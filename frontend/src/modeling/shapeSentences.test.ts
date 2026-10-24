@@ -261,3 +261,11 @@ describe("Stage A follow-ups fixed in Stage B (5.9)", () => {
     expect(ruleProblem({ ...at, minInclusive: { value: "2020-01-01T10:00:00", datatype: "xsd:dateTime" } })).toBeNull();
   });
 });
+
+
+it("localizes validation panel headings from raw names rather than English inflection", () => {
+  expect(panelHeader(panel({}), "ja")).toBe("Person rules：Person5件中2件が不適合（3件の問題）");
+  expect(panelName(panel({}), "ja")).toBe("不適合。Person rules：Person5件中2件が不適合（3件の問題）");
+  expect(panelHeader(panel({ state: "passes", focusCount: 1 }), "ja")).toBe("Person rules：Person1件が適合");
+  expect(panelHeader(panel({ state: "warnings", warningCount: 1 }), "ja")).toBe("Person rules：警告1件");
+});

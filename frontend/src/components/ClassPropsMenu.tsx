@@ -10,6 +10,9 @@ SUMMARY
     Also unpins a pinned individual.
 
 BASIC IDEA
+    Current-language labels are derived from original QueryStep facts; UI
+    locale changes preserve filter inputs, selected properties and query text.
+
     Presentational over one QueryStep and the class's available data properties.
     Toggling a property adds/removes it; a filter forces the property present
     (so its "optional" toggle disables). Datatype drives which operators and
@@ -25,6 +28,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { translateParts } from "../i18n/parts";
 import { NUMERIC_TYPES, TEMPORAL_TYPES } from "../sparql/generate";
 import type { FilterOp, QueryStep, SelectedProp } from "../sparql/types";
 import type { SchemaDataProp } from "../types";
@@ -36,18 +41,6 @@ const NATIVE_INPUTS: Record<string, string> = {
   [`${XSD}date`]: "date",
   [`${XSD}dateTime`]: "datetime-local",
   [`${XSD}time`]: "time",
-};
-
-const OP_LABELS: Record<FilterOp, string> = {
-  "=": "equals",
-  "!=": "not equals",
-  ">": "greater than",
-  ">=": "at least",
-  "<": "less than",
-  "<=": "at most",
-  contains: "contains",
-  startsWith: "starts with",
-  lang: "language is",
 };
 
 function opsFor(datatype?: string): FilterOp[] {
@@ -71,6 +64,7 @@ interface Props {
 }
 
 export default function ClassPropsMenu({ step, available, onChange, onClose }: Props) {
+  const { locale, t } = useI18n();
   const selectedByIri = new Map(step.props.map((p) => [p.predicateIri, p]));
 
   const setProps = (props: SelectedProp[]) => onChange({ props });
@@ -97,8 +91,8 @@ export default function ClassPropsMenu({ step, available, onChange, onClose }: P
   return (
     <div className="menu-card" onClick={(e) => e.stopPropagation()}>
       <div className="menu-header">
-        <strong>Data properties &amp; filters — {step.label}</strong>
-        <button className="icon-btn" onClick={onClose} title="Close">
+        <strong>{t("propsMenu.title", { name: step.label })}</strong>
+        <button className="icon-btn" onClick={onClose} title={t("queryMenu.close")} aria-label={t("queryMenu.close")}>
           ✕
         </button>
       </div>
@@ -106,16 +100,16 @@ export default function ClassPropsMenu({ step, available, onChange, onClose }: P
       {step.pin && (
         <div className="pin-row">
           <span>
-            Pinned to <strong>{step.pin.label}</strong>
+            {translateParts(locale, "propsMenu.pinned", { name: step.pin }).map((part, index) => typeof part === "string" ? part : <strong key={index}>{part.label}</strong>)}
           </span>
           <button className="ghost" onClick={() => onChange({ pin: null })}>
-            Match any {step.label}
+            {t("propsMenu.unpin", { name: step.label })}
           </button>
         </div>
       )}
 
       {available.length === 0 && (
-        <p className="detail-note">This class has no literal-valued properties.</p>
+        <p className="detail-note">{t("propsMenu.empty")}</p>
       )}
 
       {available.length > 0 && (
@@ -134,10 +128,10 @@ export default function ClassPropsMenu({ step, available, onChange, onClose }: P
               )
             }
           >
-            Select all
+            {t("propsMenu.all")}
           </button>
           <button className="ghost" onClick={() => setProps([])}>
-            Clear all
+            {t("propsMenu.clear")}
           </button>
         </div>
       )}
@@ -153,7 +147,7 @@ export default function ClassPropsMenu({ step, available, onChange, onClose }: P
                 {prop.label}
                 <span className="hint">
                   {prop.datatypePrefixed}
-                  {prop.count > 0 ? ` · ${prop.count.toLocaleString()} values` : ""}
+                  {prop.count > 0 ? t("propsMenu.count", { count: prop.count }) : ""}
                 </span>
               </span>
             </label>
@@ -172,12 +166,12 @@ export default function ClassPropsMenu({ step, available, onChange, onClose }: P
                         : undefined,
                     })
                   }
-                  title="Filter operator"
+                  title={t("propsMenu.operator")} aria-label={t("propsMenu.operator")}
                 >
-                  <option value="">no filter</option>
+                  <option value="">{t("propsMenu.noFilter")}</option>
                   {opsFor(prop.datatype).map((op) => (
                     <option key={op} value={op}>
-                      {OP_LABELS[op]}
+                      {t(`propsMenu.op.${op}`)}
                     </option>
                   ))}
                 </select>
@@ -185,7 +179,8 @@ export default function ClassPropsMenu({ step, available, onChange, onClose }: P
                   <input
                     type={selected.filter.op === "lang" ? "text" : inputTypeFor(prop.datatype)}
                     value={selected.filter.value}
-                    placeholder={selected.filter.op === "lang" ? "en" : "value"}
+                    placeholder={selected.filter.op === "lang" ? "en" : t("propsMenu.value")}
+                    aria-label={t("propsMenu.valueLabel", { label: prop.label })}
                     onChange={(e) =>
                       patchProp(prop.predicate, {
                         filter: { op: selected.filter!.op, value: e.target.value },
@@ -199,11 +194,11 @@ export default function ClassPropsMenu({ step, available, onChange, onClose }: P
                   onClick={() => patchProp(prop.predicate, { optional: !selected.optional })}
                   title={
                     filterActive
-                      ? "A filtered property must be present, so it cannot be optional"
-                      : "Optional: rows without this property still match"
+                      ? t("propsMenu.required")
+                      : t("propsMenu.optionalHint")
                   }
                 >
-                  optional
+                  {t("propsMenu.optional")}
                 </button>
               </div>
             )}

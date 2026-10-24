@@ -65,10 +65,10 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/QueryPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/QueryStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
 | `frontend/src/components/ResultsTable.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行済み |
-| `frontend/src/components/ResultPanels.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ResultPanels.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（違反・グループ・データラベルの生成元はTask 12） |
 | `frontend/src/components/PathBar.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の文言を移行済み |
-| `frontend/src/components/ClassPropsMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/PredicateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ClassPropsMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行 |
+| `frontend/src/components/PredicateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行 |
 | `frontend/src/components/NextSteps.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の文言を移行済み |
 | `frontend/src/components/SparqlEditor.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の操作文言を移行済み、外部生成元は接続待ち |
 | `frontend/src/components/SparqlPreview.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の操作文言を移行済み、外部生成元は接続待ち |
@@ -101,6 +101,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/useSuggestions.ts` | 作成候補の説明・件数 | 11 | 元の取得データから現在のUI言語で表示 |
 
 | `frontend/src/modeling/examples.ts` | 具体例の型説明・入力検証 | 11 | 共通表示関数を移行 |
+
+| `frontend/src/modeling/shapeSentences.ts` | ルール・検証の文章 | 12 | 結果パネルの共通見出しを先行移行、その他はTask 12 |
 
 ## 登録済みメッセージ
 
@@ -1511,8 +1513,8 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `hierarchy.outline` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
 | `hierarchy.filter` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
 | `hierarchy.filterLabel` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
-| `hierarchy.expand` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
-| `hierarchy.collapse` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.expand` | — | `frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/ResultPanels.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.collapse` | — | `frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/ResultPanels.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
 | `hierarchy.loading` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
 | `hierarchy.emptyTree` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
 | `hierarchy.sectionCount` | count, title | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
@@ -1546,3 +1548,82 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `hierarchy.empty.attributes` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
 | `hierarchy.empty.annotations` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
 | `hierarchy.empty.examples` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+
+| `queryMenu.close` | — | `frontend/src/components/ClassPropsMenu.tsx`<br>`frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.title` | name | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.pinned` | name | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.unpin` | name | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.empty` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.all` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.clear` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.count` | count | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.operator` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.noFilter` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.value` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.valueLabel` | label | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.required` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.optionalHint` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.optional` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.optional` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.optionalHint` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.modifier` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.relationships` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.empty` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.primary` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.inverse` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.forward` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.declared` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.restriction` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.inherited` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.count` | count | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.=` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.!=` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.>` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.>=` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.<` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.<=` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.contains` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.startsWith` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `propsMenu.op.lang` | — | `frontend/src/components/ClassPropsMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.modifier.exact` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.hint.exact` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.modifier.star` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.hint.star` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.modifier.plus` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.hint.plus` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.modifier.optional` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+| `predicateMenu.hint.optional` | — | `frontend/src/components/PredicateMenu.tsx` | クエリの属性・関係メニュー | 11 | 画面所有文言を移行済み |
+
+| `shapePanel.state.fails` | — | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.state.passes` | — | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.state.warnings` | — | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.state.nothing` | — | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.state.error` | — | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.match.one` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.match.many` | — | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.problems.one` | count | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.problems.many` | count | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.fail.one` | failing, focus, name, problems, target | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.fail.many` | failing, focus, name, problems, target | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.pass.one` | name, target | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.pass.many` | count, name, target | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.warning.one` | count, name | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.warning.many` | count, name | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.nothing` | name, target | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.error` | name | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `shapePanel.name` | header, state | `frontend/src/modeling/shapeSentences.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.validateHint` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.validating` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.validate` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.empty` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.stale` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.stopped.one` | shapes, statements | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.stopped.many` | shapes, statements | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.noShapes` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.checkedData` | source | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.shapeError` | error | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.nothingClass` | label | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.nothingOther` | label | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.passes` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.value` | value | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+| `results.more` | count | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |

@@ -47,6 +47,8 @@ vi.mock("../api", async (importOriginal) => ({
 import { projectStore } from "../state/projectStore";
 import type { ValidationPanel, ValidationResult } from "../types";
 import ResultPanels, { ValidateButton } from "./ResultPanels";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const PROJECT = {
   id: "prj-0123456789ab", name: "Shop", createdAt: "", updatedAt: "", baseIri: "http://x#", prefix: "x",
@@ -340,4 +342,26 @@ describe("ResultPanels: Stage A follow-ups fixed in Stage B (5.9)", () => {
       screen.getByText("No Invoice is in the data yet, so there is nothing to check. Add an example from the Invoice form, then validate again."),
     ).toBeTruthy();
   });
+});
+
+
+it("keeps an expanded validation result and original problem facts on UI language switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc("model", 2), doc("shapes", 5)], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  validateProject.mockResolvedValue(RESULT);
+  const select = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><ValidateButton onError={vi.fn()} /><ResultPanels onSelect={select} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "検証" })));
+  const header = screen.getByRole("button", { name: "不適合。Person rules：Person5件中2件が不適合（3件の問題）" });
+  fireEvent.click(header);
+  const result = projectStore.getSnapshot().validation;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Fails. Person rules: 2 of 5 people fail (3 problems)" })).toBe(header);
+  expect(header.getAttribute("aria-expanded")).toBe("true");
+  expect(projectStore.getSnapshot().validation).toBe(result);
+  fireEvent.click(screen.getByRole("button", { name: "Bob" }));
+  expect(select).toHaveBeenCalledWith("http://x#bob");
+  expect(validateProject).toHaveBeenCalledTimes(1);
 });

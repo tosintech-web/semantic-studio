@@ -13,6 +13,10 @@ SUMMARY
     checks the rule editor makes before Add is allowed.
 
 BASIC IDEA
+    Result-panel headers accept a UI locale and use raw target labels for
+    Japanese; server-provided English inflections stay English-only. Other
+    shape/rule descriptions are migrated separately with their consumers.
+
     Every rule and every result is a sentence in the learner's own names
     (Section 7), so the sentences are built in one place and tested without
     rendering. Names come from the server, already in the display language;
@@ -42,6 +46,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { englishTranslator, translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
 import type { PanelState, ShapeForm, ShapeRule, ValidationPanel, ValidationResult } from "../types";
 import { a, mustVerb } from "./sentences";
 
@@ -234,12 +240,12 @@ export function rowSentence(shape: Pick<ShapeForm, "target" | "rules">): string 
 }
 
 /** The word a result is said with, beside its colour: never colour alone. */
+export function panelStateWord(state: PanelState, t: Translator = englishTranslator): string {
+  return t(`shapePanel.state.${state}`);
+}
 export const STATE_WORDS: Record<PanelState, string> = {
-  fails: "Fails",
-  passes: "Passes",
-  warnings: "Warnings",
-  nothing: "Nothing to check",
-  error: "Could not run",
+  fails: panelStateWord("fails"), passes: panelStateWord("passes"),
+  warnings: panelStateWord("warnings"), nothing: panelStateWord("nothing"), error: panelStateWord("error"),
 };
 
 export const STATE_SIGNS: Record<PanelState, string> = {
@@ -251,31 +257,33 @@ export const STATE_SIGNS: Record<PanelState, string> = {
 };
 
 /** A panel's header text after its sign (5.7). */
-export function panelHeader(panel: ValidationPanel): string {
-  const one = panel.target?.one ?? "match";
-  const many = panel.target?.many ?? "matches";
+export function panelHeader(panel: ValidationPanel, locale: UiLocale = "en"): string {
+  const t = ((code, args) => translate(locale, code, args)) as Translator;
+  // English inflections from the server are presentation for English only.
+  const one = (locale === "en" ? panel.target?.one : panel.target?.label) ?? t("shapePanel.match.one");
+  const many = (locale === "en" ? panel.target?.many : panel.target?.label) ?? t("shapePanel.match.many");
+  const name = panel.name;
   switch (panel.state) {
-    case "fails": {
-      const problems = panel.problemCount === 1 ? "1 problem" : `${panel.problemCount.toLocaleString()} problems`;
-      const of = `${panel.failingCount.toLocaleString()} of ${panel.focusCount.toLocaleString()} ${panel.focusCount === 1 ? one : many}`;
-      return `${panel.name}: ${of} ${panel.failingCount === 1 ? "fails" : "fail"} (${problems})`;
-    }
+    case "fails":
+      return t(panel.failingCount === 1 ? "shapePanel.fail.one" : "shapePanel.fail.many", {
+        name, failing: panel.failingCount, focus: panel.focusCount, target: panel.focusCount === 1 ? one : many,
+        problems: t(panel.problemCount === 1 ? "shapePanel.problems.one" : "shapePanel.problems.many", { count: panel.problemCount }),
+      });
     case "passes":
-      return panel.focusCount === 1
-        ? `${panel.name}: the one ${one} passes`
-        : `${panel.name}: all ${panel.focusCount.toLocaleString()} ${many} pass`;
+      return panel.focusCount === 1 ? t("shapePanel.pass.one", { name, target: one }) : t("shapePanel.pass.many", { name, count: panel.focusCount, target: many });
     case "warnings":
-      return `${panel.name}: ${panel.warningCount === 1 ? "1 warning" : `${panel.warningCount.toLocaleString()} warnings`}`;
+      return t(panel.warningCount === 1 ? "shapePanel.warning.one" : "shapePanel.warning.many", { name, count: panel.warningCount });
     case "nothing":
-      return `${panel.name}: no ${panel.target?.label ?? "match"} in the data yet`;
+      return t("shapePanel.nothing", { name, target: panel.target?.label ?? t("shapePanel.match.one") });
     case "error":
-      return `${panel.name}: this shape could not be checked`;
+      return t("shapePanel.error", { name });
   }
 }
 
 /** A panel's accessible name: the state word, then the header with counts. */
-export function panelName(panel: ValidationPanel): string {
-  return `${STATE_WORDS[panel.state]}. ${panelHeader(panel)}`;
+export function panelName(panel: ValidationPanel, locale: UiLocale = "en"): string {
+  const t = ((code, args) => translate(locale, code, args)) as Translator;
+  return t("shapePanel.name", { state: panelStateWord(panel.state, t), header: panelHeader(panel, locale) });
 }
 
 /** What the Results tab carries when a run ends while Shape is showing
