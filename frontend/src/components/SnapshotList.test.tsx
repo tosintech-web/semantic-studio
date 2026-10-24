@@ -14,6 +14,9 @@ SUMMARY
     A list that cannot be read says so once, with Try again (PR #53 review).
 
 BASIC IDEA
+    Owned refusal metadata changes language at render time without losing
+    the original detail nodes, expanded panels or retained snapshot identity.
+
     api.ts is mocked and the real project store is opened on a fixed
     project, so every action's announcement and the refetched list are the
     store's own.
@@ -441,5 +444,20 @@ it("does not announce or refetch a previous project's completed data action", as
   await act(async () => { finish({ snapshot: { ...SNAP, enabled: false }, generation: 2 }); });
   expect(projectStore.getSnapshot().project?.id).toBe(nextId);
   expect(projectStore.getSnapshot().announcement).toBe(announcement);
+  expect(listData).toHaveBeenCalledTimes(calls);
+});
+
+it("renders an unsupported mapping's facts in the active locale without reloading the snapshot", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const name = "rml:fn <b>{name}";
+  const outside: SnapshotSummary = { ...SNAP, mapping: { status: "outside", message: "Original <img>{reason}",
+    uiMessage: { code: "rml.unsupported", args: { name } } } };
+  await setup([outside], true);
+  expect(screen.getByText(`${name}は、このアプリで実行できるRMLの範囲外です。マッピングは他のRMLツールで使えるようそのまま保持し、データは変更しません。`)).toBeTruthy();
+  const pre = screen.getByText("Original <img>{reason}", { selector: "pre" });
+  const calls = listData.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(`${name} is outside the supported RML subset. The mapping is kept unchanged for other RML tools, and the data stays as it was.`)).toBeTruthy();
+  expect(screen.getByText("Original <img>{reason}", { selector: "pre" })).toBe(pre);
   expect(listData).toHaveBeenCalledTimes(calls);
 });

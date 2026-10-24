@@ -922,6 +922,243 @@
     "words.field.max_length": {},
     "words.field.boundary": {},
     "words.field.allowed_languages": {},
-    "words.field.name_languages": {}
+    "words.field.name_languages": {},
+    "projects.layout_object": {},
+    "projects.positions_object": {},
+    "projects.layout_limit": {
+      "limit": "number"
+    },
+    "projects.layout_key": {
+      "limit": "number"
+    },
+    "projects.position": {},
+    "projects.shown": {},
+    "projects.viewport": {},
+    "projects.template": {
+      "name": "string"
+    },
+    "projects.name_required": {},
+    "projects.name_limit": {
+      "limit": "number"
+    },
+    "projects.base_iri": {},
+    "projects.prefix": {},
+    "projects.language": {
+      "language": "string"
+    },
+    "projects.document_kind": {},
+    "projects.shapes_exists": {},
+    "projects.kind": {},
+    "snapshots.choices_object": {},
+    "snapshots.class_required": {},
+    "snapshots.model_class": {},
+    "snapshots.column_missing": {
+      "name": "string"
+    },
+    "snapshots.columns_object": {},
+    "snapshots.one_name": {},
+    "snapshots.column_property": {
+      "name": "string"
+    },
+    "snapshots.relationship_end": {
+      "name": "string",
+      "property": "string"
+    },
+    "snapshots.sample_file": {
+      "total": "number",
+      "limit": "number"
+    },
+    "snapshots.sample_sheet": {
+      "total": "number",
+      "limit": "number"
+    },
+    "snapshots.refresh_encoding": {
+      "encoding": "string"
+    },
+    "snapshots.mapping_text": {},
+    "snapshots.mapping_syntax": {},
+    "snapshots.source_missing": {},
+    "snapshots.choose_sheet": {},
+    "snapshots.refresh_mapping_refused": {},
+    "tabular.file_too_large": {
+      "bytes": "number",
+      "limit": "number"
+    },
+    "tabular.binary": {},
+    "tabular.encoding": {
+      "encoding": "string"
+    },
+    "tabular.invalid_byte": {
+      "encoding": "string",
+      "position": "number"
+    },
+    "tabular.not_csv_encoding": {},
+    "tabular.separator": {},
+    "tabular.column_limit": {
+      "count": "number",
+      "limit": "number"
+    },
+    "tabular.cell_limit": {
+      "row": "number",
+      "column": "number",
+      "characters": "number",
+      "limit": "number"
+    },
+    "tabular.long_cell": {
+      "row": "number",
+      "limit": "number"
+    },
+    "tabular.csv_syntax": {
+      "row": "number"
+    },
+    "tabular.empty": {},
+    "tabular.format.xlsm": {},
+    "tabular.format.xltm": {},
+    "tabular.format.xlsb": {},
+    "tabular.format.xls": {},
+    "tabular.format.ods": {},
+    "tabular.password": {},
+    "tabular.not_xlsx": {},
+    "tabular.damaged_zip": {},
+    "tabular.unpacked_limit": {
+      "bytes": "number",
+      "limit": "number"
+    },
+    "tabular.compression_limit": {
+      "ratio": "number",
+      "limit": "number"
+    },
+    "tabular.xml_declaration": {
+      "name": "string"
+    },
+    "tabular.sheet_column_limit": {
+      "name": "string",
+      "row": "number",
+      "column": "number",
+      "limit": "number"
+    },
+    "tabular.sheet_cell_limit": {
+      "name": "string",
+      "row": "number",
+      "column": "number",
+      "characters": "number",
+      "limit": "number"
+    },
+    "tabular.unsafe_parser": {},
+    "tabular.header_row": {},
+    "tabular.workbook_unreadable": {},
+    "tabular.no_sheets": {},
+    "tabular.sheet_missing": {
+      "name": "string"
+    },
+    "tabular.sheet_empty": {
+      "name": "string"
+    },
+    "tabular.header_empty": {
+      "name": "string",
+      "row": "number"
+    },
+    "rml.template_open": {
+      "template": "string"
+    },
+    "rml.template_close": {
+      "template": "string"
+    },
+    "rml.field_multiple": {
+      "property": "string",
+      "count": "number"
+    },
+    "rml.field_missing": {
+      "property": "string"
+    },
+    "rml.source": {
+      "name": "string",
+      "source": "string"
+    },
+    "rml.syntax": {},
+    "rml.unsupported": {
+      "name": "string"
+    },
+    "rml.map_count": {
+      "count": "number"
+    },
+    "rml.formulation": {
+      "name": "string"
+    },
+    "rml.delimiter": {},
+    "rml.encoding": {
+      "encoding": "string"
+    },
+    "rml.header": {},
+    "rml.predicate_object": {},
+    "rml.predicate_iri": {},
+    "rml.pair_limit": {
+      "limit": "number"
+    },
+    "rml.class_limit": {
+      "limit": "number"
+    },
+    "rml.object_source": {},
+    "rml.language_datatype": {},
+    "rml.columns_missing": {
+      "columns": "parts"
+    },
+    "rml.subject_iri": {
+      "iri": "string"
+    },
+    "validation.shapes_refused": {},
+    "snapshots.refresh.template_open": {
+      "template": "string"
+    },
+    "snapshots.refresh.template_close": {
+      "template": "string"
+    },
+    "snapshots.refresh.field_multiple": {
+      "property": "string",
+      "count": "number"
+    },
+    "snapshots.refresh.field_missing": {
+      "property": "string"
+    },
+    "snapshots.refresh.source": {
+      "name": "string",
+      "source": "string"
+    },
+    "snapshots.refresh.syntax": {},
+    "snapshots.refresh.unsupported": {
+      "name": "string"
+    },
+    "snapshots.refresh.map_count": {
+      "count": "number"
+    },
+    "snapshots.refresh.formulation": {
+      "name": "string"
+    },
+    "snapshots.refresh.delimiter": {},
+    "snapshots.refresh.encoding": {
+      "encoding": "string"
+    },
+    "snapshots.refresh.header": {},
+    "snapshots.refresh.predicate_object": {},
+    "snapshots.refresh.predicate_iri": {},
+    "snapshots.refresh.pair_limit": {
+      "limit": "number"
+    },
+    "snapshots.refresh.class_limit": {
+      "limit": "number"
+    },
+    "snapshots.refresh.object_source": {},
+    "snapshots.refresh.language_datatype": {},
+    "snapshots.refresh.columns_missing": {
+      "columns": "parts"
+    },
+    "snapshots.refresh.subject_iri": {
+      "iri": "string"
+    },
+    "tabular.entry_compression_limit": {
+      "name": "string",
+      "ratio": "number",
+      "limit": "number"
+    }
   }
 }

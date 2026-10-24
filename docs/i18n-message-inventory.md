@@ -532,7 +532,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -2862,3 +2862,113 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `words.field.boundary` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
 | `words.field.allowed_languages` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
 | `words.field.name_languages` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+
+## プロジェクト・既存データ機能の拒否（Task 12）
+
+| key | 引数 | 生成元 | 用途 | Task | 状態 |
+| --- | --- | --- | --- | --- | --- |
+| `projects.layout_object` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.positions_object` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.layout_limit` | limit | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.layout_key` | limit | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.position` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.shown` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.viewport` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.template` | name | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.name_required` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.name_limit` | limit | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.base_iri` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.prefix` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.language` | language | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.document_kind` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.shapes_exists` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `projects.kind` | — | `backend/app/projects.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.choices_object` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.class_required` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.model_class` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.column_missing` | name | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.columns_object` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.one_name` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.column_property` | name | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.relationship_end` | name, property | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.sample_file` | total, limit | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.sample_sheet` | total, limit | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh_encoding` | encoding | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.mapping_text` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.mapping_syntax` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.source_missing` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.choose_sheet` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh_mapping_refused` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.file_too_large` | bytes, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.binary` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.encoding` | encoding | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.invalid_byte` | encoding, position | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.not_csv_encoding` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.separator` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.column_limit` | count, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.cell_limit` | row, column, characters, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.long_cell` | row, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.csv_syntax` | row | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.empty` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.format.xlsm` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.format.xltm` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.format.xlsb` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.format.xls` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.format.ods` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.password` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.not_xlsx` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.damaged_zip` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.unpacked_limit` | bytes, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.compression_limit` | ratio, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.xml_declaration` | name | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.sheet_column_limit` | name, row, column, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.sheet_cell_limit` | name, row, column, characters, limit | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.unsafe_parser` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.header_row` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.workbook_unreadable` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.no_sheets` | — | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.sheet_missing` | name | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.sheet_empty` | name | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.header_empty` | name, row | `backend/app/tabular.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.template_open` | template | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.template_close` | template | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.field_multiple` | property, count | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.field_missing` | property | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.source` | name, source | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.syntax` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.unsupported` | name | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.map_count` | count | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.formulation` | name | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.delimiter` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.encoding` | encoding | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.header` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.predicate_object` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.predicate_iri` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.pair_limit` | limit | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.class_limit` | limit | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.object_source` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.language_datatype` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.columns_missing` | columns | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `rml.subject_iri` | iri | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/rml.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `validation.shapes_refused` | — | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.template_open` | template | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.template_close` | template | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.field_multiple` | property, count | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.field_missing` | property | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.source` | name, source | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.syntax` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.unsupported` | name | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.map_count` | count | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.formulation` | name | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.delimiter` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.encoding` | encoding | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.header` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.predicate_object` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.predicate_iri` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.pair_limit` | limit | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.class_limit` | limit | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.object_source` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.language_datatype` | — | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.columns_missing` | columns | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `snapshots.refresh.subject_iri` | iri | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
+| `tabular.entry_compression_limit` | name, ratio, limit | `backend/app/tabular.py` | 既存Excelの展開率制限 | 12 | エントリ名と倍率を原文と別に収集 |

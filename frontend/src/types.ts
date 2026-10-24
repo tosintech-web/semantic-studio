@@ -1276,6 +1276,7 @@ export interface ValidationPanel {
   problems: ValidationProblem[];
   problemsTotal: number;
   error: string | null;
+  errorUiMessage?: WireMessage | null;
   // The data snapshots whose individuals this shape checked, by id
   // (csv-data-import 5.6).
   data?: string[];
@@ -1346,7 +1347,7 @@ export interface SnapshotSummary extends DataSource {
   report: ImportReportData;
   // "outside": an edited mapping uses something the engine does not run;
   // the last good data is kept and `message` says why.
-  mapping: { status: "ok" | "outside"; message: string | null };
+  mapping: { status: "ok" | "outside"; message: string | null; uiMessage?: WireMessage | null };
   mappingText?: string | null;
   // Set when the source was an Excel workbook.
   workbook?: WorkbookChoice | null;

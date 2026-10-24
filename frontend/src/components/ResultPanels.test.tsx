@@ -14,6 +14,9 @@ SUMMARY
     and the summary read in the live region.
 
 BASIC IDEA
+    Owned refusal metadata changes language at render time without losing
+    the original detail nodes, expanded panels or retained snapshot identity.
+
     api.ts is mocked and the real project store is opened on a fixed
     project, so Validate goes through the same action the Shapes view and
     the Turtle editor run.
@@ -364,4 +367,27 @@ it("keeps an expanded validation result and original problem facts on UI languag
   fireEvent.click(screen.getByRole("button", { name: "Bob" }));
   expect(select).toHaveBeenCalledWith("http://x#bob");
   expect(validateProject).toHaveBeenCalledTimes(1);
+});
+
+it("translates a shape-engine refusal while preserving its original details and expanded panel", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc("model", 2), doc("shapes", 5)], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  const error = "Engine <img>{error}";
+  validateProject.mockResolvedValue({ ...RESULT, shapes: [panel({ state: "error", error,
+    errorUiMessage: { code: "validation.shapes_refused", args: {} }, problems: [], problemsTotal: 0 })] });
+  const { container } = render(<I18nProvider><UiLanguageSelect /><ValidateButton onError={vi.fn()} /><ResultPanels onSelect={vi.fn()} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "検証" })));
+  const header = screen.getByRole("button", { name: /Person rules/ });
+  fireEvent.click(header);
+  expect(screen.getByText(/検証エンジンがこのルールを読み込めませんでした/)).toBeTruthy();
+  const pre = screen.getByText(error, { selector: "pre" });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(/The validation engine could not load this shape/)).toBeTruthy();
+  expect(screen.getByText(error, { selector: "pre" })).toBe(pre);
+  expect(header.getAttribute("aria-expanded")).toBe("true");
+  expect(validateProject).toHaveBeenCalledTimes(1);
+  expect(container.querySelector("img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

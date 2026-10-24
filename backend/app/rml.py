@@ -10,6 +10,9 @@ SUMMARY
     runs one on a table's rows into a graph, with the import report.
 
 BASIC IDEA
+    Owned refusals add validated display facts at their source. Legacy text,
+    exception types and input-processing rules remain unchanged.
+
     The mapping is saved as RML so it is the expert's to read, edit and run in
     another engine (RMLMapper, Morph-KGC). The Python RML engines cannot be
     installed beside pySHACL (Section 1), so the app runs a documented subset
@@ -55,6 +58,7 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
+from .messages import make_message, literal_part, word_part
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
@@ -93,9 +97,19 @@ _TYPES = {
 _ENCODINGS = {"utf-8": "utf-8", "utf8": "utf-8", "windows-1252": "windows-1252", "cp1252": "windows-1252"}
 
 
+def _column_parts(columns: list) -> list[dict]:
+    """Capture raw column identities and a flat translated conjunction."""
+    return [part for index, column in enumerate(columns)
+            for part in ([word_part("words.list.and")] if index else []) + [literal_part(str(column))]]
+
+
 class UnsupportedMapping(ValueError):
     """A mapping outside the subset, or one that cannot run; the sentence
     names what."""
+
+    def __init__(self, message: str, *, ui_message: dict | None = None):
+        super().__init__(message)
+        self.ui_message = ui_message
 
 
 @dataclass
@@ -162,7 +176,10 @@ def template_parts(template: str) -> list:
                 name.append(template[i])
                 i += 1
             if i >= len(template):
-                raise UnsupportedMapping(f"The template {template} has a {{ that is never closed.")
+                raise UnsupportedMapping(
+                    f'The template {template} has a {{ that is never closed.',
+                    ui_message=make_message('rml.template_open', template=str(template)),
+                )
             if text:
                 parts.append("".join(text))
                 text = []
@@ -170,7 +187,10 @@ def template_parts(template: str) -> list:
             i += 1
             continue
         if ch == "}":
-            raise UnsupportedMapping(f"The template {template} has a }} that was never opened.")
+            raise UnsupportedMapping(
+                f'The template {template} has a }} that was never opened.',
+                ui_message=make_message('rml.template_close', template=str(template)),
+            )
         text.append(ch)
         i += 1
     if text:
@@ -270,10 +290,16 @@ def _name(graph: Graph, term) -> str:
 def _one(graph: Graph, node, predicate, what: str, required: bool = True):
     values = list(graph.objects(node, predicate))
     if len(values) > 1:
-        raise UnsupportedMapping(f"A mapping here has one {what}; this one has {len(values)}.")
+        raise UnsupportedMapping(
+            f'A mapping here has one {what}; this one has {len(values)}.',
+            ui_message=make_message('rml.field_multiple', property=_name(graph, predicate), count=len(values)),
+        )
     if not values:
         if required:
-            raise UnsupportedMapping(f"This mapping has no {what}.")
+            raise UnsupportedMapping(
+                f'This mapping has no {what}.',
+                ui_message=make_message('rml.field_missing', property=_name(graph, predicate)),
+            )
         return None
     return values[0]
 
@@ -283,8 +309,8 @@ def check_source(value) -> None:
     text = str(value)
     if not isinstance(value, Literal) or text != SOURCE_NAME:
         raise UnsupportedMapping(
-            f"rml:source must name this snapshot's own {SOURCE_NAME}; this mapping names {text}. "
-            "A mapping here reads only the copy kept with it, never another file or a URL."
+            f"rml:source must name this snapshot's own {SOURCE_NAME}; this mapping names {text}. A mapping here reads only the copy kept with it, never another file or a URL.",
+            ui_message=make_message('rml.source', name=str(text), source=SOURCE_NAME),
         )
 
 
@@ -298,7 +324,10 @@ def read(text: str, base: str) -> Mapping:
         # (CF-8): <#map> must not become file:///C:/...
         graph.parse(data=text, format="turtle", publicID=base)
     except Exception as exc:  # noqa: BLE001 - rdflib raises many kinds
-        raise UnsupportedMapping(f"This mapping is not valid Turtle: {str(exc).splitlines()[0]}") from exc
+        raise UnsupportedMapping(
+            f'This mapping is not valid Turtle: {str(exc).splitlines()[0]}',
+            ui_message=make_message('rml.syntax'),
+        ) from exc
     return read_graph(graph)
 
 
@@ -306,24 +335,28 @@ def read_graph(graph: Graph) -> Mapping:
     for s, p, o in graph:
         if p not in _ALLOWED:
             raise UnsupportedMapping(
-                f"{_name(graph, p)} is outside what Semantic Studio runs. The mapping is kept as "
-                "written and runs in other RML tools; the data stays as it was."
+                f'{_name(graph, p)} is outside what Semantic Studio runs. The mapping is kept as written and runs in other RML tools; the data stays as it was.',
+                ui_message=make_message('rml.unsupported', name=_name(graph, p)),
             )
         if p == RDF.type and o not in _TYPES:
             raise UnsupportedMapping(
-                f"{_name(graph, o)} is outside what Semantic Studio runs. The mapping is kept as "
-                "written and runs in other RML tools; the data stays as it was."
+                f'{_name(graph, o)} is outside what Semantic Studio runs. The mapping is kept as written and runs in other RML tools; the data stays as it was.',
+                ui_message=make_message('rml.unsupported', name=_name(graph, o)),
             )
     maps = set(graph.subjects(RML.logicalSource, None)) | set(graph.subjects(RDF.type, RML.TriplesMap))
     if len(maps) != 1:
         raise UnsupportedMapping(
-            f"A mapping here has one triples map; this one has {len(maps)}."
+            f'A mapping here has one triples map; this one has {len(maps)}.',
+            ui_message=make_message('rml.map_count', count=len(maps)),
         )
     tm = next(iter(maps))
     ls = _one(graph, tm, RML.logicalSource, "logical source")
     formulation = _one(graph, ls, RML.referenceFormulation, "reference formulation")
     if formulation != RML.CSV:
-        raise UnsupportedMapping(f"{_name(graph, formulation)} is outside what Semantic Studio runs: it reads CSV.")
+        raise UnsupportedMapping(
+            f'{_name(graph, formulation)} is outside what Semantic Studio runs: it reads CSV.',
+            ui_message=make_message('rml.formulation', name=_name(graph, formulation)),
+        )
     source = _one(graph, ls, RML.source, "rml:source")
     separator, encoding = ",", "utf-8"
     if isinstance(source, Literal):
@@ -336,15 +369,24 @@ def read_graph(graph: Graph) -> Mapping:
             if delimiter is not None:
                 separator = str(delimiter)
                 if separator not in SEPARATORS:
-                    raise UnsupportedMapping("csvw:delimiter is a comma, a semicolon or a tab here.")
+                    raise UnsupportedMapping(
+                        'csvw:delimiter is a comma, a semicolon or a tab here.',
+                        ui_message=make_message('rml.delimiter'),
+                    )
             named = _one(graph, dialect, CSVW.encoding, "csvw:encoding", required=False)
             if named is not None:
                 encoding = _ENCODINGS.get(str(named).lower(), "")
                 if not encoding:
-                    raise UnsupportedMapping(f"The encoding {named} is not one Semantic Studio reads.")
+                    raise UnsupportedMapping(
+                        f'The encoding {named} is not one Semantic Studio reads.',
+                        ui_message=make_message('rml.encoding', encoding=str(named)),
+                    )
             header = _one(graph, dialect, CSVW.header, "csvw:header", required=False)
             if header is not None and not bool(header.toPython()):
-                raise UnsupportedMapping("csvw:header false is outside what Semantic Studio runs: it reads a header row.")
+                raise UnsupportedMapping(
+                    'csvw:header false is outside what Semantic Studio runs: it reads a header row.',
+                    ui_message=make_message('rml.header'),
+                )
     sm = _one(graph, tm, RML.subjectMap, "subject map")
     template = _one(graph, sm, RML.template, "subject template")
     template_parts(str(template))  # a malformed template is refused now, not per row
@@ -358,19 +400,29 @@ def read_graph(graph: Graph) -> Mapping:
         predicates = list(graph.objects(pom, RML.predicate))
         objects = list(graph.objects(pom, RML.objectMap))
         if not predicates or not objects:
-            raise UnsupportedMapping("Each predicate-object map here has an rml:predicate and an rml:objectMap.")
+            raise UnsupportedMapping(
+                'Each predicate-object map here has an rml:predicate and an rml:objectMap.',
+                ui_message=make_message('rml.predicate_object'),
+            )
         for node in objects:
             om = _object_map(graph, node)
             for predicate in predicates:
                 if not isinstance(predicate, URIRef):
-                    raise UnsupportedMapping("An rml:predicate is an IRI.")
+                    raise UnsupportedMapping(
+                        'An rml:predicate is an IRI.',
+                        ui_message=make_message('rml.predicate_iri'),
+                    )
                 mapping.poms.append((predicate, om))
         if len(mapping.poms) > MAX_MAPS:
             raise UnsupportedMapping(
-                f"A mapping here writes at most {MAX_MAPS} predicate-object pairs per row; this one writes more."
+                f'A mapping here writes at most {MAX_MAPS} predicate-object pairs per row; this one writes more.',
+                ui_message=make_message('rml.pair_limit', limit=MAX_MAPS),
             )
     if len(mapping.classes) > MAX_MAPS:
-        raise UnsupportedMapping(f"A mapping here gives a row at most {MAX_MAPS} classes; this one gives more.")
+        raise UnsupportedMapping(
+            f'A mapping here gives a row at most {MAX_MAPS} classes; this one gives more.',
+            ui_message=make_message('rml.class_limit', limit=MAX_MAPS),
+        )
     mapping.poms.sort(key=lambda p: (str(p[0]), p[1].kind, str(p[1].value)))
     return mapping
 
@@ -383,13 +435,17 @@ def _object_map(graph: Graph, node) -> ObjectMap:
     ]
     if len(kinds) != 1:
         raise UnsupportedMapping(
-            "Each object map here has exactly one of rml:reference, rml:template and rml:constant."
+            'Each object map here has exactly one of rml:reference, rml:template and rml:constant.',
+            ui_message=make_message('rml.object_source'),
         )
     kind, value = kinds[0]
     datatype = _one(graph, node, RML.datatype, "rml:datatype", required=False)
     language = _one(graph, node, RML.language, "rml:language", required=False)
     if datatype is not None and language is not None:
-        raise UnsupportedMapping("An object map has an rml:datatype or an rml:language, not both.")
+        raise UnsupportedMapping(
+            'An object map has an rml:datatype or an rml:language, not both.',
+            ui_message=make_message('rml.language_datatype'),
+        )
     if kind == "template":
         template_parts(str(value))
     if kind != "constant":
@@ -435,8 +491,8 @@ def run(mapping: Mapping, table: Table) -> tuple[Graph, dict]:
     missing = [name for name in mapping.references() if name not in index]
     if missing:
         raise UnsupportedMapping(
-            "The mapping reads " + " and ".join(f"column {m}" for m in missing)
-            + ", which this file does not have."
+            'The mapping reads ' + ' and '.join((f'column {m}' for m in missing)) + ', which this file does not have.',
+            ui_message=make_message('rml.columns_missing', columns=_column_parts(missing)),
         )
     subject_parts = template_parts(mapping.subject)
     compiled = []
@@ -461,7 +517,10 @@ def run(mapping: Mapping, table: Table) -> tuple[Graph, dict]:
             skipped.append(number)
             continue
         if not _absolute(iri):
-            raise UnsupportedMapping(f"The subject template makes {iri}, which is not an absolute IRI.")
+            raise UnsupportedMapping(
+                f'The subject template makes {iri}, which is not an absolute IRI.',
+                ui_message=make_message('rml.subject_iri', iri=str(iri)),
+            )
         subject = URIRef(iri)
         if iri in subjects:
             repeated.append(number)

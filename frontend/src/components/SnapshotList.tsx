@@ -12,6 +12,9 @@ SUMMARY
     the top.
 
 BASIC IDEA
+    Unsupported mapping metadata stays with the saved snapshot and renders
+    in the current UI locale; its original message stays in native details.
+
     Every action here is a snapshot action, not a model change: none is in
     the undo history or makes the model unsaved (5.7). Each says what it
     did in the project's live region (projectStore.dataChanged), which also
@@ -49,7 +52,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ApiError, inspectData, refreshData, removeData, updateData } from "../api";
 import { useI18n } from "../i18n/I18nProvider";
 import { englishTranslator } from "../i18n/format";
-import { renderServerError } from "../i18n/serverMessage";
+import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { makeUiMessage, renderUiMessage } from "../i18n/uiMessage";
 import { dataLabel, reportWord, rowLimitSentence } from "../modeling/dataSentences";
 import { plural } from "../modeling/shapeSentences";
@@ -292,7 +295,9 @@ function SnapshotRow({
         </label>
       </div>
       {outside && (
-        <><p className="detail-error">{t("dataSnapshot.mappingOutside")}</p>
+        <><p className="detail-error">{validWireMessage(snapshot.mapping.uiMessage)
+          ? renderServerMessage(snapshot.mapping.uiMessage, snapshot.mapping.message ?? "", t)
+          : t("dataSnapshot.mappingOutside")}</p>
           {snapshot.mapping.message && <details><summary>{t("common.details")}</summary><pre>{snapshot.mapping.message}</pre></details>}</>
       )}
       <div className="snapshot-actions">

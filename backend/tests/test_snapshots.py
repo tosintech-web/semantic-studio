@@ -15,6 +15,9 @@ SUMMARY
     no row reported and caught by the Small template's Points to rule.
 
 BASIC IDEA
+    Unsupported mapping facts survive API wrapping and disk persistence; a
+    rejected refresh keeps its precise facts and leaves the last good data intact.
+
     Each test makes a Small-template project (Person, Organization, member
     of), adds the attributes it needs by command, and imports a CSV or a
     workbook built in the test. What is asserted is what the spec's rows check: the statements
@@ -402,6 +405,13 @@ def test_d9_edit_as_rml_reruns_then_a_function_is_refused_by_name_with_the_data_
     # The last good data stays, and the mapping is kept as written.
     assert len(data_graph(pid, sid)) == len(before)
     assert "rml:function" in (folder(pid, sid) / "mapping.rml.ttl").read_text(encoding="utf-8")
+    expected = {"code": "rml.unsupported", "args": {"name": "rml:function"}}
+    assert refused["mapping"]["uiMessage"] == expected
+    assert json.loads((folder(pid, sid) / "snapshot.json").read_text())["mapping"]["uiMessage"] == expected
+    refreshed = client.post(f"/api/projects/{pid}/data/{sid}/refresh", files=csv_file(PEOPLE))
+    assert refreshed.status_code == 422, refreshed.text
+    assert refreshed.json()["uiMessage"] == {"code": "snapshots.refresh.unsupported", "args": expected["args"]}
+    assert set(data_graph(pid, sid)) == set(before)
 
 
 @pytest.mark.parametrize("source", ["../model.ttl", "C:\\\\x.csv", "https://example.org/people.csv"])

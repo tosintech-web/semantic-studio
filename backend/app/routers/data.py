@@ -9,6 +9,9 @@ SUMMARY
     change or edit the mapping, and remove, under /api/projects/{pid}/data.
 
 BASIC IDEA
+    Domain refusal metadata is forwarded alongside the original status/detail,
+    including workbook picker state and size-limit responses.
+
     Thin, like the other routers: read the body under its cap, hand the work
     to snapshots.py through the editing service (which holds the open
     project's model and its snapshots), and map refusals to status codes in
@@ -54,6 +57,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from starlette.concurrency import run_in_threadpool
 
+from ..messages import UiHTTPException
 from .. import tabular
 from ..editing import NotOpen, editing_service
 from ..projects import UnknownProject
@@ -87,8 +91,12 @@ def _errors():
             # A sheet that gave no table still names the sheets and its
             # rows, so the wizard keeps its Sheet and Header row pickers.
             detail["workbook"] = exc.workbook
+        if exc.ui_message is not None:
+            raise UiHTTPException(status_code=status, detail=detail, ui_message=exc.ui_message) from exc
         raise HTTPException(status_code=status, detail=detail) from exc
     except (SnapshotError, UnsupportedMapping) as exc:
+        if exc.ui_message is not None:
+            raise UiHTTPException(status_code=422, detail=str(exc), ui_message=exc.ui_message) from exc
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

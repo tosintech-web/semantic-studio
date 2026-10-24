@@ -12,6 +12,9 @@ SUMMARY
     budgets of Section 10.
 
 BASIC IDEA
+    Broken-shape errors retain the engine text and add separate display facts,
+    verified through the actual validation route.
+
     Through the HTTP API, as the frontend drives it. Shapes are made by the
     shape commands where the form can make them and written in Turtle where
     the row is about Turtle (S13 to S15); the example individuals are inline
@@ -345,6 +348,7 @@ shop:Good a sh:NodeShape ; rdfs:label "Good rules"@en ; sh:targetClass shop:Pers
     broken = panel(result, EX + "Broken")
     assert broken["state"] == "error"
     assert "minCount" in broken["error"]
+    assert broken["errorUiMessage"] == {"code": "validation.shapes_refused", "args": {}}
     good = panel(result, EX + "Good")
     assert good["state"] == "fails"
     assert sentences(good) == ["Carol has 2 names; every Person may have at most 1."]

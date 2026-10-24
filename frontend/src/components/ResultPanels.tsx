@@ -12,6 +12,9 @@ SUMMARY
     rule, with the individual's name as a link that selects it.
 
 BASIC IDEA
+    Shape-engine refusals render validated display facts in the current UI
+    language and retain escaped engine text in original-details disclosures.
+
     Owned controls, headers and count guidance follow the current UI locale;
     result identity, open panels and navigation facts remain unchanged. Raw
     violation/group/source text is supplied by its separately migrated producer.
@@ -54,6 +57,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerMessage } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useMemo, useState } from "react";
 import {
@@ -253,9 +257,12 @@ function PanelBody({ panel, onSelect }: { panel: ValidationPanel; onSelect: (iri
   }, [panel.problems]);
   if (panel.state === "error") {
     return (
-      <p className="result-error-text">
-        {t("results.shapeError", { error: panel.error ?? "" })}
-      </p>
+      <>
+        <p className="result-error-text">
+          {t("results.shapeError", { error: renderServerMessage(panel.errorUiMessage, panel.error ?? "", t) })}
+        </p>
+        <details><summary>{t("common.details")}</summary><pre>{panel.error}</pre></details>
+      </>
     );
   }
   if (panel.state === "nothing") {

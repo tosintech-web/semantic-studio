@@ -853,6 +853,32 @@ export const SERVER_CONTRACTS = {
       "null"
     ]
   },
+  "projects.base_iri": {},
+  "projects.document_kind": {},
+  "projects.kind": {},
+  "projects.language": {
+    "language": "string"
+  },
+  "projects.layout_key": {
+    "limit": "number"
+  },
+  "projects.layout_limit": {
+    "limit": "number"
+  },
+  "projects.layout_object": {},
+  "projects.name_limit": {
+    "limit": "number"
+  },
+  "projects.name_required": {},
+  "projects.position": {},
+  "projects.positions_object": {},
+  "projects.prefix": {},
+  "projects.shapes_exists": {},
+  "projects.shown": {},
+  "projects.template": {
+    "name": "string"
+  },
+  "projects.viewport": {},
   "reasoning.failed": {},
   "reasoning.stopped": {},
   "reasoning.timeout": {
@@ -863,10 +889,221 @@ export const SERVER_CONTRACTS = {
     "limit": "number"
   },
   "request.invalid": {},
+  "rml.class_limit": {
+    "limit": "number"
+  },
+  "rml.columns_missing": {
+    "columns": "parts"
+  },
+  "rml.delimiter": {},
+  "rml.encoding": {
+    "encoding": "string"
+  },
+  "rml.field_missing": {
+    "property": "string"
+  },
+  "rml.field_multiple": {
+    "count": "number",
+    "property": "string"
+  },
+  "rml.formulation": {
+    "name": "string"
+  },
+  "rml.header": {},
+  "rml.language_datatype": {},
+  "rml.map_count": {
+    "count": "number"
+  },
+  "rml.object_source": {},
+  "rml.pair_limit": {
+    "limit": "number"
+  },
+  "rml.predicate_iri": {},
+  "rml.predicate_object": {},
+  "rml.source": {
+    "name": "string",
+    "source": "string"
+  },
+  "rml.subject_iri": {
+    "iri": "string"
+  },
+  "rml.syntax": {},
+  "rml.template_close": {
+    "template": "string"
+  },
+  "rml.template_open": {
+    "template": "string"
+  },
+  "rml.unsupported": {
+    "name": "string"
+  },
+  "snapshots.choices_object": {},
+  "snapshots.choose_sheet": {},
+  "snapshots.class_required": {},
+  "snapshots.column_missing": {
+    "name": "string"
+  },
+  "snapshots.column_property": {
+    "name": "string"
+  },
+  "snapshots.columns_object": {},
+  "snapshots.mapping_syntax": {},
+  "snapshots.mapping_text": {},
+  "snapshots.model_class": {},
+  "snapshots.one_name": {},
+  "snapshots.refresh.class_limit": {
+    "limit": "number"
+  },
+  "snapshots.refresh.columns_missing": {
+    "columns": "parts"
+  },
+  "snapshots.refresh.delimiter": {},
+  "snapshots.refresh.encoding": {
+    "encoding": "string"
+  },
+  "snapshots.refresh.field_missing": {
+    "property": "string"
+  },
+  "snapshots.refresh.field_multiple": {
+    "count": "number",
+    "property": "string"
+  },
+  "snapshots.refresh.formulation": {
+    "name": "string"
+  },
+  "snapshots.refresh.header": {},
+  "snapshots.refresh.language_datatype": {},
+  "snapshots.refresh.map_count": {
+    "count": "number"
+  },
+  "snapshots.refresh.object_source": {},
+  "snapshots.refresh.pair_limit": {
+    "limit": "number"
+  },
+  "snapshots.refresh.predicate_iri": {},
+  "snapshots.refresh.predicate_object": {},
+  "snapshots.refresh.source": {
+    "name": "string",
+    "source": "string"
+  },
+  "snapshots.refresh.subject_iri": {
+    "iri": "string"
+  },
+  "snapshots.refresh.syntax": {},
+  "snapshots.refresh.template_close": {
+    "template": "string"
+  },
+  "snapshots.refresh.template_open": {
+    "template": "string"
+  },
+  "snapshots.refresh.unsupported": {
+    "name": "string"
+  },
+  "snapshots.refresh_encoding": {
+    "encoding": "string"
+  },
+  "snapshots.refresh_mapping_refused": {},
+  "snapshots.relationship_end": {
+    "name": "string",
+    "property": "string"
+  },
+  "snapshots.sample_file": {
+    "limit": "number",
+    "total": "number"
+  },
+  "snapshots.sample_sheet": {
+    "limit": "number",
+    "total": "number"
+  },
+  "snapshots.source_missing": {},
+  "tabular.binary": {},
+  "tabular.cell_limit": {
+    "characters": "number",
+    "column": "number",
+    "limit": "number",
+    "row": "number"
+  },
+  "tabular.column_limit": {
+    "count": "number",
+    "limit": "number"
+  },
+  "tabular.compression_limit": {
+    "limit": "number",
+    "ratio": "number"
+  },
+  "tabular.csv_syntax": {
+    "row": "number"
+  },
+  "tabular.damaged_zip": {},
+  "tabular.empty": {},
+  "tabular.encoding": {
+    "encoding": "string"
+  },
+  "tabular.entry_compression_limit": {
+    "limit": "number",
+    "name": "string",
+    "ratio": "number"
+  },
+  "tabular.file_too_large": {
+    "bytes": "number",
+    "limit": "number"
+  },
+  "tabular.format.ods": {},
+  "tabular.format.xls": {},
+  "tabular.format.xlsb": {},
+  "tabular.format.xlsm": {},
+  "tabular.format.xltm": {},
+  "tabular.header_empty": {
+    "name": "string",
+    "row": "number"
+  },
+  "tabular.header_row": {},
+  "tabular.invalid_byte": {
+    "encoding": "string",
+    "position": "number"
+  },
+  "tabular.long_cell": {
+    "limit": "number",
+    "row": "number"
+  },
+  "tabular.no_sheets": {},
+  "tabular.not_csv_encoding": {},
+  "tabular.not_xlsx": {},
+  "tabular.password": {},
+  "tabular.separator": {},
+  "tabular.sheet_cell_limit": {
+    "characters": "number",
+    "column": "number",
+    "limit": "number",
+    "name": "string",
+    "row": "number"
+  },
+  "tabular.sheet_column_limit": {
+    "column": "number",
+    "limit": "number",
+    "name": "string",
+    "row": "number"
+  },
+  "tabular.sheet_empty": {
+    "name": "string"
+  },
+  "tabular.sheet_missing": {
+    "name": "string"
+  },
+  "tabular.unpacked_limit": {
+    "bytes": "number",
+    "limit": "number"
+  },
+  "tabular.unsafe_parser": {},
+  "tabular.workbook_unreadable": {},
+  "tabular.xml_declaration": {
+    "name": "string"
+  },
   "validation.min_count": {
     "count": "number",
     "name": "string"
   },
+  "validation.shapes_refused": {},
   "words.characteristic.asymmetric": {},
   "words.characteristic.functional": {},
   "words.characteristic.functionalAttribute": {},
@@ -1210,12 +1447,117 @@ export interface ServerMessageArgs {
   "model.warning.symmetric.any": { "classes": string; "end": string; "name": string };
   "model.warning.symmetric.one": { "classes": string; "end": string; "name": string };
   "parse.syntax": { "format": string; "line": number | null };
+  "projects.base_iri": undefined;
+  "projects.document_kind": undefined;
+  "projects.kind": undefined;
+  "projects.language": { "language": string };
+  "projects.layout_key": { "limit": number };
+  "projects.layout_limit": { "limit": number };
+  "projects.layout_object": undefined;
+  "projects.name_limit": { "limit": number };
+  "projects.name_required": undefined;
+  "projects.position": undefined;
+  "projects.positions_object": undefined;
+  "projects.prefix": undefined;
+  "projects.shapes_exists": undefined;
+  "projects.shown": undefined;
+  "projects.template": { "name": string };
+  "projects.viewport": undefined;
   "reasoning.failed": undefined;
   "reasoning.stopped": undefined;
   "reasoning.timeout": { "seconds": number };
   "reasoning.too_large": { "count": number; "limit": number };
   "request.invalid": undefined;
+  "rml.class_limit": { "limit": number };
+  "rml.columns_missing": { "columns": string };
+  "rml.delimiter": undefined;
+  "rml.encoding": { "encoding": string };
+  "rml.field_missing": { "property": string };
+  "rml.field_multiple": { "count": number; "property": string };
+  "rml.formulation": { "name": string };
+  "rml.header": undefined;
+  "rml.language_datatype": undefined;
+  "rml.map_count": { "count": number };
+  "rml.object_source": undefined;
+  "rml.pair_limit": { "limit": number };
+  "rml.predicate_iri": undefined;
+  "rml.predicate_object": undefined;
+  "rml.source": { "name": string; "source": string };
+  "rml.subject_iri": { "iri": string };
+  "rml.syntax": undefined;
+  "rml.template_close": { "template": string };
+  "rml.template_open": { "template": string };
+  "rml.unsupported": { "name": string };
+  "snapshots.choices_object": undefined;
+  "snapshots.choose_sheet": undefined;
+  "snapshots.class_required": undefined;
+  "snapshots.column_missing": { "name": string };
+  "snapshots.column_property": { "name": string };
+  "snapshots.columns_object": undefined;
+  "snapshots.mapping_syntax": undefined;
+  "snapshots.mapping_text": undefined;
+  "snapshots.model_class": undefined;
+  "snapshots.one_name": undefined;
+  "snapshots.refresh.class_limit": { "limit": number };
+  "snapshots.refresh.columns_missing": { "columns": string };
+  "snapshots.refresh.delimiter": undefined;
+  "snapshots.refresh.encoding": { "encoding": string };
+  "snapshots.refresh.field_missing": { "property": string };
+  "snapshots.refresh.field_multiple": { "count": number; "property": string };
+  "snapshots.refresh.formulation": { "name": string };
+  "snapshots.refresh.header": undefined;
+  "snapshots.refresh.language_datatype": undefined;
+  "snapshots.refresh.map_count": { "count": number };
+  "snapshots.refresh.object_source": undefined;
+  "snapshots.refresh.pair_limit": { "limit": number };
+  "snapshots.refresh.predicate_iri": undefined;
+  "snapshots.refresh.predicate_object": undefined;
+  "snapshots.refresh.source": { "name": string; "source": string };
+  "snapshots.refresh.subject_iri": { "iri": string };
+  "snapshots.refresh.syntax": undefined;
+  "snapshots.refresh.template_close": { "template": string };
+  "snapshots.refresh.template_open": { "template": string };
+  "snapshots.refresh.unsupported": { "name": string };
+  "snapshots.refresh_encoding": { "encoding": string };
+  "snapshots.refresh_mapping_refused": undefined;
+  "snapshots.relationship_end": { "name": string; "property": string };
+  "snapshots.sample_file": { "limit": number; "total": number };
+  "snapshots.sample_sheet": { "limit": number; "total": number };
+  "snapshots.source_missing": undefined;
+  "tabular.binary": undefined;
+  "tabular.cell_limit": { "characters": number; "column": number; "limit": number; "row": number };
+  "tabular.column_limit": { "count": number; "limit": number };
+  "tabular.compression_limit": { "limit": number; "ratio": number };
+  "tabular.csv_syntax": { "row": number };
+  "tabular.damaged_zip": undefined;
+  "tabular.empty": undefined;
+  "tabular.encoding": { "encoding": string };
+  "tabular.entry_compression_limit": { "limit": number; "name": string; "ratio": number };
+  "tabular.file_too_large": { "bytes": number; "limit": number };
+  "tabular.format.ods": undefined;
+  "tabular.format.xls": undefined;
+  "tabular.format.xlsb": undefined;
+  "tabular.format.xlsm": undefined;
+  "tabular.format.xltm": undefined;
+  "tabular.header_empty": { "name": string; "row": number };
+  "tabular.header_row": undefined;
+  "tabular.invalid_byte": { "encoding": string; "position": number };
+  "tabular.long_cell": { "limit": number; "row": number };
+  "tabular.no_sheets": undefined;
+  "tabular.not_csv_encoding": undefined;
+  "tabular.not_xlsx": undefined;
+  "tabular.password": undefined;
+  "tabular.separator": undefined;
+  "tabular.sheet_cell_limit": { "characters": number; "column": number; "limit": number; "name": string; "row": number };
+  "tabular.sheet_column_limit": { "column": number; "limit": number; "name": string; "row": number };
+  "tabular.sheet_empty": { "name": string };
+  "tabular.sheet_missing": { "name": string };
+  "tabular.unpacked_limit": { "bytes": number; "limit": number };
+  "tabular.unsafe_parser": undefined;
+  "tabular.workbook_unreadable": undefined;
+  "tabular.xml_declaration": { "name": string };
   "validation.min_count": { "count": number; "name": string };
+  "validation.shapes_refused": undefined;
   "words.characteristic.asymmetric": undefined;
   "words.characteristic.functional": undefined;
   "words.characteristic.functionalAttribute": undefined;

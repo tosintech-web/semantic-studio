@@ -11,6 +11,9 @@ SUMMARY
     state and a sentence per problem in the learner's own names.
 
 BASIC IDEA
+    Owned refusals add validated display facts at their source. Legacy text,
+    exception types and input-processing rules remain unchanged.
+
     pySHACL runs with inference off, SHACL Advanced Features off, JavaScript
     off and owl:imports in the shapes not followed (Section 9, OPTIONS
     below; a test asserts each). Inference is not needed for what learners
@@ -70,6 +73,7 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
+from .messages import make_message, MessageText
 import contextvars
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -141,6 +145,16 @@ IRREGULAR = {"person": "people", "child": "children", "man": "men", "woman": "wo
 class ShapesRefused(Exception):
     """pySHACL would not run the shapes: one is broken. Carries its reason."""
 
+    def __init__(self, message: str, *, ui_message: dict | None = None):
+        super().__init__(message)
+        self.ui_message = ui_message
+
+
+def _refusal_text(error: ShapesRefused) -> str:
+    """Keep run_shapes' string contract while forwarding producer-owned facts."""
+    wire = error.ui_message
+    return MessageText(str(error), wire["code"], **wire["args"]) if wire else str(error)
+
 
 def language_name(tag: str) -> str:
     base = (tag or "").split("-")[0].lower()
@@ -189,10 +203,16 @@ def _run(data: Graph, shapes: Graph, use: Optional[list] = None):
             data, shacl_graph=shapes, inplace=True, abort_on_first=False, **kwargs
         )
     except Exception as exc:  # ShapeLoadError, ConstraintLoadError and friends
-        raise ShapesRefused(_reason(str(exc))) from exc
+        raise ShapesRefused(
+            _reason(str(exc)),
+            ui_message=make_message("validation.shapes_refused"),
+        ) from exc
     if not isinstance(report, Graph):
         # pySHACL reports some refusals as a "Validation Failure" text.
-        raise ShapesRefused(_reason(str(text)))
+        raise ShapesRefused(
+            _reason(str(text)),
+            ui_message=make_message("validation.shapes_refused"),
+        )
     return report
 
 
@@ -216,11 +236,11 @@ def run_shapes(data: Graph, shapes: Graph, listed: list) -> tuple[list, dict]:
                 _run(data, shapes, [node])
                 good.append(node)
             except ShapesRefused as exc:
-                errors[node] = str(exc)
+                errors[node] = _refusal_text(exc)
         if not errors and listed:
             # Each runs alone but not together (a shared nested shape):
             # every panel says so rather than none.
-            return [], {node: str(whole) for node in listed}
+            return [], {node: _refusal_text(whole) for node in listed}
         return (_results(_run(data, shapes, good)) if good else []), errors
 
 
@@ -586,7 +606,9 @@ def panels(
         }
         if node in errors:
             panel["state"] = "error"
-            panel["error"] = errors[node]
+            panel["error"] = str(errors[node])
+            if getattr(errors[node], "ui_message", None) is not None:
+                panel["errorUiMessage"] = errors[node].ui_message
             out.append(panel)
             continue
         found = by_owner[node]
