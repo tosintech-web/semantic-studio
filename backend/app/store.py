@@ -88,6 +88,8 @@ from __future__ import annotations
 #   sys       - detect the operating system to pick the OS-standard data dir
 #   threading - locks so concurrent requests do not double-parse or corrupt state
 #   uuid      - generate stable, collision-free ontology ids
+from collections import OrderedDict
+
 import contextlib
 import contextvars
 import json
@@ -349,6 +351,10 @@ class Ontology:
     # The sentence builder's choices for a project class's form (axioms 5.9):
     # (key, the view they were read from, value), built once per revision.
     choices_cache: Optional[tuple] = field(default=None, repr=False)
+    # Dictionary projections are bounded per ontology and protected after the
+    # document lock. Their own key includes imports identity and data generation.
+    entity_cache: OrderedDict = field(default_factory=OrderedDict, repr=False, compare=False)
+    entity_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
     # A project model's snapshots, supplied by editing.py on open:
     # () -> (generation, [(graph, info)]). None everywhere else.
     snapshots: Optional[Callable[[], tuple]] = field(default=None, repr=False, compare=False)

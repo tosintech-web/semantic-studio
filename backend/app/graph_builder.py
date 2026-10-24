@@ -211,8 +211,25 @@ def _preferred_literal(graph: Graph, node: URIRef, predicates, langs: Sequence[s
     return preferred_literal(values, langs)
 
 
-def preferred_literal(values, langs: Sequence[str]):
-    """Select from copied (predicate priority, literal) pairs without a graph."""
+def preferred_literal(values, langs: Optional[Sequence[str]]):
+    """Select from copied (predicate priority, literal) pairs without a graph.
+
+    None explicitly means the legacy Library rule: an earlier predicate wins
+    even if its only value is foreign. An empty preference list still uses
+    stable untagged/other-language ordering, like an explicit view.
+    """
+    if langs is None:
+        priority = None
+        fallback = None
+        for predicate, value in values:
+            if predicate != priority and fallback is not None:
+                return fallback
+            priority = predicate
+            if not value.language or lang_matches(value.language, "en"):
+                return value
+            if fallback is None:
+                fallback = value
+        return fallback
     def rank(pair):
         predicate, value = pair
         tag = value.language or ""

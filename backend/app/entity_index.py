@@ -53,7 +53,7 @@ class Entity:
     names: tuple[tuple[int, Literal], ...]
     fields: tuple[SearchValue, ...]
 
-    def display_name(self, languages: tuple[str, ...]) -> str:
+    def display_name(self, languages: tuple[str, ...] | None) -> str:
         value = preferred_literal(self.names, languages)
         return str(value) if value is not None else _local_name(self.iri)
 
@@ -92,7 +92,7 @@ def build_entity_index(graph: Graph, graph_nodes: list[dict]) -> EntityIndex:
     return EntityIndex(MappingProxyType(entities))
 
 
-def rank_matches(index: EntityIndex, query: str, languages: tuple[str, ...]) -> list[EntityMatch]:
+def rank_matches(index: EntityIndex, query: str, languages: tuple[str, ...] | None) -> list[EntityMatch]:
     query = normalize_query(query)
     if not query:
         return []
