@@ -2549,3 +2549,52 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `command.removed_rule` | shape_name, path | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
 | `command.deleted_shape` | name | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
 | `command.added_check` | shape_name, path | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `words.list.and` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.functional` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.inverseFunctional` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.symmetric` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.transitive` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.asymmetric` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.irreflexive` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.reflexive` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.characteristic.functionalAttribute` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.mapping.exactMatch` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.mapping.closeMatch` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.mapping.broadMatch` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.mapping.narrowMatch` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.mapping.relatedMatch` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.class` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.objectProperty` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.datatypeProperty` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.annotationProperty` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.property` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.concept` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.conceptScheme` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.example` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.entity` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `command.set_label` | name, language | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.set_comment` | name, language | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.set_domain` | name, target | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.set_range` | name, target | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.set_ends_domain` | name, domain | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.set_ends_range` | name, range | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.set_ends_both` | name, domain, range | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.cleared_domain` | name | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.cleared_range` | name | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.assigned_domain` | property, class_name | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.moved_domain` | property, class_name | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.shared_domain` | property, names | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.shared_parent` | names, property | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.removed_domain_member` | class_name, property | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.made_inverse` | inverse, name | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.marked_characteristic` | name, characteristic | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.unmarked_characteristic` | name, characteristic | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.added_mapping` | mapping, concept, target | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.removed_mapping` | mapping, concept, target | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.deleted_entity` | kind, name | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.linked_example_value` | subject, target, property | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.removed_example_link` | subject, target, property | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.set_example_value` | property, subject | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.added_example_value` | property, subject | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.removed_example_value` | property, subject | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+| `command.applied_turtle` | — | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |

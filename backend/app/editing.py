@@ -159,7 +159,7 @@ from typing import Callable, Iterable, Optional
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
-from .messages import make_message, word_part
+from .messages import literal_part, make_message, word_part
 from .graph_builder import (
     lang_matches,
     name_in,
@@ -924,7 +924,13 @@ def _set_text(ctx: Context, a: dict, predicate_for: Callable[[URIRef], URIRef], 
         raise CommandError(f'"{lang}" is not a well-formed language tag (for example en or fr).')
     predicate = predicate_for(iri)
     old = _label_triples(ctx, iri, predicate, lang)
-    change = _change(ctx.graph, "", [(iri, predicate, Literal(value.strip(), lang=lang))], old)
+    change = _change(
+        ctx.graph,
+        "",
+        [(iri, predicate, Literal(value.strip(), lang=lang))],
+        old,
+        ui_message=make_message(f"command.set_{what}", name=ctx.name(iri), language=lang),
+    )
     change.label = f"Set {what} of {ctx.name(iri)} ({lang})"
     return change
 
@@ -1093,8 +1099,15 @@ def _set_single(ctx: Context, a: dict, predicate: URIRef, what: str) -> Change:
     ctx.require(target, what)
     old = _end_removes(ctx, prop, predicate)
     return _change(
-        ctx.graph, f"Set {what} of {ctx.name(prop)} to {ctx.name(target)}",
-        [(prop, predicate, target)], old,
+        ctx.graph,
+        f"Set {what} of {ctx.name(prop)} to {ctx.name(target)}",
+        [(prop, predicate, target)],
+        old,
+        ui_message=make_message(
+            "command.set_domain" if predicate == RDFS.domain else "command.set_range",
+            name=ctx.name(prop),
+            target=ctx.name(target),
+        ),
     )
 
 
@@ -1159,6 +1172,14 @@ def cmd_swap_ends(ctx: Context, a: dict) -> Change:
     )
 
 
+def _ends_notice(name: str, ends: dict[str, str]) -> dict:
+    if len(ends) == 2:
+        code = "command.set_ends_both"
+    else:
+        code = "command.set_ends_domain" if "domain" in ends else "command.set_ends_range"
+    return make_message(code, name=name, **ends)
+
+
 def cmd_set_ends(ctx: Context, a: dict) -> Change:
     """A relationship's domain and range set together, as one undo step: a
     line drawn to complete an existing relationship sets both at once (the
@@ -1167,6 +1188,7 @@ def cmd_set_ends(ctx: Context, a: dict) -> Change:
     if not a.get("domain") and not a.get("range"):
         raise CommandError("Say which end to set: a domain, a range, or both.")
     adds, removes, parts = [], [], []
+    end_names: dict[str, str] = {}
     for key, predicate, word in (("domain", RDFS.domain, "from"), ("range", RDFS.range, "to")):
         if not a.get(key):
             continue
@@ -1175,7 +1197,14 @@ def cmd_set_ends(ctx: Context, a: dict) -> Change:
         removes += _end_removes(ctx, prop, predicate)
         adds.append((prop, predicate, target))
         parts.append(f"{word} {ctx.name(target)}")
-    return _change(ctx.graph, f"Set the ends of {ctx.name(prop)}: {' '.join(parts)}", adds, removes)
+        end_names[key] = ctx.name(target)
+    return _change(
+        ctx.graph,
+        f"Set the ends of {ctx.name(prop)}: {' '.join(parts)}",
+        adds,
+        removes,
+        ui_message=_ends_notice(ctx.name(prop), end_names),
+    )
 
 
 # --- relationship Stage B: ends, inverse, characteristics, parent (5.6, 5.7) ------------
@@ -1195,7 +1224,15 @@ def _clear_end(ctx: Context, a: dict, predicate: URIRef, word: str) -> Change:
     removes = _end_removes(ctx, prop, predicate)
     if not removes:
         raise CommandError(f"{ctx.name(prop)} has no {word} to clear.")
-    return _change(ctx.graph, f"Cleared the {word} of {ctx.name(prop)}", removes=removes)
+    return _change(
+        ctx.graph,
+        f"Cleared the {word} of {ctx.name(prop)}",
+        removes=removes,
+        ui_message=make_message(
+            "command.cleared_domain" if predicate == RDFS.domain else "command.cleared_range",
+            name=ctx.name(prop),
+        ),
+    )
 
 
 def cmd_clear_domain(ctx: Context, a: dict) -> Change:
@@ -1211,6 +1248,16 @@ def cmd_clear_range(ctx: Context, a: dict) -> Change:
 
 def _share_name(ctx: Context) -> Callable[[URIRef], str]:
     return lambda iri: _rule_name(ctx, iri)
+
+
+def _named_parts(items, name: Callable) -> list[dict]:
+    """Keep a class group flat and its conjunction independent of UI language."""
+    parts = []
+    for index, item in enumerate(items):
+        if index:
+            parts.append(word_part("words.list.and"))
+        parts.append(literal_part(name(item)))
+    return parts
 
 
 def share_plan(ctx: Context, a: dict) -> dict:
@@ -1306,7 +1353,12 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
         cls = URIRef(plan["class"]["iri"])
         c = name(cls)
         if case == "A":
-            return _change(ctx.graph, f"Gave {p} to {c}", [(prop, RDFS.domain, cls)])
+            return _change(
+                ctx.graph,
+                f"Gave {p} to {c}",
+                [(prop, RDFS.domain, cls)],
+                ui_message=make_message("command.assigned_domain", property=p, class_name=c),
+            )
         if case == "B":
             via = plan["via"]["label"]
             raise CommandError(
@@ -1315,7 +1367,11 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
             )
         if case == "C":
             return _change(
-                ctx.graph, f"Moved {p} up to {c}", [(prop, RDFS.domain, cls)], _end_removes(ctx, prop, RDFS.domain)
+                ctx.graph,
+                f"Moved {p} up to {c}",
+                [(prop, RDFS.domain, cls)],
+                _end_removes(ctx, prop, RDFS.domain),
+                ui_message=make_message("command.moved_domain", property=p, class_name=c),
             )
         everyone = [*reading.classes, cls]
     how = a.get("how")
@@ -1330,18 +1386,36 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
                 "Give them a shared parent instead."
             )
         members = list(reading.classes) if cls is None else axioms.shared_members(view, reading, cls)
-        return _change(ctx.graph, f"Shared {p} between {names}", axioms.union_triples(prop, members)[1], removes)
+        return _change(
+            ctx.graph,
+            f"Shared {p} between {names}",
+            axioms.union_triples(prop, members)[1],
+            removes,
+            ui_message=make_message("command.shared_domain", property=p, names=_named_parts(everyone, name)),
+        )
     if how == "parent":
         if not plan["choices"]["parent"]:
             raise CommandError(_imported_sentence(plan))
         parent, adds = _parent_change(ctx, a, everyone, rdfs=not plan["choices"]["union"])
         adds.append((prop, RDFS.domain, parent))
-        return _change(ctx.graph, f"Gave {names} a shared parent, and {p} to it", adds, removes)
+        return _change(
+            ctx.graph,
+            f"Gave {names} a shared parent, and {p} to it",
+            adds,
+            removes,
+            ui_message=make_message("command.shared_parent", property=p, names=_named_parts(everyone, name)),
+        )
     if how == "up":
         target = ctx.iri(a.get("parent"), "parent class")
         if str(target) not in {u["iri"] for u in plan["choices"]["up"]}:
             raise CommandError(f"{name(target)} is not a parent {names} share.")
-        return _change(ctx.graph, f"Moved {p} up to {name(target)}", [(prop, RDFS.domain, target)], removes)
+        return _change(
+            ctx.graph,
+            f"Moved {p} up to {name(target)}",
+            [(prop, RDFS.domain, target)],
+            removes,
+            ui_message=make_message("command.moved_domain", property=p, class_name=name(target)),
+        )
     raise CommandError(f"Say how to share {p}: as a union, with a shared parent, or up to a parent they share.")
 
 
@@ -1361,7 +1435,13 @@ def cmd_unshare_domain(ctx: Context, a: dict) -> Change:
         adds = axioms.union_triples(prop, left)[1] if len(left) >= 2 else [(prop, RDFS.domain, c) for c in left]
     else:
         removes, adds = [(prop, RDFS.domain, cls)], []
-    return _change(ctx.graph, f"Removed {name(cls)} from {name(prop)}", adds, removes)
+    return _change(
+        ctx.graph,
+        f"Removed {name(cls)} from {name(prop)}",
+        adds,
+        removes,
+        ui_message=make_message("command.removed_domain_member", property=name(prop), class_name=name(cls)),
+    )
 
 
 def _inverse_triples(ctx: Context, prop: URIRef) -> list:
@@ -1420,7 +1500,13 @@ def cmd_set_inverse(ctx: Context, a: dict) -> Change:
         adds += [(inverse, RDFS.range, d) for d in ctx.graph.objects(prop, RDFS.domain) if isinstance(d, URIRef)]
         created = inverse
         target_name = label
-    change = _change(ctx.graph, f"Made {target_name} the other way round of {ctx.name(prop)}", adds, removes)
+    change = _change(
+        ctx.graph,
+        f"Made {target_name} the other way round of {ctx.name(prop)}",
+        adds,
+        removes,
+        ui_message=make_message("command.made_inverse", name=ctx.name(prop), inverse=target_name),
+    )
     change.created = created
     return change
 
@@ -1441,6 +1527,11 @@ def cmd_clear_inverse(ctx: Context, a: dict) -> Change:
         removes=removes,
         ui_message=make_message("command.cleared_inverse", name=ctx.name(prop)),
     )
+
+
+def _characteristic_parts(name: str, attribute: bool) -> list[dict]:
+    token = "functionalAttribute" if attribute else name
+    return [word_part(f"words.characteristic.{token}")]
 
 
 def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
@@ -1468,10 +1559,28 @@ def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
     if on:
         if triple in ctx.graph:
             raise CommandError(f'{ctx.name(prop)} is already "{words}".')
-        return _change(ctx.graph, f'Marked {ctx.name(prop)} as "{words}"', [triple])
+        return _change(
+            ctx.graph,
+            f'Marked {ctx.name(prop)} as "{words}"',
+            [triple],
+            ui_message=make_message(
+                "command.marked_characteristic",
+                name=ctx.name(prop),
+                characteristic=_characteristic_parts(name, attribute),
+            ),
+        )
     if triple not in ctx.graph:
         raise CommandError(f'{ctx.name(prop)} is not "{words}".')
-    return _change(ctx.graph, f'Unmarked {ctx.name(prop)} as "{words}"', removes=[triple])
+    return _change(
+        ctx.graph,
+        f'Unmarked {ctx.name(prop)} as "{words}"',
+        removes=[triple],
+        ui_message=make_message(
+            "command.unmarked_characteristic",
+            name=ctx.name(prop),
+            characteristic=_characteristic_parts(name, attribute),
+        ),
+    )
 
 
 def _property_kind(ctx: Context, iri: URIRef) -> Optional[URIRef]:
@@ -1672,7 +1781,15 @@ def cmd_add_mapping(ctx: Context, a: dict) -> Change:
     if (concept, predicate, target) in ctx.graph:
         raise CommandError(f"{ctx.name(concept)} already has that mapping.")
     return _change(
-        ctx.graph, f"Added {words} of {ctx.name(concept)}: {target}", [(concept, predicate, target)]
+        ctx.graph,
+        f"Added {words} of {ctx.name(concept)}: {target}",
+        [(concept, predicate, target)],
+        ui_message=make_message(
+            "command.added_mapping",
+            concept=ctx.name(concept),
+            mapping=[word_part(f"words.mapping.{a['kind']}")],
+            target=str(target),
+        ),
     )
 
 
@@ -1681,8 +1798,15 @@ def cmd_remove_mapping(ctx: Context, a: dict) -> Change:
     if (concept, predicate, target) not in ctx.graph:
         raise CommandError(f"{ctx.name(concept)} has no such mapping to remove.")
     return _change(
-        ctx.graph, f"Removed {words} of {ctx.name(concept)}: {target}",
+        ctx.graph,
+        f"Removed {words} of {ctx.name(concept)}: {target}",
         removes=[(concept, predicate, target)],
+        ui_message=make_message(
+            "command.removed_mapping",
+            concept=ctx.name(concept),
+            mapping=[word_part(f"words.mapping.{a['kind']}")],
+            target=str(target),
+        ),
     )
 
 
@@ -1782,6 +1906,13 @@ def _expressions_mentioning(graph: Graph, iri: URIRef) -> set:
     return extra
 
 
+_DELETE_KIND_TOKENS = {
+    "class": "class", "object property": "objectProperty", "datatype property": "datatypeProperty",
+    "annotation property": "annotationProperty", "property": "property", "concept": "concept",
+    "concept scheme": "conceptScheme", "example": "example", "entity": "entity",
+}
+
+
 def delete_plan(ctx: Context, a: dict) -> tuple[Change, dict]:
     iri = ctx.iri(a.get("iri"), "entity")
     if not ctx.mentioned(iri):
@@ -1864,7 +1995,17 @@ def delete_plan(ctx: Context, a: dict) -> tuple[Change, dict]:
         "individuals": [ref(i) for i in individuals],
         "importMentions": import_mentions,
     }
-    change = _change(g, f"Deleted {kind} {ctx.name(iri)}", adds + shrunk, removing)
+    change = _change(
+        g,
+        f"Deleted {kind} {ctx.name(iri)}",
+        adds + shrunk,
+        removing,
+        ui_message=make_message(
+            "command.deleted_entity",
+            kind=[word_part("words.kind." + _DELETE_KIND_TOKENS[kind])],
+            name=ctx.name(iri),
+        ),
+    )
     return change, impact
 
 
@@ -1995,13 +2136,33 @@ def _linked(ctx: Context, iri: URIRef, term, name: str) -> str:
     return f"{ctx.name(iri)} to {pick_label_in(_class_graph(ctx), term, ctx.languages)[0]} by {name}"
 
 
+def _example_value_notice(ctx: Context, iri: URIRef, term, name: str, action: str) -> dict:
+    """A link's operands stay separate; _linked is only the legacy English form."""
+    subject = ctx.name(iri)
+    if isinstance(term, URIRef):
+        return make_message(
+            "command.removed_example_link" if action == "remove" else "command.linked_example_value",
+            subject=subject, target=pick_label_in(_class_graph(ctx), term, ctx.languages)[0], property=name,
+        )
+    return make_message(
+        {"set": "command.set_example_value", "add": "command.added_example_value",
+         "remove": "command.removed_example_value"}[action], subject=subject, property=name,
+    )
+
+
 def cmd_set_example_value(ctx: Context, a: dict) -> Change:
     """The one value of an attribute or relationship, replacing any others:
     what a single field sets (5.8)."""
     iri, prop, term, name = _example_value(ctx, a)
     old = [(iri, prop, o) for o in ctx.graph.objects(iri, prop)]
     label = f"Linked {_linked(ctx, iri, term, name)}" if isinstance(term, URIRef) else f"Set {name} of {ctx.name(iri)}"
-    return _change(ctx.graph, label, [(iri, prop, term)], old)
+    return _change(
+        ctx.graph,
+        label,
+        [(iri, prop, term)],
+        old,
+        ui_message=_example_value_notice(ctx, iri, term, name, "set"),
+    )
 
 
 def cmd_add_example_value(ctx: Context, a: dict) -> Change:
@@ -2009,7 +2170,12 @@ def cmd_add_example_value(ctx: Context, a: dict) -> Change:
     if (iri, prop, _stored(ctx, iri, prop, term)) in ctx.graph:
         raise CommandError(f"{ctx.name(iri)} already has that {name}.")
     label = f"Linked {_linked(ctx, iri, term, name)}" if isinstance(term, URIRef) else f"Added {name} to {ctx.name(iri)}"
-    return _change(ctx.graph, label, [(iri, prop, term)])
+    return _change(
+        ctx.graph,
+        label,
+        [(iri, prop, term)],
+        ui_message=_example_value_notice(ctx, iri, term, name, "add"),
+    )
 
 
 def _stored_value(ctx: Context, spec):
@@ -2037,7 +2203,12 @@ def cmd_remove_example_value(ctx: Context, a: dict) -> Change:
         raise CommandError(f"{ctx.name(iri)} has no such {name} to remove.")
     label = (f"Removed the link from {_linked(ctx, iri, term, name)}" if isinstance(term, URIRef)
              else f"Removed {name} from {ctx.name(iri)}")
-    return _change(ctx.graph, label, removes=[(iri, prop, term)])
+    return _change(
+        ctx.graph,
+        label,
+        removes=[(iri, prop, term)],
+        ui_message=_example_value_notice(ctx, iri, term, name, "remove"),
+    )
 
 
 # --- rules on a class: restrictions, disjoint and equivalent classes (axioms 5.8 to 5.10) ----
@@ -3313,7 +3484,10 @@ class EditingService:
         with document.lock:
             graph = document.graph
             old, new = set(graph), set(parsed)
-            change = Change("Applied Turtle edits", list(new - old), list(old - new))
+            change = Change(
+                "Applied Turtle edits", list(new - old), list(old - new),
+                ui_message=make_message("command.applied_turtle"),
+            )
             for prefix, namespace in parsed.namespaces():
                 graph.bind(prefix, namespace, override=True, replace=True)
             before = document.editor_state()
@@ -3323,6 +3497,7 @@ class EditingService:
             return {
                 "revision": document.ontology.revision,
                 "label": change.label,
+                "uiMessage": change.ui_message,
                 "delta": _delta_json(change),
                 "state": document.state(),
             }

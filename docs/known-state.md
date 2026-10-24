@@ -2505,3 +2505,24 @@ paths, severity, message removal and CheckInData's new/existing-shape branches.
 API tests take them through undo/redo and RDF isomorphism. An 80-term alternative
 path retains all 159 noun/separator parts. The project header test keeps the same
 shapes document, notice and API request across UI-language changes.
+
+
+### Every editing operation carries a display descriptor (P1)
+
+All 57 `_change` producer sites in editing.py now attach message metadata;
+`apply_text` also returns the descriptor of its direct Change. The text setter
+keeps its label/comment mode and language, endpoint setters retain the selected
+side(s), shared-domain cases keep literal class names and a localized conjunction,
+characteristics use the actual enum and property kind, mappings use the mapping
+enum, and deletion uses Context.kind's semantic classification. Example values
+branch on URIRef versus literal and keep subject, target and field names separate.
+No descriptor infers facts from a finished English label, `_linked` phrase or
+joined English list. The previous labels, deltas and refusal rules are intact.
+
+API tests cover all characteristic/mapping enums, nine deletion kinds, the
+sharing cases, literal/link modes and source apply on both documents. They take
+each through undo/redo with graph isomorphism; source redo also keeps the exact
+Turtle text including its comment. The old scalar and flat-parts wire contracts
+are unchanged by these producers. This completes success-label producers only;
+custom client announcement callbacks and known refusals/warnings/results still
+require their own migration and end-to-end verification.

@@ -179,6 +179,133 @@
     "command.added_check": {
       "shape_name": "string",
       "path": "parts"
-    }
+    },
+    "words.list.and": {},
+    "words.characteristic.functional": {},
+    "words.characteristic.inverseFunctional": {},
+    "words.characteristic.symmetric": {},
+    "words.characteristic.transitive": {},
+    "words.characteristic.asymmetric": {},
+    "words.characteristic.irreflexive": {},
+    "words.characteristic.reflexive": {},
+    "words.characteristic.functionalAttribute": {},
+    "words.mapping.exactMatch": {},
+    "words.mapping.closeMatch": {},
+    "words.mapping.broadMatch": {},
+    "words.mapping.narrowMatch": {},
+    "words.mapping.relatedMatch": {},
+    "words.kind.class": {},
+    "words.kind.objectProperty": {},
+    "words.kind.datatypeProperty": {},
+    "words.kind.annotationProperty": {},
+    "words.kind.property": {},
+    "words.kind.concept": {},
+    "words.kind.conceptScheme": {},
+    "words.kind.example": {},
+    "words.kind.entity": {},
+    "command.set_label": {
+      "name": "string",
+      "language": "string"
+    },
+    "command.set_comment": {
+      "name": "string",
+      "language": "string"
+    },
+    "command.set_domain": {
+      "name": "string",
+      "target": "string"
+    },
+    "command.set_range": {
+      "name": "string",
+      "target": "string"
+    },
+    "command.set_ends_domain": {
+      "name": "string",
+      "domain": "string"
+    },
+    "command.set_ends_range": {
+      "name": "string",
+      "range": "string"
+    },
+    "command.set_ends_both": {
+      "name": "string",
+      "domain": "string",
+      "range": "string"
+    },
+    "command.cleared_domain": {
+      "name": "string"
+    },
+    "command.cleared_range": {
+      "name": "string"
+    },
+    "command.assigned_domain": {
+      "property": "string",
+      "class_name": "string"
+    },
+    "command.moved_domain": {
+      "property": "string",
+      "class_name": "string"
+    },
+    "command.shared_domain": {
+      "property": "string",
+      "names": "parts"
+    },
+    "command.shared_parent": {
+      "names": "parts",
+      "property": "string"
+    },
+    "command.removed_domain_member": {
+      "class_name": "string",
+      "property": "string"
+    },
+    "command.made_inverse": {
+      "inverse": "string",
+      "name": "string"
+    },
+    "command.marked_characteristic": {
+      "name": "string",
+      "characteristic": "parts"
+    },
+    "command.unmarked_characteristic": {
+      "name": "string",
+      "characteristic": "parts"
+    },
+    "command.added_mapping": {
+      "mapping": "parts",
+      "concept": "string",
+      "target": "string"
+    },
+    "command.removed_mapping": {
+      "mapping": "parts",
+      "concept": "string",
+      "target": "string"
+    },
+    "command.deleted_entity": {
+      "kind": "parts",
+      "name": "string"
+    },
+    "command.linked_example_value": {
+      "subject": "string",
+      "target": "string",
+      "property": "string"
+    },
+    "command.removed_example_link": {
+      "subject": "string",
+      "target": "string",
+      "property": "string"
+    },
+    "command.set_example_value": {
+      "property": "string",
+      "subject": "string"
+    },
+    "command.added_example_value": {
+      "property": "string",
+      "subject": "string"
+    },
+    "command.removed_example_value": {
+      "property": "string",
+      "subject": "string"
+    },
+    "command.applied_turtle": {}
   }
 }

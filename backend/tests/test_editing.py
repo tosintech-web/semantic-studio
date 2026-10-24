@@ -35,6 +35,8 @@ EXPECTED OUTPUT
     - Additive creation/history metadata with unchanged English labels,
       revisions and before/after RDF isomorphism; compound path words and
       literal names stay distinct across every rule-set command and history.
+    - Conditional operation descriptors preserve endpoint choices, semantic
+      characteristic/mapping/deletion kinds, shared names and exact Turtle text.
 ================================================================================
 """
 
@@ -1903,3 +1905,225 @@ def test_other_shape_notices_keep_legacy_labels_and_rdf(pid, action):
     before = shapes_graph(pid)
     result = shapes_ok(pid, command, **args)
     _shape_history_notice(pid, result, before, {"code": code, "args": facts}, legacy)
+
+
+CONDITIONAL_ATTR = "属性 <b>{field}</b>"
+CONDITIONAL_E1 = "個体甲 <img>{subject}"
+CONDITIONAL_E2 = "個体乙 {target}"
+CONDITIONAL_C = "丙 {class}"
+
+
+def _conditional_seed(pid):
+    for local, label in (("MetaA", META_A), ("MetaB", META_B), ("MetaC", CONDITIONAL_C)):
+        ok(pid, "CreateClass", iri="shop:" + local, label=label)
+    for local, label in (("MetaCA", META_CA), ("MetaCB", META_CB)):
+        ok(pid, "CreateConcept", iri="shop:" + local, prefLabel=label)
+    ok(pid, "CreateObjectProperty", iri="shop:metaP", label=META_P, domain="shop:MetaA", range="shop:MetaB")
+    ok(pid, "CreateObjectProperty", iri="shop:metaQ", label=META_Q, domain="shop:MetaB", range="shop:MetaA")
+    ok(pid, "CreateObjectProperty", iri="shop:metaLoose", label="未設定の関係")
+    ok(pid, "CreateDatatypeProperty", iri="shop:metaAttr", label=CONDITIONAL_ATTR, domain="shop:MetaA", datatype="xsd:string")
+    ok(pid, "CreateExample", iri="shop:metaE1", label=CONDITIONAL_E1, **{"class": "shop:MetaA"})
+    ok(pid, "CreateExample", iri="shop:metaE2", label=CONDITIONAL_E2, **{"class": "shop:MetaB"})
+
+
+def _conditional_history(pid, result, before, code, facts, legacy):
+    after = graph_copy(pid)
+    wire = {"code": code, "args": facts}
+    assert result["label"] == legacy
+    assert result.get("uiMessage") == wire
+    assert result["state"].get("undoUiMessage") == wire
+    undone = undo(pid)
+    assert undone["label"] == legacy and undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, doc(pid).graph)
+    redone = redo(pid)
+    assert redone["label"] == legacy and redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert isomorphic(after, doc(pid).graph)
+
+
+CONDITIONAL_SIMPLE_CASES = [
+    ("SetLabel", {"iri": "shop:MetaA", "lang": "fr", "value": "Nom <b>{value}</b>"}, "command.set_label", {"name": META_A, "language": "fr"}, f"Set label of {META_A} (fr)"),
+    ("SetComment", {"iri": "shop:MetaA", "lang": "fr", "value": "Définition {value}"}, "command.set_comment", {"name": META_A, "language": "fr"}, f"Set comment of {META_A} (fr)"),
+    ("SetDomain", {"property": "shop:metaP", "target": "shop:MetaB"}, "command.set_domain", {"name": META_P, "target": META_B}, f"Set domain of {META_P} to {META_B}"),
+    ("SetRange", {"property": "shop:metaP", "target": "shop:MetaA"}, "command.set_range", {"name": META_P, "target": META_A}, f"Set range of {META_P} to {META_A}"),
+    ("SetEnds", {"property": "shop:metaP", "domain": "shop:MetaB"}, "command.set_ends_domain", {"name": META_P, "domain": META_B}, f"Set the ends of {META_P}: from {META_B}"),
+    ("SetEnds", {"property": "shop:metaP", "range": "shop:MetaA"}, "command.set_ends_range", {"name": META_P, "range": META_A}, f"Set the ends of {META_P}: to {META_A}"),
+    ("SetEnds", {"property": "shop:metaP", "domain": "shop:MetaB", "range": "shop:MetaA"}, "command.set_ends_both", {"name": META_P, "domain": META_B, "range": META_A}, f"Set the ends of {META_P}: from {META_B} to {META_A}"),
+    ("ClearDomain", {"property": "shop:metaP"}, "command.cleared_domain", {"name": META_P}, f"Cleared the start of {META_P}"),
+    ("ClearRange", {"property": "shop:metaP"}, "command.cleared_range", {"name": META_P}, f"Cleared the end of {META_P}"),
+    ("SetInverse", {"property": "shop:metaP", "inverse": "shop:metaQ"}, "command.made_inverse", {"name": META_P, "inverse": META_Q}, f"Made {META_Q} the other way round of {META_P}"),
+    ("SetInverse", {"property": "shop:metaP", "iri": "shop:metaNewInverse", "label": "逆の関係 <b>{inverse}</b>"}, "command.made_inverse", {"name": META_P, "inverse": "逆の関係 <b>{inverse}</b>"}, f"Made 逆の関係 <b>{{inverse}}</b> the other way round of {META_P}"),
+]
+
+
+@pytest.mark.parametrize("command,args,code,facts,legacy", CONDITIONAL_SIMPLE_CASES,
+                         ids=[f"{row[0]}-{index}" for index, row in enumerate(CONDITIONAL_SIMPLE_CASES)])
+def test_conditional_simple_notices_keep_prechange_names_and_end_selection(pid, command, args, code, facts, legacy):
+    _conditional_seed(pid)
+    before = graph_copy(pid)
+    result = ok(pid, command, **args)
+    _conditional_history(pid, result, before, code, facts, legacy)
+
+
+CONDITIONAL_CHARACTERISTICS = [
+    ("functional", "at most one"), ("inverseFunctional", "identifies its start"),
+    ("symmetric", "works both ways"), ("transitive", "chains"),
+    ("asymmetric", "never both ways"), ("irreflexive", "never to itself"),
+    ("reflexive", "always to itself"), ("functionalAttribute", "one value only"),
+]
+
+
+@pytest.mark.parametrize("token,words", CONDITIONAL_CHARACTERISTICS)
+@pytest.mark.parametrize("on", [True, False])
+def test_conditional_characteristic_notices_use_semantic_tokens_for_both_property_kinds(pid, token, words, on):
+    _conditional_seed(pid)
+    attribute = token == "functionalAttribute"
+    characteristic = "functional" if attribute else token
+    prop, label = ("shop:metaAttr", CONDITIONAL_ATTR) if attribute else ("shop:metaP", META_P)
+    if not on:
+        ok(pid, "SetCharacteristic", property=prop, characteristic=characteristic, on=True)
+    before = graph_copy(pid)
+    result = ok(pid, "SetCharacteristic", property=prop, characteristic=characteristic, on=on)
+    _conditional_history(pid, result, before,
+        "command.marked_characteristic" if on else "command.unmarked_characteristic",
+        {"name": label, "characteristic": [{"code": f"words.characteristic.{token}", "args": {}}]},
+        f'{"Marked" if on else "Unmarked"} {label} as "{words}"')
+    assert {name for name, _ in CONDITIONAL_CHARACTERISTICS if name != "functionalAttribute"} == set(editing.modeling_checks.CHARACTERISTICS)
+
+
+CONDITIONAL_MAPPING_KINDS = [
+    ("exactMatch", "an exact match"), ("closeMatch", "a close match"),
+    ("broadMatch", "a broader match"), ("narrowMatch", "a narrower match"),
+    ("relatedMatch", "a related match"),
+]
+
+
+@pytest.mark.parametrize("kind,words", CONDITIONAL_MAPPING_KINDS)
+@pytest.mark.parametrize("remove", [False, True])
+def test_conditional_mapping_notices_keep_the_external_target_literal(pid, kind, words, remove):
+    _conditional_seed(pid)
+    target = "https://example.org/external/target"
+    args = {"concept": "shop:MetaCA", "kind": kind, "target": target}
+    if remove:
+        ok(pid, "AddMapping", **args)
+    before = graph_copy(pid)
+    result = ok(pid, "RemoveMapping" if remove else "AddMapping", **args)
+    _conditional_history(pid, result, before, "command.removed_mapping" if remove else "command.added_mapping",
+        {"concept": META_CA, "mapping": [{"code": f"words.mapping.{kind}", "args": {}}], "target": target},
+        f'{"Removed" if remove else "Added"} {words} of {META_CA}: {target}')
+    assert {name for name, _ in CONDITIONAL_MAPPING_KINDS} == set(editing.MAPPINGS)
+
+
+@pytest.mark.parametrize("command", ["SetExampleValue", "AddExampleValue", "RemoveExampleValue"])
+@pytest.mark.parametrize("link", [False, True])
+def test_conditional_example_notices_keep_subject_target_and_field_separate(pid, command, link):
+    _conditional_seed(pid)
+    value = {"kind": "link", "value": "shop:metaE2"} if link else {"kind": "text", "value": "値 <b>{value}</b>", "lang": "en"}
+    prop, field = ("shop:metaP", META_P) if link else ("shop:metaAttr", CONDITIONAL_ATTR)
+    args = {"iri": "shop:metaE1", "property": prop, "value": value}
+    if command == "RemoveExampleValue":
+        ok(pid, "AddExampleValue", **args)
+    elif command == "SetExampleValue":
+        if link:
+            ok(pid, "CreateExample", label="前の対象", iri="shop:metaE3", **{"class": "shop:MetaB"})
+        old = {"kind": "link", "value": "shop:metaE3"} if link else {"kind": "text", "value": "前の値", "lang": "en"}
+        ok(pid, "AddExampleValue", iri="shop:metaE1", property=prop, value=old)
+    before = graph_copy(pid)
+    result = ok(pid, command, **args)
+    remove = command == "RemoveExampleValue"
+    if link:
+        code = "command.removed_example_link" if remove else "command.linked_example_value"
+        facts = {"subject": CONDITIONAL_E1, "target": CONDITIONAL_E2, "property": META_P}
+        legacy = f'{"Removed the link from" if remove else "Linked"} {CONDITIONAL_E1} to {CONDITIONAL_E2} by {META_P}'
+    else:
+        code = {"SetExampleValue": "command.set_example_value", "AddExampleValue": "command.added_example_value", "RemoveExampleValue": "command.removed_example_value"}[command]
+        facts = {"subject": CONDITIONAL_E1, "property": CONDITIONAL_ATTR}
+        legacy = f'{"Set" if command == "SetExampleValue" else "Added" if command == "AddExampleValue" else "Removed"} {CONDITIONAL_ATTR} {"of" if command == "SetExampleValue" else "to" if command == "AddExampleValue" else "from"} {CONDITIONAL_E1}'
+    _conditional_history(pid, result, before, code, facts, legacy)
+
+
+CONDITIONAL_DELETE_KINDS = [
+    (OWL.Class, "class", "class"), (OWL.ObjectProperty, "object property", "objectProperty"),
+    (OWL.DatatypeProperty, "datatype property", "datatypeProperty"),
+    (OWL.AnnotationProperty, "annotation property", "annotationProperty"),
+    (RDF.Property, "property", "property"), (SKOS.Concept, "concept", "concept"),
+    (SKOS.ConceptScheme, "concept scheme", "conceptScheme"),
+    (U("MetaA"), "example", "example"), (None, "entity", "entity"),
+]
+
+
+@pytest.mark.parametrize("rdf_type,legacy_kind,token", CONDITIONAL_DELETE_KINDS)
+def test_conditional_delete_notices_use_the_same_semantic_kind_as_the_legacy_label(pid, rdf_type, legacy_kind, token):
+    _conditional_seed(pid)
+    name = "削除候補 <b>{name}</b>"
+    text = doc(pid).text() + f'\n<{EX}metaDelete> <{RDFS.label}> {json.dumps(name, ensure_ascii=False)}@en .\n'
+    if rdf_type:
+        text += f'<{EX}metaDelete> <{RDF.type}> <{rdf_type}> .\n'
+    response = apply(pid, text)
+    assert response.status_code == 200, response.text
+    before = graph_copy(pid)
+    result = ok(pid, "DeleteEntity", iri="shop:metaDelete")
+    _conditional_history(pid, result, before, "command.deleted_entity",
+        {"kind": [{"code": f"words.kind.{token}", "args": {}}], "name": name}, f"Deleted {legacy_kind} {name}")
+
+
+@pytest.mark.parametrize("document", ["model", "shapes"])
+def test_conditional_turtle_apply_notices_remain_one_step_and_restore_exact_editor_text(pid, document):
+    current = editing_service.document(pid, document)
+    before = Graph()
+    for triple in current.graph:
+        before.add(triple)
+    text = current.text() + f'\n# Original comment {{literal}}\n<{EX}appliedParts> <{RDFS.label}> "適用 <b>{{value}}</b>"@ja .\n'
+    response = client.put(f"/api/projects/{pid}/documents/{document}/source", json={"text": text})
+    assert response.status_code == 200, response.text
+    result = response.json()
+    if document == "model":
+        _conditional_history(pid, result, before, "command.applied_turtle", {}, "Applied Turtle edits")
+    else:
+        _shape_history_notice(pid, result, before, {"code": "command.applied_turtle", "args": {}}, "Applied Turtle edits")
+    assert client.get(f"/api/projects/{pid}/documents/{document}/source").json()["text"] == text
+
+
+@pytest.mark.parametrize("case", ["give", "move", "union", "union-three", "parent-new", "parent-existing", "up", "separate", "unshare"])
+def test_conditional_shared_domain_notices_keep_case_and_name_group_facts(pid, case):
+    _conditional_seed(pid)
+    args = {"property": "shop:metaP", "class": "shop:MetaB"}
+    names = [{"text": META_A}, {"code": "words.list.and", "args": {}}, {"text": META_B}]
+    if case == "give":
+        args["property"] = "shop:metaLoose"
+        code, facts, legacy = "command.assigned_domain", {"property": "未設定の関係", "class_name": META_B}, f"Gave 未設定の関係 to {META_B}"
+    elif case == "move":
+        ok(pid, "AddSubClassOf", child="shop:MetaA", parent="shop:MetaB")
+        code, facts, legacy = "command.moved_domain", {"property": META_P, "class_name": META_B}, f"Moved {META_P} up to {META_B}"
+    elif case in ("union", "union-three", "separate"):
+        args["how"] = "union"
+        if case == "union-three":
+            ok(pid, "ShareDomain", **args)
+            args["class"] = "shop:MetaC"
+            names += [{"code": "words.list.and", "args": {}}, {"text": CONDITIONAL_C}]
+        if case == "separate":
+            response = apply(pid, doc(pid).text() + f'\n<{EX}metaP> <{RDFS.domain}> <{EX}MetaB> .\n')
+            assert response.status_code == 200, response.text
+            args.pop("class")
+            args.pop("how")  # The existing separate-domain fix chooses union.
+        labels = f"{META_A} and {META_B}" + (f" and {CONDITIONAL_C}" if case == "union-three" else "")
+        code, facts, legacy = "command.shared_domain", {"property": META_P, "names": names}, f"Shared {META_P} between {labels}"
+    elif case in ("parent-new", "parent-existing"):
+        args["how"] = "parent"
+        if case == "parent-new":
+            args.update(parentLabel="共通親 <b>{parent}</b>", parentIri="shop:MetaParent")
+        else:
+            args["parent"] = "shop:MetaC"
+        code, facts, legacy = "command.shared_parent", {"property": META_P, "names": names}, f"Gave {META_A} and {META_B} a shared parent, and {META_P} to it"
+    elif case == "up":
+        ok(pid, "AddSubClassOf", child="shop:MetaA", parent="shop:MetaC")
+        ok(pid, "AddSubClassOf", child="shop:MetaB", parent="shop:MetaC")
+        args.update(how="up", parent="shop:MetaC")
+        code, facts, legacy = "command.moved_domain", {"property": META_P, "class_name": CONDITIONAL_C}, f"Moved {META_P} up to {CONDITIONAL_C}"
+    else:
+        ok(pid, "ShareDomain", **args, how="union")
+        code, facts, legacy = "command.removed_domain_member", {"property": META_P, "class_name": META_B}, f"Removed {META_B} from {META_P}"
+    before = graph_copy(pid)
+    result = ok(pid, "UnshareDomain" if case == "unshare" else "ShareDomain", **args)
+    _conditional_history(pid, result, before, code, facts, legacy)
