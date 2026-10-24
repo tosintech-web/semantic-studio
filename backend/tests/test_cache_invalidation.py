@@ -117,7 +117,7 @@ def test_every_view_reflects_an_apply_and_an_undo(pid):
     assert not any(_has_new(_views(oid)).values())
 
 
-def test_a_library_ontology_never_rebuilds_its_views(monkeypatch):
+def test_a_library_ontology_reuses_each_explicit_language_view(monkeypatch):
     oid = client.post(
         "/api/ontologies/upload",
         files={"file": ("steady.ttl", b"@prefix ex: <http://example.org/steady#> .\n"
@@ -142,6 +142,36 @@ def test_a_library_ontology_never_rebuilds_its_views(monkeypatch):
         client.get(f"/api/ontologies/{oid}/hierarchy")
         client.get(f"/api/ontologies/{oid}/query-schema")
         client.get(f"/api/ontologies/{oid}/source", params={"pretty": "true"})
-    # The viz was built at ingest; the other two once each, on first read.
-    assert calls == {"viz": 0, "hierarchy": 1, "schema": 1}
+    # Default viz was built at ingest; explicit French once, not on every
+    # alternation. Tree/schema build once each on their first read.
+    assert calls == {"viz": 1, "hierarchy": 1, "schema": 1}
     assert ontology.revision == 0 and ontology.pretty_cache[0] == 0
+
+
+@pytest.mark.parametrize('with_data', [False, True])
+def test_imported_and_data_language_projections_do_not_accumulate(with_data, monkeypatch):
+    import gc
+    import weakref
+    from rdflib import Graph, Literal, URIRef
+    from rdflib.namespace import RDFS
+    from app import imports as imports_mod
+    result = client.post('/api/ontologies/upload', files={'file': ('bounded-languages.ttl', b'<https://example.org/cache/A> a <http://www.w3.org/2002/07/owl#Class> .')})
+    ontology = store_module.store.get(result.json()['id'])
+    if with_data:
+        data = Graph()
+        data.add((URIRef('https://example.org/cache/sample'), RDFS.label, Literal('Sample')))
+        ontology.snapshots = lambda: (1, [(data, {'id': 'synthetic', 'source': 'Synthetic'})])
+    original = imports_mod.build_viz_graph
+    built = []
+    class Tracked(dict):
+        pass
+    def tracked(*args, **kwargs):
+        value = Tracked(original(*args, **kwargs))
+        built.append(weakref.ref(value))
+        return value
+    monkeypatch.setattr(imports_mod, 'build_viz_graph', tracked)
+    for lang in ['ja', 'en', 'fr', 'de', 'es', 'it', 'pt', 'ko']:
+        imports_mod.view_viz(ontology, not with_data, lang=lang)
+    gc.collect()
+    assert len(built) == 8
+    assert sum(ref() is not None for ref in built) <= 4

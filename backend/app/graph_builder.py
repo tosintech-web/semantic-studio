@@ -71,6 +71,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Callable, Optional, Sequence
 
+
 from rdflib import Graph, Literal, URIRef, BNode
 from rdflib.namespace import DC, DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
@@ -973,11 +974,12 @@ def node_kind(graph: Graph, node: URIRef) -> str:
     test_node_detail.py checks this against build_viz_graph on
     every bundled example.
     """
+    from . import axioms  # Delayed: shapes_form imports the label helpers.
     kinds = _kinds_stated(graph, node)
     if not kinds & {KIND_CLASS, KIND_SCHEME, KIND_CONCEPT}:
         for t in graph.objects(node, RDF.type):
             if isinstance(t, URIRef) and (KIND_CLASS in _kinds_stated(graph, t) or
-                                         (t not in TYPE_TO_KIND and t not in {OWL.Restriction, RDF.List})):
+                                         (t not in TYPE_TO_KIND and t not in axioms.NON_INSTANCE_TYPES)):
                 kinds.add(KIND_INDIVIDUAL)
                 break
     return _best_kind(kinds)

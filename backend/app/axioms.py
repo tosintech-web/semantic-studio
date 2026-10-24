@@ -91,6 +91,10 @@ SH = Namespace("http://www.w3.org/ns/shacl#")
 
 Name = Callable[[URIRef], str]
 
+# Schema carriers that are not general class types for dictionary individuals.
+# Keeping this knowledge here preserves the one reader of OWL expression shapes.
+NON_INSTANCE_TYPES = frozenset({OWL.Restriction, RDF.List})
+
 FORMS = ("every", "defines")
 KINDS = ("some", "only", "exactly", "atLeast", "atMost", "value")
 COUNT_KINDS = ("exactly", "atLeast", "atMost")

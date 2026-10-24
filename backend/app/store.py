@@ -355,6 +355,10 @@ class Ontology:
     # document lock. Their own key includes imports identity and data generation.
     entity_cache: OrderedDict = field(default_factory=OrderedDict, repr=False, compare=False)
     entity_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
+    # Current tuple slots stay compatible; bounded per-view language variants
+    # prevent alternating between Library preferences rebuilding every time.
+    language_variants: dict = field(default_factory=dict, repr=False, compare=False)
+    view_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
     # A project model's snapshots, supplied by editing.py on open:
     # () -> (generation, [(graph, info)]). None everywhere else.
     snapshots: Optional[Callable[[], tuple]] = field(default=None, repr=False, compare=False)
@@ -396,13 +400,26 @@ class Ontology:
         return self.lock if self.lock is not None else contextlib.nullcontext()
 
     def _cached(self, slot: str, key, build: Callable[[], object]):
-        held = getattr(self, slot)
-        if held is not None and held[0] == key:
-            return held[1]
-        with self.reading():
-            value = build()
-        setattr(self, slot, (key, value))
-        return value
+        with self.reading(), self.view_lock:
+            held = getattr(self, slot)
+            if held is not None and held[0] == key:
+                return held[1]
+            variants = self.language_variants.setdefault(slot, OrderedDict()) if slot in {"viz_cache", "hierarchy_cache", "schema_cache"} else None
+            if variants is not None:
+                if held is not None:
+                    variants[held[0]] = held[1]
+                if key in variants:
+                    value = variants[key]
+                    variants.move_to_end(key)
+                else:
+                    value = build()
+                    variants[key] = value
+                while len(variants) > 4:
+                    variants.popitem(last=False)
+            else:
+                value = build()
+            setattr(self, slot, (key, value))
+            return value
 
     def ensure_loaded(self) -> Graph:
         """Parse the persisted RDF on first use (lazy restore).

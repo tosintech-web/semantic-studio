@@ -71,6 +71,8 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
+from collections import OrderedDict
+
 import hashlib
 import json
 import threading
@@ -1041,12 +1043,9 @@ class ImportsService:
     def derived(self, ontology: Ontology, name, build: Callable[[Graph], dict]) -> dict:
         """A view built over the merged graph, cached beside it (never beside the
         file-only caches, which is the second key the spec asks for)."""
-        view = self.merged(ontology)
-        cache = ontology.merged_cache
-        if name not in cache:
-            with ontology.reading():
-                cache[name] = build(view["graph"])
-        return cache[name]
+        with ontology.reading():
+            view = self.merged(ontology)
+            return _bounded_derived(ontology, view, name, build)
 
     # --- the view with data snapshots (csv-data-import 5.6) ----------------
 
@@ -1138,12 +1137,25 @@ def snapshot_graphs(ontology: Ontology) -> tuple[int, list]:
     return provider() if provider is not None else (0, [])
 
 
+def _bounded_derived(ontology: Ontology, view: dict, name, build: Callable[[Graph], dict]) -> dict:
+    """At most four language projections per captured imports/data source."""
+    with ontology.reading(), ontology.view_lock:
+        held = view.get("derived")
+        if not isinstance(held, OrderedDict):
+            held = OrderedDict(held or {})
+            view["derived"] = held
+        if name in held:
+            held.move_to_end(name)
+            return held[name]
+        value = build(view["graph"])
+        held[name] = value
+        while len(held) > 4:
+            held.popitem(last=False)
+        return value
+
+
 def _data_derived(ontology: Ontology, view: dict, name, build: Callable[[Graph], dict]) -> dict:
-    held = view["derived"]
-    if name not in held:
-        with ontology.reading():
-            held[name] = build(view["graph"])
-    return held[name]
+    return _bounded_derived(ontology, view, name, build)
 
 
 def view_graph(ontology: Ontology, imports: bool, parse_timeout: Optional[float] = None) -> Graph:
