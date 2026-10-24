@@ -25,6 +25,8 @@ EXPECTED OUTPUT
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import type { WhyReason } from "../types";
 import WhyDisclosure from "./WhyDisclosure";
 
@@ -148,4 +150,23 @@ describe("Why? (5.6)", () => {
     await open(screen.getByRole("button", { name: "Why? a p b" }));
     expect(screen.getByRole("alert").textContent).toBe("That fact is not in the last result.");
   });
+});
+
+
+it("keeps the loaded reason open when labels and premise marks change language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getWhy.mockResolvedValue(MANAGER);
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="prj-1" fact={{ s: "a", p: "p", o: "b" }} label="Alice is a Manager" /></I18nProvider>);
+  const button = screen.getByRole("button", { name: "根拠：Alice is a Manager" });
+  await open(button);
+  expect(button.getAttribute("aria-expanded")).toBe("true");
+  expect(screen.getByText("根拠となる記述：")).toBeTruthy();
+  expect(document.querySelector(".why-mark")?.textContent).toBe("推論結果");
+  const region = document.getElementById(button.getAttribute("aria-controls")!);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Why? Alice is a Manager" })).toBe(button);
+  expect(document.getElementById(button.getAttribute("aria-controls")!)).toBe(region);
+  expect(document.querySelector(".why-mark")?.textContent).toBe("inferred");
+  expect(getWhy).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

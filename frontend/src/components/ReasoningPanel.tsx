@@ -52,17 +52,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { getReasoningPage } from "../api";
 import {
-  DATA_SLOWER,
-  EMPTY,
-  INTRO,
-  NOTHING,
-  NOT_SAVED,
-  STALE,
-  TAXONOMY,
-  VALUES_FOOTER,
   finishedLine,
   groupHeading,
   importedLine,
@@ -97,6 +90,7 @@ export function ReasonControls({
   hasData,
   onPress,
 }: Pick<Props, "kind" | "now" | "hasData"> & { onPress?: () => void }) {
+  const { t } = useI18n();
   const since = useRunning();
   const result = useProjectSelector((s) => s.reasoning);
   const showInferred = useProjectSelector((s) => s.showInferred);
@@ -121,7 +115,7 @@ export function ReasonControls({
           }
         }}
       >
-        {running ? "Stop" : "Reason"}
+        {t(running ? "reasonUI.stop" : "reasonUI.reason")}
       </button>
       {/* Hidden before a run and while the result is stale (Section 6). */}
       {current && (
@@ -132,7 +126,7 @@ export function ReasonControls({
           onClick={() => projectStore.setShowInferred(!showInferred)}
         >
           <span aria-hidden="true">{showInferred ? "✓ " : ""}</span>
-          Show inferred
+          {t("reasonUI.showInferred")}
         </button>
       )}
     </>
@@ -176,6 +170,7 @@ function useElapsed(since: number | null): number {
 }
 
 export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect }: Props) {
+  const { t, locale } = useI18n();
   const since = useRunning();
   const result = useProjectSelector((s) => s.reasoning);
   const token = useProjectSelector((s) => s.reasoningToken);
@@ -196,7 +191,7 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
   });
 
   if (kind === "taxonomy") {
-    return <p className="detail-note reasoning-intro">{TAXONOMY}</p>;
+    return <p className="detail-note reasoning-intro">{t("reasonWords.taxonomy")}</p>;
   }
   const running = since !== null;
   const stale = result !== null && isStale(result, now);
@@ -211,16 +206,16 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
             checked={includeData}
             onChange={(e) => projectStore.setReasoningData(e.target.checked)}
           />{" "}
-          <label htmlFor={dataId}>Include data snapshots</label> <span className="detail-note">({DATA_SLOWER})</span>
+          <label htmlFor={dataId}>{t("reasonUI.includeData")}</label> <span className="detail-note">{t("reasonUI.dataSpeed", { text: t("reasonWords.dataSlower") })}</span>
         </p>
       )}
       <p className="detail-note reasoning-status">
-        {running ? runningLine(elapsed) : result && !stale ? finishedLine(result) : ""}
+        {running ? runningLine(elapsed, locale) : result && !stale ? finishedLine(result, locale) : ""}
       </p>
       <section className="reasoning-results" aria-labelledby={headingId}>
         <div className="reasoning-results-head">
           <h3 id={headingId} ref={headingRef} tabIndex={-1}>
-            {panelHeading(stale ? null : result)}
+            {panelHeading(stale ? null : result, locale)}
           </h3>
         </div>
         {error && (
@@ -228,7 +223,7 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
             {error}
           </p>
         )}
-        {!result && !error && <p className="detail-note">{EMPTY}</p>}
+        {!result && !error && <p className="detail-note">{t("reasonWords.empty")}</p>}
         {result && stale && (
           <ReasonAgain
             running={running}
@@ -246,7 +241,7 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
         {/* What reasoning is, said once, under the results (5.4): the page
             starts with the model, not with this. */}
         <p className="detail-note reasoning-footer">
-          {INTRO} {VALUES_FOOTER} {NOT_SAVED}
+          {t("reasonWords.intro")} {t("reasonWords.valuesFooter")} {t("reasonWords.notSaved")}
         </p>
       </section>
     </div>
@@ -256,10 +251,11 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
 /** *The model changed after this run.* with **Reason again**, which goes
  *  once its run is current: if it had focus, the heading takes it. */
 function ReasonAgain({ running, onReason, onLeave }: { running: boolean; onReason: () => void; onLeave: () => void }) {
+  const { t } = useI18n();
   const ref = useFocusLeave<HTMLButtonElement>(onLeave);
   return (
     <p className="detail-note reasoning-stale">
-      {STALE}{" "}
+      {t("reasonWords.stale")}{" "}
       <button
         ref={ref}
         type="button"
@@ -269,7 +265,7 @@ function ReasonAgain({ running, onReason, onLeave }: { running: boolean; onReaso
           if (!running) onReason();
         }}
       >
-        Reason again
+        {t("reasonUI.again")}
       </button>
     </p>
   );
@@ -290,18 +286,23 @@ function Results({
   imports: boolean;
   onSelect: (iri: string) => void;
 }) {
+  const { t, locale } = useI18n();
   if (result.status !== "done") {
-    return <p className="detail-note reasoning-ending">{result.sentence}</p>;
+    const ending = finishedLine(result, locale);
+    return <>
+      <p className="detail-note reasoning-ending">{ending}</p>
+      {result.sentence && result.sentence !== ending && <details><summary>{t("reasonUI.originalDetails")}</summary><pre>{result.sentence}</pre></details>}
+    </>;
   }
   const facts = result.groups.reduce((sum, g) => sum + g.total, 0) + result.importedFacts.total;
   if (result.problems.length === 0 && facts === 0) {
-    return <p className="detail-note">{NOTHING}</p>;
+    return <p className="detail-note">{t("reasonWords.nothing")}</p>;
   }
   return (
     <>
       {result.problems.length > 0 && (
         <section className="reasoning-group">
-          <h4>Problems ({result.problems.length.toLocaleString("en-US")})</h4>
+          <h4>{t("reasonUI.problems", { count: result.problems.length })}</h4>
           <ul>
             {result.problems.map((problem, i) => (
               <Problem key={`${problem.kind}|${problem.subject}|${i}`} projectId={projectId} problem={problem} onSelect={onSelect} />
@@ -316,7 +317,7 @@ function Results({
             projectId={projectId}
             group={group}
             imports={imports}
-            heading={groupHeading(group.kind as Exclude<typeof group.kind, "imported">, group.total)}
+            heading={groupHeading(group.kind as Exclude<typeof group.kind, "imported">, group.total, locale)}
             onSelect={onSelect}
           />
         ) : null,
@@ -337,6 +338,7 @@ function Problem({
   problem: ReasoningProblem;
   onSelect: (iri: string) => void;
 }) {
+  const { t, locale } = useI18n();
   const [why, setWhy] = useState(false);
   const whyId = useId();
   return (
@@ -358,7 +360,7 @@ function Problem({
             aria-controls={whyId}
             onClick={() => setWhy(!why)}
           >
-            Why?
+            {t("reasonUI.why")}
           </button>
           {why && (
             <p id={whyId} className="detail-note why-reason">
@@ -368,13 +370,13 @@ function Problem({
         </>
       )}
       {problem.causes.length > 0 && (
-        <ul className="reasoning-causes" aria-label="Caused by">
+        <ul className="reasoning-causes" aria-label={t("reasonUI.causedBy")}>
           {problem.causes.map((cause, i) => (
             <li key={`${cause.s}|${cause.p}|${cause.o}|${i}`}>
               <button type="button" className="term-link" onClick={() => onSelect(cause.s)}>
                 {cause.sentence}
               </button>{" "}
-              <span className="why-mark">{premiseMark(cause.inferred)}</span>
+              <span className="why-mark">{premiseMark(cause.inferred, locale)}</span>
               {cause.inferred && cause.o !== null && (
                 <>
                   {" "}
@@ -486,14 +488,15 @@ function ShowMore({
   onMore: () => void;
   onLeave: () => void;
 }) {
+  const { t } = useI18n();
   const ref = useFocusLeave<HTMLButtonElement>(onLeave);
   return (
     <p>
       <button ref={ref} type="button" className="ghost" aria-disabled={loading} onClick={() => !loading && onMore()}>
-        Show more
+        {t("reasonUI.more")}
       </button>{" "}
       <span className="detail-note">
-        {shown.toLocaleString("en-US")} of {total.toLocaleString("en-US")} shown
+        {t("reasonUI.shown", { shown, total })}
       </span>
     </p>
   );
@@ -532,13 +535,14 @@ function Imported({
   imports: boolean;
   onSelect: (iri: string) => void;
 }) {
+  const { locale } = useI18n();
   const [open, setOpen] = useState(false);
   const listId = useId();
   return (
     <section className="reasoning-group">
       <h4>
         <button type="button" className="term-link" aria-expanded={open} aria-controls={listId} onClick={() => setOpen(!open)}>
-          {importedLine(group.total)}
+          {importedLine(group.total, locale)}
         </button>
       </h4>
       {open && (

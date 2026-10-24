@@ -27,6 +27,7 @@ EXPECTED OUTPUT
 */
 
 export type { WireMessage } from "./i18n/server-contracts";
+import type { WireMessage } from "./i18n/server-contracts";
 import type { Translator } from "./i18n/types";
 import { kindLabelMessage } from "./i18n/kindLabel";
 import type { EntityMatchWire } from "./entities/types";
@@ -1543,6 +1544,7 @@ export interface ReasoningResult {
   statements: number;
   // The ending's sentence for anything but done.
   sentence: string | null;
+  uiMessage?: WireMessage | null;
   problems: ReasoningProblem[];
   groups: ReasoningGroup[];
   importedFacts: ReasoningGroup;

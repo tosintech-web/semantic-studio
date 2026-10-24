@@ -53,6 +53,8 @@ vi.mock("../api", async (importOriginal) => ({
 }));
 
 import { ApiError } from "../api";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
 import ReasoningPanel, { ReasonControls } from "./ReasoningPanel";
 
@@ -544,4 +546,47 @@ describe("Focus and endings (PR #55 review)", () => {
     await run.answer(result());
     expect(said()).toBe("Reasoned in 4 s, but the model changed meanwhile: Reason again.");
   });
+});
+
+
+it("changes reasoning controls and result headings without repeating the run", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn();
+  render(<I18nProvider><UiLanguageSelect />{view("ontology", NOW, true)}</I18nProvider>);
+  const data = screen.getByRole("checkbox", { name: "データスナップショットを含める" });
+  fireEvent.click(data);
+  const run = pending();
+  const control = screen.getByRole("button", { name: "推論" });
+  await act(async () => fireEvent.click(control));
+  expect(screen.getByRole("button", { name: "停止" })).toBe(control);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Stop" })).toBe(control);
+  expect((screen.getByRole("checkbox", { name: "Include data snapshots" }) as HTMLInputElement).checked).toBe(true);
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  await run.answer(result());
+  const heading = screen.getByRole("heading", { name: "Results: reasoned in 4 s" });
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(screen.getByRole("heading", { name: "推論結果：4秒で完了" })).toBe(heading);
+  expect(screen.getByRole("heading", { name: "新しい所属関係（2件）" })).toBeTruthy();
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  expect(getReasoningPage).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("renders timeout metadata and keeps original engine details separate", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn();
+  render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  const run = pending();
+  await press("推論");
+  await run.answer(result({ status: "timedOut", problems: [], groups: [], sentence: "Original diagnostic 999", uiMessage: { code: "reasoning.timeout", args: { seconds: 1.5 } } }));
+  expect(document.querySelector(".reasoning-ending")?.textContent).toContain("1.5秒");
+  expect(document.querySelector(".reasoning-ending")?.textContent).not.toContain("999");
+  expect(screen.getByText("Original diagnostic 999").closest("details")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".reasoning-ending")?.textContent).toContain("1.5 seconds");
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

@@ -113,6 +113,11 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/ShapesView.tsx` | 検証ルールセット一覧 | 11/12 | 画面所有文言・行と件数バッジを移行、結果データから現在言語で表示 |
 | `frontend/src/components/ShapeForm.tsx` | 検証ルールセット編集 | 11/12 | 画面所有文言・説明・候補・削除確認を移行（サーバーの生成文はTask 12） |
 
+| `frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数を移行、状態判定と件数集計は保持 |
+| `frontend/src/components/ReasoningPanel.tsx` | 推論の操作・結果の枠 | 11/12 | 画面所有文言・終了メタデータを接続（事実・原因・APIエラーの生成元はTask 12） |
+| `frontend/src/components/WhyDisclosure.tsx` | 根拠の開閉・表示の枠 | 11/12 | 画面所有文言を移行、開閉と取得済み結果を保持（サーバーの根拠文はTask 12） |
+| `frontend/src/components/InferredBlock.tsx` | 詳細の推論結果の枠 | 11/12 | 見出しと個体を持てないことの説明を移行（事実文・APIエラーの生成元はTask 12） |
+
 ## 登録済みメッセージ
 
 一覧は現在のカタログと使用箇所から生成した作業記録。動的キーの接頭辞も使用箇所として記載する。
@@ -707,7 +712,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `parse.syntax` | format, line | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `model.invalid_value` | value, datatype | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `validation.min_count` | name, count | `frontend/src/sparql/generate.ts` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
-| `reasoning.timeout` | seconds | `frontend/src/components/RulesBlock.tsx` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
+| `reasoning.timeout` | seconds | `frontend/src/components/RulesBlock.tsx` <br>`backend/app/reasoning.py` | UI・読み上げ・通知 | 12 | 実際のタイムアウト値から生成、推論画面に接続済み |
 | `entities.page_too_large` | total, suggested_limit | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
 | `entities.view_changed` | — | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
 | `request.invalid` | — | `frontend/src/components/RulesBlock.tsx` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
@@ -2193,3 +2198,58 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `shapeForm.deleteEmpty` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
 | `shapeForm.deleteOne` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
 | `shapeForm.deleteMany` | count | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+
+| `reasoning.stopped` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の終了理由 | 12 | サーバーで原因コードと実値を追加、推論画面に接続済み |
+| `reasoning.failed` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の終了理由 | 12 | サーバーで原因コードと実値を追加、推論画面に接続済み |
+| `reasoning.too_large` | count, limit | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の終了理由 | 12 | サーバーで原因コードと実値を追加、推論画面に接続済み |
+
+| `reasonWords.intro` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.empty` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.nothing` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.stale` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.taxonomy` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.dataSlower` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.valuesFooter` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.neverMembers` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.notSaved` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.group.kinds` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.group.same` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.group.memberships` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.group.links` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.heading` | count, name | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.imported.one` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.imported.many` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.seconds` | value | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.running` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.ended` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.finishedEmpty` | time | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.finished` | facts, problems, time | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.problems.one` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.problems.many` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.facts.one` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.facts.many` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.staleFinished` | time | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.results` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.resultsDone` | time | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.inferred` | — | `frontend/src/components/InferredBlock.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+| `reasonWords.stated` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数と画面を接続（操作通知の生成元はTask 12） |
+
+| `reasonUI.reason` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.stop` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.showInferred` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.includeData` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.dataSpeed` | text | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.again` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.problems` | count | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.why` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.causedBy` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.more` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.shown` | shown, total | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.whyLabel` | label | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.finding` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.because` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `reasonUI.originalDetails` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `inferred.title` | — | `frontend/src/components/InferredBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `inferred.about` | name | `frontend/src/components/InferredBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `inferred.never` | name | `frontend/src/components/InferredBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+| `inferred.empty` | name | `frontend/src/components/InferredBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |

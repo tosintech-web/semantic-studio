@@ -28,9 +28,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useState } from "react";
 import { getReasoningAbout } from "../api";
-import { NEVER_MEMBERS } from "../reasoning/reasonSentences";
 import type { ReasoningAbout } from "../types";
 import WhyDisclosure from "./WhyDisclosure";
 
@@ -45,6 +45,7 @@ interface Props {
 }
 
 export default function InferredBlock({ projectId, iri, imports, resultKey, revision, label, onSelect }: Props) {
+  const { t } = useI18n();
   // The facts are kept with what they were fetched for, and shown only for
   // that: after a new run the last run's facts showed until the new ones
   // came (PR #55 review).
@@ -67,20 +68,20 @@ export default function InferredBlock({ projectId, iri, imports, resultKey, revi
   if (error) {
     return (
       <section className="detail-inferred">
-        <h3>Inferred</h3>
+        <h3>{t("inferred.title")}</h3>
         <p className="detail-error">{error}</p>
       </section>
     );
   }
   if (!about || about.iri !== iri || about.stale) return null;
   return (
-    <section className="detail-inferred" aria-label={`Inferred about ${label}`}>
+    <section className="detail-inferred" aria-label={t("inferred.about", { name: label })}>
       <h3>
-        Inferred <span className="count">{about.facts.length}</span>
+        {t("inferred.title")} <span className="count">{about.facts.length}</span>
       </h3>
-      {about.neverMembers && <p className="detail-note">{`${label} ${NEVER_MEMBERS}.`}</p>}
+      {about.neverMembers && <p className="detail-note">{t("inferred.never", { name: label })}</p>}
       {about.facts.length === 0 && !about.neverMembers && (
-        <p className="detail-note">Reasoning concluded nothing new about {label}.</p>
+        <p className="detail-note">{t("inferred.empty", { name: label })}</p>
       )}
       {about.facts.length > 0 && (
         <ul className="detail-inferred-facts">
@@ -91,7 +92,7 @@ export default function InferredBlock({ projectId, iri, imports, resultKey, revi
                 <button type="button" className="term-link" onClick={() => onSelect(other)}>
                   {fact.sentence}
                 </button>{" "}
-                <span className="why-mark">inferred</span>{" "}
+                <span className="why-mark">{t("reasonWords.inferred")}</span>{" "}
                 <WhyDisclosure projectId={projectId} fact={fact} label={fact.sentence} onSelect={onSelect} />
               </li>
             );

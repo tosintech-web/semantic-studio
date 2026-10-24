@@ -1,12 +1,35 @@
 {
   "version": 1,
   "codes": {
-    "parse.syntax": {"format": "string", "line": ["number", "null"]},
-    "model.invalid_value": {"value": "string", "datatype": "string"},
-    "validation.min_count": {"name": "string", "count": "number"},
-    "reasoning.timeout": {"seconds": "number"},
-    "entities.page_too_large": {"total": "number", "suggested_limit": "number"},
+    "parse.syntax": {
+      "format": "string",
+      "line": [
+        "number",
+        "null"
+      ]
+    },
+    "model.invalid_value": {
+      "value": "string",
+      "datatype": "string"
+    },
+    "validation.min_count": {
+      "name": "string",
+      "count": "number"
+    },
+    "reasoning.timeout": {
+      "seconds": "number"
+    },
+    "entities.page_too_large": {
+      "total": "number",
+      "suggested_limit": "number"
+    },
     "entities.view_changed": {},
-    "request.invalid": {}
+    "request.invalid": {},
+    "reasoning.stopped": {},
+    "reasoning.failed": {},
+    "reasoning.too_large": {
+      "count": "number",
+      "limit": "number"
+    }
   }
 }

@@ -32,6 +32,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useId, useState } from "react";
 import { getWhy } from "../api";
 import { premiseMark } from "../reasoning/reasonSentences";
@@ -46,6 +47,7 @@ interface Props {
 }
 
 export default function WhyDisclosure({ projectId, fact, label, onSelect }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<WhyReason | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,10 +71,10 @@ export default function WhyDisclosure({ projectId, fact, label, onSelect }: Prop
         className="term-link why-button"
         aria-expanded={open}
         aria-controls={listId}
-        aria-label={`Why? ${label}`}
+        aria-label={t("reasonUI.whyLabel", { label })}
         onClick={toggle}
       >
-        Why?
+        {t("reasonUI.why")}
       </button>
       {open && (
         <div id={listId} className="why-reason">
@@ -81,7 +83,7 @@ export default function WhyDisclosure({ projectId, fact, label, onSelect }: Prop
               {error}
             </p>
           )}
-          {!error && reason === null && <p className="detail-note">Finding the reason…</p>}
+          {!error && reason === null && <p className="detail-note">{t("reasonUI.finding")}</p>}
           {reason && <Reason projectId={projectId} reason={reason} onSelect={onSelect} />}
         </div>
       )}
@@ -98,12 +100,13 @@ function Reason({
   reason: WhyReason;
   onSelect?: (iri: string) => void;
 }) {
+  const { t } = useI18n();
   if (reason.family === "stated" || reason.premises.length === 0) {
     return <p className="detail-note why-plain">{reason.sentence}</p>;
   }
   return (
     <>
-      <p className="why-because">Because:</p>
+      <p className="why-because">{t("reasonUI.because")}</p>
       <ul className="why-premises">
         {reason.premises.map((premise, i) => (
           <Premise key={`${premise.s}|${premise.p}|${premise.o}|${i}`} projectId={projectId} premise={premise} onSelect={onSelect} />
@@ -122,7 +125,8 @@ function Premise({
   premise: ReasoningPremise;
   onSelect?: (iri: string) => void;
 }) {
-  const mark = premiseMark(premise.inferred);
+  const { locale } = useI18n();
+  const mark = premiseMark(premise.inferred, locale);
   return (
     <li className={`why-premise${premise.inferred ? " inferred" : ""}`}>
       {onSelect ? (

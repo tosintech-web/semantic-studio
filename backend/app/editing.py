@@ -3598,6 +3598,7 @@ class EditingService:
             if raw.status != "done":
                 outcome = reasoning.Outcome(
                     raw.status, key, statements=statements, duration_ms=raw.duration_ms, message=raw.message,
+                    limit_seconds=raw.limit_seconds,
                 )
             else:
                 stated = list(model) + list(data)

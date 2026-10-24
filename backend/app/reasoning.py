@@ -85,6 +85,7 @@ from rdflib.util import from_n3
 from . import reasoning_worker
 from .graph_builder import pick_label_in
 from .sentences import a, verb
+from .messages import make_message
 
 # Fixed, never settings (5.10, as D-098's row limit is). A test lowers the
 # limit through the module attribute, which is all it reads.
@@ -156,6 +157,7 @@ class RawResult:
     message: Optional[str] = None   # a failure's first line, or the timed-out sentence
     duration_ms: float = 0.0
     probe_ms: float = 0.0           # the probe run's share, measured in the worker
+    limit_seconds: Optional[float] = None  # the actual timeout, never parsed from message
 
 
 class RunHandle:
@@ -207,7 +209,7 @@ def reason(
             if handle.stop_requested.is_set():
                 return RawResult("stopped", duration_ms=elapsed())
             if time.perf_counter() >= deadline:
-                return RawResult("timedOut", message=timed_out_sentence(limit), duration_ms=elapsed())
+                return RawResult("timedOut", message=timed_out_sentence(limit), duration_ms=elapsed(), limit_seconds=limit)
             if receiver.poll(_POLL_SECONDS):
                 try:
                     answer = receiver.recv()
@@ -366,12 +368,25 @@ class Outcome:
         facts: Optional[dict] = None,
         problems: Optional[list] = None,
         never: Optional[set] = None,
+        limit_seconds: Optional[float] = None,
     ) -> None:
         self.status = status
         self.key = key
         self.statements = statements
         self.duration_ms = duration_ms
         self.message = message
+        self.limit_seconds = TIME_LIMIT_SECONDS if limit_seconds is None else limit_seconds
+        # Capture the facts at creation. UI locale never enters the engine,
+        # and a client need not read a number back out of English prose.
+        self.ui_message = None
+        if status == "stopped":
+            self.ui_message = make_message("reasoning.stopped")
+        elif status == "failed":
+            self.ui_message = make_message("reasoning.failed")
+        elif status == "timedOut":
+            self.ui_message = make_message("reasoning.timeout", seconds=self.limit_seconds)
+        elif status == "tooLarge":
+            self.ui_message = make_message("reasoning.too_large", count=statements, limit=MAX_STATEMENTS)
         self.stated = stated
         self.closure = closure
         self.names = names
@@ -394,7 +409,7 @@ class Outcome:
                 "with fewer imports."
             )
         if self.status == "timedOut":
-            return self.message or timed_out_sentence(TIME_LIMIT_SECONDS)
+            return self.message or timed_out_sentence(self.limit_seconds)
         return ENDINGS.get(self.status)
 
     def summary(self, current: Optional[Key] = None) -> dict:
@@ -409,6 +424,7 @@ class Outcome:
             "durationMs": round(self.duration_ms),
             "statements": self.statements,
             "sentence": self.sentence(),
+            **({"uiMessage": self.ui_message} if self.ui_message is not None else {}),
             "problems": self.problems,
             "groups": [self._group(kind, 0) for kind in GROUPS],
             "importedFacts": self._group(IMPORTED, 0),

@@ -28,8 +28,14 @@ export const SERVER_CONTRACTS = {
       "null"
     ]
   },
+  "reasoning.failed": {},
+  "reasoning.stopped": {},
   "reasoning.timeout": {
     "seconds": "number"
+  },
+  "reasoning.too_large": {
+    "count": "number",
+    "limit": "number"
   },
   "request.invalid": {},
   "validation.min_count": {
@@ -42,7 +48,10 @@ export interface ServerMessageArgs {
   "entities.view_changed": undefined;
   "model.invalid_value": { "datatype": string; "value": string };
   "parse.syntax": { "format": string; "line": number | null };
+  "reasoning.failed": undefined;
+  "reasoning.stopped": undefined;
   "reasoning.timeout": { "seconds": number };
+  "reasoning.too_large": { "count": number; "limit": number };
   "request.invalid": undefined;
   "validation.min_count": { "count": number; "name": string };
 }

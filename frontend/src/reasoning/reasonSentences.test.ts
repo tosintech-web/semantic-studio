@@ -142,3 +142,32 @@ describe("what goes stale (5.3)", () => {
     expect(marksShown(null, NOW, true)).toBe(false);
   });
 });
+
+it("describes current result facts in Japanese without changing staleness or counts", () => {
+  const current = result();
+  const original = JSON.stringify(current);
+  expect(finishedLine(current, "ja")).toBe("推論が4秒で完了しました：問題1件、新しい事実37件");
+  expect(groupHeading("memberships", 4000, "ja")).toBe("新しい所属関係（4,000件）");
+  expect(importedLine(12, "ja")).toBe("インポートした用語に関する事実12件");
+  expect(seconds(240, "ja")).toBe("0.2秒");
+  expect(runningLine(3.7, "ja")).toBe("推論中… 3秒");
+  expect(panelHeading(current, "ja")).toBe("推論結果：4秒で完了");
+  expect(staleLine(current, "ja")).toBe("推論は4秒で完了しましたが、実行中にモデルが変更されました。もう一度推論してください。");
+  expect(premiseMark(true, "ja")).toBe("推論結果");
+  expect(premiseMark(false, "ja")).toBe("記述済み");
+  expect(isStale(current, NOW)).toBe(false);
+  expect(JSON.stringify(current)).toBe(original);
+});
+
+it("renders ending metadata while preserving the legacy diagnostic as data", () => {
+  const stopped = result({ status: "stopped", sentence: "Legacy stop detail", uiMessage: { code: "reasoning.stopped", args: {} } });
+  expect(finishedLine(stopped, "ja")).toBe("停止しました。推論結果はありません。");
+  expect(finishedLine(stopped, "en")).toBe("Stopped. Nothing was concluded.");
+  expect(stopped.sentence).toBe("Legacy stop detail");
+  const timed = result({ status: "timedOut", sentence: "Legacy detail with 999 seconds", uiMessage: { code: "reasoning.timeout", args: { seconds: 1.5 } } });
+  expect(finishedLine(timed, "ja")).toContain("1.5秒");
+  expect(finishedLine(timed, "ja")).not.toContain("999");
+  const tooLarge = result({ status: "tooLarge", uiMessage: { code: "reasoning.too_large", args: { count: 200001, limit: 200000 } } });
+  expect(finishedLine(tooLarge, "ja")).toContain("200,001件");
+  expect(finishedLine(tooLarge, "ja")).toContain("200,000件");
+});

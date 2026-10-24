@@ -481,6 +481,21 @@ describe("DetailPanel: the Inferred block (axioms-and-reasoning 5.7)", () => {
     return onNavigate;
   }
 
+  it("rewords the inferred block without refetching the selected entity", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    getNodeDetails.mockResolvedValue(ROBOT);
+    getReasoningAbout.mockResolvedValue({ iri: ROBOT.iri, neverMembers: true, stale: false, facts: [] });
+    await act(async () => { render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={ROBOT.iri} onNavigate={vi.fn()} onClose={vi.fn()} inferred={INFERRED} /></I18nProvider>); });
+    const block = screen.getByRole("region", { name: "Robotについての推論結果" });
+    expect(within(block).getByText("Robotは所属する個体を持てません。")).toBeTruthy();
+    const calls = [getReasoningAbout.mock.calls.length, getNodeDetails.mock.calls.length];
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("region", { name: "Inferred about Robot" })).toBe(block);
+    expect(within(block).getByText("Robot can never have members.")).toBeTruthy();
+    expect([getReasoningAbout.mock.calls.length, getNodeDetails.mock.calls.length]).toEqual(calls);
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+  });
+
   it("lists what a current result concluded, under the statements, each with Why?", async () => {
     const onNavigate = await show(INFERRED);
     expect(getReasoningAbout).toHaveBeenCalledWith("prj-1", `${X}Robot`, false);

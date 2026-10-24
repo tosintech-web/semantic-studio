@@ -568,6 +568,7 @@ def test_a_run_past_the_time_limit_is_killed_with_its_sentence(shop, monkeypatch
     assert result["status"] == "timedOut"
     # The limit that applied, never the one the module started with.
     assert result["sentence"] == "Stopped after 1.5 seconds. Try without the data snapshots, or with fewer imports."
+    assert result["uiMessage"] == {"code": "reasoning.timeout", "args": {"seconds": 1.5}}
     assert not reasoning.service.running(shop)
 
 
@@ -586,6 +587,7 @@ def test_a_set_over_the_ceiling_is_refused_before_any_process_starts(shop, monke
     result = reason(shop)
     count = len(Graph().parse(data=SHOP, format="turtle"))
     assert result["status"] == "tooLarge" and started == [] and result["statements"] == count
+    assert result["uiMessage"] == {"code": "reasoning.too_large", "args": {"count": count, "limit": 10}}
     assert result["sentence"] == (
         f"This project has {count:,} statements to reason over. Semantic Studio reasons over at most "
         "10: try without the data snapshots, or with fewer imports."
@@ -805,3 +807,28 @@ def test_two_domain_lines_make_a_subject_a_member_of_both():
     apply(pid, SHARED_DOMAIN)
     memberships = shown(reason(pid))["memberships"]
     assert "bob is an Employee" in memberships and "bob is a Manager" in memberships
+
+
+@pytest.mark.parametrize("status,statements,seconds,code,args", [
+    ("stopped", 0, None, "reasoning.stopped", {}),
+    ("failed", 0, None, "reasoning.failed", {}),
+    ("timedOut", 0, 1.5, "reasoning.timeout", {"seconds": 1.5}),
+    ("tooLarge", 200001, None, "reasoning.too_large", {"count": 200001, "limit": 200000}),
+])
+def test_ending_metadata_is_additive_and_uses_original_facts(status, statements, seconds, code, args):
+    outcome = reasoning.Outcome(status, reasoning.Key(1, 0, False, False), statements=statements,
+                                message="Raw failure detail" if status == "failed" else None,
+                                limit_seconds=seconds)
+    legacy = outcome.sentence()
+    summary = outcome.summary()
+    assert summary["sentence"] == legacy
+    assert summary["uiMessage"] == {"code": code, "args": args}
+    assert summary["status"] == status
+    if status == "failed":
+        assert summary["sentence"] == "The reasoner stopped with an error: Raw failure detail"
+
+
+def test_ending_metadata_does_not_add_an_ending_to_a_finished_run():
+    summary = reasoning.Outcome("done", reasoning.Key(1, 0, False, False)).summary()
+    assert summary["sentence"] is None
+    assert summary.get("uiMessage") is None
