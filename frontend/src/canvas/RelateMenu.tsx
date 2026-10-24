@@ -44,6 +44,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState } from "react";
 import { relationshipSentence } from "../modeling/sentences";
 import { keep } from "./ClassNode";
@@ -79,6 +80,7 @@ export default function RelateMenu({
   onChoose,
   onClose,
 }: Props) {
+  const { t, locale } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const sentenceId = useId();
   const [naming, setNaming] = useState(false);
@@ -116,7 +118,7 @@ export default function RelateMenu({
       <div className="relate-head">
         <p className="relate-title" id="relate-title">
           {from} <span aria-hidden="true">…</span>
-          <span className="visually-hidden">to</span> {to}
+          <span className="visually-hidden">{t("canvasMenu.to")}</span> {to}
         </p>
         {!loop && (
           <button
@@ -124,10 +126,10 @@ export default function RelateMenu({
             className="ghost relate-swap"
             aria-disabled={busy}
             onClick={() => !busy && onSwap()}
-            aria-label={`Swap: from ${to} to ${from}`}
-            title="Swap the direction"
+            aria-label={t("canvasMenu.swapLabel", { from: to, to: from })}
+            title={t("canvasMenu.swapTitle")}
           >
-            <span aria-hidden="true">⇄</span> Swap
+            <span aria-hidden="true">⇄</span> {t("canvasMenu.swap")}
           </button>
         )}
       </div>
@@ -139,7 +141,7 @@ export default function RelateMenu({
           }}
         >
           <label className="edit-field-label" htmlFor="relate-name">
-            Name of the new relationship
+            {t("canvasMenu.name")}
           </label>
           <input
             id="relate-name"
@@ -150,14 +152,14 @@ export default function RelateMenu({
             onChange={(e) => setName(e.target.value)}
           />
           <p id={sentenceId} className="relate-sentence">
-            {relationshipSentence(from, name, to)}
+            {relationshipSentence(from, name, to, locale)}
           </p>
           <div className="edit-actions">
             <button type="submit" className="primary" aria-disabled={busy || !name.trim()}>
-              {busy ? "Saving change…" : "Create"}
+              {busy ? t("canvasMenu.saving") : t("canvasMenu.create")}
             </button>
             <button type="button" className="ghost" onClick={onClose}>
-              Cancel
+              {t("canvasNode.cancel")}
             </button>
           </div>
         </form>

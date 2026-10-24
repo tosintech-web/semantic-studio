@@ -23,18 +23,20 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { memo } from "react";
 import type { NodeProps } from "@xyflow/react";
 import { BoxHead, Sides, boxClasses, type BoxNode } from "./ClassNode";
 
 function ConceptNode({ data, selected }: NodeProps<BoxNode>) {
+  const { t } = useI18n();
   return (
     <div className={boxClasses(data, Boolean(selected))}>
       <Sides />
       <BoxHead data={data} />
       {data.otherKind && (
         <div className="canvas-box-body">
-          <span className="canvas-box-from">read-only in an ontology</span>
+          <span className="canvas-box-from">{t("canvasNode.ontologyReadonly")}</span>
         </div>
       )}
     </div>

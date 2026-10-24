@@ -45,11 +45,12 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { memo, useState } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { useSuggestions } from "../components/useSuggestions";
 import { moreRulesText } from "../modeling/ruleSentences";
-import { ALREADY_HERE, article, useOn } from "../modeling/sentences";
+import { article, useOn } from "../modeling/sentences";
 import { DATATYPES } from "../modeling/values";
 import type { CanvasNode } from "../types";
 import { boxKind, kindWord } from "./kindColours";
@@ -111,10 +112,11 @@ export function NameLine({ data }: { data: BoxData }) {
 
 /** The header: the name, and the kind in words at its right (5.8). */
 export function BoxHead({ data }: { data: BoxData }) {
+  const { locale } = useI18n();
   return (
     <div className="canvas-box-head">
       <NameLine data={data} />
-      <span className="canvas-box-kind">{kindWord(data.node)}</span>
+      <span className="canvas-box-kind">{kindWord(data.node, locale)}</span>
     </div>
   );
 }
@@ -133,6 +135,7 @@ export function boxClasses(data: BoxData, selected: boolean): string {
 }
 
 function RenameField({ data }: { data: BoxData }) {
+  const { t } = useI18n();
   const { node, busy, onRenameDone } = data;
   // A fallback name is the primary language's, marked "(en)": this language
   // has no name yet, so the field starts empty rather than on text that
@@ -142,7 +145,7 @@ function RenameField({ data }: { data: BoxData }) {
   return (
     <input
       className="canvas-rename nodrag"
-      aria-label={`New name for ${node.label}`}
+      aria-label={t("canvasNode.rename", { name: node.label })}
       autoFocus
       placeholder={node.fallback ? node.label : undefined}
       value={value}
@@ -164,6 +167,7 @@ function RenameField({ data }: { data: BoxData }) {
 }
 
 function ClassNode({ data, selected }: NodeProps<BoxNode>) {
+  const { t, locale } = useI18n();
   const { node, busy, onAddAttribute, otherKind } = data;
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -182,19 +186,19 @@ function ClassNode({ data, selected }: NodeProps<BoxNode>) {
       <Sides />
       <BoxHead data={data} />
       <div className="canvas-box-body">
-        {otherKind && <span className="canvas-box-from">read-only in a taxonomy</span>}
+        {otherKind && <span className="canvas-box-from">{t("canvasNode.taxonomyReadonly")}</span>}
         {/* A reasoning result found it can never have members (5.5, 5.7):
             said in text, and outlined dashed, never by colour alone. */}
-        {node.neverMembers && <span className="canvas-box-never">can never have members</span>}
+        {node.neverMembers && <span className="canvas-box-never">{t("canvasNode.neverMembers")}</span>}
         {/* Rules (axioms-and-reasoning 5.9): disjointness is a line in the
             box, never a line between boxes; a rule the canvas does not draw
             is counted, so the form is where to look. */}
         {node.disjoint?.map((d) => (
           <span key={d.iri} className="canvas-box-rule">
-            never {article(d.label)} {d.label}
+            {t("canvasBox.never", { name: locale === "en" ? `${article(d.label)} ${d.label}` : d.label })}
           </span>
         ))}
-        {node.moreRules ? <span className="canvas-box-rule">{moreRulesText(node.moreRules)}</span> : null}
+        {node.moreRules ? <span className="canvas-box-rule">{moreRulesText(node.moreRules, locale)}</span> : null}
         {node.attributes.length > 0 && (
           <ul className="canvas-attributes">
             {node.attributes.map((a) => (
@@ -212,9 +216,9 @@ function ClassNode({ data, selected }: NodeProps<BoxNode>) {
                     data.onSelectAttribute?.(a.iri);
                   }}
                 >
-                  {a.label} : {a.datatype ?? "no type"}
+                  {a.label} : {a.datatype ?? t("canvasNode.noType")}
                   {/* Said in text, never by colour alone (attribute-reuse 5.5). */}
-                  {a.both ? " (both, see warning)" : a.shared ? " (shared)" : ""}
+                  {a.both ? t("canvasNode.both") : a.shared ? t("canvasNode.shared") : ""}
                 </button>
               </li>
             ))}
@@ -225,7 +229,7 @@ function ClassNode({ data, selected }: NodeProps<BoxNode>) {
           (adding ? (
             <div className="canvas-attr-form nodrag" onKeyDown={keep}>
               <input
-                aria-label={`Name of the new attribute of ${node.label}`}
+                aria-label={t("canvasNode.attributeName", { name: node.label })}
                 autoFocus
                 value={name}
                 readOnly={busy}
@@ -236,7 +240,7 @@ function ClassNode({ data, selected }: NodeProps<BoxNode>) {
                 }}
               />
               <select
-                aria-label="Type of value"
+                aria-label={t("canvasNode.valueType")}
                 value={datatype}
                 aria-disabled={busy}
                 onChange={(e) => !busy && setDatatype(e.target.value)}
@@ -248,20 +252,20 @@ function ClassNode({ data, selected }: NodeProps<BoxNode>) {
                 ))}
               </select>
               <button type="button" className="primary" aria-disabled={busy || !name.trim()} onClick={() => void submit()}>
-                Add
+                {t("canvasNode.add")}
               </button>
               <button type="button" className="ghost" onClick={() => setAdding(false)}>
-                Cancel
+                {t("canvasNode.cancel")}
               </button>
               {suggestions.length > 0 && data.onReuse && (
                 <div className="canvas-suggestions">
-                  <span className="canvas-box-from">{ALREADY_HERE}</span>
+                  <span className="canvas-box-from">{t("modelSentences.already")}</span>
                   {suggestions.map((s) => (
                     <span key={s.iri} className="canvas-suggestion">
                       {s.line}{" "}
                       <button
                         type="button"
-                        aria-label={`${useOn(node.label)} (${s.label})`}
+                        aria-label={t("canvasNode.reuse", { action: useOn(node.label, locale), name: s.label })}
                         aria-disabled={busy}
                         onClick={() => {
                           if (busy) return;
@@ -270,7 +274,7 @@ function ClassNode({ data, selected }: NodeProps<BoxNode>) {
                           data.onReuse?.(node.iri, s.iri, s.label);
                         }}
                       >
-                        {useOn(node.label)}
+                        {useOn(node.label, locale)}
                       </button>
                     </span>
                   ))}
@@ -284,10 +288,10 @@ function ClassNode({ data, selected }: NodeProps<BoxNode>) {
             <button
               type="button"
               className="canvas-add-attr nodrag"
-              aria-label={`Add an attribute to ${node.label}`}
+              aria-label={t("canvasNode.addAttribute", { name: node.label })}
               onClick={() => setAdding(true)}
             >
-              + attribute
+              {t("canvasNode.attribute")}
             </button>
           ))}
       </div>

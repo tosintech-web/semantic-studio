@@ -31,6 +31,8 @@ EXPECTED OUTPUT
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "../components/UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
 import type { CanvasLayout, CanvasView } from "../types";
 
@@ -1927,4 +1929,71 @@ describe("a shared domain (attribute-reuse 5.3)", () => {
     });
     expect(lastCommand()).toEqual(["UnshareDomain", { property: EX + "filedBy", class: EX + "Invoice" }]);
   });
+});
+
+
+it("switches canvas controls and box words while preserving the attribute draft and positions", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const view = viewOf();
+  getCanvas.mockResolvedValue(view);
+  render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  await waitFor(() => expect(document.querySelectorAll(".react-flow__node")).toHaveLength(view.nodes.length));
+  expect(screen.getByRole("region", { name: "モデリングキャンバス" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "拡大" })).toBeTruthy();
+  expect(box("Document").textContent).toContain("OWLクラス");
+  expect(box("Agent").textContent).toContain("インポート · FOAF");
+  fireEvent.click(screen.getByRole("button", { name: "Documentに属性を追加" }));
+  const field = screen.getByRole("textbox", { name: "Documentの新しい属性名" });
+  fireEvent.change(field, { target: { value: "金額 <b>{name}</b>" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "値の型" }), { target: { value: "xsd:decimal" } });
+  const before = flow.props.nodes.map((node: any) => [node.id, node.position]);
+  const calls = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name of the new attribute of Document" })).toBe(field);
+  expect((field as HTMLInputElement).value).toBe("金額 <b>{name}</b>");
+  expect((screen.getByRole("combobox", { name: "Type of value" }) as HTMLSelectElement).value).toBe("xsd:decimal");
+  expect(flow.props.nodes.map((node: any) => [node.id, node.position])).toEqual(before);
+  expect(getCanvas).toHaveBeenCalledTimes(calls);
+  expect(putLayout).not.toHaveBeenCalled();
+  await act(async () => { fireEvent.click(within(box("Document")).getByRole("button", { name: "Add" })); });
+  expect(lastCommand()).toEqual(["CreateDatatypeProperty", { label: "金額 <b>{name}</b>", domain: EX + "Document", datatype: "xsd:decimal" }]);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("updates an open relate menu without resetting its draft or changing its command", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf());
+  render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  await waitFor(() => expect(document.querySelectorAll(".react-flow__node")).toHaveLength(5));
+  act(() => { flow.props.onConnect({ source: EX + "Document", target: EX + "Invoice", sourceHandle: null, targetHandle: null }); flow.props.onConnectEnd({ clientX: 40, clientY: 50 }); });
+  expect(screen.getByRole("menuitem", { name: "DocumentはInvoice (en)の一種です" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("menuitem", { name: "新しい関係…" }));
+  const field = screen.getByRole("textbox", { name: "新しい関係の名前" });
+  fireEvent.change(field, { target: { value: "関連する" } });
+  const calls = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name of the new relationship" })).toBe(field);
+  expect((field as HTMLInputElement).value).toBe("関連する");
+  expect(getCanvas).toHaveBeenCalledTimes(calls);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Create" })); });
+  expect(lastCommand()).toEqual(["CreateObjectProperty", { label: "関連する", domain: EX + "Document", range: EX + "Invoice" }]);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords a read-only explanation and selected-line hint in the current language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf({ kind: "taxonomy" }));
+  render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  await waitFor(() => expect(document.querySelectorAll(".react-flow__node")).toHaveLength(5));
+  fireEvent.keyDown(box("Document"), { key: "Enter" });
+  expect(document.querySelector(".canvas-hint")?.textContent).toContain("Documentはクラスで、分類体系では読み取り専用です。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".canvas-hint")?.textContent).toContain("Document is a class, read-only in a taxonomy.");
+  const related = flow.props.edges.find((edge: any) => edge.id.startsWith("broader"));
+  act(() => flow.props.onEdgeClick({}, related));
+  expect(document.querySelector(".canvas-hint")?.textContent).toBe("Paid is narrower than Status selected. Delete removes it.");
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(document.querySelector(".canvas-hint")?.textContent).toBe("「PaidはStatusより狭い概念です」を選択しています。Deleteで削除できます。");
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

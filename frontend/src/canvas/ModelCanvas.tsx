@@ -145,6 +145,9 @@ import { Legend, TipCard, type LegendLine } from "./CanvasAids";
 import type { LineKind } from "./kindColours";
 import { BOX_HEIGHT, freeSpot } from "./layered";
 import RelateMenu from "./RelateMenu";
+import { useI18n } from "../i18n/I18nProvider";
+import { translate } from "../i18n/format";
+import type { UiLocale } from "../i18n/types";
 import { boxName, otherKindRefusal, relateChoices, type RelateChoice } from "./relate";
 import { useCanvasData } from "./useCanvasData";
 
@@ -269,6 +272,7 @@ interface DraftPlace {
 }
 
 function Canvas(props: ModelCanvasProps) {
+  const { t, locale } = useI18n();
   const dictionaryLanguage = useDictionaryDisplayLanguage();
   const { projectId, doc, revision, language, primaryLanguage, selected, onSelect, onSelectLink, onDeleted, onCanvasSet } =
     props;
@@ -311,11 +315,16 @@ function Canvas(props: ModelCanvasProps) {
   const [place, setPlace] = useState<DraftPlace | null>(null);
   // The palette items, where a drag or a press began: Cancel's way back.
   const chips = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [hint, setHint] = useState("");
+  const [hint, setHint] = useState<
+    | { type: "edge"; id: string }
+    | { type: "node"; iri: string }
+    | { type: "relate"; from: string; to: string }
+    | null
+  >(null);
   // The palette chip being dragged: its pressed look (Section 6).
   const [dragging, setDragging] = useState<"class" | "concept" | null>(null);
   // While a chip is over a box: *Drop to make a kind of Person* (5.5).
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ kind: "class" | "concept"; name: string } | null>(null);
   const [relate, setRelate] = useState<{
     from: string;
     to: string;
@@ -325,6 +334,7 @@ function Canvas(props: ModelCanvasProps) {
     // turned round): the menu says so in place of its choices.
     refusal?: string;
   } | null>(null);
+  const relateDisplay = useMemo(() => view && relate ? relateChoices(view, relate.from, relate.to, locale) : null, [view, relate, locale]);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const [deleting, setDeleting] = useState<{ iri: string; label: string } | null>(null);
   // Delete on one line of a shared relationship: remove the class, or delete it?
@@ -384,7 +394,7 @@ function Canvas(props: ModelCanvasProps) {
       }
       // A refusal is the runner's errors.rename, which the status line shows;
       // an older hint would stand in front of it (found in review).
-      setHint("");
+      setHint(null);
       if (await run("rename", "SetLabel", { iri, value, lang: language ?? primaryLanguage })) {
         setRenaming(null);
         focusBox(iri);
@@ -508,7 +518,7 @@ function Canvas(props: ModelCanvasProps) {
   const swap = () => {
     if (!relate || !view) return;
     clear("relate");
-    const result = relateChoices(view, relate.to, relate.from);
+    const result = relateChoices(view, relate.to, relate.from, locale);
     setRelate(
       "refusal" in result
         ? { from: relate.to, to: relate.from, choices: [], notes: [], refusal: result.refusal }
@@ -524,21 +534,21 @@ function Canvas(props: ModelCanvasProps) {
   const fixedLink = (edge: CanvasView["edges"][number]): string | null => {
     if (!view) return null;
     if (edge.inferred) {
-      return `${label(view, edge.source)} is a kind of ${label(view, edge.target)}, inferred by reasoning: a conclusion, not part of your model, so it is not removed here.`;
+      return t("canvasUI.fixedInferred", { from: label(view, edge.source), to: label(view, edge.target) });
     }
     if (edge.kind === "relationship") {
       return view.kind === "taxonomy"
-        ? `${edge.label ?? "This relationship"} is a relationship, read-only in a taxonomy. Edit it in Turtle, or change the project to an ontology.`
+        ? t("canvasUI.fixedRelationship", { name: edge.label ?? t("canvasUI.thisRelationship") })
         : null;
     }
     for (const iri of [edge.source, edge.target]) {
       const box = view.nodes.find((n) => n.iri === iri);
-      const reason = box && !box.imported ? otherKindRefusal(view, box) : null;
+      const reason = box && !box.imported ? otherKindRefusal(view, box, locale) : null;
       if (reason) return reason;
     }
     const child = view.nodes.find((n) => n.iri === edge.source);
     if (child?.imported && edge.kind !== "related") {
-      return `${child.label} comes from ${child.imported === "outside" ? "outside this model" : child.imported} and is read-only; this link is changed where it is defined.`;
+      return t("canvasUI.fixedImported", { name: child.label, source: child.imported === "outside" ? t("canvasKind.outside") : child.imported });
     }
     return null;
   };
@@ -548,7 +558,7 @@ function Canvas(props: ModelCanvasProps) {
     if (!edge) return;
     const fixed = fixedLink(edge);
     if (fixed) {
-      setHint(fixed);
+      setHint({ type: "edge", id });
       return;
     }
     if (edge.kind === "subClassOf") await run("edge", "RemoveSubClassOf", { child: edge.source, parent: edge.target });
@@ -577,14 +587,8 @@ function Canvas(props: ModelCanvasProps) {
     const line = view.edges.find((e) => edgeId(e) === id);
     if (!line) return;
     const fixed = fixedLink(line);
-    const words =
-      line.kind === "relationship"
-        ? `${label(view, line.source)} ${line.label} ${label(view, line.target)}`
-        : line.kind === "rule"
-          ? ruleWords(view, line)
-          : linkSentence(line.kind, label(view, line.source), label(view, line.target));
     setSelectedEdge(id);
-    setHint(fixed ?? `${words} selected. Delete removes it.`);
+    setHint({ type: "edge", id });
     wrapper.current?.focus();
     if (line.kind === "relationship" && line.property) {
       edgeSelection.current = line.property;
@@ -648,7 +652,7 @@ function Canvas(props: ModelCanvasProps) {
             position: { x: positions[n.iri][0], y: positions[n.iri][1] },
             data,
             selected: n.iri === selected,
-            ariaLabel: boxName(view, n.iri),
+            ariaLabel: boxName(view, n.iri, locale),
             // An imported box is linked to, never changed or moved about.
             draggable: !n.imported,
             connectable: true,
@@ -659,7 +663,7 @@ function Canvas(props: ModelCanvasProps) {
       boxes.sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x);
       return boxes;
     });
-  }, [view, positions, selected, renaming, dropTarget, busy, onRenameDone, onAddAttribute, selectHere, onReuse, projectId, doc]);
+  }, [view, positions, selected, renaming, dropTarget, busy, onRenameDone, onAddAttribute, selectHere, onReuse, projectId, doc, locale]);
 
   const edges = useMemo<Edge[]>(() => {
     if (!view) return [];
@@ -681,12 +685,12 @@ function Canvas(props: ModelCanvasProps) {
         ariaLabel:
           e.kind === "relationship" && e.member
             ? // One of a shared relationship's lines names its member (5.5).
-              `${e.label}, from ${label(view, e.source)} to ${label(view, e.target)}`
+              t("canvasUI.sharedLink", { name: String(e.label), from: label(view, e.source), to: label(view, e.target) })
             : e.kind === "relationship"
-            ? `${label(view, e.source)} ${e.label} ${label(view, e.target)}`
+            ? t("canvasUI.relationshipLink", { name: String(e.label), from: label(view, e.source), to: label(view, e.target) })
             : e.kind === "rule"
-              ? `${ruleWords(view, e)}, a rule`
-              : `${linkSentence(e.kind, label(view, e.source), label(view, e.target))}${e.inferred ? ", inferred" : ""}`,
+              ? t("canvasUI.ruleLink", { text: ruleWords(view, e, locale) })
+              : e.inferred ? t("canvasUI.linkInferred", { text: linkSentence(e.kind, label(view, e.source), label(view, e.target), t) }) : linkSentence(e.kind, label(view, e.source), label(view, e.target), t),
         // A hollow triangle at the parent for a kind of or broader line, a
         // filled arrow for a relationship or a rule, and a dot at both ends
         // of related, which reads the same both ways (5.8).
@@ -696,14 +700,14 @@ function Canvas(props: ModelCanvasProps) {
           // An inferred line always says so, in words: never by its dash alone.
           text:
             e.kind === "relationship"
-              ? `${e.label ?? ""}${e.both ? " (both, see warning)" : e.shared ? " (shared)" : ""}`
+              ? `${e.label ?? ""}${e.both ? t("canvasNode.both") : e.shared ? t("canvasNode.shared") : ""}`
               : e.kind === "rule"
                 ? e.rule
-                  ? shortLabel(e.rule)
-                  : "rule"
+                  ? shortLabel(e.rule, locale)
+                  : t("canvasUI.rule")
                 : e.inferred
-                  ? `${LINE_WORDS[e.kind]} · inferred`
-                  : LINE_WORDS[e.kind],
+                  ? t("canvasUI.inferred", { text: t(`canvasUI.line.${e.kind}`) })
+                  : t(`canvasUI.line.${e.kind}`),
           always: true,
           pair: e.pair ?? 0,
           pairs: e.pairs ?? 1,
@@ -715,7 +719,7 @@ function Canvas(props: ModelCanvasProps) {
         },
       };
     });
-  }, [view, selectedEdge, positions, selected, clickLabel]);
+  }, [view, selectedEdge, positions, selected, clickLabel, locale, t]);
 
   // --- selection made elsewhere pans here (D-047) ------------------------------------
 
@@ -798,16 +802,16 @@ function Canvas(props: ModelCanvasProps) {
     (connection: Connection) => {
       if (!view) return;
       clear("relate");
-      const result = relateChoices(view, connection.source, connection.target);
+      const result = relateChoices(view, connection.source, connection.target, locale);
       if ("refusal" in result) {
-        setHint(result.refusal);
+        setHint({ type: "relate", from: connection.source, to: connection.target });
         setRelate(null);
       } else {
-        setHint("");
+        setHint(null);
         setRelate({ from: connection.source, to: connection.target, ...result });
       }
     },
-    [view, clear],
+    [view, clear, locale],
   );
 
   const kindDragged = (e: React.DragEvent): "class" | "concept" | null =>
@@ -827,13 +831,7 @@ function Canvas(props: ModelCanvasProps) {
     e.dataTransfer.dropEffect = "copy";
     const target = targetUnder(e, kind);
     setDropTarget(target?.iri ?? null);
-    setToast(
-      target
-        ? kind === "class"
-          ? `Drop to make a kind of ${target.label}`
-          : `Drop to make a narrower concept of ${target.label}`
-        : "",
-    );
+    setToast(target ? { kind, name: target.label } : null);
   };
 
   const onDrop = (e: React.DragEvent) => {
@@ -842,7 +840,7 @@ function Canvas(props: ModelCanvasProps) {
     e.preventDefault();
     const target = targetUnder(e, kind);
     setDropTarget(null);
-    setToast("");
+    setToast(null);
     setDragging(null);
     const at = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
     const spot: [number, number] = target && positions[target.iri]
@@ -899,7 +897,7 @@ function Canvas(props: ModelCanvasProps) {
       // Read-only here: say where it is changed, rather than doing nothing.
       e.preventDefault();
       e.stopPropagation();
-      if (!node.imported) setHint(otherKindRefusal(view!, node)!);
+      if (!node.imported) setHint({ type: "node", iri: node.iri });
     } else if (node && e.key === "Enter") {
       // Enter renames (5.4); React Flow's own Enter would only select.
       e.preventDefault();
@@ -911,7 +909,7 @@ function Canvas(props: ModelCanvasProps) {
       setDeleting({ iri: node.iri, label: node.label });
     } else if (!node && selectedEdge && (e.key === "Delete" || e.key === "Backspace")) {
       e.preventDefault();
-      setHint("");
+      setHint(null);
       void removeEdge(selectedEdge);
     } else if (e.key === "+" || e.key === "=") {
       e.preventDefault();
@@ -922,23 +920,44 @@ function Canvas(props: ModelCanvasProps) {
     }
   };
 
+  const hintText = () => {
+    if (!view || !hint) return "";
+    if (hint.type === "node") {
+      const node = view.nodes.find(n => n.iri === hint.iri);
+      return node ? otherKindRefusal(view, node, locale) ?? "" : "";
+    }
+    if (hint.type === "relate") {
+      const result = relateChoices(view, hint.from, hint.to, locale);
+      return "refusal" in result ? result.refusal : "";
+    }
+    const line = view.edges.find(e => edgeId(e) === hint.id);
+    if (!line) return "";
+    const fixed = fixedLink(line);
+    if (fixed) return fixed;
+    const text = line.kind === "relationship"
+      ? t("canvasUI.relationshipLink", { from: label(view, line.source), name: String(line.label), to: label(view, line.target) })
+      : line.kind === "rule" ? ruleWords(view, line, locale)
+      : linkSentence(line.kind, label(view, line.source), label(view, line.target), t);
+    return t("canvasUI.selectedLine", { text });
+  };
+
   // --- states ------------------------------------------------------------------
 
   if (data.error) {
     return (
-      <section className="model-canvas canvas-message" aria-label="Modeling canvas">
-        <p>The canvas could not load. The tree and the form still work.</p>
+      <section className="model-canvas canvas-message" aria-label={t("canvasUI.name")}>
+        <p>{t("canvasUI.failed")}</p>
         <p className="detail-note">{data.error}</p>
         <button type="button" className="ghost" onClick={data.retry}>
-          Retry
+          {t("canvasUI.retry")}
         </button>
       </section>
     );
   }
   if (!view) {
     return (
-      <section className="model-canvas canvas-message" aria-label="Modeling canvas" aria-busy="true">
-        <p role="status">Loading the canvas…</p>
+      <section className="model-canvas canvas-message" aria-label={t("canvasUI.name")} aria-busy="true">
+        <p role="status">{t("canvasUI.loading")}</p>
       </section>
     );
   }
@@ -948,14 +967,14 @@ function Canvas(props: ModelCanvasProps) {
   // The kind's own palette item; both for a project not opened since kinds.
   const palette: ("class" | "concept")[] =
     view.kind === "ontology" ? ["class"] : view.kind === "taxonomy" ? ["concept"] : ["class", "concept"];
-  const otherNote = otherKindLine(view);
+  const otherNote = otherKindLine(view, locale);
   const drawnPlace = draft && place?.token === draft.token ? place.at : null;
   const draftNode = drawnPlace ? flow.flowToScreenPosition({ x: drawnPlace[0], y: drawnPlace[1] }) : null;
   const origin = wrapper.current?.getBoundingClientRect();
   const refused = errors.rename || errors.attribute || errors.edge || data.saveError || "";
 
   return (
-    <section className="model-canvas" aria-label="Modeling canvas" aria-busy={busy} ref={section} tabIndex={-1}>
+    <section className="model-canvas" aria-label={t("canvasUI.name")} aria-busy={busy} ref={section} tabIndex={-1}>
       <svg className="canvas-defs" aria-hidden="true" width="0" height="0">
         <defs>
           {/* One marker per kind, coloured by CSS (5.8), and sized in the
@@ -976,9 +995,9 @@ function Canvas(props: ModelCanvasProps) {
           </marker>
         </defs>
       </svg>
-      <div className="canvas-toolbar" role="toolbar" aria-label="Canvas">
+      <div className="canvas-toolbar" role="toolbar" aria-label={t("canvasUI.toolbar")}>
         <span className="canvas-palette-label" id="canvas-add-label">
-          Add
+          {t("canvasUI.add")}
         </span>
         {palette.map((kind) => (
           <button
@@ -997,27 +1016,27 @@ function Canvas(props: ModelCanvasProps) {
             }}
             onDragEnd={() => setDragging(null)}
             onClick={() => startDraft(kind)}
-            title={`Drag onto the canvas, or press to add a ${kind} in the middle`}
+            title={t(`canvasUI.paletteTitle.${kind}`)}
           >
             <span className="canvas-grip" aria-hidden="true">
               ⠿
             </span>
-            {kind === "class" ? "Class" : "Concept"}
+            {t(`canvasUI.palette.${kind}`)}
           </button>
         ))}
         <span className="canvas-palette-hint" id="canvas-palette-hint">
-          drag onto the canvas, or press
+          {t("canvasUI.paletteHint")}
         </span>
         <span className="canvas-toolbar-gap" />
         {props.reason}
-        <button type="button" className="ghost" onClick={() => void flow.zoomIn({ duration: reduced ? 0 : 150 })} aria-label="Zoom in">
+        <button type="button" className="ghost" onClick={() => void flow.zoomIn({ duration: reduced ? 0 : 150 })} aria-label={t("canvasUI.zoomIn")}>
           +
         </button>
-        <button type="button" className="ghost" onClick={() => void flow.zoomOut({ duration: reduced ? 0 : 150 })} aria-label="Zoom out">
+        <button type="button" className="ghost" onClick={() => void flow.zoomOut({ duration: reduced ? 0 : 150 })} aria-label={t("canvasUI.zoomOut")}>
           −
         </button>
         <button type="button" className="ghost" onClick={() => void flow.fitView({ duration: reduced ? 0 : 200, maxZoom: 1 })}>
-          Fit
+          {t("canvasUI.fit")}
         </button>
         <button
           type="button"
@@ -1027,33 +1046,33 @@ function Canvas(props: ModelCanvasProps) {
           aria-disabled={nodes.length === 0}
           onClick={() => nodes.length > 0 && setTidying(true)}
         >
-          Tidy up
+          {t("canvasUI.tidy")}
         </button>
         {undrawn.length > 0 && (
           <button type="button" className="ghost" aria-expanded={undrawnOpen} onClick={() => setUndrawnOpen((o) => !o)}>
-            {undrawn.length} {undrawn.length === 1 ? "relationship" : "relationships"} not drawn
+            {t(undrawn.length === 1 ? "canvasUI.undrawn.one" : "canvasUI.undrawn.many", { count: undrawn.length })}
           </button>
         )}
       </div>
       {undrawnOpen && (
-        <ul className="canvas-undrawn" aria-label="Relationships not drawn">
+        <ul className="canvas-undrawn" aria-label={t("canvasUI.undrawn")}>
           {undrawn.map((u) => (
             <li key={u.iri}>
               <button type="button" className="term-link" onClick={() => onSelect(u.iri)}>
                 {u.label}
               </button>{" "}
-              <span className="detail-note">{UNDRAWN_WHY[u.missing]}</span>
+              <span className="detail-note">{t(`canvasUI.missing.${u.missing}`)}</span>
             </li>
           ))}
         </ul>
       )}
       <p className="canvas-hint" role="status">
-        {busy ? "Saving change…" : hint || refused}
+        {busy ? t("canvasMenu.saving") : hintText() || refused}
       </p>
       {otherNote && <p className="detail-note canvas-other-kind">{otherNote}</p>}
       {view.limited && (
         <p className="detail-note canvas-limited">
-          This model has {view.total.toLocaleString()} classes and concepts; the canvas shows the ones you choose.
+          {t("canvasUI.limited", { count: view.total })}
         </p>
       )}
       <div
@@ -1064,7 +1083,7 @@ function Canvas(props: ModelCanvasProps) {
         onDragOver={onDragOver}
         onDragLeave={() => {
           setDropTarget(null);
-          setToast("");
+          setToast(null);
         }}
         onDrop={onDrop}
         onKeyDownCapture={onKeyDownCapture}
@@ -1119,7 +1138,7 @@ function Canvas(props: ModelCanvasProps) {
           maxZoom={2}
         />
         {empty && !draft && (
-          <p className="canvas-empty">Drag a {view.kind === "taxonomy" ? "Concept" : "Class"} here to start</p>
+          <p className="canvas-empty">{t(view.kind === "taxonomy" ? "canvasUI.empty.concept" : "canvasUI.empty.class")}</p>
         )}
         {draft && draftNode && origin && (
           <div
@@ -1129,26 +1148,14 @@ function Canvas(props: ModelCanvasProps) {
             {/* A visible label and the hint as the field's description (5.5,
                 Section 6); the field's name says the same, longer. */}
             <label className="canvas-box-head canvas-draft-label" htmlFor="canvas-draft-name">
-              {draft.parent
-                ? draft.kind === "class"
-                  ? `New kind of ${draft.parent.label}`
-                  : `New concept narrower than ${draft.parent.label}`
-                : draft.kind === "class"
-                  ? "New class"
-                  : "New concept"}
+              {draft.parent ? t(draft.kind === "class" ? "canvasUI.draftParent.class" : "canvasUI.draftParent.concept", { name: draft.parent.label }) : t(draft.kind === "class" ? "canvasUI.draft.class" : "canvasUI.draft.concept")}
             </label>
             <input
               id="canvas-draft-name"
               className="nodrag"
               aria-describedby="canvas-draft-hint"
               autoFocus
-              aria-label={
-                draft.parent
-                  ? draft.kind === "class"
-                    ? `Name of the new kind of ${draft.parent.label}`
-                    : `Name of the new concept narrower than ${draft.parent.label}`
-                  : `Name of the new ${draft.kind}`
-              }
+              aria-label={draft.parent ? t(draft.kind === "class" ? "canvasUI.draftNameParent.class" : "canvasUI.draftNameParent.concept", { name: draft.parent.label }) : t(draft.kind === "class" ? "canvasUI.draftName.class" : "canvasUI.draftName.concept")}
               value={draft.name}
               readOnly={draftBusy}
               onChange={(e) => projectStore.setCreatingName(e.target.value)}
@@ -1168,14 +1175,14 @@ function Canvas(props: ModelCanvasProps) {
               onBlur={(e) => !draftBusy && !draft.name.trim() && !intoDraft(e.relatedTarget) && projectStore.cancelCreating(false)}
             />
             <p className="canvas-draft-hint" id="canvas-draft-hint">
-              Enter to create · Esc to cancel
+              {t("canvasUI.draftKeys")}
             </p>
             {draftError && <p className="edit-error">{draftError}</p>}
           </div>
         )}
         {toast && (
           <p className="canvas-toast" role="status">
-            {toast}
+            {t(`canvasUI.drop.${toast.kind}`, { name: toast.name })}
           </p>
         )}
         <TipCard word={view.kind === "taxonomy" ? "Concept" : "Class"} />
@@ -1184,9 +1191,9 @@ function Canvas(props: ModelCanvasProps) {
           <RelateMenu
             from={label(view, relate.from)}
             to={label(view, relate.to)}
-            choices={relate.choices}
-            notes={relate.notes}
-            refusal={relate.refusal ?? null}
+            choices={relateDisplay && "choices" in relateDisplay ? relateDisplay.choices : []}
+            notes={relateDisplay && "notes" in relateDisplay ? relateDisplay.notes : []}
+            refusal={relateDisplay && "refusal" in relateDisplay ? relateDisplay.refusal : null}
             loop={relate.from === relate.to}
             onSwap={swap}
             anchor={anchor}
@@ -1221,29 +1228,29 @@ function Canvas(props: ModelCanvasProps) {
       )}
       {tidying && (
         <ConfirmDialog
-          title="Tidy up the canvas?"
+          title={t("canvasUI.tidyQuestion")}
           escape="cancel"
           actions={[
-            { id: "tidy", label: "Tidy up", primary: true },
-            { id: "cancel", label: "Cancel" },
+            { id: "tidy", label: t("canvasUI.tidy"), primary: true },
+            { id: "cancel", label: t("canvasNode.cancel") },
           ]}
           onAnswer={(id) => {
             setTidying(false);
             if (id === "tidy") data.tidy();
           }}
         >
-          <p>This moves every box. Positions you set are replaced.</p>
+          <p>{t("canvasUI.tidyEffect")}</p>
         </ConfirmDialog>
       )}
       {unsharing && (
         <ConfirmDialog
-          title={memberDeleteQuestion(unsharing.memberLabel, unsharing.label)}
+          title={memberDeleteQuestion(unsharing.memberLabel, unsharing.label, locale)}
           escape="cancel"
           busy={busy}
           actions={[
-            { id: "remove", label: `Remove ${unsharing.memberLabel}`, primary: true },
-            { id: "delete", label: `Delete ${unsharing.label}` },
-            { id: "cancel", label: "Cancel" },
+            { id: "remove", label: t("canvasUI.remove", { name: unsharing.memberLabel }), primary: true },
+            { id: "delete", label: t("canvasUI.delete", { name: unsharing.label }) },
+            { id: "cancel", label: t("canvasNode.cancel") },
           ]}
           onAnswer={async (id) => {
             const asked = unsharing;
@@ -1259,8 +1266,7 @@ function Canvas(props: ModelCanvasProps) {
           }}
         >
           <p>
-            Remove {unsharing.memberLabel} takes only this line away. Delete {unsharing.label} removes the relationship
-            from every class.
+            {t("canvasUI.unshare", { member: unsharing.memberLabel, name: unsharing.label })}
           </p>
         </ConfirmDialog>
       )}
@@ -1295,29 +1301,14 @@ function legendLines(view: CanvasView): LegendLine[] {
   return lines;
 }
 
-/** What a hierarchy or related line says beside it. */
-const LINE_WORDS: Record<Exclude<CanvasView["edges"][number]["kind"], "relationship" | "rule">, string> = {
-  subClassOf: "is a kind of",
-  broader: "narrower than",
-  related: "related to",
-};
-
-const UNDRAWN_WHY: Record<CanvasView["undrawn"][number]["missing"], string> = {
-  domain: "no domain",
-  range: "no range",
-  both: "no domain or range",
-  expression: "an end written as an expression; edit it in Turtle",
-  outside: "of a class outside this model",
-};
-
 function edgeId(e: CanvasView["edges"][number]): string {
   // Two rules may join the same two boxes: a rule's line is told by its key.
   return `${e.kind}|${e.source}|${e.target}|${e.property ?? (e.key ? JSON.stringify(e.key) : "")}`;
 }
 
 /** A rule's line read as its sentence (5.9). */
-function ruleWords(view: CanvasView, e: CanvasView["edges"][number]): string {
-  if (!e.rule) return `A rule from ${label(view, e.source)} to ${label(view, e.target)}`;
+function ruleWords(view: CanvasView, e: CanvasView["edges"][number], locale: UiLocale = "en"): string {
+  if (!e.rule) return translate(locale, "canvasUI.ruleFallback", { from: label(view, e.source), to: label(view, e.target) });
   return restrictionSentence(label(view, e.source), {
     form: e.rule.form,
     kind: e.rule.kind,
@@ -1325,14 +1316,14 @@ function ruleWords(view: CanvasView, e: CanvasView["edges"][number]): string {
     filler: e.rule.fillerLabel,
     n: e.rule.n,
     with: e.rule.withLabel,
-  });
+  }, locale);
 }
 
 /** One line when the document holds the other kind (5.1). Imported boxes
  *  are not counted: they are an import's, whatever the kind. */
-function otherKindLine(view: CanvasView): string | null {
+function otherKindLine(view: CanvasView, locale: UiLocale = "en"): string | null {
   const other: CanvasNode["kind"] = view.kind === "ontology" ? "concept" : "class";
-  return otherKindNote(view.kind, view.nodes.filter((n) => n.kind === other && !n.imported).length);
+  return otherKindNote(view.kind, view.nodes.filter((n) => n.kind === other && !n.imported).length, (code, ...args) => translate(locale, code, args[0]));
 }
 
 function label(view: CanvasView, iri: string): string {

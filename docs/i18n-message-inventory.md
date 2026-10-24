@@ -86,10 +86,10 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/canvas/layered.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/kindColours.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/curves.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/RelateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/ModelCanvas.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/ConceptNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/ClassNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/RelateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner通知・APIエラー等はTask 12、ブラウザ確認はTask 13） |
+| `frontend/src/canvas/ModelCanvas.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner通知・APIエラー等はTask 12、ブラウザ確認はTask 13） |
+| `frontend/src/canvas/ConceptNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner通知・APIエラー等はTask 12、ブラウザ確認はTask 13） |
+| `frontend/src/canvas/ClassNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner通知・APIエラー等はTask 12、ブラウザ確認はTask 13） |
 | `frontend/src/canvas/CanvasAids.tsx` | 凡例・キーボードヘルプ・初回案内 | 11 | 画面所有文言を移行、開閉状態とdismissフラグを保持（実ブラウザ確認はTask 13） |
 | `frontend/src/components/GraphView.tsx` | 探索グラフの共通操作・ズーム・出力案内 | 11 | 操作を移行、ルールラベル生成元は別途移行 |
 | `frontend/src/components/SideTabs.tsx` | 編集・推論の共通タブ表示 | 11 | 既定表示を移行、カスタム表示の生成元は別途移行 |
@@ -1097,7 +1097,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `modelSentences.suggestion.attributeTyped` | domain, name, type | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.suggestion.attribute` | domain, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.suggestion.relationship` | domain, end, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
-| `modelSentences.already` | — | `frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.already` | — | `frontend/src/canvas/ClassNode.tsx`<br>`frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.use` | cls | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.matches.attribute.one` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.matches.attribute.many` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
@@ -1803,7 +1803,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `canvasKind.scheme` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
 | `canvasKind.example` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
 | `canvasKind.attribute` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
-| `canvasKind.outside` | — | `frontend/src/canvas/kindColours.ts`<br>`frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.outside` | — | `frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/canvas/kindColours.ts`<br>`frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
 | `canvasKind.imported` | name | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
 | `canvasRelate.mixed` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
 | `canvasRelate.otherConcept` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
@@ -1828,4 +1828,84 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `canvasBox.children.concept.many` | count | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
 | `canvasBox.outsideReadonly` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
 | `canvasBox.importedReadonly` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
-| `canvasBox.never` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.never` | name | `frontend/src/canvas/ClassNode.tsx`<br>`frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+
+| `canvasNode.rename` | name | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.taxonomyReadonly` | — | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.ontologyReadonly` | — | `frontend/src/canvas/ConceptNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.neverMembers` | — | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.noType` | — | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.both` | — | `frontend/src/canvas/ClassNode.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.shared` | — | `frontend/src/canvas/ClassNode.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.attributeName` | name | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.valueType` | — | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.add` | — | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.cancel` | — | `frontend/src/canvas/ClassNode.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.reuse` | action, name | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.addAttribute` | name | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasNode.attribute` | — | `frontend/src/canvas/ClassNode.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasMenu.to` | — | `frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasMenu.swap` | — | `frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasMenu.swapLabel` | from, to | `frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasMenu.swapTitle` | — | `frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasMenu.name` | — | `frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasMenu.saving` | — | `frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasMenu.create` | — | `frontend/src/canvas/RelateMenu.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.name` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.failed` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.retry` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.loading` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.toolbar` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.add` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.palette.class` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.palette.concept` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.paletteHint` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.paletteTitle.class` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.paletteTitle.concept` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.zoomIn` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.zoomOut` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.fit` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.tidy` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.undrawn.one` | count | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.undrawn.many` | count | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.undrawn` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.missing.domain` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.missing.range` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.missing.both` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.missing.expression` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.missing.outside` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.limited` | count | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.empty.class` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.empty.concept` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draftParent.class` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draftParent.concept` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draft.class` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draft.concept` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draftNameParent.class` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draftNameParent.concept` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draftName.class` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draftName.concept` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.draftKeys` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.tidyQuestion` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.tidyEffect` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.remove` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.delete` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.unshare` | member, name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.line.subClassOf` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.line.broader` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.line.related` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.inferred` | text | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.linkInferred` | text | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.sharedLink` | from, name, to | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.relationshipLink` | from, name, to | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.ruleLink` | text | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.rule` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.ruleFallback` | from, to | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+
+| `canvasUI.fixedInferred` | from, to | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
+| `canvasUI.fixedRelationship` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
+| `canvasUI.thisRelationship` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
+| `canvasUI.fixedImported` | name, source | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
+| `canvasUI.selectedLine` | text | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
+| `canvasUI.drop.class` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
+| `canvasUI.drop.concept` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |

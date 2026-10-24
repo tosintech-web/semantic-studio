@@ -2139,3 +2139,20 @@ it("localizes graph controls and its accessible equivalent without recreating Si
     expect(sigmaCalls.last).toBe(renderer);
   } finally { cleanup(); }
 });
+
+it("updates rule labels in the same graph without moving nodes on a UI language switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const { default: GraphView } = await import("./GraphView");
+  try {
+    await act(async () => { render(<I18nProvider><UiLanguageSelect /><GraphView data={WITH_RULES} theme="light" hiddenKinds={new Set()} selected="http://x/Order" onSelect={vi.fn()} focusTick={0} /></I18nProvider>); });
+    const renderer = sigmaCalls.last;
+    const graph = renderer.graph;
+    const labels = () => graph.edges().map((key: string) => graph.getEdgeAttribute(key, "label")).sort();
+    expect(labels()).toEqual(["1件以上・has line", "3件以下・has line"]);
+    const positions = graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")]);
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(labels()).toEqual(["at least 1 · has line", "at most 3 · has line"]);
+    expect(sigmaCalls.last).toBe(renderer);
+    expect(graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")])).toEqual(positions);
+  } finally { cleanup(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});

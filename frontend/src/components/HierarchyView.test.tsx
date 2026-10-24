@@ -802,16 +802,20 @@ describe("HierarchyView, Stage 2 follow-ups (visual-modeling 5.8)", () => {
     // canvas beside the outline. A fold that told the parent anything would
     // re-render the canvas with it.
     function Page() {
-      const [, setCounts] = useState<unknown>(null);
+      const [counts, setCounts] = useState<unknown>(null);
       return (
         <>
           {view({ onCounts: setCounts })}
           <StubCanvas />
+          <span data-testid="model-counts-ready">{counts === null ? "waiting" : "ready"}</span>
         </>
       );
     }
     render(<Page />);
     await waitFor(() => expect(itemByLabel("Alpha")).toBeTruthy());
+    // Seeing the first row can precede its passive onCounts effect. Include
+    // that initial parent render in the baseline, then measure only folds.
+    await waitFor(() => expect(screen.getByTestId("model-counts-ready").textContent).toBe("ready"));
     const before = canvasRenders;
     for (let i = 0; i < 10; i++) {
       await act(async () => fireEvent.click(screen.getByRole("button", { name: named("Concepts") })));
