@@ -131,6 +131,54 @@
     "command.removed_equivalent": {
       "first": "string",
       "second": "string"
+    },
+    "words.path.name": {},
+    "words.path.nameLabel": {},
+    "words.path.preferredName": {},
+    "words.path.definition": {},
+    "words.path.description": {},
+    "words.path.or": {},
+    "words.severity.violation": {},
+    "words.severity.warning": {},
+    "command.added_rule": {
+      "shape_name": "string",
+      "path": "parts"
+    },
+    "command.created_shape": {
+      "name": "string"
+    },
+    "command.changed_shape_target": {
+      "name": "string",
+      "target": "string"
+    },
+    "command.renamed_shape": {
+      "old": "string",
+      "new": "string"
+    },
+    "command.changed_shape_severity": {
+      "name": "string",
+      "severity": "parts"
+    },
+    "command.removed_shape_message": {
+      "name": "string"
+    },
+    "command.changed_shape_message": {
+      "name": "string"
+    },
+    "command.changed_rule": {
+      "shape_name": "string",
+      "path": "parts"
+    },
+    "command.removed_rule": {
+      "shape_name": "string",
+      "path": "parts"
+    },
+    "command.deleted_shape": {
+      "name": "string"
+    },
+    "command.added_check": {
+      "shape_name": "string",
+      "path": "parts"
     }
   }
 }

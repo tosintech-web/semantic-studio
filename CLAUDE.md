@@ -310,6 +310,7 @@ leaves one behind.
 - Data actions pass their issuing project id to `dataChanged`; a late completion must not announce or refetch another project's data. [P1 structured data notices]
 - Retained project notices store typed descriptors or minimal summary facts, never translated UI text or full result witnesses; language changes render them without moving their id or replaying work. Raw operation failures stay beside legacy strings and render in the current locale with original details. [P1 operation notices]
 - Successful command descriptors follow their exact history step and remain additive to label/undoLabel/redoLabel. An unsupported descriptor keeps the legacy successful action label; never replace it with an operation-failed message. [P1 command history descriptors]
+- Compound message arguments use validated flat literal/zero-argument word parts; no nested templates or captured English noun groups. Resolve words only in the current UI locale and capture mutable parts at the server boundary. [P1 compound message parts]
 - CSV/Excel header-keyed UI maps have no prototype and incoming choices use own-key lookup; `__proto__` and `constructor` are literal headers. [P1 literal import headers]
 - Authoring controls are `aria-disabled`, not `disabled`, so focus is never dropped. [authoring foundations]
 - `pick_label` tests the exact `en` tag before the prefix match. [authoring foundations]

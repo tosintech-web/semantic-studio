@@ -624,3 +624,42 @@ it("renders a command and its undo/redo labels and announcements from retained m
   expect(screen.getByRole("status").querySelector("img")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });
+
+it("keeps compound rule descriptors and the active shapes document intact across UI language changes", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const shapeName = "犬の確認 <img>{shape}";
+  const custom = "備考 <b>{path}</b>";
+  const wire = Object.freeze({ code: "command.added_rule", args: Object.freeze({ shape_name: shapeName,
+    path: Object.freeze([
+      Object.freeze({ code: "words.path.name", args: Object.freeze({}) }),
+      Object.freeze({ code: "words.path.or", args: Object.freeze({}) }),
+      Object.freeze({ text: custom }),
+    ]),
+  }) });
+  const shapes = { ...doc(), doc: "shapes" as const, ontologyId: `${PROJECT.id}-shapes`, revision: 1, dirty: false, canUndo: false, undoLabel: null };
+  openProject.mockResolvedValue({ project: { ...PROJECT, documents: [...PROJECT.documents, { file: "shapes.ttl", role: "shapes" }] }, documents: [doc({ dirty: false }), shapes], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  projectStore.switchDocument("shapes");
+  render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  const english = `Added a rule on name or ${custom} to ${shapeName}`;
+  const japanese = `ルールセット「${shapeName}」への名前または${custom}のルール追加`;
+  const packet = { shape: "urn:synthetic:shape", rule: { path: ["http://www.w3.org/2000/01/rdf-schema#label", "urn:synthetic:notes"], minCount: 1 } };
+  runCommand.mockResolvedValueOnce({ revision: 2, label: english, uiMessage: wire, state: { ...shapes, revision: 2, dirty: true, canUndo: true, undoLabel: english, undoUiMessage: wire } });
+  await act(async () => { await projectStore.command("AddRule", packet); });
+  expect(live()).toBe(`${japanese}が完了しました。未保存の変更があります。`);
+  expect(screen.getByRole("button", { name: `元に戻す：${japanese}` })).toBeTruthy();
+  const notice = projectStore.getSnapshot().announcement;
+  const span = screen.getByRole("status").firstElementChild;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(live()).toBe(`${english}. Unsaved changes.`);
+  expect(screen.getByRole("button", { name: `Undo: ${english}` })).toBeTruthy();
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(screen.getByRole("status").firstElementChild).toBe(span);
+  expect(projectStore.getSnapshot().activeDoc).toBe("shapes");
+  expect(projectStore.getSnapshot().displayLanguage).toBe("en");
+  expect(projectStore.getSnapshot().documents.find(d => d.doc === "shapes")?.undoUiMessage).toBe(wire);
+  expect(runCommand).toHaveBeenCalledExactlyOnceWith(PROJECT.id, "shapes", "AddRule", packet);
+  expect(openProject).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("status").querySelector("img,b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});

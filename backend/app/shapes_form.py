@@ -47,6 +47,10 @@ BASIC IDEA
     *one value only*, and names and definitions. A suggestion whose every
     part an existing rule on its path already says is not offered again.
 
+    path_parts retains the same structural path meanings as path_label while
+    keeping standard UI words separate from literal model names for rendering
+    in the client's current language. The legacy English label stays intact.
+
 INPUTS / INPUT SOURCES
     - The shapes document's graph, and the model's graph (with its imports
       merged when they are resolved) for names, classes and properties.
@@ -68,6 +72,7 @@ from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.collection import Collection
 from rdflib.namespace import OWL, RDF, RDFS, SKOS, XSD
 
+from .messages import literal_part, word_part
 from .graph_builder import pick_label_in, prefixed
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
@@ -208,6 +213,34 @@ def path_label(model: Graph, path: tuple, languages: list) -> str:
             return "description"
         return pick_label_in(model, iri, languages)[0]
     return " or ".join(path_label(model, (p,), languages) for p in path)
+
+
+def path_parts(model: Graph, path: tuple, languages: list) -> list[dict]:
+    """The same path meanings as path_label, without capturing English UI words.
+
+    This is a noun group, not a nested template. Standard meanings and the
+    alternative separator are registered zero-argument words; other paths
+    retain the model's literal display names in the requested RDF languages.
+    """
+    if tuple(path) == DEFINITION_PATH:
+        return [word_part("words.path.definition")]
+    if len(path) == 1:
+        iri = path[0]
+        if iri == RDFS.label:
+            return [word_part("words.path.nameLabel" if _name_taken(model, languages) else "words.path.name")]
+        standard = {
+            SKOS.prefLabel: "words.path.preferredName", SKOS.definition: "words.path.definition",
+            RDFS.comment: "words.path.description",
+        }
+        if iri in standard:
+            return [word_part(standard[iri])]
+        return [literal_part(pick_label_in(model, iri, languages)[0])]
+    parts = []
+    for index, iri in enumerate(path):
+        if index:
+            parts.append(word_part("words.path.or"))
+        parts.extend(path_parts(model, (iri,), languages))
+    return parts
 
 
 def path_kind(model: Graph, path: tuple) -> str:

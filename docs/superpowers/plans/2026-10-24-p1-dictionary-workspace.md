@@ -305,7 +305,13 @@ offset=0へ戻して再取得する。旧世代の一覧・詳細応答を破棄
 `frontend/src/i18n/server-contracts.ts`（生成）、`frontend/src/i18n/serverMessage.ts` / 同テスト。
 変更 `api.ts` / `types.ts`、`backend/app/main.py`、各routerの例外応答。
 
-**Interfaces:** `WireMessage={code:string, args:Record<string,string|number|boolean|null>}`。
+**Interfaces:** `WireMessage={code:string, args:Record<string,string|number|boolean|null|UiPart[]>}`。
+`UiPart={text:string}|{code:string,args:{}}` は、原文の名称と登録済み`words.*`の
+引数なし標準用語を区別する平坦なリスト。再帰的な文・式・任意キーを含めない。
+複合パスや名称列を英語断片として渡さず、レンダリング時のlocaleで用語を解決してから
+外側の文全体へ補間する。従来のprimitive引数はそのまま有効。
+JSON契約の`parts`型を両側で検証し、生成する表示用の`ServerMessageArgs`ではstringにする。
+バックエンドはリストを複製し、作成後の引数の変更で履歴を書き換えさせない。
 既知のpayloadに任意 `uiMessage: WireMessage` を加え、既存の `detail`、`text`、
 parse_errorの `message`（文字列）等の意味/型は変えない。
 `make_message(code: str, **args) -> dict` は契約のコード・引数名/型を検証する。

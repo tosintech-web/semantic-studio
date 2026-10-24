@@ -20,6 +20,10 @@ export const SERVER_CONTRACTS = {
     "broader": "string",
     "concept": "string"
   },
+  "command.added_check": {
+    "path": "parts",
+    "shape_name": "string"
+  },
   "command.added_disjoint": {
     "first": "string",
     "second": "string"
@@ -36,6 +40,10 @@ export const SERVER_CONTRACTS = {
     "name": "string",
     "property": "string"
   },
+  "command.added_rule": {
+    "path": "parts",
+    "shape_name": "string"
+  },
   "command.added_subclass": {
     "child": "string",
     "parent": "string"
@@ -51,6 +59,21 @@ export const SERVER_CONTRACTS = {
   "command.changed_restriction": {
     "name": "string",
     "property": "string"
+  },
+  "command.changed_rule": {
+    "path": "parts",
+    "shape_name": "string"
+  },
+  "command.changed_shape_message": {
+    "name": "string"
+  },
+  "command.changed_shape_severity": {
+    "name": "string",
+    "severity": "parts"
+  },
+  "command.changed_shape_target": {
+    "name": "string",
+    "target": "string"
   },
   "command.cleared_inverse": {
     "name": "string"
@@ -72,6 +95,12 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "command.created_object_property": {
+    "name": "string"
+  },
+  "command.created_shape": {
+    "name": "string"
+  },
+  "command.deleted_shape": {
     "name": "string"
   },
   "command.removed_annotation": {
@@ -98,6 +127,13 @@ export const SERVER_CONTRACTS = {
     "name": "string",
     "property": "string"
   },
+  "command.removed_rule": {
+    "path": "parts",
+    "shape_name": "string"
+  },
+  "command.removed_shape_message": {
+    "name": "string"
+  },
   "command.removed_subclass": {
     "child": "string",
     "parent": "string"
@@ -107,6 +143,10 @@ export const SERVER_CONTRACTS = {
     "parent": "string"
   },
   "command.renamed_iri": {
+    "new": "string",
+    "old": "string"
+  },
+  "command.renamed_shape": {
     "new": "string",
     "old": "string"
   },
@@ -142,19 +182,33 @@ export const SERVER_CONTRACTS = {
   "validation.min_count": {
     "count": "number",
     "name": "string"
-  }
+  },
+  "words.path.definition": {},
+  "words.path.description": {},
+  "words.path.name": {},
+  "words.path.nameLabel": {},
+  "words.path.or": {},
+  "words.path.preferredName": {},
+  "words.severity.violation": {},
+  "words.severity.warning": {}
 } as const;
 export interface ServerMessageArgs {
   "command.added_annotation": { "name": string; "property": string };
   "command.added_broader": { "broader": string; "concept": string };
+  "command.added_check": { "path": string; "shape_name": string };
   "command.added_disjoint": { "first": string; "second": string };
   "command.added_equivalent": { "first": string; "second": string };
   "command.added_related": { "concept": string; "related": string };
   "command.added_restriction": { "name": string; "property": string };
+  "command.added_rule": { "path": string; "shape_name": string };
   "command.added_subclass": { "child": string; "parent": string };
   "command.added_subproperty": { "child": string; "parent": string };
   "command.changed_annotation": { "name": string; "property": string };
   "command.changed_restriction": { "name": string; "property": string };
+  "command.changed_rule": { "path": string; "shape_name": string };
+  "command.changed_shape_message": { "name": string };
+  "command.changed_shape_severity": { "name": string; "severity": string };
+  "command.changed_shape_target": { "name": string; "target": string };
   "command.cleared_inverse": { "name": string };
   "command.created_annotation_property": { "name": string };
   "command.created_class": { "name": string };
@@ -162,15 +216,20 @@ export interface ServerMessageArgs {
   "command.created_datatype_property": { "name": string };
   "command.created_example": { "class_name": string; "name": string };
   "command.created_object_property": { "name": string };
+  "command.created_shape": { "name": string };
+  "command.deleted_shape": { "name": string };
   "command.removed_annotation": { "name": string; "property": string };
   "command.removed_broader": { "broader": string; "concept": string };
   "command.removed_disjoint": { "first": string; "second": string };
   "command.removed_equivalent": { "first": string; "second": string };
   "command.removed_related": { "concept": string; "related": string };
   "command.removed_restriction": { "name": string; "property": string };
+  "command.removed_rule": { "path": string; "shape_name": string };
+  "command.removed_shape_message": { "name": string };
   "command.removed_subclass": { "child": string; "parent": string };
   "command.removed_subproperty": { "child": string; "parent": string };
   "command.renamed_iri": { "new": string; "old": string };
+  "command.renamed_shape": { "new": string; "old": string };
   "command.swapped_ends": { "name": string };
   "entities.page_too_large": { "suggested_limit": number; "total": number };
   "entities.view_changed": undefined;
@@ -182,5 +241,14 @@ export interface ServerMessageArgs {
   "reasoning.too_large": { "count": number; "limit": number };
   "request.invalid": undefined;
   "validation.min_count": { "count": number; "name": string };
+  "words.path.definition": undefined;
+  "words.path.description": undefined;
+  "words.path.name": undefined;
+  "words.path.nameLabel": undefined;
+  "words.path.or": undefined;
+  "words.path.preferredName": undefined;
+  "words.severity.violation": undefined;
+  "words.severity.warning": undefined;
 }
-export interface WireMessage { code: string; args: Record<string, string | number | boolean | null> }
+export type UiPart = { text: string } | { code: string; args: Record<string, never> };
+export interface WireMessage { code: string; args: Record<string, string | number | boolean | null | UiPart[]> }

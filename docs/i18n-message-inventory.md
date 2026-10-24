@@ -2530,3 +2530,22 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `command.removed_disjoint` | first, second | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
 | `command.added_equivalent` | first, second | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
 | `command.removed_equivalent` | first, second | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `words.path.name` | — | `backend/app/messages.py`<br>`backend/app/shapes_form.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `words.path.nameLabel` | — | `backend/app/messages.py`<br>`backend/app/shapes_form.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `words.path.preferredName` | — | `backend/app/messages.py`<br>`backend/app/shapes_form.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `words.path.definition` | — | `backend/app/messages.py`<br>`backend/app/shapes_form.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `words.path.description` | — | `backend/app/messages.py`<br>`backend/app/shapes_form.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `words.path.or` | — | `backend/app/messages.py`<br>`backend/app/shapes_form.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `words.severity.violation` | — | `backend/app/messages.py`<br>`backend/app/editing.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `words.severity.warning` | — | `backend/app/messages.py`<br>`backend/app/editing.py` | 複合用語の標準語 | 12 | 現在のUI言語で表示、元の名称は保持 |
+| `command.added_rule` | shape_name, path | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、平坦な用語情報を現在言語で表示 |
+| `command.created_shape` | name | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.changed_shape_target` | name, target | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.renamed_shape` | old, new | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.changed_shape_severity` | name, severity | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.removed_shape_message` | name | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.changed_shape_message` | name | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.changed_rule` | shape_name, path | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.removed_rule` | shape_name, path | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.deleted_shape` | name | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |
+| `command.added_check` | shape_name, path | `backend/app/editing.py` | ルールセット操作 | 12 | 英語labelを保持、構造化した用語を現在言語で表示 |

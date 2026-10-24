@@ -2480,3 +2480,28 @@ against isomorphic RDF graphs. The UI tests preserve every literal operand in
 both locales and check Japanese hierarchy direction and annotation ownership.
 These are display-only additions; the RDF deltas and refusal algorithms stay
 unchanged. Conditional and composite operation labels remain a separate migration.
+
+
+### Compound server noun groups stay structural (P1)
+
+The shared version-1 message schema accepts `parts` as well as existing scalar
+argument declarations. A flat part is a captured literal (`{text: string}`) or a
+registered, zero-argument `words.*` token (`{code, args: {}}`). The server and
+browser reject other shapes, nested templates, unknown tokens and extra fields.
+Validation does not recursively evaluate anything or impose a new path-length
+limit. `make_message` copies mutable part structures before a history step keeps
+them. Generated display argument types remain strings; only the wire value can
+be a part list. The browser resolves words in the current UI locale before
+interpolating the whole outer sentence. Literal names and legacy English fields
+are untouched. This extends the plan's original scalar-only metadata interface:
+arbitrary alternative paths cannot be represented by a finite set of compound
+message codes without freezing English or replacing friendly terms with IRIs.
+
+`shapes_form.path_parts` follows the same IRI/path-shape decisions as the unchanged
+English `path_label`: standard name/definition/description meanings, the existing
+name-collision distinction, alternative separators and raw custom display names.
+All rule-set command labels now have additive descriptors, including changed
+paths, severity, message removal and CheckInData's new/existing-shape branches.
+API tests take them through undo/redo and RDF isomorphism. An 80-term alternative
+path retains all 159 noun/separator parts. The project header test keeps the same
+shapes document, notice and API request across UI-language changes.

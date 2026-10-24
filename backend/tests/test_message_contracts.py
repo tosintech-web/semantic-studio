@@ -4,7 +4,8 @@ FILE: backend/tests/test_message_contracts.py
 SUMMARY
     Shared message contract, generator and additive HTTP metadata.
 BASIC IDEA
-    Validate primitive arguments at their source and inspect a real API error.
+    Validate primitive arguments and flat literal/word groups at their source,
+    copy mutable parts, reject nested structures and inspect a real API error.
 INPUTS / INPUT SOURCES
     Representative contracts, invalid arguments and controlled exceptions.
 EXPECTED OUTPUT
@@ -100,3 +101,70 @@ def test_project_command_refusal_keeps_its_metadata():
         with _errors(): raise CommandError("Original command refusal", ui_message=wire)
     assert caught.value.detail == "Original command refusal"
     assert caught.value.ui_message == wire
+
+
+@pytest.fixture
+def parts_contract(monkeypatch):
+    """Only the schema is synthetic; exercise the production validator/copy."""
+    from app import messages
+    for code, fields in {
+        "test.parts": {"label": "parts"},
+        "words.path.name": {}, "words.path.or": {},
+    }.items():
+        monkeypatch.setitem(messages.CONTRACT["codes"], code, fields)
+
+
+def test_flat_parts_keep_words_separate_from_literal_names_and_roundtrip(parts_contract):
+    parts = [
+        {"code": "words.path.name", "args": {}},
+        {"code": "words.path.or", "args": {}},
+        {"text": "備考 <b>{name}</b>"},
+    ]
+    wire = make_message("test.parts", label=parts)
+    assert wire == {"code": "test.parts", "args": {"label": parts}}
+    assert json.loads(json.dumps(wire)) == wire
+    parts[0]["code"] = "words.path.or"
+    parts[2]["text"] = "changed later"
+    parts.append({"text": "another later change"})
+    assert wire["args"]["label"] == [
+        {"code": "words.path.name", "args": {}},
+        {"code": "words.path.or", "args": {}},
+        {"text": "備考 <b>{name}</b>"},
+    ]
+
+
+@pytest.mark.parametrize("parts", [
+    None, "English fragment", {}, [1], [[{"text": "nested"}]],
+    [{"text": 1}], [{"text": "x", "extra": True}],
+    [{"code": "unknown.word", "args": {}}],
+    [{"code": "__proto__", "args": {}}],
+    [{"code": "words.path.name"}],
+    [{"code": "words.path.name", "args": {"extra": 1}}],
+    [{"code": "words.path.name", "args": {}, "text": "mixed"}],
+    [{"code": "reasoning.stopped", "args": {}}],
+])
+def test_flat_parts_reject_unknown_words_nested_templates_and_extra_fields(parts_contract, parts):
+    with pytest.raises(ValueError):
+        make_message("test.parts", label=parts)
+
+
+def test_flat_parts_do_not_recurse_into_a_cyclic_input(parts_contract):
+    parts = []
+    parts.append(parts)
+    with pytest.raises(ValueError):
+        make_message("test.parts", label=parts)
+
+
+def test_parts_generator_keeps_display_strings_distinct_from_structured_wire_values():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("parts_generator", ROOT / "scripts/generate_message_contracts.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    contract = {"version": 1, "codes": {"words.path.name": {}, "test.parts": {"label": "parts", "count": "number"}}}
+    output = module.generate(contract)
+    assert output == module.generate(contract)
+    assert '"label": "parts"' in output  # Runtime wire schema retains the distinction.
+    assert '"test.parts": { "count": number; "label": string }' in output
+    assert "export type UiPart" in output and "UiPart[]" in output
+    with pytest.raises(ValueError):
+        module.generate({"version": 1, "codes": {"words.invalid": {"value": "string"}}})

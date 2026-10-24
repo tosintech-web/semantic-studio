@@ -159,7 +159,7 @@ from typing import Callable, Iterable, Optional
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
-from .messages import make_message
+from .messages import make_message, word_part
 from .graph_builder import (
     lang_matches,
     name_in,
@@ -2649,7 +2649,12 @@ def cmd_create_shape(ctx: Context, a: dict) -> Change:
         for rule in (names, definition):
             adds += _rule_triples(ctx, iri, rule, None)[1]
     _bind_shapes(ctx)
-    return _created(_change(ctx.graph, f"Created shape {name}", adds), iri)
+    return _created(_change(
+        ctx.graph,
+        f"Created shape {name}",
+        adds,
+        ui_message=make_message("command.created_shape", name=name),
+    ), iri)
 
 
 def cmd_set_shape_target(ctx: Context, a: dict) -> Change:
@@ -2659,8 +2664,11 @@ def cmd_set_shape_target(ctx: Context, a: dict) -> Change:
         raise CommandError(f"There is no class {ctx.short(target)} in the model or its imports.")
     old = [(node, SH.targetClass, o) for o in ctx.graph.objects(node, SH.targetClass)]
     return _change(
-        ctx.graph, f"Made {_shape_label(ctx, node)} apply to {_model_name(ctx, target)}",
-        [(node, SH.targetClass, target)], old,
+        ctx.graph,
+        f"Made {_shape_label(ctx, node)} apply to {_model_name(ctx, target)}",
+        [(node, SH.targetClass, target)],
+        old,
+        ui_message=make_message("command.changed_shape_target", name=_shape_label(ctx, node), target=_model_name(ctx, target)),
     )
 
 
@@ -2671,8 +2679,11 @@ def cmd_set_shape_name(ctx: Context, a: dict) -> Change:
         raise CommandError("A shape's name cannot be empty.")
     old = [(node, RDFS.label, o) for o in ctx.graph.objects(node, RDFS.label)]
     return _change(
-        ctx.graph, f"Renamed shape {_shape_label(ctx, node)} to {value.strip()}",
-        [(node, RDFS.label, Literal(value.strip(), lang=ctx.primary))], old,
+        ctx.graph,
+        f"Renamed shape {_shape_label(ctx, node)} to {value.strip()}",
+        [(node, RDFS.label, Literal(value.strip(), lang=ctx.primary))],
+        old,
+        ui_message=make_message("command.renamed_shape", old=_shape_label(ctx, node), new=value.strip()),
     )
 
 
@@ -2687,7 +2698,13 @@ def cmd_set_shape_severity(ctx: Context, a: dict) -> Change:
     removes = [(s, SH.severity, o) for s in (node, *props) for o in ctx.graph.objects(s, SH.severity)]
     adds = [] if severity == "violation" else [(s, SH.severity, SH.Warning) for s in (node, *props)]
     word = "a problem" if severity == "violation" else "a warning"
-    return _change(ctx.graph, f"Made a failure of {_shape_label(ctx, node)} {word}", adds, removes)
+    return _change(
+        ctx.graph,
+        f"Made a failure of {_shape_label(ctx, node)} {word}",
+        adds,
+        removes,
+        ui_message=make_message("command.changed_shape_severity", name=_shape_label(ctx, node), severity=[word_part(f"words.severity.{severity}")]),
+    )
 
 
 def cmd_set_shape_message(ctx: Context, a: dict) -> Change:
@@ -2699,10 +2716,18 @@ def cmd_set_shape_message(ctx: Context, a: dict) -> Change:
     if not value or not value.strip():
         if not old:
             raise CommandError(f"{_shape_label(ctx, node)} has no message to remove.")
-        return _change(ctx.graph, f"Removed the message of {_shape_label(ctx, node)}", removes=old)
+        return _change(
+            ctx.graph,
+            f"Removed the message of {_shape_label(ctx, node)}",
+            removes=old,
+            ui_message=make_message("command.removed_shape_message", name=_shape_label(ctx, node)),
+        )
     return _change(
-        ctx.graph, f"Set the message of {_shape_label(ctx, node)}",
-        [(node, SH.message, Literal(value.strip(), lang=ctx.primary))], old,
+        ctx.graph,
+        f"Set the message of {_shape_label(ctx, node)}",
+        [(node, SH.message, Literal(value.strip(), lang=ctx.primary))],
+        old,
+        ui_message=make_message("command.changed_shape_message", name=_shape_label(ctx, node)),
     )
 
 
@@ -2733,7 +2758,13 @@ def cmd_add_rule(ctx: Context, a: dict) -> Change:
         removes = _rules_on(ctx, node, path)
     _, adds = _rule_triples(ctx, node, rule, _severity_of(ctx, node))
     label = shapes_form.path_label(ctx.model, path, ctx.languages)
-    return _change(ctx.graph, f"Added a rule on {label} to {_shape_label(ctx, node)}", adds, removes)
+    return _change(
+        ctx.graph,
+        f"Added a rule on {label} to {_shape_label(ctx, node)}",
+        adds,
+        removes,
+        ui_message=make_message("command.added_rule", shape_name=_shape_label(ctx, node), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+    )
 
 
 def cmd_replace_rule(ctx: Context, a: dict) -> Change:
@@ -2746,8 +2777,13 @@ def cmd_replace_rule(ctx: Context, a: dict) -> Change:
     if new_path != path and new_path in rules:
         raise CommandError(f"There is already a rule on {rules[new_path]['pathLabel']}; edit that one.")
     label = shapes_form.path_label(ctx.model, new_path, ctx.languages)
-    return _change(ctx.graph, f"Changed the rule on {label} of {_shape_label(ctx, node)}",
-                   adds, _rules_on(ctx, node, path))
+    return _change(
+        ctx.graph,
+        f"Changed the rule on {label} of {_shape_label(ctx, node)}",
+        adds,
+        _rules_on(ctx, node, path),
+        ui_message=make_message("command.changed_rule", shape_name=_shape_label(ctx, node), path=shapes_form.path_parts(ctx.model, new_path, ctx.languages)),
+    )
 
 
 def cmd_remove_rule(ctx: Context, a: dict) -> Change:
@@ -2757,7 +2793,12 @@ def cmd_remove_rule(ctx: Context, a: dict) -> Change:
     if not removes:
         raise CommandError(f"{_shape_label(ctx, node)} has no rule on that path to remove.")
     label = shapes_form.path_label(ctx.model, path, ctx.languages)
-    return _change(ctx.graph, f"Removed the rule on {label} from {_shape_label(ctx, node)}", removes=removes)
+    return _change(
+        ctx.graph,
+        f"Removed the rule on {label} from {_shape_label(ctx, node)}",
+        removes=removes,
+        ui_message=make_message("command.removed_rule", shape_name=_shape_label(ctx, node), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+    )
 
 
 def cmd_delete_shape(ctx: Context, a: dict) -> Change:
@@ -2769,7 +2810,12 @@ def cmd_delete_shape(ctx: Context, a: dict) -> Change:
     removes = set(g.triples((node, None, None))) | set(g.triples((None, None, node)))
     for _, _, o in g.triples((node, None, None)):
         removes |= _closure(g, o)
-    return _change(g, f"Deleted shape {_shape_label(ctx, node)}", removes=list(removes))
+    return _change(
+        g,
+        f"Deleted shape {_shape_label(ctx, node)}",
+        removes=list(removes),
+        ui_message=make_message("command.deleted_shape", name=_shape_label(ctx, node)),
+    )
 
 
 def cmd_check_in_data(ctx: Context, a: dict) -> Change:
@@ -2833,7 +2879,13 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
             raise CommandError(f"{shape_name} already checks this.")
         adds += [(node, SH.property, prop), *triples]
     _bind_shapes(ctx)
-    return _change(ctx.graph, f"Added a check on {path_label} to {shape_name}", adds, removes)
+    return _change(
+        ctx.graph,
+        f"Added a check on {path_label} to {shape_name}",
+        adds,
+        removes,
+        ui_message=make_message("command.added_check", shape_name=shape_name, path=shapes_form.path_parts(model, path, ctx.languages)),
+    )
 
 
 SHAPE_COMMANDS = {

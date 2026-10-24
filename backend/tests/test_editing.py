@@ -33,7 +33,8 @@ EXPECTED OUTPUT
       IRI, plain literals, search by kind, kinds in project details.
     - shacl-authoring Stage A: AC-2 as the server sees it, row S20.
     - Additive creation/history metadata with unchanged English labels,
-      revisions and before/after RDF isomorphism.
+      revisions and before/after RDF isomorphism; compound path words and
+      literal names stay distinct across every rule-set command and history.
 ================================================================================
 """
 
@@ -1786,3 +1787,119 @@ def test_model_operation_descriptors_keep_operands_and_rdf_through_history(pid, 
     assert redone["label"] == legacy and redone.get("uiMessage") == wire
     assert redone["state"].get("undoUiMessage") == wire
     assert isomorphic(after, doc(pid).graph)
+
+
+PARTS_SHAPE = "犬の確認 <b>{shape}</b>"
+PARTS_CLASS = "犬 <i>{class}</i>"
+PARTS_CUSTOM = "備考 <img>{path}"
+PARTS_CUSTOM_IRI = EX + "partsValue"
+
+
+def _parts_seed(pid, collision=False):
+    ok(pid, "CreateClass", label=PARTS_CLASS, iri="shop:PartsClass")
+    ok(pid, "CreateClass", label="別の対象", iri="shop:PartsOther")
+    ok(pid, "CreateDatatypeProperty", label=PARTS_CUSTOM, iri="shop:partsValue", domain="shop:PartsClass", datatype="xsd:string")
+    if collision:
+        ok(pid, "CreateDatatypeProperty", label="name", iri="shop:partsName", domain="shop:PartsClass", datatype="xsd:string")
+
+
+def _shape_history_notice(pid, result, before, wire, legacy):
+    after = shapes_graph(pid)
+    assert result["label"] == legacy
+    assert result.get("uiMessage") == wire
+    assert result["state"].get("undoUiMessage") == wire
+    undone = client.post(f"/api/projects/{pid}/documents/shapes/undo").json()
+    assert undone["label"] == legacy and undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, editing_service.document(pid, "shapes").graph)
+    redone = client.post(f"/api/projects/{pid}/documents/shapes/redo").json()
+    assert redone["label"] == legacy and redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert isomorphic(after, editing_service.document(pid, "shapes").graph)
+
+
+PARTS_PATH_CASES = [
+    ([str(RDFS.label)], [{"code": "words.path.name", "args": {}}], "name", False),
+    ([str(RDFS.label)], [{"code": "words.path.nameLabel", "args": {}}], "name (label)", True),
+    ([str(SKOS.prefLabel)], [{"code": "words.path.preferredName", "args": {}}], "preferred name", False),
+    ([str(SKOS.definition)], [{"code": "words.path.definition", "args": {}}], "definition", False),
+    ([str(RDFS.comment)], [{"code": "words.path.description", "args": {}}], "description", False),
+    ([str(p) for p in editing.shapes_form.DEFINITION_PATH], [{"code": "words.path.definition", "args": {}}], "definition", False),
+    ([PARTS_CUSTOM_IRI], [{"text": PARTS_CUSTOM}], PARTS_CUSTOM, False),
+    ([str(RDFS.label), PARTS_CUSTOM_IRI], [{"code": "words.path.name", "args": {}}, {"code": "words.path.or", "args": {}}, {"text": PARTS_CUSTOM}], f"name or {PARTS_CUSTOM}", False),
+]
+
+
+@pytest.mark.parametrize("path,parts,legacy_path,collision", PARTS_PATH_CASES,
+                         ids=["name", "name-collision", "preferred", "definition", "description", "definition-alternative", "custom", "mixed-alternative"])
+def test_shape_path_notices_keep_semantic_words_and_names_through_each_history_step(pid, path, parts, legacy_path, collision):
+    _parts_seed(pid, collision)
+    sid = shapes_ok(pid, "CreateShape", target="shop:PartsClass", name=PARTS_SHAPE)["created"]
+    before = shapes_graph(pid)
+    added = shapes_ok(pid, "AddRule", shape=sid, rule={"path": path, "minCount": 1})
+    _shape_history_notice(pid, added, before, {"code": "command.added_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Added a rule on {legacy_path} to {PARTS_SHAPE}")
+    # A changed path must describe the replacement, not the rule it superseded.
+    original_path = path
+    if path == [PARTS_CUSTOM_IRI]:
+        path, parts, legacy_path = [str(RDFS.label)], [{"code": "words.path.name", "args": {}}], "name"
+    before = shapes_graph(pid)
+    changed = shapes_ok(pid, "ReplaceRule", shape=sid, path=original_path, rule={"path": path, "minCount": 2})
+    _shape_history_notice(pid, changed, before, {"code": "command.changed_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Changed the rule on {legacy_path} of {PARTS_SHAPE}")
+    before = shapes_graph(pid)
+    removed = shapes_ok(pid, "RemoveRule", shape=sid, path=path)
+    _shape_history_notice(pid, removed, before, {"code": "command.removed_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Removed the rule on {legacy_path} from {PARTS_SHAPE}")
+
+
+def test_long_alternative_path_metadata_is_complete_without_a_new_part_limit(pid):
+    _parts_seed(pid)
+    sid = shapes_ok(pid, "CreateShape", target="shop:PartsClass", name=PARTS_SHAPE)["created"]
+    path = [str(RDFS.label), PARTS_CUSTOM_IRI] * 40
+    parts = []
+    for index in range(80):
+        if index:
+            parts.append({"code": "words.path.or", "args": {}})
+        parts.append({"code": "words.path.name", "args": {}} if index % 2 == 0 else {"text": PARTS_CUSTOM})
+    before = shapes_graph(pid)
+    result = shapes_ok(pid, "AddRule", shape=sid, rule={"path": path, "minCount": 1})
+    _shape_history_notice(pid, result, before, {"code": "command.added_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Added a rule on {' or '.join(['name', PARTS_CUSTOM] * 40)} to {PARTS_SHAPE}")
+
+
+@pytest.mark.parametrize("action", ["create", "default-name", "target", "name", "warning", "violation", "message", "remove-message", "delete", "check", "check-new-shape"])
+def test_other_shape_notices_keep_legacy_labels_and_rdf(pid, action):
+    _parts_seed(pid)
+    if action in ("create", "default-name"):
+        before = shapes_graph(pid)
+        name = PARTS_SHAPE if action == "create" else f"{PARTS_CLASS} rules"
+        args = {"target": "shop:PartsClass", **({"name": name} if action == "create" else {})}
+        result = shapes_ok(pid, "CreateShape", **args)
+        _shape_history_notice(pid, result, before, {"code": "command.created_shape", "args": {"name": name}}, f"Created shape {name}")
+        return
+    if action == "check-new-shape":
+        sid = None
+    else:
+        sid = shapes_ok(pid, "CreateShape", target="shop:PartsClass", name=PARTS_SHAPE)["created"]
+    shape_name = PARTS_SHAPE if sid else f"{PARTS_CLASS} rules"
+    if action in ("check", "check-new-shape"):
+        ok(pid, "AddRestriction", **{"class": "shop:PartsClass"}, property="shop:partsValue", kind="atMost", n=1)
+        args = {"class": "shop:PartsClass", "restriction": {"form": "every", "property": "shop:partsValue", "kind": "atMost", "filler": None, "n": 1}}
+        command, code, facts, legacy = "CheckInData", "command.added_check", {"shape_name": shape_name, "path": [{"text": PARTS_CUSTOM}]}, f"Added a check on {PARTS_CUSTOM} to {shape_name}"
+    elif action == "target":
+        command, args, code, facts, legacy = "SetShapeTarget", {"shape": sid, "target": "shop:PartsOther"}, "command.changed_shape_target", {"name": PARTS_SHAPE, "target": "別の対象"}, f"Made {PARTS_SHAPE} apply to 別の対象"
+    elif action == "name":
+        command, args, code, facts, legacy = "SetShapeName", {"shape": sid, "value": "改名 <b>{new}</b>"}, "command.renamed_shape", {"old": PARTS_SHAPE, "new": "改名 <b>{new}</b>"}, f"Renamed shape {PARTS_SHAPE} to 改名 <b>{{new}}</b>"
+    elif action in ("warning", "violation"):
+        if action == "violation":
+            shapes_ok(pid, "SetShapeSeverity", shape=sid, severity="warning")
+        word = "a warning" if action == "warning" else "a problem"
+        command, args, code, facts, legacy = "SetShapeSeverity", {"shape": sid, "severity": action}, "command.changed_shape_severity", {"name": PARTS_SHAPE, "severity": [{"code": f"words.severity.{action}", "args": {}}]}, f"Made a failure of {PARTS_SHAPE} {word}"
+    elif action in ("message", "remove-message"):
+        if action == "remove-message":
+            shapes_ok(pid, "SetShapeMessage", shape=sid, value="Original message")
+        command, args = "SetShapeMessage", {"shape": sid, "value": "確認 <b>{message}</b>" if action == "message" else ""}
+        code = "command.changed_shape_message" if action == "message" else "command.removed_shape_message"
+        facts, legacy = {"name": PARTS_SHAPE}, f"{'Set' if action == 'message' else 'Removed'} the message of {PARTS_SHAPE}"
+    else:
+        command, args, code, facts, legacy = "DeleteShape", {"shape": sid}, "command.deleted_shape", {"name": PARTS_SHAPE}, f"Deleted shape {PARTS_SHAPE}"
+    before = shapes_graph(pid)
+    result = shapes_ok(pid, command, **args)
+    _shape_history_notice(pid, result, before, {"code": code, "args": facts}, legacy)
