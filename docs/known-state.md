@@ -2329,3 +2329,61 @@ EXPECTED OUTPUT
   traversal. The inference engine, limits and selected facts use the same
   rules. Full-suite results are tracked separately from this isolated
   measurement.
+
+- **P1 canvas label scans and cold snapshot reads** (2026-10-24).
+  Existing factor-1 median-of-five API budgets failed on Python 3.14.4:
+  the 20,000-statement model with 1,000 union-domain attributes took
+  175.052 ms against 150 ms, and reopening two full 2,000-row snapshots
+  took 1,324.454 ms against 1,000 ms. Profiles inside the TestClient's
+  service thread found repeated label-predicate lookups, URIRef comparison
+  overhead and per-triple context bookkeeping during snapshot parsing.
+
+  The canvas now indexes its four naming predicates for each explicit-language
+  view and uses the existing `preferred_literal` rank. Library labels retain
+  their original lookup path: a predicate-wide scan can change insertion order,
+  which would change the Library's first-label rule. The index is local to one
+  build, including a separate imported view, so it cannot outlive revision or
+  import invalidation. URIRef-only sets sort by their string keys, preserving
+  their order; fixed RDF union terms are resolved once while every malformed,
+  shared, cyclic and oversized-list check remains in `axioms.py`.
+
+  Snapshot N-Triples reopen into rdflib's bundled SimpleMemory store: each
+  snapshot is a plain graph, with no named contexts. Views still join those
+  graphs through `MergedView`. SimpleMemory's length operation is linear,
+  unlike Memory's; existing snapshot, union, query and validation tests cover
+  its use here. Plain/language-tagged string normalization is an identity and
+  is skipped; all typed values retain rdflib's conversion and validation.
+  Lexical strings, tags, datatypes, Python values, escaped text and the
+  hand-edited-Turtle fallback are checked against rdflib. No parsed graph is
+  retained across close and no third-party internals are bypassed.
+
+  The same API harness, with the unprofiled median measured before a separate
+  profiled call, then measured 131.269 ms and 941.137 ms. Budgets, fixtures,
+  warm-ups, cache invalidation and sample counts are unchanged. These are
+  local measurements, not a claim about browser performance or CI.
+
+- **P1 stop inside basic-pattern evaluation** (2026-10-24). Two full backend
+  runs reproduced a timed-out ORDER BY query retaining its worker and ontology
+  key. Async QueryStopped exceptions were reported as unraisable inside GC
+  finalizers. All resend attempts during the two-second grace can be lost;
+  checking cancellation only after the first result cannot stop ORDER BY's
+  collection of a Cartesian product. The surviving worker reached about 18 GB
+  and invalidated later timing measurements. The same test passed alone, so
+  an isolated rerun was insufficient evidence.
+
+  `sparql_exec` now registers a context-scoped BGP handler using rdflib's
+  public CUSTOM_EVALS extension. It uses rdflib's same bound-term ordering
+  and evalBGP implementation, checking the existing cancellation event between
+  bindings before ORDER BY consumes them. Other algebra falls through; the
+  SERVICE handler, broker, external stop, read lock, grace and caps remain.
+  Unmanaged rdflib calls have no cancellation context and retain their normal
+  path. The worker resets its context in cleanup. This complements outside
+  interruption; it cannot interrupt a C call or a pattern that yields no binding.
+
+  A bounded synthetic regression makes every async injection a no-op and
+  yields bindings without a first sorted result. Before the change it left
+  the worker alive; after it ends cooperatively. Its explicit release event
+  also cleans up the failing baseline. The original stop, cleanup-race,
+  SELECT, row-cap and SERVICE tests remain in place. The endpoint and SERVICE
+  suites passed 71 tests after the change; final full-suite verification is
+  recorded separately rather than inferred from that subset.

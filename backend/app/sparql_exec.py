@@ -31,6 +31,11 @@ BASIC IDEA
         later (inside a C call or a network wait) keeps its ontology's key,
         and a new query on that ontology is refused until it ends (D-108).
 
+    Managed queries also check their stop between basic-pattern bindings,
+    through rdflib's public evaluator extension. This ends first-row work
+    even when GC finalizers swallow an asynchronous stop; rdflib still orders
+    and evaluates the pattern, and the broker still owns every SERVICE call.
+
 INPUTS / INPUT SOURCES
     - A raw SPARQL query string (from the frontend via the /sparql endpoint).
     - The target ontology's rdflib.Graph (from store.Ontology.ensure_loaded).
@@ -65,6 +70,7 @@ from typing import Callable, Optional
 # two halves of prepareQuery, called apart because the SERVICE blocks have to
 # be read from the parse tree before translation reorders it.
 from rdflib import BNode, Graph, Literal, URIRef
+from rdflib.plugins.sparql import CUSTOM_EVALS, evaluate as sparql_evaluate
 from rdflib.plugins.sparql.algebra import translateQuery
 from rdflib.plugins.sparql.parser import expandUnicodeEscapes, parseQuery
 
@@ -96,6 +102,42 @@ class QueryStopped(BaseException):
 
     A BaseException, as KeyboardInterrupt is, so an ``except Exception``
     somewhere in rdflib's evaluation cannot swallow it and carry on."""
+
+
+_query_stop: contextvars.ContextVar[Optional[threading.Event]] = contextvars.ContextVar(
+    "semantic_studio_query_stop", default=None,
+)
+
+
+def _stoppable_bgp(ctx, part):
+    """Keep rdflib's pattern evaluation, checking cancellation per binding.
+
+    ORDER BY consumes a whole pattern before it yields the first result row.
+    Async stops can all be swallowed in GC finalizers; an explicit check here
+    still ends that work as soon as it resumes. The context belongs only to
+    this worker, so pySHACL and other rdflib callers keep their normal path.
+    """
+    stop = _query_stop.get()
+    if stop is None or part.name != "BGP":
+        raise NotImplementedError
+    # This is rdflib evalPart's own bound-term ordering, followed by its own
+    # evalBGP. No local join, filtering or binding semantics are substituted.
+    triples = sorted(part.triples, key=lambda t: len([n for n in t if ctx[n] is None]))
+
+    def bindings():
+        if stop.is_set():
+            raise QueryStopped
+        for binding in sparql_evaluate.evalBGP(ctx, triples):
+            if stop.is_set():
+                raise QueryStopped
+            yield binding
+
+    return bindings()
+
+
+# A public rdflib extension, alongside the existing SERVICE handler. Other
+# algebra nodes fall through and SERVICE still runs only through the broker.
+CUSTOM_EVALS["semantic-studio-query-stop"] = _stoppable_bgp
 
 
 BUSY_DETAIL = "The last query is still stopping. Try again in a few seconds."
@@ -424,6 +466,7 @@ def execute_select(
     # in its own cleanup rather than reading on after the request let go.
     def run():
         token = sparql_service.begin_run(run_state)
+        cancellation = _query_stop.set(stop)
         held = sparql_service.hold_stop.set(stopper.held)
         try:
             with reading():
@@ -443,6 +486,7 @@ def execute_select(
         except BaseException as exc:  # handed to the request thread
             outcome.append(exc)
         finally:
+            _query_stop.reset(cancellation)
             sparql_service.hold_stop.reset(held)
             sparql_service.end_run(token)
             entered.set()

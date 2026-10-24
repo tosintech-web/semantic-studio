@@ -62,7 +62,8 @@ EXPECTED OUTPUT
     - pick_label / prefixed are imported by query_schema.py and sparql_exec.py.
     - labeler / lang_matches choose a project document's names in its display
       language, falling back to the primary one marked "(en)" (D-085); a
-      library ontology keeps pick_label's rule.
+      library ontology keeps pick_label's rule. Its optional per-view index
+      scans naming predicates once for the canvas, sharing the same selection.
 ================================================================================
 """
 
@@ -257,7 +258,9 @@ def label_metadata(graph: Graph, node: URIRef, langs: Optional[Sequence[str]]) -
     return {"label_language": tag or None, "label_fallback": not lang_matches(tag, langs[0])}
 
 
-def labeler(graph: Graph, langs: Optional[Sequence[str]]) -> Callable[[URIRef], str]:
+def labeler(
+    graph: Graph, langs: Optional[Sequence[str]], *, indexed: bool = False,
+) -> Callable[[URIRef], str]:
     """The label function for a view: the library's, or a project's (D-085).
 
     `langs` is (display,) for Library or (display, primary) for Project.
@@ -265,11 +268,35 @@ def labeler(graph: Graph, langs: Optional[Sequence[str]]) -> Callable[[URIRef], 
     reports it explicitly so callers never parse the suffix.
     """
     if not langs:
+        # A predicate-wide scan can reorder values relative to a resource's
+        # insertion order. Keep the Library's first-value rule on its original
+        # path; only explicit project preferences have a stable ranking.
         return lambda node: pick_label(graph, node)
+    if indexed:
+        # A canvas names thousands of resources from the same immutable view.
+        # Scan the four naming predicates once instead of looking up all four
+        # for every box and attribute. Project names still use the shared
+        # language-first rank, independent of the predicate scan's order.
+        names: dict[URIRef, list] = {}
+        for priority, predicate in enumerate(LABEL_PREDICATES):
+            for node, value in graph.subject_objects(predicate):
+                if isinstance(value, Literal):
+                    names.setdefault(node, []).append((priority, value))
+
+        def pick(node: URIRef) -> tuple[str, Optional[str]]:
+            value = preferred_literal(names.get(node, ()), langs)
+            if value is None:
+                return _local_name(str(node)), None
+            return str(value), value.language or ""
+
+    else:
+        def pick(node: URIRef) -> tuple[str, Optional[str]]:
+            return pick_label_in(graph, node, langs)
+
     display = langs[0]
 
     def label(node: URIRef) -> str:
-        text, tag = pick_label_in(graph, node, langs)
+        text, tag = pick(node)
         if tag and not lang_matches(tag, display):
             return f"{text} ({tag})"
         return text

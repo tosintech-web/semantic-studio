@@ -27,7 +27,8 @@ INPUTS / INPUT SOURCES
     - The FastAPI app through TestClient, with the client header.
 
 EXPECTED OUTPUT
-    - Pass/fail; two `perf` budgets (Section 10).
+    - Pass/fail; two `perf` budgets (Section 10), and cold-parser literal
+      lexical forms, language tags, datatypes and Python values match rdflib.
 ================================================================================
 """
 
@@ -1069,3 +1070,17 @@ def test_x3_a_link_uses_the_iri_pattern_of_the_target_classs_snapshot(pid):
     assert not any("data/organization/" in str(t) for t in targets)
     assert people["report"]["unmatched"][0]["count"] == 12
     assert members(pid) == 6
+
+
+@pytest.mark.parametrize("suffix", ["", "@en-GB", "@ja", "^^<http://www.w3.org/2001/XMLSchema#string>", "^^<https://example.test/custom-type>"])
+@pytest.mark.parametrize("text", ["", "  spaces  ", "日本語 😀", "two\\nlines", "01"])
+def test_snapshot_literals_keep_rdflib_lexical_and_python_values(text, suffix):
+    from app.snapshots import read_ntriples
+
+    source = f'<https://example.test/s> <https://example.test/p> "{text}"{suffix} .'
+    expected = next(Graph().parse(data=source, format="nt").objects())
+    actual = next(read_ntriples(source).objects())
+    assert actual == expected
+    assert (str(actual), actual.language, actual.datatype, actual.value, actual.ill_typed) == (
+        str(expected), expected.language, expected.datatype, expected.value, expected.ill_typed,
+    )

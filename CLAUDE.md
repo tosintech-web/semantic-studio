@@ -294,6 +294,8 @@ leaves one behind.
 - The sentence explains the attempt of the format the file claims to be, else the furthest; a message the table knows counts as a sign of RDF. [Load and Shapes]
 - A timed-out query is stopped from outside, on a thread of its own, and only while armed in its query, never inside a SERVICE call, and resent, as a finaliser can swallow one; its end is its thread's end; the worker holds the read lock, and the timeout starts once it has it (D-108). [stopped from outside]
 
+- Managed SPARQL basic patterns check their scoped stop between bindings through `CUSTOM_EVALS`, using rdflib's own ordering/evaluator; outside interruption and the SERVICE broker remain required. [P1 stop inside basic-pattern evaluation]
+
 **Sentences**
 - One a/an rule and one verb rule per side, `sentences.py` and `modeling/sentences.ts`, tested with one table; no module defines its own (`test_sentences.py`, `sentences.test.ts` scan). [one a/an rule]
 - A standard term's definition lives in `explain/glossary.ts` alone; a SKOS mapping's in `MAPPINGS` (D-114). [explain panel]

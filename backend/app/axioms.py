@@ -652,6 +652,10 @@ def choices(g: Graph, own: Graph, name: Name) -> dict:
 UNION_MAX = 100
 DOMAIN_FORMS = ("none", "one", "union", "separate", "expression")
 _TOP = (OWL.Thing, RDFS.Resource)
+# These fixed terms are tested for every cell of a shared-property union.
+# Resolve namespace attributes once; loaded terms still undergo every check.
+_UNION_OF, _OWL_CLASS = OWL.unionOf, OWL.Class
+_RDF_TYPE, _RDF_FIRST, _RDF_REST, _RDF_NIL = RDF.type, RDF.first, RDF.rest, RDF.nil
 
 
 @dataclass(frozen=True)
@@ -680,9 +684,9 @@ def _union_members(g: Graph, node) -> Optional[tuple]:
             return None  # shared with another statement: changing it would change that too
     head, typed = None, False
     for p, o in g.predicate_objects(node):
-        if p == OWL.unionOf and head is None:
+        if p == _UNION_OF and head is None:
             head = o
-        elif p == RDF.type and o == OWL.Class and not typed:
+        elif p == _RDF_TYPE and o == _OWL_CLASS and not typed:
             typed = True
         else:
             return None
@@ -691,15 +695,15 @@ def _union_members(g: Graph, node) -> Optional[tuple]:
     members: list = []
     seen: set = set()
     cell = head
-    while cell != RDF.nil:
+    while cell != _RDF_NIL:
         if not isinstance(cell, BNode) or cell in seen or len(members) >= UNION_MAX:
             return None
         seen.add(cell)
         first = rest = None
         for p, o in g.predicate_objects(cell):
-            if p == RDF.first and first is None:
+            if p == _RDF_FIRST and first is None:
                 first = o
-            elif p == RDF.rest and rest is None:
+            elif p == _RDF_REST and rest is None:
                 rest = o
             else:
                 return None

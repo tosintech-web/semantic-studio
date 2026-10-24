@@ -7,7 +7,8 @@ SUMMARY
     Unit tests for graph_builder: verifies that the demo ontology is turned
     into the right nodes (with correct kinds), the right structural/assertion
     edges, correct node-detail output, working search, and correct format
-    detection/sniffing.
+    detection/sniffing. Indexed project labels must agree with the ordinary
+    reader across language preferences; Library labels retain insertion order.
 
 BASIC IDEA
     Parse the shipped example ontology once (fixtures), build the viz graph
@@ -479,3 +480,34 @@ def test_the_explain_panel_reads_a_union_s_members():
     assert sorted(r["label"] for r in result["domains"]) == ["Contractor", "Employee"]
     assert result["domainForm"] == "union" and "unnamedDomain" not in result
     assert explain(g, URIRef(UNI + "badge"), labeler(g, None))["domainForm"] == "separate"
+
+
+@pytest.mark.parametrize("langs", [None, (), ("en",), ("ja", "en"), ("en-GB", "ja")])
+def test_indexed_labeler_preserves_language_predicate_and_literal_choices(langs):
+    from rdflib import Literal, URIRef
+    from rdflib.namespace import DC, DCTERMS, SKOS
+
+    from app.graph_builder import labeler
+
+    g = Graph()
+    nodes = [URIRef(f"https://example.test/name/{n}") for n in range(7)]
+    for node, predicate, value in [
+        (nodes[5], RDFS.label, Literal("later for another resource", lang="fr")),
+        (nodes[4], RDFS.label, Literal("first for this resource", lang="fr")),
+        (nodes[4], RDFS.label, Literal("later for another resource", lang="fr")),
+        (nodes[0], SKOS.prefLabel, Literal("優先", lang="ja")),
+        (nodes[0], RDFS.label, Literal("English", lang="en")),
+        (nodes[1], RDFS.label, Literal("regional", lang="en-GB")),
+        (nodes[1], RDFS.label, Literal("exact", lang="en")),
+        (nodes[1], RDFS.label, Literal("日本語", lang="ja")),
+        (nodes[2], DCTERMS.title, Literal("")),
+        (nodes[2], DC.title, Literal("lower priority")),
+        (nodes[3], SKOS.prefLabel, URIRef("https://example.test/not-a-literal")),
+        (nodes[3], RDFS.label, Literal("plain")),
+        (nodes[4], RDFS.label, Literal("second", lang="fr")),
+        (nodes[4], RDFS.label, Literal("first", lang="de")),
+    ]:
+        g.add((node, predicate, value))
+    original = labeler(g, langs)
+    indexed = labeler(g, langs, indexed=True)
+    assert [indexed(node) for node in nodes] == [original(node) for node in nodes]

@@ -32,7 +32,11 @@ BASIC IDEA
     layout (D-087). Its own counter, the generation, moves on every change,
     and the views are cached on it beside the revision (imports.py).
     Switched off, a snapshot stays on disk and leaves every view and
-    validation.
+    validation. Cold reopening reads each snapshot into rdflib's plain
+    SimpleMemory graph; snapshot graphs have no named contexts. Plain and
+    language-tagged strings skip identity normalization, while typed literals
+    retain rdflib's conversion and validation, and hand-edited Turtle retains
+    its general-parser fallback.
 
     A workbook (5.8) takes the same path: its sheet is written as the CSV
     copy, UTF-8 with a comma, and the original is kept beside it as
@@ -1000,7 +1004,10 @@ def _unescape(text: str) -> str:
 
 def read_ntriples(text: str) -> Graph:
     """N-Triples without blank nodes, as rdflib writes them, or ValueError."""
-    graph = Graph()
+    # Each snapshot is one plain graph, never an RDF dataset. The bundled
+    # SimpleMemory store keeps the same triple indexes without tracking named
+    # contexts for every cell, which dominates cold reopening of full tables.
+    graph = Graph(store="SimpleMemory")
     iris: dict[str, URIRef] = {}
 
     def iri(value: str) -> URIRef:
@@ -1021,7 +1028,14 @@ def read_ntriples(text: str) -> Graph:
             if o is not None:
                 obj = iri(o)
             else:
-                obj = Literal(_unescape(lexical), lang=lang, datatype=iri(datatype) if datatype else None)
+                # Plain and language-tagged lexical strings already are their
+                # Python value. Skip only their identity normalization; typed
+                # literals still take rdflib's full conversion/validation path.
+                obj = Literal(
+                    _unescape(lexical), lang=lang,
+                    datatype=iri(datatype) if datatype else None,
+                    normalize=None if datatype else False,
+                )
             yield iri(s), iri(p), obj, graph
 
     graph.addN(triples())
