@@ -12,6 +12,7 @@ SUMMARY
     removes it both ways, as it was made.
 
 BASIC IDEA
+    Field refusals follow UI language; their original text stays in a disclosure.
     Titles, relation prose and actions use the current UI translator while
     original labels and endpoint IRIs remain intact. Read-only reasons and
     command refusals are supplied by their producers.
@@ -47,7 +48,7 @@ import { useI18n } from "../i18n/I18nProvider";
 import { useEffect } from "react";
 import { linkSentence } from "../modeling/sentences";
 import type { CanvasLink } from "../types";
-import { useRunner } from "./EditParts";
+import { RunnerErrorDetails, useRunner } from "./EditParts";
 
 interface Props {
   link: CanvasLink;
@@ -59,7 +60,8 @@ const HEADING_ID = "link-panel-heading";
 
 export default function LinkPanel({ link, onSelect, onClose }: Props) {
   const { t } = useI18n();
-  const { busy, errors, run, alive, clear } = useRunner();
+  const runner = useRunner();
+  const { busy, errors, run, alive, clear } = runner;
   useEffect(() => clear("link"), [clear, link.kind, link.source, link.target]);
   const sentence = linkSentence(link.kind, link.sourceLabel, link.targetLabel, t);
 
@@ -119,6 +121,7 @@ export default function LinkPanel({ link, onSelect, onClose }: Props) {
           {errors.link}
         </p>
       )}
+      <RunnerErrorDetails runner={runner} />
     </aside>
   );
 }

@@ -7,7 +7,8 @@ FILE: frontend/src/canvas/ModelCanvas.test.tsx
 SUMMARY
     The modeling canvas (visual-modeling Stage 2, AC-10 to AC-14): what it
     draws and how it names it, the empty, too-big and error states, the
-    palette, a drop onto a class, the relate menu and its refusals, rename,
+    palette, a drop onto a class, the relate menu and its refusal explanations
+    with retained raw details, rename,
     delete, moving a box, the shared selection, and that React Flow is only
     ever loaded lazily.
 
@@ -546,8 +547,9 @@ describe("relating (AC-12)", () => {
       fireEvent.click(screen.getByRole("menuitem", { name: "Document is a kind of Agent" }));
     });
     expect(within(document.querySelector(".relate-menu")!).getByRole("alert").textContent).toBe(
-      "Document is already a subclass of Agent.",
+      "The operation could not be completed. Check the details.",
     );
+    expect(screen.getByText("Document is already a subclass of Agent.").tagName).toBe("PRE");
   });
 });
 
@@ -1355,7 +1357,8 @@ describe("relationships Stage B: related lines and the Stage A follow-ups (5.8, 
     await act(async () => {
       fireEvent.click(screen.getByRole("menuitem", { name: "Status is related to Paid" }));
     });
-    expect(screen.getByRole("alert").textContent).toBe(sentence);
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText(sentence).tagName).toBe("PRE");
   });
 
   it("a related line opens the link panel, and Delete removes it both ways in one command", async () => {

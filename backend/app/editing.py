@@ -10,6 +10,8 @@ SUMMARY
     (D-082, D-083). This is the only module that mutates a project document's
     graph; test_no_direct_mutation.py holds the rest of the code to that.
 
+    Value refusals also carry validated display facts without altering RDF checks.
+
 BASIC IDEA
     A document, once its project is opened, is an Ontology registered in the
     store under prj-<hex>-<doc>, so every read endpoint serves it unchanged.
@@ -265,13 +267,15 @@ def check_lexical(value: str, datatype: str) -> None:
         return
     if datatype == "anyURI":
         if re.search(r"\s", value) or not value:
-            raise CommandError(f'"{value}" is not a valid URI (it is empty or contains a space).')
+            raise CommandError(f'"{value}" is not a valid URI (it is empty or contains a space).',
+                               ui_message=make_message("editing.value.invalid_uri", value=value))
         return
     # The rules are lexical.py's, shared with the data import's engine, so
     # what the form refuses is exactly what an import keeps as text.
     if not lexical.valid(value, datatype):
         _, name, expected = lexical.LEXICAL[datatype]
-        raise CommandError(f'"{value}" is not a valid {name} (expected {expected}).')
+        raise CommandError(f'"{value}" is not a valid {name} (expected {expected}).',
+                           ui_message=make_message(f"editing.value.invalid_{datatype}", value=value))
 
 
 def parse_value(spec, primary: str, resolve: Callable[[str], URIRef]):
@@ -283,45 +287,49 @@ def parse_value(spec, primary: str, resolve: Callable[[str], URIRef]):
     does this.
     """
     if not isinstance(spec, dict):
-        raise CommandError("A value needs a kind: text, typed or link.")
+        raise CommandError("A value needs a kind: text, typed or link.", ui_message=make_message("editing.value.kind_required"))
     kind = spec.get("kind")
     raw = spec.get("value")
     if not isinstance(raw, str):
-        raise CommandError("A value needs its text.")
+        raise CommandError("A value needs its text.", ui_message=make_message("editing.value.text_required"))
     lang = spec.get("lang")
     datatype = spec.get("datatype")
     if lang and datatype:
         raise CommandError(
-            "A value cannot carry both a language and a datatype; RDF allows one or the other."
+            "A value cannot carry both a language and a datatype; RDF allows one or the other.",
+            ui_message=make_message("editing.value.language_datatype"),
         )
     if kind == "text":
         lang = lang or primary
         if not valid_lang(lang):
-            raise CommandError(f'"{lang}" is not a well-formed language tag (for example en or fr).')
+            raise CommandError(f'"{lang}" is not a well-formed language tag (for example en or fr).',
+                               ui_message=make_message("editing.value.invalid_language", language=str(lang)))
         if not raw.strip():
-            raise CommandError("A text value cannot be empty.")
+            raise CommandError("A text value cannot be empty.", ui_message=make_message("editing.value.empty_text"))
         return Literal(raw, lang=lang)
     if kind == "typed":
         if lang:
             raise CommandError(
-                "A value cannot carry both a language and a datatype; RDF allows one or the other."
+                "A value cannot carry both a language and a datatype; RDF allows one or the other.",
+                ui_message=make_message("editing.value.language_datatype"),
             )
         name = _datatype_name(datatype)
         check_lexical(raw, name)
         return Literal(raw, datatype=OFFERED_DATATYPES[name])
     if kind == "link":
         return resolve(raw)
-    raise CommandError("A value's kind is text, typed or link.")
+    raise CommandError("A value's kind is text, typed or link.", ui_message=make_message("editing.value.invalid_kind"))
 
 
 def _datatype_name(datatype) -> str:
     if not isinstance(datatype, str) or not datatype:
-        raise CommandError("A typed value needs a datatype.")
+        raise CommandError("A typed value needs a datatype.", ui_message=make_message("editing.value.datatype_required"))
     for name, iri in OFFERED_DATATYPES.items():
         if datatype in (name, f"xsd:{name}", str(iri)):
             return name
     offered = ", ".join(f"xsd:{n}" for n in OFFERED_DATATYPES)
-    raise CommandError(f"{datatype} is not one of the offered datatypes ({offered}).")
+    raise CommandError(f"{datatype} is not one of the offered datatypes ({offered}).",
+                       ui_message=make_message("editing.value.unsupported_datatype", datatype=datatype))
 
 
 def value_json(term) -> dict:
@@ -376,7 +384,7 @@ def range_for_value_type(spec) -> Optional[URIRef]:
     if spec is None:
         return None
     if not isinstance(spec, dict):
-        raise CommandError("A value type is {kind: text | typed | link}.")
+        raise CommandError("A value type is {kind: text | typed | link}.", ui_message=make_message("editing.value.type_required"))
     kind = spec.get("kind")
     if kind == "text":
         return RDF.langString
@@ -384,7 +392,7 @@ def range_for_value_type(spec) -> Optional[URIRef]:
         return RDFS.Resource
     if kind == "typed":
         return OFFERED_DATATYPES[_datatype_name(spec.get("datatype"))]
-    raise CommandError("A value type's kind is text, typed or link.")
+    raise CommandError("A value type's kind is text, typed or link.", ui_message=make_message("editing.value.invalid_type_kind"))
 
 
 # ---------------------------------------------------------------------------
@@ -921,7 +929,8 @@ def _set_text(ctx: Context, a: dict, predicate_for: Callable[[URIRef], URIRef], 
         raise CommandError(f"A {what} cannot be empty.")
     lang = a.get("lang") or ctx.primary
     if not valid_lang(lang):
-        raise CommandError(f'"{lang}" is not a well-formed language tag (for example en or fr).')
+        raise CommandError(f'"{lang}" is not a well-formed language tag (for example en or fr).',
+                           ui_message=make_message("editing.value.invalid_language", language=str(lang)))
     predicate = predicate_for(iri)
     old = _label_triples(ctx, iri, predicate, lang)
     change = _change(
@@ -2193,7 +2202,7 @@ def _stored_value(ctx: Context, spec):
     if kind == "typed":
         datatype = spec.get("datatype") or "xsd:string"
         return Literal(raw, datatype=ctx.iri(datatype, "datatype"))
-    raise CommandError("A value's kind is text, typed or link.")
+    raise CommandError("A value's kind is text, typed or link.", ui_message=make_message("editing.value.invalid_kind"))
 
 
 def cmd_remove_example_value(ctx: Context, a: dict) -> Change:

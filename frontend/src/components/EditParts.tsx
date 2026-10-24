@@ -12,8 +12,9 @@ BASIC IDEA
     so delayed and existing notices follow UI language without changing text.
 
     useRunner is the form's one path to the server: it runs a command through
-    projectStore.command and keeps, per field, the server's sentence when it
-    refuses, so the sentence appears under the field that caused it. One busy
+    projectStore.command and keeps raw refusals per field. Current-language
+    explanations appear under their field and original sentences in a shared
+    keyboard-accessible disclosure. One busy
     flag for the whole form, because the commands of one document are applied
     one at a time on the server anyway, and the status line says "Saving
     change…" while it is set. A second command while one is in flight is
@@ -42,21 +43,25 @@ INPUTS / INPUT SOURCES
     - The project store, for commands.
 
 EXPECTED OUTPUT
-    - useRunner, Runner, useReturnFocus, useCopy, Block, InlineText.
+    - useRunner, Runner, RunnerErrorDetails, useReturnFocus, useCopy, Block, InlineText.
 ================================================================================
 */
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "../i18n/I18nProvider";
+import { renderServerError } from "../i18n/serverMessage";
 import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
 import { projectStore } from "../state/projectStore";
 import type { ProjectNoticeInput } from "../modeling/projectNotices";
 import type { ChangeResult, ProjectDocName } from "../types";
 
 /** Run one command for one field: its busy flag and its refusal. */
+export interface RunnerRefusal { message: string; cause: unknown }
 export interface Runner {
   busy: boolean;
   errors: Record<string, string>;
+  /** Raw errors stay separate from current-language field explanations. */
+  refusals?: Record<string, RunnerRefusal>;
   run: (
     field: string,
     command: string,
@@ -75,8 +80,17 @@ export interface Runner {
 /** `doc` names the document the commands go to; the open one by default.
  *  The Shapes view passes "shapes" (shacl-authoring 5.3). */
 export function useRunner(doc?: ProjectDocName): Runner {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [refusals, setRefusals] = useState<Record<string, RunnerRefusal>>({});
+  const errors = useMemo(() => Object.fromEntries(Object.entries(refusals)
+    .map(([field, refusal]) => [field, renderServerError(refusal.cause, t)])), [refusals, t]);
+  const clear = useCallback((field: string) => setRefusals(previous => {
+    if (!Object.prototype.hasOwnProperty.call(previous, field)) return previous;
+    const next = { ...previous };
+    delete next[field];
+    return next;
+  }), []);
   // A ref as well as the state: two submits in one tick both see busy as
   // false, and the second command would be sent (found in review).
   const inFlight = useRef(false);
@@ -98,13 +112,13 @@ export function useRunner(doc?: ProjectDocName): Runner {
       if (inFlight.current) return null;
       inFlight.current = true;
       setBusy(true);
-      setErrors((e) => ({ ...e, [field]: "" }));
+      clear(field);
       try {
         return await projectStore.command(command, args, announcement, doc);
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         if (mounted.current) {
-          setErrors((prev) => ({ ...prev, [field]: message }));
+          setRefusals((prev) => ({ ...prev, [field]: { message, cause: e } }));
         }
         refused?.(message, e);
         return null;
@@ -113,11 +127,21 @@ export function useRunner(doc?: ProjectDocName): Runner {
         if (mounted.current) setBusy(false);
       }
     },
-    [doc],
+    [doc, clear],
   );
-  const clear = useCallback((field: string) => setErrors((e) => ({ ...e, [field]: "" })), []);
   const alive = useCallback(() => mounted.current, []);
-  return { busy, errors, run, clear, alive };
+  return { busy, errors, refusals, run, clear, alive };
+}
+
+/** One stable disclosure per runner. Native summary focus and open state
+ *  survive a UI language switch; raw server text is always escaped text. */
+export function RunnerErrorDetails({ runner }: { runner: Runner }) {
+  const { t } = useI18n();
+  const entries = Object.entries(runner.refusals ?? {});
+  if (!entries.length) return null;
+  return <details><summary>{t("common.details")}</summary>
+    {entries.map(([field, refusal]) => <pre key={field}>{refusal.message}</pre>)}
+  </details>;
 }
 
 /** A ref for the control that opens a small form, and a function that gives

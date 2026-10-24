@@ -10,6 +10,7 @@ SUMMARY
     Delete. Each change is one E-6 command, so one labelled undo step.
 
 BASIC IDEA
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     UI copy uses the current translator while names, definitions, annotation
     values and language tags remain original. Locale changes keep existing
     drafts and controls mounted; errors are owned by the command runner.
@@ -80,7 +81,7 @@ import { describeValue, typeOfValue, valueProblem, toValue } from "../modeling/v
 import type { CanvasSet, NodeDetails, ProjectKind } from "../types";
 import AnnotationAdder, { ValueInput } from "./AnnotationAdder";
 import DeleteDialog from "./DeleteDialog";
-import { Block, InlineText, useCopy, useReturnFocus, useRunner, type Runner } from "./EditParts";
+import { RunnerErrorDetails, Block, InlineText, useCopy, useReturnFocus, useRunner, type Runner } from "./EditParts";
 import EditStructure from "./EditStructure";
 import ExampleForm from "./ExampleForm";
 import NewEntityForm from "./NewEntityForm";
@@ -143,6 +144,7 @@ export default function EditSection({
   if (otherKind && model.defined && !details.importedFrom) {
     return (
       <section className="edit-section read-only" aria-label={t("nav.edit")}>
+        <RunnerErrorDetails runner={runner} />
         <p className="detail-note">{otherKind}</p>
       </section>
     );
@@ -154,6 +156,7 @@ export default function EditSection({
   if (details.importedFrom || details.fromData || !model.defined) {
     return (
       <section className="edit-section read-only" aria-label={t("nav.edit")}>
+        <RunnerErrorDetails runner={runner} />
         <p className="detail-note">
           {details.importedFrom
             ? t("editSection.imported", { source: details.importedFrom })
@@ -230,6 +233,7 @@ export default function EditSection({
   const examples = model.kind === "class" ? examplesOf(details) : [];
   return (
     <section className="edit-section" aria-label={t("nav.edit")} aria-busy={busy}>
+      <RunnerErrorDetails runner={runner} />
       <h3>{t("nav.edit")}</h3>
       <p className="detail-note edit-status" role="status">
         {busy ? t("annotation.saving") : ""}

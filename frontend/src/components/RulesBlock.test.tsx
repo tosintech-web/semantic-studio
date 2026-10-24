@@ -13,6 +13,7 @@ SUMMARY
     builder and in the live region; warnings under their rule and said once;
     a rule outside the form read-only with Edit in Turtle; Check it in data
     too on shapes.ttl; a rule begun on the canvas opening the builder; and
+    current-language delayed operation/refusal notices and raw warning records;
     focus, which goes back to Add a rule after an add, to the next rule
     after a remove, and never to the page.
 
@@ -39,7 +40,7 @@ import { renderProjectAnnouncement } from "../modeling/projectNotices";
 import { builderSentence, EMPTY_BUILDER, itemSentence } from "../modeling/ruleSentences";
 import { projectStore, useProjectStore } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleRestriction } from "../types";
-import { useRunner } from "./EditParts";
+import { RunnerErrorDetails, useRunner } from "./EditParts";
 import RulesBlock from "./RulesBlock";
 
 const { openProject, runCommand } = vi.hoisted(() => ({ openProject: vi.fn(), runCommand: vi.fn() }));
@@ -97,7 +98,7 @@ function Harness({ initial }: { initial: ClassRules }) {
   const [rules, set] = useState(initial);
   setRules = set;
   const runner = useRunner();
-  return <RulesBlock iri={EX + "Order"} name="Order" rules={rules} runner={runner} onSelect={onSelect} />;
+  return <><RunnerErrorDetails runner={runner} /><RulesBlock iri={EX + "Order"} name="Order" rules={rules} runner={runner} onSelect={onSelect} /></>;
 }
 
 async function show(rules: ClassRules) {
@@ -210,8 +211,9 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
     });
-    const group = screen.getByRole("group");
-    expect(within(group).getByText("Order already has this rule.")).toBeTruthy();
+    const group = screen.getByRole("group", { name: "Every Order has at least one line that is an Order line" });
+    expect(within(group).getByText("The operation could not be completed. Check the details.")).toBeTruthy();
+    expect(screen.getByText("Order already has this rule.").tagName).toBe("PRE");
     expect(said()).toBe("Order already has this rule.");
   });
 
@@ -453,5 +455,24 @@ it.each(["known", "unknown", "newline"] as const)("keeps a %s warning as facts a
   expect(projectStore.getSnapshot().announcement).toBe(notice);
   expect(runCommand).not.toHaveBeenCalled();
   expect(screen.getByTestId("notice").querySelector("b,img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords a refused rule's live notice without replacing its original details or repeating the command", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const raw = "Original rule refusal <b>{literal}";
+  runCommand.mockRejectedValueOnce(new Error(raw));
+  render(<I18nProvider><UiLanguageSelect /><NoticeProbe /><Harness initial={rulesOf([some()])} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /^削除：/ })));
+  const notice = screen.getByTestId("notice");
+  expect(notice.textContent).toBe("操作を完了できませんでした。詳細を確認してください。");
+  const id = projectStore.getSnapshot().announcement.id;
+  expect(said()).toBe(raw);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(notice.textContent).toBe("The operation could not be completed. Check the details.");
+  expect(said()).toBe(raw);
+  expect(projectStore.getSnapshot().announcement.id).toBe(id);
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  expect(document.querySelector("b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

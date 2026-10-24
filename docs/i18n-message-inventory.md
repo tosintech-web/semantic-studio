@@ -532,7 +532,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -2607,3 +2607,23 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `projectNotice.reuseSubclass` | cls, name, parent | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
 | `projectNotice.warnings` | messages | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
 | `projectNotice.warningUnknown` | count | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+
+| `editing.value.kind_required` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.text_required` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.language_datatype` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_language` | language | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.empty_text` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_kind` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.datatype_required` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.unsupported_datatype` | datatype | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.type_required` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_type_kind` | — | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_integer` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_decimal` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_double` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_float` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_boolean` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_date` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_dateTime` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_gYear` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+| `editing.value.invalid_uri` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |

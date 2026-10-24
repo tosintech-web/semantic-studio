@@ -14,6 +14,7 @@ SUMMARY
     from the local server the first time a canvas opens, and never before.
 
 BASIC IDEA
+    Command refusals share current-language explanations and raw-text details.
     What is drawn is the server's canvas view (canvas.py), fetched for each
     revision; where it is drawn is the layout file, kept by useCanvasData.
     React Flow holds the boxes while they are dragged and measured, and a
@@ -135,7 +136,7 @@ import "@xyflow/react/dist/base.css";
 import ConfirmDialog from "../components/ConfirmDialog";
 import DeleteDialog from "../components/DeleteDialog";
 import { alreadyDefined, getNodeDetails } from "../api";
-import { useRunner } from "../components/EditParts";
+import { RunnerErrorDetails, useRunner } from "../components/EditParts";
 import { restrictionSentence, shortLabel } from "../modeling/ruleSentences";
 import { createdAnnouncement, linkSentence, memberDeleteQuestion, otherKindNote, removedAnnouncement } from "../modeling/sentences";
 import { projectStore, useProjectSelector } from "../state/projectStore";
@@ -1276,6 +1277,7 @@ function Canvas(props: ModelCanvasProps) {
           </p>
         </ConfirmDialog>
       )}
+      <RunnerErrorDetails runner={runner} />
     </section>
   );
 }

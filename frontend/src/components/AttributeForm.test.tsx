@@ -13,6 +13,7 @@ SUMMARY
     opens the plan that asks the shared parent's name.
 
 BASIC IDEA
+    Refusal context stays by its field; original server text remains in details.
     The form is rendered for an entity model built by entityModel from
     details shaped as /node sends them, with the api mocked as the other
     form tests mock it and the project store open.
@@ -33,7 +34,7 @@ import type { DomainReading, ModelWarning, NodeDetails } from "../types";
 import AttributeForm from "./AttributeForm";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
-import { useRunner } from "./EditParts";
+import { RunnerErrorDetails, useRunner } from "./EditParts";
 
 const { openProject, runCommand, planShare } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -97,7 +98,7 @@ function separate(needs?: "parentName"): ModelWarning {
 function Harness({ details, warnings }: { details: NodeDetails; warnings: ModelWarning[] }) {
   const runner = useRunner();
   return (
-    <AttributeForm
+    <><RunnerErrorDetails runner={runner} /><AttributeForm
       ontologyId={`${PID}-model`}
       iri={details.iri}
       name={details.label}
@@ -105,7 +106,7 @@ function Harness({ details, warnings }: { details: NodeDetails; warnings: ModelW
       runner={runner}
       onSelect={() => undefined}
       warnings={warnings}
-    />
+    /></>
   );
 }
 
@@ -221,6 +222,7 @@ describe("found in code review", () => {
     runCommand.mockRejectedValue(new Error("hasName has no start to clear."));
     await show({ form: "one", classes: [ref("Employee")] });
     await act(async () => screen.getByRole("button", { name: "Clear the class hasName belongs to" }).click());
+    expect(screen.getAllByText("The operation could not be completed. Check the details.")).toHaveLength(1);
     expect(screen.getAllByText("hasName has no start to clear.")).toHaveLength(1);
   });
 });

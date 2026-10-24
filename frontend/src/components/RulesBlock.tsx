@@ -14,6 +14,7 @@ SUMMARY
     sentence builder.
 
 BASIC IDEA
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     The rules come with the panel's /node details, read by the server
     (axioms.py), and refetch with it on every revision, so the block shows
     what the server holds; the sentences are modeling/ruleSentences.ts's.
@@ -57,10 +58,10 @@ import {
   stateOf,
   type BuilderState,
 } from "../modeling/ruleSentences";
-import { ruleNotice, ruleCheckNotice } from "../modeling/projectNotices";
+import { refusalNotice, ruleNotice, ruleCheckNotice } from "../modeling/projectNotices";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleKey, RuleRestriction } from "../types";
-import { useRunner, type Runner } from "./EditParts";
+import { RunnerErrorDetails, useRunner, type Runner } from "./EditParts";
 import { useWarningAnnouncer } from "./RelationshipForm";
 import RuleBuilder from "./RuleBuilder";
 
@@ -313,14 +314,15 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
           </button>
         )
       )}
+      <RunnerErrorDetails runner={shapes} />
     </section>
   );
 }
 
 /** A refusal stands under the builder or the rule, and is said in the live
  *  region too (Section 6). */
-function say(message: string): void {
-  projectStore.say(message);
+function say(message: string, error: unknown): void {
+  projectStore.say(refusalNotice(message, error));
 }
 
 /** An id-safe form of a key: IRIs carry characters ids should not. */

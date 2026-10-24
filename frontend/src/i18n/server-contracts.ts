@@ -257,6 +257,47 @@ export const SERVER_CONTRACTS = {
     "characteristic": "parts",
     "name": "string"
   },
+  "editing.value.datatype_required": {},
+  "editing.value.empty_text": {},
+  "editing.value.invalid_boolean": {
+    "value": "string"
+  },
+  "editing.value.invalid_date": {
+    "value": "string"
+  },
+  "editing.value.invalid_dateTime": {
+    "value": "string"
+  },
+  "editing.value.invalid_decimal": {
+    "value": "string"
+  },
+  "editing.value.invalid_double": {
+    "value": "string"
+  },
+  "editing.value.invalid_float": {
+    "value": "string"
+  },
+  "editing.value.invalid_gYear": {
+    "value": "string"
+  },
+  "editing.value.invalid_integer": {
+    "value": "string"
+  },
+  "editing.value.invalid_kind": {},
+  "editing.value.invalid_language": {
+    "language": "string"
+  },
+  "editing.value.invalid_type_kind": {},
+  "editing.value.invalid_uri": {
+    "value": "string"
+  },
+  "editing.value.kind_required": {},
+  "editing.value.language_datatype": {},
+  "editing.value.text_required": {},
+  "editing.value.type_required": {},
+  "editing.value.unsupported_datatype": {
+    "datatype": "string"
+  },
   "entities.page_too_large": {
     "suggested_limit": "number",
     "total": "number"
@@ -384,6 +425,25 @@ export interface ServerMessageArgs {
   "command.shared_parent": { "names": string; "property": string };
   "command.swapped_ends": { "name": string };
   "command.unmarked_characteristic": { "characteristic": string; "name": string };
+  "editing.value.datatype_required": undefined;
+  "editing.value.empty_text": undefined;
+  "editing.value.invalid_boolean": { "value": string };
+  "editing.value.invalid_date": { "value": string };
+  "editing.value.invalid_dateTime": { "value": string };
+  "editing.value.invalid_decimal": { "value": string };
+  "editing.value.invalid_double": { "value": string };
+  "editing.value.invalid_float": { "value": string };
+  "editing.value.invalid_gYear": { "value": string };
+  "editing.value.invalid_integer": { "value": string };
+  "editing.value.invalid_kind": undefined;
+  "editing.value.invalid_language": { "language": string };
+  "editing.value.invalid_type_kind": undefined;
+  "editing.value.invalid_uri": { "value": string };
+  "editing.value.kind_required": undefined;
+  "editing.value.language_datatype": undefined;
+  "editing.value.text_required": undefined;
+  "editing.value.type_required": undefined;
+  "editing.value.unsupported_datatype": { "datatype": string };
   "entities.page_too_large": { "suggested_limit": number; "total": number };
   "entities.view_changed": undefined;
   "model.invalid_value": { "datatype": string; "value": string };

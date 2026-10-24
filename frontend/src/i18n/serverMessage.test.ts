@@ -10,7 +10,8 @@ BASIC IDEA
 INPUTS / INPUT SOURCES
     Known, unknown and malformed wire objects and typed catalog translators.
 EXPECTED OUTPUT
-    Whole translated sentences, safe fallback and unchanged substituted data.
+    Whole translated sentences, annotation-value refusal facts, safe fallback
+    and unchanged substituted data.
 ================================================================================
 */
 import { expect, it } from "vitest";
@@ -90,4 +91,185 @@ it("renders a word from its own fields when its prototype also has a text proper
   const wire = { code: "command.added_rule", args: { shape_name: "確認", path: [part] } };
   expect(validWireMessage(wire)).toBe(true);
   expect(renderServerMessage(wire, "", translator("ja"))).toBe("ルールセット「確認」への名前のルール追加");
+});
+
+it.each([
+  [
+    {
+      "code": "editing.value.kind_required",
+      "args": {}
+    },
+    "A value needs a kind: text, typed or link.",
+    "値の種類を指定してください：テキスト、型付きの値、またはリンク。"
+  ],
+  [
+    {
+      "code": "editing.value.text_required",
+      "args": {}
+    },
+    "A value needs its text.",
+    "値のテキストを指定してください。"
+  ],
+  [
+    {
+      "code": "editing.value.language_datatype",
+      "args": {}
+    },
+    "A value cannot carry both a language and a datatype; RDF allows one or the other.",
+    "値に言語とデータ型を同時に指定することはできません。RDFではいずれか一方を指定します。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_language",
+      "args": {
+        "language": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a well-formed language tag (for example en or fr).",
+    "「<b>{literal}犬」は有効な言語タグではありません（例：ja、en）。"
+  ],
+  [
+    {
+      "code": "editing.value.empty_text",
+      "args": {}
+    },
+    "A text value cannot be empty.",
+    "テキストの値は空にできません。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_kind",
+      "args": {}
+    },
+    "A value's kind is text, typed or link.",
+    "値の種類は、テキスト、型付きの値、またはリンクを指定してください。"
+  ],
+  [
+    {
+      "code": "editing.value.datatype_required",
+      "args": {}
+    },
+    "A typed value needs a datatype.",
+    "型付きの値にはデータ型を指定してください。"
+  ],
+  [
+    {
+      "code": "editing.value.unsupported_datatype",
+      "args": {
+        "datatype": "<b>{literal}犬"
+      }
+    },
+    "<b>{literal}犬 is not one of the offered datatypes (xsd:string, xsd:integer, xsd:decimal, xsd:boolean, xsd:date, xsd:dateTime, xsd:anyURI).",
+    "「<b>{literal}犬」は選択可能なデータ型ではありません（xsd:string、xsd:integer、xsd:decimal、xsd:boolean、xsd:date、xsd:dateTime、xsd:anyURI）。"
+  ],
+  [
+    {
+      "code": "editing.value.type_required",
+      "args": {}
+    },
+    "A value type needs a kind: text, typed or link.",
+    "値の型には、テキスト、型付きの値、またはリンクの種類を指定してください。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_type_kind",
+      "args": {}
+    },
+    "A value type's kind is text, typed or link.",
+    "値の型の種類は、テキスト、型付きの値、またはリンクを指定してください。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_integer",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid integer (expected a whole number such as 42).",
+    "「<b>{literal}犬」は有効な整数ではありません（例：42）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_decimal",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid decimal (expected a number such as 4.5).",
+    "「<b>{literal}犬」は有効な小数ではありません（例：4.5）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_double",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid number (expected a number such as 4.5 or 1E3).",
+    "「<b>{literal}犬」は有効な数値ではありません（例：4.5、1E3）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_float",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid number (expected a number such as 4.5 or 1E3).",
+    "「<b>{literal}犬」は有効な数値ではありません（例：4.5、1E3）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_boolean",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid boolean (expected true or false).",
+    "「<b>{literal}犬」は有効な真偽値ではありません（true または false を指定してください）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_date",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid date (expected YYYY-MM-DD).",
+    "「<b>{literal}犬」は有効な日付ではありません（YYYY-MM-DD形式）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_dateTime",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid date and time (expected YYYY-MM-DDThh:mm:ss).",
+    "「<b>{literal}犬」は有効な日時ではありません（YYYY-MM-DDThh:mm:ss形式）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_gYear",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid year (expected a year such as 2026).",
+    "「<b>{literal}犬」は有効な年ではありません（例：2026）。"
+  ],
+  [
+    {
+      "code": "editing.value.invalid_uri",
+      "args": {
+        "value": "<b>{literal}犬"
+      }
+    },
+    "\"<b>{literal}犬\" is not a valid URI (it is empty or contains a space).",
+    "「<b>{literal}犬」は有効なURIではありません。空の値や空白を含む値は指定できません。"
+  ]
+])("renders annotation-value refusal facts in either UI locale: %j", (wire, english, japanese) => {
+  expect(validWireMessage(wire)).toBe(true);
+  expect(renderServerMessage(wire, "Unchanged original detail", translator("en"))).toBe(english);
+  expect(renderServerMessage(wire, "Unchanged original detail", translator("ja"))).toBe(japanese);
 });

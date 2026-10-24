@@ -35,6 +35,7 @@ EXPECTED OUTPUT
     - Additive creation/history metadata with unchanged English labels,
       revisions and before/after RDF isomorphism; compound path words and
       literal names stay distinct across every rule-set command and history.
+    - Value refusals keep exact HTTP details, graph isomorphism and revisions.
     - Conditional operation descriptors preserve endpoint choices, semantic
       characteristic/mapping/deletion kinds, shared names and exact Turtle text.
 ================================================================================
@@ -2127,3 +2128,23 @@ def test_conditional_shared_domain_notices_keep_case_and_name_group_facts(pid, c
     before = graph_copy(pid)
     result = ok(pid, "UnshareDomain" if case == "unshare" else "ShareDomain", **args)
     _conditional_history(pid, result, before, code, facts, legacy)
+
+
+@pytest.mark.parametrize("command,args,legacy,wire", [
+    ("AddAnnotation", {"iri": "shop:Person", "property": "rdfs:comment", "value": {"kind": "typed", "value": "<b>{value}", "datatype": "xsd:integer"}},
+     '"<b>{value}" is not a valid integer (expected a whole number such as 42).',
+     {"code": "editing.value.invalid_integer", "args": {"value": "<b>{value}"}}),
+    ("SetLabel", {"iri": "shop:Person", "value": "x", "lang": "en_US"},
+     '"en_US" is not a well-formed language tag (for example en or fr).',
+     {"code": "editing.value.invalid_language", "args": {"language": "en_US"}}),
+    ("AddAnnotation", {"iri": "shop:Person", "property": "rdfs:comment", "value": {"kind": "text", "value": "x", "lang": "ja", "datatype": "xsd:string"}},
+     "A value cannot carry both a language and a datatype; RDF allows one or the other.",
+     {"code": "editing.value.language_datatype", "args": {}}),
+])
+def test_value_refusal_wire_keeps_document_and_legacy_detail(pid, command, args, legacy, wire):
+    before, rev = graph_copy(pid), revision(pid)
+    response = run(pid, command, **args)
+    assert response.status_code == 422
+    assert response.json() == {"detail": legacy, "uiMessage": wire}
+    assert revision(pid) == rev
+    assert isomorphic(doc(pid).graph, before)

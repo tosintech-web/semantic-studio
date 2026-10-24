@@ -11,6 +11,7 @@ SUMMARY
     (the selected shape's form) and Results (the result panels).
 
 BASIC IDEA
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     One shape at a time, as Imran asked (D-093). + opens a short chooser --
     *Rules for a class* in an ontology, *Rules for concepts* in a taxonomy,
     and *Check my model* in both -- and the shape it creates opens in the
@@ -62,7 +63,7 @@ import { getShapes } from "../api";
 import { panelStateWord, problemsFound, rowSentence } from "../modeling/shapeSentences";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { PanelState, ProjectKind, ShapeForm as Shape, ShapesListing, ValidationResult } from "../types";
-import { useRunner, useReturnFocus } from "./EditParts";
+import { RunnerErrorDetails, useRunner, useReturnFocus } from "./EditParts";
 import EntityPicker from "./EntityPicker";
 import ResultPanels, { ValidateButton, isStale } from "./ResultPanels";
 import ShapeForm from "./ShapeForm";
@@ -347,6 +348,7 @@ export default function ShapesView({
           </div>
         )}
       </SideTabs>
+      <RunnerErrorDetails runner={runner} />
     </section>
   );
 }

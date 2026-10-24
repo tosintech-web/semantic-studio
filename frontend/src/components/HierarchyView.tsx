@@ -29,6 +29,7 @@ SUMMARY
     _resetOutline).
 
 BASIC IDEA
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     Section and empty-state identities are stable message codes; labels and
     raw row ends are formatted at render time. UI language does not key a
     hierarchy request; translating row ends does not key flattening. Filters, expansion,
@@ -137,7 +138,7 @@ import { kindLabel } from "../types";
 import type { CreatingKind, ProjectKind } from "../types";
 import { otherKindNote, otherKindReason, rowEnds } from "../modeling/sentences";
 import DeleteDialog from "./DeleteDialog";
-import { useRunner } from "./EditParts";
+import { RunnerErrorDetails, useRunner } from "./EditParts";
 import { RowMenu, rowActions, type RowAction } from "./HierarchyActions";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { ModelCounts } from "./NothingSelected";
@@ -990,6 +991,7 @@ export default function HierarchyView({
           }}
         />
       )}
+      <RunnerErrorDetails runner={runner} />
     </section>
   );
 }

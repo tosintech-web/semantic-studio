@@ -306,6 +306,47 @@
       "property": "string",
       "subject": "string"
     },
-    "command.applied_turtle": {}
+    "command.applied_turtle": {},
+    "editing.value.kind_required": {},
+    "editing.value.text_required": {},
+    "editing.value.language_datatype": {},
+    "editing.value.invalid_language": {
+      "language": "string"
+    },
+    "editing.value.empty_text": {},
+    "editing.value.invalid_kind": {},
+    "editing.value.datatype_required": {},
+    "editing.value.unsupported_datatype": {
+      "datatype": "string"
+    },
+    "editing.value.type_required": {},
+    "editing.value.invalid_type_kind": {},
+    "editing.value.invalid_integer": {
+      "value": "string"
+    },
+    "editing.value.invalid_decimal": {
+      "value": "string"
+    },
+    "editing.value.invalid_double": {
+      "value": "string"
+    },
+    "editing.value.invalid_float": {
+      "value": "string"
+    },
+    "editing.value.invalid_boolean": {
+      "value": "string"
+    },
+    "editing.value.invalid_date": {
+      "value": "string"
+    },
+    "editing.value.invalid_dateTime": {
+      "value": "string"
+    },
+    "editing.value.invalid_gYear": {
+      "value": "string"
+    },
+    "editing.value.invalid_uri": {
+      "value": "string"
+    }
   }
 }

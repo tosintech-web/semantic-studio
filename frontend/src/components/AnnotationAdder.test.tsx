@@ -8,7 +8,7 @@ SUMMARY
     Adding an annotation (visual-modeling 5.1.1, AC-2): the property list and
     its groups, the default type each property brings, the input each type
     asks for, Add unavailable while the value is invalid, a new annotation
-    property, and the server's refusal shown under the value.
+    property, a refusal explanation under the value and retained raw details.
 
 BASIC IDEA
     api.ts mocked; the project store opened on a mocked project so commands
@@ -29,7 +29,7 @@ import { projectStore } from "../state/projectStore";
 import AnnotationAdder from "./AnnotationAdder";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
-import { useRunner } from "./EditParts";
+import { RunnerErrorDetails, useRunner } from "./EditParts";
 
 const { openProject, runCommand, getAnnotationProperties } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -68,7 +68,7 @@ const onDone = vi.fn();
 /** The adder with a runner of its own, as EditSection lends it one. */
 function Adder() {
   const runner = useRunner();
-  return <AnnotationAdder iri={EX + "Invoice"} primaryLanguage="en" languages={["fr"]} runner={runner} onDone={onDone} />;
+  return <><RunnerErrorDetails runner={runner} /><AnnotationAdder iri={EX + "Invoice"} primaryLanguage="en" languages={["fr"]} runner={runner} onDone={onDone} /></>;
 }
 
 async function renderAdder() {
@@ -195,7 +195,8 @@ describe("AnnotationAdder", () => {
     await act(async () => {
       fireEvent.click(add());
     });
-    const error = screen.getByText("Invoice already has a skos:prefLabel in en.");
+    const error = screen.getByText("The operation could not be completed. Check the details.");
+    expect(screen.getByText("Invoice already has a skos:prefLabel in en.").tagName).toBe("PRE");
     expect(screen.getByRole("textbox", { name: "Value" }).getAttribute("aria-describedby")).toBe(error.id);
     expect(onDone).not.toHaveBeenCalled();
   });

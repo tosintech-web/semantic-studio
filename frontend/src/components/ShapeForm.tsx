@@ -13,6 +13,7 @@ SUMMARY
     not, and Edit in Turtle.
 
 BASIC IDEA
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     Every control is one command on shapes.ttl through the shared runner
     (EditParts.useRunner, pointed at the shapes document), so every change
     is one undo step and a refusal shows under the field that caused it.
@@ -49,7 +50,7 @@ import { getShapeSuggestions } from "../api";
 import { everyWord, pathWords, ruleSentence, shapeSentence } from "../modeling/shapeSentences";
 import type { ShapeForm as Shape, ShapePath, ShapeRule, ShapeSuggestions } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
-import { Block, InlineText, useRunner, useReturnFocus } from "./EditParts";
+import { RunnerErrorDetails, Block, InlineText, useRunner, useReturnFocus } from "./EditParts";
 import EntityPicker from "./EntityPicker";
 import RuleEditor from "./RuleEditor";
 
@@ -392,6 +393,7 @@ export default function ShapeForm({
           </p>
         </ConfirmDialog>
       )}
+      <RunnerErrorDetails runner={runner} />
     </section>
   );
 }

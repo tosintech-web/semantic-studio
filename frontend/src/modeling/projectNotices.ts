@@ -5,7 +5,7 @@ FILE: frontend/src/modeling/projectNotices.ts
 SUMMARY
     Project announcements rendered in the current UI language from operation facts.
 BASIC IDEA
-    Keep finite descriptors, selected rule labels, reuse facts or small summaries.
+    Keep finite descriptors, refusal facts, selected rule labels or small summaries.
     Reuse the panels' formatters and retain English text for legacy callers.
     Command history labels use additive server descriptors; each notice also
     keeps the action and save-state facts needed by its whole sentence.
@@ -47,6 +47,7 @@ export interface NoticeWarning { text: string; uiMessage?: unknown }
 type Operation = Pick<ChangeResult, "label" | "uiMessage">;
 export type ProjectNoticeInput = string | ProjectNotice | ProjectNoticeDetail;
 export type ProjectNoticeDetail =
+  | { kind: "refusal"; message: string; uiMessage: WireMessage | undefined }
   | { kind: "rule"; action: "added" | "changed" | "removed"; narrative: RuleNarrative | null; operation: Operation }
   | { kind: "ruleCheck"; operation: Operation }
   | { kind: "reuse"; facts: ReuseFacts }
@@ -73,6 +74,10 @@ function captureMessage(value: unknown): WireMessage | undefined {
 function operationFacts(result: Operation): Operation {
   return { label: result.label, uiMessage: captureMessage(result.uiMessage) };
 }
+export function refusalNotice(message: string, error: unknown): ProjectNoticeDetail {
+  const metadata = error && typeof error === "object" && "uiMessage" in error ? error.uiMessage : undefined;
+  return { kind: "refusal", message, uiMessage: captureMessage(metadata) };
+}
 export function ruleNotice(action: "added" | "changed" | "removed", narrative: RuleNarrative | null, result: Operation): ProjectNoticeDetail {
   const facts = narrative?.type === "restriction" ? { ...narrative, parts: { ...narrative.parts } } : narrative && { ...narrative };
   return { kind: "rule", action, narrative: facts, operation: operationFacts(result) };
@@ -89,6 +94,7 @@ export function warningNotice(warnings: NoticeWarning[]): ProjectNoticeDetail {
 
 /** Keep legacy text independent of the localized metadata's wording. */
 export function legacyNoticeText(detail: ProjectNoticeDetail): string | undefined {
+  if (detail.kind === "refusal") return detail.message;
   if (detail.kind === "warnings") return `Warning: ${detail.warnings.map(w => w.text).join(" ")}`;
   if (detail.kind === "ruleCheck") return `${detail.operation.label}. Validate checks it in your data.`;
   if (detail.kind === "rule") {
@@ -123,6 +129,7 @@ export function historyLabel(label: string | null | undefined, message: unknown,
 }
 
 export function renderProjectNoticeDetail(detail: ProjectNoticeDetail, locale: UiLocale, t: Translator): string {
+  if (detail.kind === "refusal") return renderServerMessage(detail.uiMessage, detail.message, t);
   if (detail.kind === "rule") return t(`projectNotice.rule.${detail.action}`, {
     sentence: detail.narrative ? narrativeSentence(detail.narrative, locale) : t("projectNotice.ruleFallback"),
     operation: historyLabel(detail.operation.label, detail.operation.uiMessage, t),

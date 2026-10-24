@@ -6,8 +6,8 @@ FILE: frontend/src/components/EditSection.test.tsx
 
 SUMMARY
     The editing form (visual-modeling Stage 1): each block sends the command
-    and arguments 5.1 names, a refusal is the server's sentence under the
-    field that caused it, read-only cases say why, names are listed per
+    and arguments 5.1 names, a refusal has a current-language explanation under
+    its field and an untouched original in technical details, read-only cases say why, names are listed per
     project language, pickers ask for one kind, and the delete flow shows the
     dry run, asks about children only when there are some, and deletes only
     on confirmation.
@@ -200,7 +200,8 @@ describe("Names (AC-1)", () => {
       fireEvent.keyDown(field, { key: "Enter" });
     });
     expect(lastCommand()).toEqual(["SetLabel", { iri: EX + "Invoice", value: "", lang: "en" }]);
-    const error = screen.getByText("A label cannot be empty.");
+    const error = screen.getByText("The operation could not be completed. Check the details.");
+    expect(screen.getByText("A label cannot be empty.").tagName).toBe("PRE");
     expect(field.getAttribute("aria-describedby")).toBe(error.id);
     expect(screen.getByRole("textbox", { name: "name in en" })).toBe(field);
   });
@@ -643,14 +644,15 @@ describe("Stage 2 follow-ups (visual-modeling 5.8)", () => {
     await act(async () => {
       fireEvent.click(within(dateRow()).getByRole("button", { name: /^Remove/ }));
     });
-    expect(within(dateRow()).getByText("Refused for the date.")).toBeTruthy();
+    expect(within(dateRow()).getByText("The operation could not be completed. Check the details.")).toBeTruthy();
+    expect(screen.getByText("Refused for the date.").tagName).toBe("PRE");
     // The same statements, the other way round (a refetch may re-order them).
     const reordered = { ...first, outgoing: [...first.outgoing].reverse() };
     await act(async () => {
       view(<EditSection ontologyId={OID} details={reordered} primaryLanguage="en" languages={["fr"]} onSelect={onSelect} onDeleted={onDeleted} />);
     });
-    expect(within(dateRow()).getByText("Refused for the date.")).toBeTruthy();
-    expect(within(screen.getByText("A-1").closest("li")!).queryByText("Refused for the date.")).toBeNull();
+    expect(within(dateRow()).getByText("The operation could not be completed. Check the details.")).toBeTruthy();
+    expect(within(screen.getByText("A-1").closest("li")!).queryByText("The operation could not be completed. Check the details.")).toBeNull();
   });
 
   it("item 4: a create does not move the selection once the user went elsewhere", async () => {
@@ -915,7 +917,8 @@ describe("relationship form (AC-7)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("checkbox", { name: /At most one/ }));
     });
-    expect(screen.getByRole("alert").textContent).toBe(sentence);
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText(sentence).tagName).toBe("PRE");
     // The box shows the model, which the refusal did not change.
     expect((screen.getByRole("checkbox", { name: /At most one/ }) as HTMLInputElement).checked).toBe(false);
   });
