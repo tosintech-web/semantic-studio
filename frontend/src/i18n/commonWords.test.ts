@@ -15,6 +15,7 @@ import { expect, it } from "vitest";
 import { translate } from "./format";
 import type { Translator } from "./types";
 import { purposeLabel, outcomeLabel, alwaysPhrase } from "../networkWords";
+import { describeKindCounts } from "../explore/suggestions";
 import { homeStatus, statementCount } from "../statusWords";
 import { removalPrompt, removalConfirmation } from "../removalPrompt";
 import { stepSentence, stepAnnouncement } from "../loadWords";
@@ -40,4 +41,8 @@ it("localizes network capabilities and outcomes with own-key fallbacks", () => {
   expect(outcomeLabel("blocked", ja)).toBe("利用者がブロック");
   expect(purposeLabel("constructor", ja)).toBe("その他");
   expect(alwaysPhrase("jsonld:context", ja)).toBe("JSON-LDコンテキストの読み込み");
+});
+it("describes dictionary contents using localized kind counts and safe unknown kinds", () => {
+  expect(describeKindCounts({ class: 1, individual: 3 }, ja)).toBe("この辞書には個体3件、クラス1件が定義されています。");
+  expect(describeKindCounts({ constructor: 1 }, ja)).toBe("この辞書にはその他1件が定義されています。");
 });

@@ -42,6 +42,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import type { Translator, UiLocale } from "../i18n/types";
+import { countKindMessage } from "../i18n/kindLabel";
+import { renderServerError } from "../i18n/serverMessage";
 import { useEffect, useId, useRef, useState } from "react";
 import { dataLabel } from "../modeling/dataSentences";
 import type { ProjectSummary } from "../types";
@@ -65,15 +69,10 @@ interface Props extends ProjectActions {
 }
 
 /** "Changed 28 Sep 2026", in the reader's locale. */
-function changedOn(iso: string): string {
+function changedOn(iso: string, locale: UiLocale, t: Translator): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return `Changed ${date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
-}
-
-function plural(n: number | undefined, one: string, many: string): string {
-  const count = n ?? 0;
-  return `${count.toLocaleString()} ${count === 1 ? one : many}`;
+  return t("home.changed", { date: date.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) });
 }
 
 export default function ProjectCard({
@@ -89,13 +88,14 @@ export default function ProjectCard({
   onExport,
   onDelete,
 }: Props) {
+  const { t, locale } = useI18n();
   const headingId = useId();
   const menuId = useId();
   const renameId = useId();
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(project.name);
-  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renameError, setRenameError] = useState<unknown>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const renameInput = useRef<HTMLInputElement>(null);
@@ -118,7 +118,7 @@ export default function ProjectCard({
       try {
         await onRename(project.id, draft.trim());
       } catch (e: unknown) {
-        setRenameError(e instanceof Error ? e.message : String(e));
+        setRenameError(e);
         return;
       }
     }
@@ -151,7 +151,7 @@ export default function ProjectCard({
           {renaming ? (
             <div className="project-rename">
               <label htmlFor={renameId} className="visually-hidden">
-                New name for {project.name}
+                {t("home.newName", { name: project.name })}
               </label>
               <input
                 id={renameId}
@@ -167,11 +167,9 @@ export default function ProjectCard({
                   }
                 }}
               />
-              <button className="ghost" onClick={() => void finishRename(true)}>
-                Save name
-              </button>
+              <button className="ghost" onClick={() => void finishRename(true)}>{t("home.saveName")}</button>
               <button className="ghost" onClick={() => void finishRename(false)}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           ) : (
@@ -186,7 +184,7 @@ export default function ProjectCard({
               aria-expanded={menuOpen}
               aria-controls={menuId}
               aria-haspopup="true"
-              aria-label={`More actions for ${project.name}`}
+              aria-label={t("home.more", { name: project.name })}
               // aria-disabled, not disabled: the action this card starts puts
               // focus here, and a disabled button would drop it.
               aria-disabled={disabled}
@@ -202,9 +200,7 @@ export default function ProjectCard({
                       setMenuOpen(false);
                       setRenaming(true);
                     }}
-                  >
-                    Rename
-                  </button>
+                  >{t("home.rename")}</button>
                   {/* A project from before kinds gets its kind when it is
                       first opened; until then there is nothing to change. */}
                   {project.kind && (
@@ -212,31 +208,27 @@ export default function ProjectCard({
                       {project.kind === "ontology" ? "Change to taxonomy…" : "Change to ontology…"}
                     </button>
                   )}
-                  <button onClick={act(onDuplicate)}>Duplicate</button>
-                  <button onClick={act(onExport)}>Export as zip</button>
-                  <button className="danger" onClick={act(onDelete)}>
-                    Delete
-                  </button>
+                  <button onClick={act(onDuplicate)}>{t("home.duplicate")}</button>
+                  <button onClick={act(onExport)}>{t("home.export")}</button>
+                  <button className="danger" onClick={act(onDelete)}>{t("home.delete")}</button>
                 </>
               )}
             </div>
           </div>
         </div>
-        {renameError && <p className="form-error">{renameError}</p>}
-        {project.kind && <p className="project-kind">{project.kind === "ontology" ? "Ontology" : "Taxonomy"}</p>}
+        {!!renameError && <><p className="form-error">{renderServerError(renameError, t)}</p><details><summary>{t("common.details")}</summary><pre>{renameError instanceof Error ? renameError.message : String(renameError)}</pre></details></>}
+        {project.kind && <p className="project-kind">{project.kind === "ontology" ? t("project.ontology") : t("project.taxonomy")}</p>}
         <p className="onto-summary">
-          {plural(project.counts.classes, "class", "classes")},{" "}
-          {plural(project.counts.properties, "property", "properties")},{" "}
-          {plural(project.counts.concepts, "concept", "concepts")}
+          {t("home.projectSummary", { classes: countKindMessage("class", project.counts.classes ?? 0, t), properties: countKindMessage("property", project.counts.properties ?? 0, t), concepts: t(`home.concepts.${project.counts.concepts === 1 ? "one" : "many"}`, { count: project.counts.concepts ?? 0 }) })}
         </p>
         {(project.data ?? []).map((source) => (
           <p key={source.id} className="project-data data-label">
-            Data {dataLabel(source)}
-            {source.enabled ? "" : " (off)"}
+            {t("home.projectData", { label: dataLabel(source) })}
+            {source.enabled ? "" : t("home.dataOff")}
           </p>
         ))}
         <p className="project-meta">
-          <span>{changedOn(project.updatedAt)}</span>
+          <span>{changedOn(project.updatedAt, locale, t)}</span>
           <span>{project.documents.map((d) => d.file).join(", ")}</span>
         </p>
         <div className="onto-verbs">
@@ -244,10 +236,10 @@ export default function ProjectCard({
             ref={openRef}
             className="primary"
             aria-disabled={disabled}
-            aria-label={`Open ${project.name}`}
+            aria-label={t("home.openName", { name: project.name })}
             onClick={() => !disabled && onOpen(project.id)}
           >
-            {busy ? "Working…" : "Open"}
+            {busy ? "Working…" : t("home.open")}
           </button>
         </div>
       </div>

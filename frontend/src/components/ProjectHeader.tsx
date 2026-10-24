@@ -52,11 +52,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState } from "react";
 import { addShapesDocument, getLanguageReport } from "../api";
 import { validLanguageTag } from "../projects/form";
 import {
-  STATUS_WORDS,
   activeDocument,
   projectStore,
   saveStatus,
@@ -71,7 +71,7 @@ interface Props {
   guard?: (then: () => void) => void;
   onSwitchDocument: (doc: ProjectDocName) => void;
   onClose: () => void;
-  onError: (message: string) => void;
+  onError: (error: unknown) => void;
   onSaveCopy: () => void;
   onTurtle?: () => void;
   canvas?: { on: boolean; onToggle: () => void } | null;
@@ -103,6 +103,7 @@ export default function ProjectHeader({
   onTurtle,
   canvas = null,
 }: Props) {
+  const { t } = useI18n();
   const state = useProjectStore();
   const project = state.project!;
   const current = activeDocument(state);
@@ -110,7 +111,7 @@ export default function ProjectHeader({
   const [langOpen, setLangOpen] = useState(false);
   const [report, setReport] = useState<LanguageReport | null>(null);
   const [newLang, setNewLang] = useState("");
-  const [langError, setLangError] = useState<string | null>(null);
+  const [langError, setLangError] = useState(false);
   const langPanelId = useId();
   const menuId = useId();
   // The ⋯ button: the menu's and the language panel's way back.
@@ -120,7 +121,7 @@ export default function ProjectHeader({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const run = (action: () => Promise<unknown>) => {
-    action().catch((e: unknown) => onError(e instanceof Error ? e.message : String(e)));
+    action().catch((e: unknown) => onError(e));
   };
 
   const canUndo = current?.canUndo ?? false;
@@ -221,10 +222,10 @@ export default function ProjectHeader({
   const addLanguage = () => {
     const tag = newLang.trim();
     if (!validLanguageTag(tag)) {
-      setLangError("Use a language tag such as fr, es or pt-BR.");
+      setLangError(true);
       return;
     }
-    setLangError(null);
+    setLangError(false);
     setNewLang("");
     run(() => projectStore.setLanguages([...project.languages, tag]));
   };
@@ -233,66 +234,62 @@ export default function ProjectHeader({
 
   return (
     <div className="project-header">
-      <span className="context-label">PROJECT</span>
+      <span className="context-label">{t("projectHeader.project")}</span>
       <span className="project-name" title={project.name}>
         {project.name}
       </span>
 
-      <label className="visually-hidden" htmlFor="project-doc-select">
-        Document
-      </label>
+      <label className="visually-hidden" htmlFor="project-doc-select">{t("projectHeader.document")}</label>
       <select
         id="project-doc-select"
         value={state.activeDoc}
         onChange={(e) => onSwitchDocument(e.target.value as ProjectDocName)}
-        title="The document open for editing"
+        title={t("projectHeader.documentHelp")}
       >
         {state.documents.map((d) => (
           <option key={d.doc} value={d.doc}>
             {DOC_FILES[d.doc]}
-            {d.dirty ? " (unsaved)" : ""}
+            {d.dirty ? t("projectHeader.unsavedTag") : ""}
           </option>
         ))}
       </select>
       <span className={`project-status project-status-${status}`}>
         <span className="project-status-dot" aria-hidden="true" />
-        {STATUS_WORDS[status]}
+        {t(status === "unsaved" ? "dictionary.dirty" : status === "saving" ? "dictionary.saving" : "dictionary.saved")}
       </span>
 
       <button
         className="ghost"
         aria-disabled={!canUndo}
-        aria-label={canUndo ? `Undo: ${current?.undoLabel}` : "Undo"}
-        title={canUndo ? `Undo: ${current?.undoLabel} (Ctrl+Z)` : "Nothing to undo"}
+        aria-label={canUndo ? t("projectHeader.undoName", { label: current?.undoLabel ?? "" }) : t("projectHeader.undo")}
+        title={canUndo ? t("projectHeader.undoHelp", { label: current?.undoLabel ?? "" }) : t("projectHeader.noUndo")}
         onClick={undo}
       >
         {/* The word, or an icon where the row is narrow (5.2); the name is
             the aria-label either way. */}
         <span className="ph-icon" aria-hidden="true">↶</span>
-        <span className="ph-word">Undo</span>
+        <span className="ph-word">{t("projectHeader.undo")}</span>
       </button>
       <button
         className="ghost"
         aria-disabled={!canRedo}
-        aria-label={canRedo ? `Redo: ${current?.redoLabel}` : "Redo"}
-        title={canRedo ? `Redo: ${current?.redoLabel} (Ctrl+Y)` : "Nothing to redo"}
+        aria-label={canRedo ? t("projectHeader.redoName", { label: current?.redoLabel ?? "" }) : t("projectHeader.redo")}
+        title={canRedo ? t("projectHeader.redoHelp", { label: current?.redoLabel ?? "" }) : t("projectHeader.noRedo")}
         onClick={redo}
       >
         <span className="ph-icon" aria-hidden="true">↷</span>
-        <span className="ph-word">Redo</span>
+        <span className="ph-word">{t("projectHeader.redo")}</span>
       </button>
       <button
         className={status === "unsaved" ? "primary" : "ghost"}
         aria-disabled={state.saving}
-        title="Save to the project's file (Ctrl+S)"
+        title={t("projectHeader.saveHelp")}
         onClick={save}
-      >
-        Save
-      </button>
+      >{t("projectHeader.save")}</button>
 
       <span className="spacer" />
       {onTurtle && (
-        <button className="ghost" onClick={onTurtle} title="Edit this document as Turtle, in View">
+        <button className="ghost" onClick={onTurtle} title={t("projectHeader.turtleHelp")}>
           Turtle
         </button>
       )}
@@ -303,8 +300,8 @@ export default function ProjectHeader({
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           aria-controls={menuId}
-          aria-label="More project actions"
-          title="Language, Save a copy, Show canvas, Close project"
+          aria-label={t("projectHeader.more")}
+          title={t("projectHeader.moreHelp")}
           onClick={() => {
             setLangOpen(false);
             setMenuOpen((open) => !open);
@@ -316,7 +313,7 @@ export default function ProjectHeader({
           ref={menuRef}
           id={menuId}
           role="menu"
-          aria-label="More project actions"
+          aria-label={t("projectHeader.more")}
           className="onto-menu project-menu"
           hidden={!menuOpen}
           onKeyDown={(e) => {
@@ -335,20 +332,16 @@ export default function ProjectHeader({
         >
           <li role="none">
             <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("language")}>
-              Language: {display}…
+              {t("projectHeader.language", { language: display })}
             </button>
           </li>
           {!hasShapes && (
             <li role="none">
-              <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("shapes")}>
-                Add shapes.ttl
-              </button>
+              <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("shapes")}>{t("projectHeader.shapes")}</button>
             </li>
           )}
           <li role="none">
-            <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("copy")}>
-              Save a copy
-            </button>
+            <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("copy")}>{t("projectHeader.copy")}</button>
           </li>
           {canvas && (
             <li role="none">
@@ -361,15 +354,11 @@ export default function ProjectHeader({
               >
                 <span className="project-menu-check" aria-hidden="true">
                   {canvas.on ? "✓" : ""}
-                </span>
-                Show canvas
-              </button>
+                </span>{t("projectHeader.canvas")}</button>
             </li>
           )}
           <li role="none">
-            <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("close")}>
-              Close project
-            </button>
+            <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("close")}>{t("projectHeader.close")}</button>
           </li>
         </ul>
         <div
@@ -387,7 +376,7 @@ export default function ProjectHeader({
           {langOpen && (
             <>
               <fieldset className="project-lang-display">
-                <legend>Show names in</legend>
+                <legend>{t("projectHeader.showNames")}</legend>
                 {languages.map((lang) => (
                   <label key={lang}>
                     <input
@@ -397,39 +386,35 @@ export default function ProjectHeader({
                       onChange={() => projectStore.setDisplayLanguage(lang)}
                     />
                     {lang}
-                    {lang === project.primaryLanguage ? " (primary)" : ""}
+                    {lang === project.primaryLanguage ? t("projectHeader.primary") : ""}
                     {report && report.missing[lang] > 0 && (
                       <span className="project-lang-missing">
-                        {" "}
-                        — {report.missing[lang].toLocaleString()} of{" "}
-                        {report.entities.toLocaleString()} entities have no name in {lang}
+                        {t("projectHeader.missing", { missing: report.missing[lang], total: report.entities, language: lang })}
                       </span>
                     )}
                   </label>
                 ))}
               </fieldset>
               {project.languages.length > 0 && (
-                <ul className="project-lang-list" aria-label="Additional languages">
+                <ul className="project-lang-list" aria-label={t("projectHeader.additional")}>
                   {project.languages.map((lang) => (
                     <li key={lang}>
                       {lang}{" "}
                       <button
                         className="ghost"
-                        aria-label={`Remove ${lang} from this project's languages`}
+                        aria-label={t("projectHeader.removeLanguage", { language: lang })}
                         onClick={() =>
                           run(() =>
                             projectStore.setLanguages(project.languages.filter((l) => l !== lang)),
                           )
                         }
-                      >
-                        Remove
-                      </button>
+                      >{t("projectHeader.remove")}</button>
                     </li>
                   ))}
                 </ul>
               )}
               <div className="project-lang-add">
-                <label htmlFor="project-new-language">Add a language</label>
+                <label htmlFor="project-new-language">{t("projectHeader.addLanguage")}</label>
                 <input
                   id="project-new-language"
                   value={newLang}
@@ -441,12 +426,10 @@ export default function ProjectHeader({
                   aria-invalid={langError ? true : undefined}
                   aria-describedby={langError ? "project-new-language-error" : undefined}
                 />
-                <button className="ghost" onClick={addLanguage}>
-                  Add
-                </button>
+                <button className="ghost" onClick={addLanguage}>{t("projectHeader.add")}</button>
                 {langError && (
                   <p id="project-new-language-error" className="form-error">
-                    {langError}
+                    {t("projectHeader.invalidLanguage")}
                   </p>
                 )}
               </div>

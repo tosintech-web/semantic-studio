@@ -3955,6 +3955,7 @@ it("opens the full list without waiting for or requesting graph JSON", async () 
   expect(getEntities).toHaveBeenCalled(); expect(getGraph).not.toHaveBeenCalled();
   expect(screen.getByRole("heading", { name: "Entities" })).toBeTruthy();
   expect(screen.queryByTestId("graph")).toBeNull();
+  expect(screen.getByRole("contentinfo").textContent).not.toMatch(/\bnodes\b|\bedges\b/);
 });
 
 it("uses reference-only details and never asks a missing node to open an edit form", async () => {
@@ -3985,4 +3986,25 @@ it("names all main navigation jobs in Japanese and changes them with UI language
   for (const name of ["ホーム", "ソース", "探索", "項目一覧", "編集", "検索クエリ"]) expect(screen.getByRole("tab", { name })).toBeTruthy();
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(screen.getByRole("tab", { name: "Home" })).toBeTruthy(); expect(screen.getByRole("tab", { name: "Entities" })).toBeTruthy();
+});
+it("hides graph budget controls when entering the list from an already drawn graph", async () => {
+  await renderAppOpened(); expect(screen.getByRole("button", { name: "Show more" })).toBeTruthy();
+  const calls = getGraph.mock.calls.length;
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
+  expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  expect(getGraph).toHaveBeenCalledTimes(calls);
+  expect(screen.getByRole("contentinfo").textContent).not.toMatch(/\bnodes\b|\bedges\b/);
+});
+it("translates a retained server error and dismisses it with a keyboard-accessible button", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getGraph.mockRejectedValue(new ApiError("Original graph failure", 400, "Original graph failure", { code: "reasoning.timeout", args: { seconds: 10 } }));
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "FIBOを探索" })); });
+  expect(screen.getByRole("alert").textContent).toContain("推論を10秒で停止しました");
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(screen.getByRole("alert").textContent).toContain("Reasoning stopped after 10 seconds");
+  expect(screen.getByText("Original graph failure")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss error" }));
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("tab", { name: "Explore" }));
 });

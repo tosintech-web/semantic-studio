@@ -26,6 +26,7 @@ EXPECTED OUTPUT
 
 // @vitest-environment jsdom
 
+import { I18nProvider } from "../i18n/I18nProvider";
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -198,4 +199,13 @@ describe("ProjectCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "More actions for Invoices" }));
     expect(screen.queryByRole("button", { name: /Change to/ })).toBeNull();
   });
+});
+it("names a Japanese project card's counts and actions without changing the project name", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1"); const open = vi.fn();
+  render(<I18nProvider><ProjectCard project={PROJECT} busy={false} disabled={false} onOpen={open} onRename={vi.fn()}
+    onChangeKind={vi.fn()} onDuplicate={vi.fn()} onExport={vi.fn()} onDelete={vi.fn()} /></I18nProvider>);
+  expect(screen.getByText("クラス2件、プロパティ1件、概念0件")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Invoicesを開く" })); expect(open).toHaveBeenCalledWith(PROJECT.id);
+  fireEvent.click(screen.getByRole("button", { name: "Invoicesのその他の操作" }));
+  expect(screen.getByRole("button", { name: "名前を変更" })).toBeTruthy();
 });

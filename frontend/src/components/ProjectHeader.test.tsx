@@ -26,6 +26,7 @@ EXPECTED OUTPUT
 
 // @vitest-environment jsdom
 
+import { I18nProvider } from "../i18n/I18nProvider";
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -84,7 +85,7 @@ function doc(changes: Record<string, unknown> = {}) {
 let handlers: {
   onSwitchDocument: ReturnType<typeof vi.fn<(doc: string) => void>>;
   onClose: ReturnType<typeof vi.fn<() => void>>;
-  onError: ReturnType<typeof vi.fn<(message: string) => void>>;
+  onError: ReturnType<typeof vi.fn<(error: unknown) => void>>;
   onSaveCopy: ReturnType<typeof vi.fn<() => void>>;
   onTurtle: ReturnType<typeof vi.fn<() => void>>;
 };
@@ -100,7 +101,7 @@ async function renderHeader(changes: Record<string, unknown> = {}) {
   handlers = {
     onSwitchDocument: vi.fn<(doc: string) => void>(),
     onClose: vi.fn<() => void>(),
-    onError: vi.fn<(message: string) => void>(),
+    onError: vi.fn<(error: unknown) => void>(),
     onSaveCopy: vi.fn<() => void>(),
     onTurtle: vi.fn<() => void>(),
   };
@@ -273,7 +274,7 @@ describe("ProjectHeader", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Undo: Created class Invoice" }));
     });
-    expect(handlers.onError).toHaveBeenCalledWith("There is nothing to undo.");
+    expect(handlers.onError).toHaveBeenCalledWith(expect.objectContaining({ message: "There is nothing to undo." }));
   });
 });
 
@@ -407,4 +408,18 @@ describe("ProjectHeader, found in code review", () => {
     });
     expect(screen.queryByRole("menu", { name: "More project actions" })).toBeNull();
   });
+});
+it("distinguishes Japanese save state and edits dictionary display language without changing UI locale", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc({ dirty: true })], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  getLanguageReport.mockResolvedValue({ entities: 3, missing: { en: 0, fr: 1 } });
+  render(<I18nProvider><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  expect(screen.getByText("未保存の変更あり")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "保存" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "プロジェクトのその他の操作" }));
+  await act(async () => { fireEvent.click(screen.getByRole("menuitem", { name: "辞書の表示言語：en…" })); });
+  fireEvent.click(screen.getByRole("radio", { name: /^fr/ }));
+  expect(projectStore.getSnapshot().displayLanguage).toBe("fr");
+  expect(screen.getByRole("button", { name: "保存" })).toBeTruthy();
 });

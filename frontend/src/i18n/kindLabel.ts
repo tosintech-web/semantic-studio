@@ -17,3 +17,8 @@ export function kindLabelMessage(kind: string, t: Translator): string {
   const known = kinds.find(value => value === kind) ?? "other";
   return t(`kind.${known}`);
 }
+
+export function countKindMessage(kind: string, count: number, t: Translator): string {
+  const known = kinds.find(value => value === kind) ?? "other";
+  return t(`kindCount.${known}.${count === 1 ? "one" : "many"}`, { count });
+}

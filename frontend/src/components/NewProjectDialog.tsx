@@ -42,13 +42,13 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
+import { renderServerError } from "../i18n/serverMessage";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import {
-  CHOOSE_KIND,
   defaultBaseIri,
   defaultPrefix,
   firstReason,
-  KIND_CHOICES,
+  kindChoices,
   validate,
   type NewProjectFields,
 } from "../projects/form";
@@ -72,6 +72,7 @@ interface Props {
 }
 
 export default function NewProjectDialog({ library, initialSource, onCreate, onClose }: Props) {
+  const { locale, t } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const reasonId = useId();
@@ -82,7 +83,8 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
   // "template:<name>" or "library:<id>", one select for both kinds of start;
   // "" until a kind is chosen or a library ontology picked.
   const [source, setSource] = useState(initialSource ? `library:${initialSource}` : "");
-  const templates = KIND_CHOICES.find((c) => c.kind === kind)?.templates ?? [];
+  const choices = useMemo(() => kindChoices(t), [t]);
+  const templates = choices.find((c) => c.kind === kind)?.templates ?? [];
   // A library copy's kind is judged by the server from what it holds, so
   // picking one clears the kind rather than leave a choice the server will
   // not use on screen (found in review); a note says how it is judged.
@@ -99,11 +101,11 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
   };
   const [baseIri, setBaseIri] = useState<string | null>(null);
   const [prefix, setPrefix] = useState<string | null>(null);
-  const { locale } = useI18n();
+
   const [primaryLanguage, setPrimaryLanguage] = useState<string>(locale);
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const escape = useCallback(() => {
     if (!busy) onClose();
@@ -116,9 +118,9 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
     prefix: prefix ?? defaultPrefix(name),
     primaryLanguage,
   };
-  const errors = useMemo(() => validate(fields), [name, baseIri, prefix, primaryLanguage]);
+  const errors = useMemo(() => validate(fields, t), [name, baseIri, prefix, primaryLanguage, t]);
   // The kind first: it is the first question the form asks (Section 6).
-  const reason = source === "" ? CHOOSE_KIND : firstReason(errors);
+  const reason = source === "" ? t("project.chooseKind") : firstReason(errors);
   const touch = (field: string) => setTouched((prev) => new Set(prev).add(field));
   const shown = (field: keyof NewProjectFields) => (touched.has(field) ? errors[field] : undefined);
 
@@ -137,7 +139,7 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
         primaryLanguage: fields.primaryLanguage.trim(),
       });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
       setBusy(false);
     }
   };
@@ -187,9 +189,7 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
         aria-modal="true"
         aria-labelledby="new-project-title"
       >
-        <h2 id="new-project-title" ref={headingRef} tabIndex={-1} className="confirm-title">
-          New project
-        </h2>
+        <h2 id="new-project-title" ref={headingRef} tabIndex={-1} className="confirm-title">{t("project.title")}</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -197,8 +197,8 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
           }}
         >
           <fieldset className="form-field new-project-kinds">
-            <legend>What are you making?</legend>
-            {KIND_CHOICES.map((choice) => (
+            <legend>{t("project.kindQuestion")}</legend>
+            {choices.map((choice) => (
               <label key={choice.kind} className={`new-project-kind${kind === choice.kind ? " chosen" : ""}`}>
                 <input
                   type="radio"
@@ -214,9 +214,9 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
               </label>
             ))}
           </fieldset>
-          {field("name", "Name", name, setName)}
+          {field("name", t("project.name"), name, setName)}
           <div className="form-field">
-            <label htmlFor="new-project-source">Start from</label>
+            <label htmlFor="new-project-source">{t("project.source")}</label>
             <select
               id="new-project-source"
               value={source}
@@ -224,12 +224,10 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
               aria-describedby={fromLibrary ? "new-project-source-hint" : undefined}
             >
               {source === "" && (
-                <option value="" disabled>
-                  Choose Ontology or Taxonomy first
-                </option>
+                <option value="" disabled>{t("project.chooseFirst")}</option>
               )}
               {templates.length > 0 && (
-                <optgroup label="Templates">
+                <optgroup label={t("project.templates")}>
                   {templates.map((t) => (
                     <option key={t.value} value={`template:${t.value}`}>
                       {t.label}
@@ -238,7 +236,7 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
                 </optgroup>
               )}
               {library.length > 0 && (
-                <optgroup label="A copy of an ontology in your library">
+                <optgroup label={t("project.libraryCopy")}>
                   {library.map((o) => (
                     <option key={o.id} value={`library:${o.id}`}>
                       {o.name}
@@ -248,31 +246,28 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
               )}
             </select>
             {fromLibrary && (
-              <p id="new-project-source-hint" className="form-hint">
-                A copy is an ontology or a taxonomy by what it holds: concepts and no classes make a taxonomy.
-                Choosing a kind above starts from its template instead.
-              </p>
+              <p id="new-project-source-hint" className="form-hint">{t("project.copyHelp")}</p>
             )}
           </div>
           {field(
             "baseIri",
-            "Base IRI",
+            t("project.baseIri"),
             fields.baseIri,
             setBaseIri,
-            "New entities are named under this. It follows the name until you change it.",
+            t("project.baseHelp"),
           )}
-          {field("prefix", "Prefix", fields.prefix, setPrefix)}
+          {field("prefix", t("project.prefix"), fields.prefix, setPrefix)}
           {field(
             "primaryLanguage",
-            "Primary language",
+            t("project.primaryLanguage"),
             primaryLanguage,
             setPrimaryLanguage,
-            "Every name is required in this language. en is what published vocabularies use.",
+            t("project.languageHelp"),
           )}
-          {error && <p className="form-error" role="alert">{error}</p>}
+          {!!error && <><p className="form-error" role="alert">{renderServerError(error, t)}</p><details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details></>}
           <div className="modal-actions">
             <button type="button" className="ghost" onClick={escape} aria-disabled={busy}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
@@ -280,7 +275,7 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
               aria-disabled={reason !== null || busy}
               aria-describedby={reason ? reasonId : undefined}
             >
-              {busy ? "Creating…" : "Create"}
+              {busy ? t("project.creating") : t("project.create")}
             </button>
           </div>
           {reason && (

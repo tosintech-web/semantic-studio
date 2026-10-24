@@ -34,6 +34,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { I18nProvider } from "../i18n/I18nProvider";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -831,7 +832,8 @@ describe("HomeScreen documentation export", () => {
       fireEvent.click(screen.getByRole("button", { name: "Download documentation" }));
     });
 
-    expect(document.querySelector(".detail-error")?.textContent).toContain("too large");
+    expect(document.querySelector(".detail-error")?.textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText("This ontology's graph is 7.5 MB, too large").closest("details")).toBeTruthy();
   });
 });
 
@@ -965,4 +967,14 @@ describe("HomeScreen documentation dialog (rework)", () => {
     });
     expect(downloadDocumentation).toHaveBeenCalledWith("inst1", false);
   });
+});
+it("shows Japanese library routes and opens the full entity list from its card", () => {
+  const enter = vi.fn();
+  render(<I18nProvider><HomeScreen ontologies={summaries(1)} loading={false} error={null} theme="dark" workingId={null} pendingMode={null}
+    onRetry={vi.fn()} onOpen={vi.fn()} onEnterMode={enter} onViewSource={vi.fn()} onRemove={vi.fn()} onOpenDialog={vi.fn()} /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "辞書ライブラリ" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "ファイルを開く" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /の項目一覧$/ }));
+  expect(enter).toHaveBeenCalledWith(summaries(1)[0].id, "entities");
+  expect(screen.getByText("閲覧専用")).toBeTruthy();
 });

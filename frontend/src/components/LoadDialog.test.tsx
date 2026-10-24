@@ -42,6 +42,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { Profiler, useState } from "react";
@@ -115,7 +117,8 @@ describe("a failed load (load-and-shapes 5.1, AC-2)", () => {
     await failWith(
       new ApiError(SENTENCE, 422, { code: "parse_error", message: SENTENCE, line: 3, format: "Turtle", technical: TECHNICAL }),
     );
-    expect(screen.getByText(SENTENCE).className).toBe("detail-error");
+    expect(document.querySelector(".detail-error")?.textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText(SENTENCE).className).toBe("load-error-original");
     const details = document.querySelector("details.technical-details") as HTMLDetailsElement;
     expect(details).toBeTruthy();
     expect(details.open).toBe(false);
@@ -862,4 +865,19 @@ describe("a load's steps and Cancel (load-progress 5.2 to 5.4)", () => {
     fireEvent.keyDown(dropzone, { key: "Enter" });
     expect(picked).toHaveBeenCalledTimes(1);
   });
+});
+it("cancels a file through Japanese controls and translates the same completed notice on UI change", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  uploadOntology.mockImplementation((_file, options: LoadOptions) => new Promise((_resolve, reject) => {
+    options.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+  }));
+  cancelLoad.mockResolvedValue({ stopped: true });
+  render(<I18nProvider><UiLanguageSelect /><LoadDialog initialTab="file" onLoaded={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
+  expect(screen.getByRole("dialog", { name: "辞書を読み込む" })).toBeTruthy();
+  await act(async () => { fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [new File(["x"], "犬.ttl")] } }); });
+  expect(screen.getByRole("progressbar", { name: "ファイルを送信中" })).toBeTruthy();
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "キャンセル" })); });
+  expect(screen.getAllByText("停止しました。ライブラリには何も追加していません。").length).toBeGreaterThan(0);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getAllByText("Stopped. Nothing was added to your library.").length).toBeGreaterThan(0);
 });

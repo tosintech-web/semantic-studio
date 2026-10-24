@@ -154,6 +154,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError } from "./i18n/serverMessage";
 import { useI18n } from "./i18n/I18nProvider";
 import { DictionaryViewContext } from "./dictionary/DictionaryViewContext";
 import { DictionaryLanguageContext, useDictionaryLanguage } from "./dictionary/useDictionaryLanguage";
@@ -466,13 +467,13 @@ export default function App() {
     resolve: (grantIds: string[] | null) => void;
   } | null>(null);
   const [loadingGraph, setLoadingGraph] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   // The ontology list's own loading and failure state, kept apart from `error`
   // above. A list that will not load is reported inside the chooser's library
   // section, because the catalogue and the file routes still work without it
   // and the error bar would imply the whole screen was broken.
   const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const [listError, setListError] = useState<unknown>(null);
   // What a removal is reported in afterwards. Kept apart from `error` because
   // it is not a failure.
   const [notice, setNotice] = useState<string | null>(null);
@@ -768,7 +769,7 @@ export default function App() {
   // The project list, for the Home screen's first section.
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
-  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectsError, setProjectsError] = useState<unknown>(null);
   const [projectBusyId, setProjectBusyId] = useState<string | null>(null);
   // The New project form, and the library ontology it starts from, if any.
   const [newProject, setNewProject] = useState<{ source?: string } | null>(null);
@@ -856,7 +857,7 @@ export default function App() {
     setListError(null);
     listOntologies()
       .then((list) => setOntologies(list))
-      .catch((e) => setListError(String(e.message ?? e)))
+      .catch((e) => setListError(e))
       .finally(() => setListLoading(false));
   }, []);
 
@@ -866,7 +867,7 @@ export default function App() {
     setProjectsError(null);
     return listProjects()
       .then((list) => setProjects(list))
-      .catch((e) => setProjectsError(String(e.message ?? e)))
+      .catch((e) => setProjectsError(e))
       .finally(() => setProjectsLoading(false));
   }, []);
 
@@ -950,7 +951,7 @@ export default function App() {
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(String(e.message ?? e));
+        setError(e);
         // Drop the press with the response that never came. Left set, it would
         // be consumed by whatever graph arrived next and move focus for a
         // button nobody had just pressed.
@@ -1123,7 +1124,7 @@ export default function App() {
       // would read "and undefined saved queries".
       setNotice(removalConfirmation(name, result.deletedQueries ?? 0, t));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
     }
   };
 
@@ -1215,7 +1216,7 @@ export default function App() {
         }
         resolve(ids);
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(e);
         resolve(null);
       }
     },
@@ -1306,7 +1307,7 @@ export default function App() {
       // a fact about the graph rather than a failure — see NOT_A_GRAPH_NODE.
       // Everything else is a real error and keeps the error bar.
       if (e instanceof ApiError && e.status === 404) setNotice(NOT_A_GRAPH_NODE);
-      else setError(e instanceof Error ? e.message : String(e));
+      else setError(e);
     } finally {
       if (activeIdRef.current === id) setExpandingIri(null);
     }
@@ -1608,7 +1609,7 @@ export default function App() {
 
   // --- projects (authoring-foundations) -----------------------------------
 
-  const failed = (e: unknown) => setError(e instanceof Error ? e.message : String(e));
+  const failed = (e: unknown) => setError(e);
 
   // Leave the open project, asking "Save, discard, or stay?" when it has
   // unsaved changes. `then` runs once the project is closed.
@@ -2079,9 +2080,11 @@ export default function App() {
         )}
       </header>
 
-      {error && (
-        <div className="error-bar" onClick={() => setError(null)} title="Click to dismiss">
-          {error}
+      {!!error && (
+        <div className="error-bar">
+          <p role="alert">{renderServerError(error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details>
+          <button type="button" onClick={() => { setError(null); document.querySelector<HTMLElement>('.main-nav [aria-selected="true"]')?.focus(); }}>{t("app.dismissError")}</button>
         </div>
       )}
 
@@ -2113,7 +2116,7 @@ export default function App() {
           library saying how much of an ontology nobody is looking at is drawn.
           Not in Hierarchy either: the tree is unbudgeted, so a "Show more"
           about the graph is meaningless above it. */}
-      {!showHome && mode !== "hierarchy" && graphData && defaultBudget !== null && (
+      {!showHome && mode !== "hierarchy" && mode !== "entities" && graphData && defaultBudget !== null && (
         <GraphNotice
           stats={graphData.stats}
           defaultBudget={defaultBudget}
@@ -2474,8 +2477,10 @@ export default function App() {
             {/* Under a budget these read "2,000 of 18,717". The status bar
                 keeps saying so after the notice is dismissed, so the fact that
                 the view is partial is never fully hidden. */}
-            <span>{countOf(graphData, "node", expanded)} nodes</span>
-            <span>{countOf(graphData, "edge", expanded)} edges</span>
+            {mode !== "entities" && <>
+              <span>{countOf(graphData, "node", expanded)} nodes</span>
+              <span>{countOf(graphData, "edge", expanded)} edges</span>
+            </>}
             <span className="dim">{formatName(active.format)}</span>
             {/* A fetched file names where it came from; a bundled example
                 says so in a word, not the code's "example" (home-and-examples
@@ -2517,7 +2522,7 @@ export default function App() {
             // The report's next step: the Shapes view, checking at once.
             setDialogOpen(false);
             if (modelOntologyId) enterMode(modelOntologyId, "shapes");
-            projectStore.validate().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+            projectStore.validate().catch((e: unknown) => setError(e));
           }}
           onShowData={() => {
             // The tree's Examples section lists the data, each row labelled.

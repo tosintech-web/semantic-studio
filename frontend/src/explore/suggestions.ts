@@ -41,9 +41,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { plural } from "../sparql/describe";
+import type { Translator } from "../i18n/types";
+import { englishTranslator } from "../i18n/format";
+import { countKindMessage } from "../i18n/kindLabel";
 import type { VizGraph, VizNode } from "../types";
-import { kindLabel } from "../types";
 
 /** Eight fills the 380px panel without scrolling, and leaves the per-kind
  *  spread rule room to show three kinds. Reversible by one constant. */
@@ -63,7 +64,7 @@ const MAX_NAMED_KINDS = 3;
 /** What an ontology with nothing drawable says. Reachable with a file
  *  containing only blank nodes, which build_viz_graph keeps out of the visual
  *  graph, and used for a null graph so this function never throws. */
-const NO_ENTITIES = "This ontology has no entities to display.";
+
 
 /**
  * Descending degree, then ascending id. The id tiebreak is what makes the list
@@ -128,24 +129,10 @@ export function suggestedEntities(
   return taken.sort(byRank);
 }
 
-/**
- * "object property" for one, "object properties" for more. `plural` is the
- * query builder's, reused rather than copied — this is the same problem in a
- * different panel, and two naive pluralisers would disagree eventually.
- */
-function kindWords(kind: string, count: number): string {
-  const label = kindLabel(kind);
-  // Lowercased to read mid-sentence, except when the label opens with an
-  // acronym: "SKOS concept" is not a capitalised word and "skos concepts" is
-  // wrong in a way a learner would notice.
-  const lowered = /^[A-Z]{2}/.test(label) ? label : label.charAt(0).toLowerCase() + label.slice(1);
-  return count === 1 ? lowered : plural(lowered);
-}
-
-/** "a, b and c" — no Oxford comma, matching the sentence in the specification. */
-function joinWithAnd(parts: string[]): string {
+/** The list's order is data-driven; its conjunction belongs to the catalog. */
+function joinWithAnd(parts: string[], t: Translator): string {
   if (parts.length <= 1) return parts.join("");
-  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+  return t("summary.join", { first: parts.slice(0, -1).join(t("common.listSeparator")), last: parts[parts.length - 1] });
 }
 
 /**
@@ -158,8 +145,8 @@ function joinWithAnd(parts: string[]): string {
  * falls back to "other" rather than being printed. The counts describe the
  * whole ontology rather than what is drawn, because kindCounts does — D-017.
  */
-export function describeContents(graph: VizGraph | null): string {
-  return describeKindCounts(graph?.stats.kindCounts ?? null);
+export function describeContents(graph: VizGraph | null, t: Translator = englishTranslator): string {
+  return describeKindCounts(graph?.stats.kindCounts ?? null, t);
 }
 
 /**
@@ -171,18 +158,18 @@ export function describeContents(graph: VizGraph | null): string {
  * hand over. Two copies of the wording would drift, and the wording is the
  * thing a learner reads on both screens.
  */
-export function describeKindCounts(counts: Record<string, number> | null): string {
-  if (!counts) return NO_ENTITIES;
+export function describeKindCounts(counts: Record<string, number> | null, t: Translator = englishTranslator): string {
+  if (!counts) return t("summary.empty");
   const present = Object.entries(counts)
     .filter(([, count]) => count > 0)
     // By count, then by kind name: the object's own key order comes from JSON
     // and is not something to rely on for a sentence that must not change
     // between two loads of the same file.
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
-  if (present.length === 0) return NO_ENTITIES;
+  if (present.length === 0) return t("summary.empty");
 
   const named = present
     .slice(0, MAX_NAMED_KINDS)
-    .map(([kind, count]) => `${count.toLocaleString()} ${kindWords(kind, count)}`);
-  return `This ontology describes ${joinWithAnd(named)}.`;
+    .map(([kind, count]) => countKindMessage(kind, count, t));
+  return t("summary.contents", { items: joinWithAnd(named, t) });
 }

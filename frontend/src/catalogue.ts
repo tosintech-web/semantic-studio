@@ -28,6 +28,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { Translator } from "./i18n/types";
+import { englishTranslator } from "./i18n/format";
+
 /** One suggested ontology shown in the catalogue. */
 export interface CatalogueEntry {
   id: string;          // stable key for React lists / loading state
@@ -67,37 +70,40 @@ export interface CatalogueEntry {
 // Reordering follows D-002, learner first when learner and expert needs
 // conflict, and costs the expert a place in a short list that needs no
 // scrolling. Do not restore FIBO to the top without reading that decision.
-export const CATALOGUE: CatalogueEntry[] = [
+export function catalogueEntries(t: Translator = englishTranslator): CatalogueEntry[] { return [
   {
     id: "schemaorg",
     name: "schema.org",
     description:
-      "The vocabulary behind structured data on the web — around 900 classes covering people, places, products, events and creative works.",
-    size: "~3 MB · 17k statements",
-    audience: "A good second step: familiar subjects, real scale.",
+      t("catalogue.schemaorg.description"),
+    size: t("catalogue.schemaorg.size"),
+    audience: t("catalogue.schemaorg.audience"),
     url: "https://github.com/schemaorg/schemaorg/blob/main/data/releases/28.1/schemaorg-current-https.ttl",
   },
   {
     id: "fibo",
     name: "FIBO — Financial Industry Business Ontology",
     description:
-      "The EDM Council's production release: financial entities, instruments, markets and legal structures. Relationships are stated as OWL restrictions, which the query builder reads.",
-    size: "~5 MB · 132k statements · ~15s",
-    audience: "Best for testing OWL restrictions and the query builder.",
+      t("catalogue.fibo.description"),
+    size: t("catalogue.fibo.size"),
+    audience: t("catalogue.fibo.audience"),
     url: "https://spec.edmcouncil.org/fibo/ontology/master/latest/prod.fibo-quickstart.ttl",
   },
   {
     id: "unesco",
     name: "UNESCO Thesaurus",
     description:
-      "A multilingual thesaurus of 4,499 concepts covering education, culture, science and communication, in a broader/narrower hierarchy. A real, maintained SKOS vocabulary at a size you can explore.",
+      t("catalogue.unesco.description"),
     // Measured 2026-07-31 by loading it through the application: 3,987,240
     // bytes, 99,685 triples, 4,595 graph nodes and 26,102 edges, fetched and
     // parsed in 3.5 seconds. No warning word, because there is nothing to warn
     // about — the entry this replaced ended in the word "slow" and that was the
     // most useful word in it.
-    size: "~3.8 MB · 100k statements · ~4s",
-    audience: "Start here for SKOS: taxonomies, concept schemes and broader/narrower.",
+    size: t("catalogue.unesco.size"),
+    audience: t("catalogue.unesco.audience"),
     url: "https://vocabularies.unesco.org/exports/thesaurus/latest/unesco-thesaurus.ttl",
   },
-];
+]; }
+
+/** Legacy callers retain explicitly English catalogue guidance. */
+export const CATALOGUE = catalogueEntries();

@@ -193,7 +193,8 @@ describe("NewProjectDialog", () => {
     await act(async () => {
       fireEvent.click(create());
     });
-    expect(screen.getByRole("alert").textContent).toBe("The prefix must start with a letter.");
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText("The prefix must start with a letter.").closest("details")).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
@@ -228,9 +229,28 @@ describe("the form's rules (projects/form.ts)", () => {
 it("new_project_defaults_to_ui_locale_but_can_override", () => {
   localStorage.removeItem("semantic-studio.uiLocale.v1");
   render(<I18nProvider><UiLanguageSelect /><NewProjectDialog library={LIBRARY} onCreate={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
-  expect(field("Primary language").value).toBe("ja");
-  fireEvent.change(field("Primary language"), { target: { value: "fr" } });
+  expect(field("主言語").value).toBe("ja");
+  fireEvent.change(field("主言語"), { target: { value: "fr" } });
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(field("Primary language").value).toBe("fr");
   localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+it("creates a project from Japanese controls while preserving the entered name and RDF language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1"); const create = vi.fn().mockResolvedValue(undefined);
+  render(<I18nProvider><NewProjectDialog library={[]} onCreate={create} onClose={vi.fn()} /></I18nProvider>);
+  expect(screen.getByRole("dialog", { name: "プロジェクトを作成" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio", { name: /^オントロジー/ }));
+  fireEvent.change(screen.getByLabelText("名前"), { target: { value: "犬の辞書" } });
+  expect((screen.getByLabelText("主言語") as HTMLInputElement).value).toBe("ja");
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "作成" })); });
+  expect(create).toHaveBeenCalledWith(expect.objectContaining({ name: "犬の辞書", primaryLanguage: "ja", template: "small" }));
+});
+it("translates an existing field refusal when UI language changes without changing its input", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><NewProjectDialog library={[]} onCreate={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
+  fireEvent.change(screen.getByLabelText("基底IRI"), { target: { value: "invalid" } }); fireEvent.blur(screen.getByLabelText("基底IRI"));
+  expect(screen.getByText(/基底IRIは/)).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(/The base IRI must/)).toBeTruthy();
+  expect((screen.getByLabelText("Base IRI") as HTMLInputElement).value).toBe("invalid");
 });

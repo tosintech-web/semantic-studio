@@ -88,21 +88,16 @@ interface Props {
 
 /** The three verbs, in the header's own order so the two places a user meets
  *  them agree. `view` first because it is the least committal. */
-const VERBS: { mode: AppMode; label: string; hint: string }[] = [
-  { mode: "explore", label: "Explore", hint: "Browse this ontology and inspect entities" },
-  { mode: "entities", label: "Entities", hint: "Browse all dictionary entries" },
-  { mode: "query", label: "Query", hint: "Build a SPARQL query against this ontology" },
-  { mode: "view", label: "View", hint: "Read this ontology's file" },
-];
+const VERBS = ["explore", "entities", "query", "view"] as const;
 
 /** "26 Jul", or null when the ontology predates addedAt being persisted.
  *  Undated is normal for an older library, so the card drops the fact rather
  *  than showing a placeholder. */
-function addedOn(iso: string | undefined): string | null {
+function addedOn(iso: string | undefined, locale: "ja" | "en"): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 function OntologyCard({
@@ -119,7 +114,7 @@ function OntologyCard({
   onRemove,
   onStartProject,
 }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const headingId = useId();
   const menuId = useId();
@@ -164,7 +159,7 @@ function OntologyCard({
     [summary.kindCounts],
   );
   const palette = PALETTES[theme];
-  const added = addedOn(summary.addedAt);
+  const added = addedOn(summary.addedAt, locale);
   // A bundled example (home-and-examples 5.5) says so where other cards show
   // their date, and its purpose stands for the counted sentence: what it is
   // for says more to a first visitor than what it holds.
@@ -239,7 +234,7 @@ function OntologyCard({
               // cards on screen, six buttons all called "More" is six controls
               // a screen reader user cannot tell apart. The glyph itself
               // announces as "⋮", which is nothing.
-              aria-label={`More actions for ${summary.name}`}
+              aria-label={t("home.more", { name: summary.name })}
               // aria-disabled, never disabled: while a removal counts this
               // card's saved queries it holds focus, and a disabled button
               // drops it to the page (portal-foundations 5.7).
@@ -265,17 +260,13 @@ function OntologyCard({
                       setMenuOpen(false);
                       onOpen(summary.id);
                     }}
-                  >
-                    Open
-                  </button>
+                  >{t("home.open")}</button>
                   <button
                     onClick={() => {
                       setMenuOpen(false);
                       onViewSource(summary.id);
                     }}
-                  >
-                    View source
-                  </button>
+                  >{t("home.source")}</button>
                   {/* DOC-1. The confirmation an URL-sourced ontology needs, the
                       progress announcement and the download itself all live in
                       HomeScreen, which owns the live region and the screen's
@@ -292,9 +283,7 @@ function OntologyCard({
                       closeMenu();
                       onDownloadDocs(summary.id);
                     }}
-                  >
-                    Download documentation
-                  </button>
+                  >{t("home.download")}</button>
                   {onStartProject && (
                     // Opens the New project form over this screen; closeMenu
                     // first so its focus trap records the stable ⋮ button as
@@ -304,9 +293,7 @@ function OntologyCard({
                         closeMenu();
                         onStartProject(summary.id);
                       }}
-                    >
-                      Start a project from this
-                    </button>
+                    >{t("home.fromThis")}</button>
                   )}
                   <button
                     className="danger"
@@ -316,9 +303,7 @@ function OntologyCard({
                       closeMenu();
                       onRemove(summary.id);
                     }}
-                  >
-                    Remove
-                  </button>
+                  >{t("home.remove")}</button>
                 </>
               )}
             </div>
@@ -328,7 +313,7 @@ function OntologyCard({
         {/* L-5's sentence, reused rather than a filename. It says more about an
             ontology than its name does, and it is already tested. */}
         <p className="onto-summary">
-          {example ? example.purpose : describeKindCounts(summary.kindCounts)}
+          {example ? example.purpose : describeKindCounts(summary.kindCounts, t)}
         </p>
 
         {/* The composition bar, a picture of the sentence above it: for a file
@@ -357,33 +342,33 @@ function OntologyCard({
         <ul className="onto-chips">
           <li className="chip-metric">{statementCount(summary.triples, t)}</li>
           {example ? (
-            <li className="chip-state">Example</li>
+            <li className="chip-state">{t("home.example")}</li>
           ) : (
-            added && <li className="chip-state">Added {added}</li>
+            added && <li className="chip-state">{t("home.added", { date: added })}</li>
           )}
           {/* In words, on the card: the section heading that said
               "(read-only)" went when projects joined the library. */}
-          <li className="chip-state">Read-only</li>
+          <li className="chip-state">{t("home.readOnly")}</li>
         </ul>
 
         <div className="onto-verbs">
           {VERBS.map((verb, i) => (
             <button
-              key={verb.mode}
+              key={verb}
               ref={i === 0 ? firstVerbRef : undefined}
               className="onto-verb"
               disabled={disabled}
               // The ontology's name is in the accessible name for the same
               // reason it is on the menu button: a library of six otherwise
               // offers eighteen buttons called Explore, Query and View.
-              aria-label={`${verb.label} ${summary.name}`}
-              title={verb.hint}
-              onClick={() => onEnterMode(summary.id, verb.mode)}
+              aria-label={t(`home.action.${verb}`, { name: summary.name })}
+              title={t(`home.hint.${verb}`)}
+              onClick={() => onEnterMode(summary.id, verb)}
             >
-              {verb.label}
+              {t(`nav.${verb}`)}
             </button>
           ))}
-          {working && <span className="onto-loading">Working…</span>}
+          {working && <span className="onto-loading">{t("home.working")}</span>}
         </div>
       </div>
     </article>
