@@ -30,6 +30,9 @@ EXPECTED OUTPUT
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { makeUiMessage } from "../i18n/uiMessage";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, inspectData, previewData, importData, fetchHierarchy, listData, updateData, refreshData } =
   vi.hoisted(() => ({
@@ -590,7 +593,7 @@ describe("the X-12 tidy-up", () => {
     sheets: [{ name: "Notes", rows: 0 }, { name: "Staff", rows: 1 }],
   };
 
-  async function mount(start: WizardStart, taxonomy = false) {
+  async function mount(start: WizardStart, taxonomy = false, localized = false) {
     openProject.mockResolvedValue({ project: PROJECT, documents: [MODEL], recovery: { available: false, draftTime: null } });
     listData.mockResolvedValue({ generation: 1, snapshots: [] });
     await projectStore.open(PID);
@@ -601,9 +604,28 @@ describe("the X-12 tidy-up", () => {
     previewData.mockResolvedValue(preview());
     onClose = vi.fn<() => void>();
     await act(async () => {
-      render(<DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={taxonomy} start={start} onClose={onClose} />);
+      const wizard = <DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={taxonomy} start={start} onClose={onClose} />;
+      render(localized ? <I18nProvider><UiLanguageSelect />{wizard}</I18nProvider> : wizard);
     });
   }
+
+  it("keeps a structured refresh explanation current without replaying the file inspection", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    const gone = { sheet: "", headerRow: 1, top: [], sheets: WORKBOOK.sheets };
+    const snapshot = { ...SNAPSHOT, source: "staff.xlsx", workbook: { sheet: "People", headerRow: 1 } };
+    const start: WizardStart = { kind: "refresh", snapshot, file: BOOK, options: {}, inspection: null, workbook: gone, missing: [], choices: null, atFile: "legacy reason", atFileMessage: makeUiMessage("dataSnapshot.missingSheet", { sheet: "People" }) };
+    try {
+      await mount(start, false, true);
+      const explanation = screen.getByText("このブックには「People」というシートがありません。更新に使うシートを選択してください。");
+      const sheet = screen.getByLabelText("Sheet");
+      const inspections = inspectData.mock.calls.length;
+      fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+      expect(screen.getByText("This workbook has no sheet named People. Choose the sheet to refresh from.")).toBe(explanation);
+      expect(screen.getByLabelText("Sheet")).toBe(sheet);
+      expect(inspectData).toHaveBeenCalledTimes(inspections);
+      expect(screen.queryByText("legacy reason")).toBeNull();
+    } finally { localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+  });
 
   it("T-5: a refresh whose sheet is gone starts at step 1, with the sheet to choose and the old one named", async () => {
     const atFile = "This workbook has no sheet named People. Choose the sheet to refresh from.";

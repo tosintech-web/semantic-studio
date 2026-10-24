@@ -107,7 +107,12 @@ import type {
 } from "../types";
 import ImportReport from "./ImportReport";
 
+import { useI18n } from "../i18n/I18nProvider";
+import { renderUiMessage, type UiMessageFor } from "../i18n/uiMessage";
+
 const CONCEPT = "http://www.w3.org/2004/02/skos/core#Concept";
+
+export type RefreshReason = UiMessageFor<"dataSnapshot.missingSheet" | "dataSnapshot.fromCsv" | "dataSnapshot.fromWorkbook">;
 
 export type WizardStart =
   | { kind: "new" }
@@ -126,6 +131,7 @@ export type WizardStart =
       // snapshot's sheet is gone, or the file is of another kind than the
       // snapshot's, so the sheet and header row are chosen, never taken.
       atFile?: string;
+      atFileMessage?: RefreshReason;
       // The sheets to choose from when there is no inspection.
       workbook?: WorkbookInspection | null;
     };
@@ -164,8 +170,9 @@ export default function DataWizard({
   onShowData,
   onDirtyChange,
 }: Props) {
+  const { locale, t } = useI18n();
   // Where Back stops: a refresh through step 1 can go back to it.
-  const firstStep = start.kind === "new" || (start.kind === "refresh" && start.atFile) ? 1 : 2;
+  const firstStep = start.kind === "new" || (start.kind === "refresh" && (start.atFile || start.atFileMessage)) ? 1 : 2;
   const [step, setStep] = useState<Step>(
     firstStep === 1 ? 1 : start.kind === "remap" ? 2 : 3,
   );
@@ -413,7 +420,7 @@ export default function DataWizard({
       const verb = start.kind === "remap" ? "Mapped again" : "Imported";
       const count = made.report.individuals;
       await projectStore.dataChanged(
-        `${verb} ${made.source}: ${count.toLocaleString("en-US")} ${count === 1 ? "thing" : "things"} made.`,
+        `${verb} ${made.source}: ${count.toLocaleString("en-US")} ${count === 1 ? "thing" : "things"} made.`, projectId,
       );
     } catch (e: unknown) {
       setError(message(e));
@@ -445,12 +452,12 @@ export default function DataWizard({
       {start.kind !== "new" && step !== "report" && (
         <p className="detail-note">
           {start.kind === "remap" ? "Changing the mapping of " : "Refreshing "}
-          {dataLabel(start.snapshot)}
+          {dataLabel(start.snapshot, locale)}
         </p>
       )}
 
-      {step === 1 && start.kind === "refresh" && start.atFile && (
-        <p className="detail-note">{start.atFile}</p>
+      {step === 1 && start.kind === "refresh" && (start.atFile || start.atFileMessage) && (
+        <p className="detail-note">{start.atFileMessage ? renderUiMessage(start.atFileMessage, t) : start.atFile}</p>
       )}
       {step === 1 && (
         <FileStep

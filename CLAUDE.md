@@ -307,6 +307,7 @@ leaves one behind.
 - A project id or document name is `fullmatch`ed before it is a path; one not issued is 404 on every route. [authoring foundations]
 - The editor's unapplied text lives in the project store; App asks before any exit. [authoring foundations]
 - The project store is module state: a test rendering App calls `cleanup()`. [authoring foundations]
+- Data actions pass their issuing project id to `dataChanged`; a late completion must not announce or refetch another project's data. [P1 structured data notices]
 - Authoring controls are `aria-disabled`, not `disabled`, so focus is never dropped. [authoring foundations]
 - `pick_label` tests the exact `en` tag before the prefix match. [authoring foundations]
 - `_change` leaves a triple that is in both adds and removes; setting a value to itself deletes nothing. [authoring foundations]

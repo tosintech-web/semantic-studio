@@ -382,6 +382,9 @@ GraphViewのズーム・PNG出力等の操作案内と、SideTabsの共通タブ
 **Files:** `components/{ShapesView,ShapeForm,RuleBuilder,RuleEditor,RulesBlock,ReasoningPanel,
 InferredBlock,DataWizard,SnapshotList,ImportReport,RmlEditor,WhyDisclosure}.tsx`、
 `modeling/{shapeSentences,dataSentences}.ts`、`reasoning/reasonSentences.ts`。
+通知の保持・表示を担う `state/projectStore.ts` / `components/ProjectHeader.tsx` と対応テストも含む。
+画面への受け渡しは型付きのコード・引数で行い、既存の英語text・文字列呼び出しの互換性を保持する。
+
 backendの `editing.py`、`modeling_checks.py`、`shacl.py`、`reasoning.py`、`parse_errors.py`、
 `shapes_form.py`、`snapshots.py`、`tabular.py`、`rml.py`、`projects.py`、router群と対応テスト。
 

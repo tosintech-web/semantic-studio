@@ -2387,3 +2387,25 @@ EXPECTED OUTPUT
   SELECT, row-cap and SERVICE tests remain in place. The endpoint and SERVICE
   suites passed 71 tests after the change; final full-suite verification is
   recorded separately rather than inferred from that subset.
+
+- **P1 structured data notices** (2026-10-24). A data action's notification
+  stores a typed code and arguments. ProjectHeader renders it in the current UI
+  locale, retaining the same counter and live-region span when locale changes.
+  The English `text` field and plain-string callers remain compatible during
+  migration; English text is never parsed to reconstruct a notification.
+  Read failures also retain their original error object separately, so known
+  metadata can be localized and the diagnostic remains in technical details.
+
+  The full catalog's message union was too large for TypeScript to distribute
+  through project state and wizard-start conditions. ProjectNotice admits its
+  actual data-notice codes and the projectNotice family; RefreshReason admits
+  only its three actual retry reasons. Both use UiMessageFor, preserving the
+  exact code/argument relation rather than accepting arbitrary string keys.
+
+  A separate regression exposed an old asynchronous boundary: after opening
+  another project, an earlier snapshot switch could announce the old source
+  and refetch the new project's list. Every internal data action now passes its
+  issuing project id to dataChanged. A mismatching or closed project leaves the
+  current notice and list alone. The already-issued server action is unchanged.
+  The wizard still retains its selected File, inspection and options across UI
+  changes; its refresh explanation carries metadata beside the legacy string.

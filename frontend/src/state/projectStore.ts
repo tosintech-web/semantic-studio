@@ -59,6 +59,10 @@ BASIC IDEA
     switching a snapshot off refreshes Explore, Query and the tree exactly
     as an edit does. The listing is fetched when the project opens and after
     every snapshot action, and only kept if that project is still open.
+    Structured notices keep their code/arguments for current-locale rendering;
+    their English text and counter remain compatible with older consumers.
+    Data-change notices also carry the issuing project id, so a late result
+    cannot announce or refetch data for another open project.
 
     Something holding writes for the open project -- the canvas, which saves
     its layout a second after a move -- registers a flush, and close() awaits
@@ -84,6 +88,9 @@ EXPECTED OUTPUT
 */
 
 import { useSyncExternalStore } from "react";
+import { englishTranslator } from "../i18n/format";
+import type { MessageId } from "../i18n/types";
+import { makeUiMessage, renderUiMessage, type UiMessageFor } from "../i18n/uiMessage";
 import {
   ApiError,
   applyDocumentSource,
@@ -117,6 +124,17 @@ import type {
 
 export type SaveStatus = "saved" | "unsaved" | "saving";
 
+/** Notice producers have a finite domain, rather than every menu/label key.
+ *  This keeps their argument relation checked without distributing thousands
+ *  of unrelated catalog variants through the complete project snapshot. */
+export type ProjectNotice = UiMessageFor<
+  | "dataSnapshot.switchedOn" | "dataSnapshot.switchedOff"
+  | "dataSnapshot.refreshed" | "dataSnapshot.removed"
+  | "dataSnapshot.mappingApplied" | "dataSnapshot.mappingKept"
+  | "dataSnapshot.readFailed"
+  | Extract<MessageId, `projectNotice.${string}`>
+>;
+
 export interface ProjectSnapshot {
   project: ProjectSummary | null;
   documents: ProjectDocumentState[];
@@ -132,7 +150,7 @@ export interface ProjectSnapshot {
   /** What the polite live region says, e.g. "Created class Invoice. Unsaved
    *  changes." A counter beside it so the same sentence twice is announced
    *  twice. */
-  announcement: { text: string; id: number };
+  announcement: { text: string; id: number; uiMessage?: ProjectNotice };
   /** The last validation (shacl-authoring 5.6, D-094): kept for the session
    *  only, never written to disk, and shown in the Shapes view and under the
    *  Turtle editor alike. */
@@ -148,6 +166,8 @@ export interface ProjectSnapshot {
   /** Why the snapshot list could not be read, until a read succeeds: the
    *  Data tab says it with Try again rather than reading for ever. */
   dataError: string | null;
+  /** Original read failure; legacy dataError is not the localized display source. */
+  dataErrorCause: { error: unknown } | null;
   /** The last reasoning run (axioms-and-reasoning 5.2): kept for the session
    *  only, never saved, and stale once the model moves (5.3). */
   reasoning: ReasoningResult | null;
@@ -225,6 +245,7 @@ const EMPTY: ProjectSnapshot = {
   editorTarget: null,
   data: null,
   dataError: null,
+  dataErrorCause: null,
   reasoning: null,
   reasoningSince: null,
   reasoningError: null,
@@ -370,8 +391,15 @@ export function revisionOf(
   return state.documents.find((d) => d.ontologyId === ontologyId)?.revision ?? 0;
 }
 
-function announce(text: string): void {
-  set({ announcement: { text, id: snapshot.announcement.id + 1 } });
+function announce(message: string | ProjectNotice, legacyText?: string): void {
+  // The descriptor is the current-locale display source. English text stays
+  // for legacy consumers while remaining producers migrate; never use it to
+  // infer a descriptor or retain a previously translated UI sentence.
+  const uiMessage = typeof message === "string" ? undefined : message;
+  const text = legacyText ?? (typeof message === "string" ? message : renderUiMessage(message, englishTranslator));
+  const announcement: ProjectSnapshot["announcement"] = { text, id: snapshot.announcement.id + 1 };
+  if (uiMessage) announcement.uiMessage = uiMessage;
+  set({ announcement });
 }
 
 function withDocument(next: ProjectDocumentState): ProjectDocumentState[] {
@@ -433,18 +461,21 @@ export const projectStore = {
       // Said in the live region and kept for the Data tab, which otherwise
       // read "Reading the project's data…" for ever (PR #53 review).
       const text = `The data snapshots could not be read: ${failureReason(e)}`;
-      set({ dataError: text });
-      announce(text);
+      set({ dataError: text, dataErrorCause: { error: e } });
+      announce(makeUiMessage("dataSnapshot.readFailed"), text);
       throw e;
     }
     if (snapshot.project?.id !== project.id) return null;
-    set({ data: listing, dataError: null });
+    set({ data: listing, dataError: null, dataErrorCause: null });
     return listing;
   },
 
   /** A snapshot changed (5.7): say what was done, and refetch the list,
    *  whose generation every view's fetch key carries. */
-  async dataChanged(sentence: string): Promise<void> {
+  async dataChanged(sentence: string | ProjectNotice, expectedProject?: string): Promise<void> {
+    // The action may finish after its tab/project was closed. Its server
+    // result belongs to that project, not the one now using the shared store.
+    if (expectedProject !== undefined && snapshot.project?.id !== expectedProject) return;
     announce(sentence);
     await projectStore.loadData();
   },

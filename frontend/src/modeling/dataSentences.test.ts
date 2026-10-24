@@ -37,6 +37,7 @@ import {
   sheetOption,
   unmatchedLines,
   typeWord,
+  rowLimitSentence,
 } from "./dataSentences";
 import type { ImportReportData } from "../types";
 
@@ -289,4 +290,11 @@ describe("Japanese data descriptions keep source facts and user text", () => {
     expect(headerRowOption({ row: 3, cells: ["id", "name"] }, "ja")).toBe("3行目：id、name");
     expect(headerRowOption({ row: 1, cells: ["Organizations of the whole wide world"] }, "ja")).toBe("1行目：Organizations of the wh…");
   });
+});
+
+
+it.each(["csv", "xlsx"] as const)("explains a %s row limit from facts, independent of a server sentence", (format) => {
+  const inspection = { format, total: 12480, limit: 2000 };
+  expect(rowLimitSentence(inspection)).toBe(`This ${format === "xlsx" ? "sheet" : "file"} has 12,480 rows. Semantic Studio imports at most 2,000 rows: it is for learning how data is mapped to a model, not for loading whole datasets.`);
+  expect(rowLimitSentence(inspection, "ja")).toBe(`この${format === "xlsx" ? "シート" : "ファイル"}には12,480行あります。Semantic Studioで取り込めるのは最大2,000行です。データとモデルの対応を学ぶための機能です。`);
 });

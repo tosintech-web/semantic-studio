@@ -36,7 +36,8 @@ INPUTS / INPUT SOURCES
 EXPECTED OUTPUT
     - dataLabel, sampleWords, importedOn, rowList, previewSentences,
       reportLines, unmatchedLines, reportWord, idProblems, typeWord;
-      sheetOption and headerRowOption for a workbook's pickers (5.8).
+      sheetOption and headerRowOption for a workbook's pickers (5.8), and
+      rowLimitSentence from the actual inspection counts.
 ================================================================================
 */
 
@@ -44,7 +45,7 @@ import { translate } from "../i18n/format";
 import type { Translator, UiLocale } from "../i18n/types";
 import { a } from "./sentences";
 import { plural } from "./shapeSentences";
-import type { DataSource, IdCheck, ImportReportData, PreviewRow, RowList } from "../types";
+import type { DataInspection, DataSource, IdCheck, ImportReportData, PreviewRow, RowList } from "../types";
 
 const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
@@ -181,4 +182,11 @@ export function headerRowOption(row: { row: number; cells: string[]; unread?: bo
   if (row.cells.length === 0) return t("dataWords.headerEmpty", { row: row.row });
   const shown = row.cells.map(c => c.length > 24 ? `${c.slice(0, 23)}…` : c);
   return t("dataWords.header", { row: row.row, cells: shown.join(t("dataWords.separator")) });
+}
+
+/** The actual file/sheet counts and cap, never a parsed server sentence. */
+export function rowLimitSentence(inspection: Pick<DataInspection, "format" | "total" | "limit">, locale: UiLocale = "en"): string {
+  return tFor(locale)(inspection.format === "xlsx" ? "dataImport.limit.sheet" : "dataImport.limit.file", {
+    total: inspection.total, limit: inspection.limit,
+  });
 }

@@ -31,7 +31,7 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject } =
+const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData } =
   vi.hoisted(() => ({
     openProject: vi.fn(),
     undoChange: vi.fn(),
@@ -39,6 +39,7 @@ const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, up
     saveDocument: vi.fn(),
     getLanguageReport: vi.fn(),
     updateProject: vi.fn(),
+    listData: vi.fn(),
   }));
 
 vi.mock("../api", async (importOriginal) => ({
@@ -49,10 +50,13 @@ vi.mock("../api", async (importOriginal) => ({
   saveDocument,
   getLanguageReport,
   updateProject,
+  listData,
 }));
 
 import { projectStore } from "../state/projectStore";
 import ProjectHeader from "./ProjectHeader";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { makeUiMessage } from "../i18n/uiMessage";
 
 const PROJECT = {
   id: "prj-0123456789ab",
@@ -129,7 +133,7 @@ async function fromMenu(name: string | RegExp) {
 }
 const live = () => document.querySelector("[role=status]")!.textContent;
 
-beforeEach(() => projectStore._reset());
+beforeEach(() => { projectStore._reset(); listData.mockResolvedValue({ generation: 1, snapshots: [] }); });
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -422,4 +426,31 @@ it("distinguishes Japanese save state and edits dictionary display language with
   fireEvent.click(screen.getByRole("radio", { name: /^fr/ }));
   expect(projectStore.getSnapshot().displayLanguage).toBe("fr");
   expect(screen.getByRole("button", { name: "保存" })).toBeTruthy();
+});
+
+
+it("renders structured snapshot notices in the current locale without changing their identity", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc()], recovery: { available: false, draftTime: null } });
+  await act(async () => { await projectStore.open(PROJECT.id); });
+  const source = "日本語 <b>{source}</b>.csv";
+  const message = makeUiMessage("dataSnapshot.switchedOff", { source });
+  await act(async () => { await projectStore.dataChanged(message); });
+  const notice = projectStore.getSnapshot().announcement;
+  expect(notice.uiMessage).toBe(message);
+  const view = render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  try {
+    expect(notice.text).toBe(`Switched off ${source}: its data has left every view and validation.`);
+    expect(live()).toBe(`${source}を無効にしました。すべてのビューと検証からデータを除きました。`);
+    const region = screen.getByRole("status");
+    const content = region.firstElementChild;
+    const requests = listData.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(live()).toBe(notice.text);
+    expect(screen.getByRole("status")).toBe(region);
+    expect(region.firstElementChild).toBe(content);
+    expect(projectStore.getSnapshot().announcement).toBe(notice);
+    expect(listData).toHaveBeenCalledTimes(requests);
+    expect(region.querySelector("b")).toBeNull();
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
 });

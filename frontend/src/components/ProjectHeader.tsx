@@ -38,7 +38,9 @@ BASIC IDEA
     The live region is here, polite, and rendered while empty, because a
     region added at the same moment as its text is unreliably announced (the
     HomeScreen lesson). It says each applied change and the status after it:
-    "Created class Invoice. Unsaved changes."
+    "Created class Invoice. Unsaved changes." Structured notices are rendered
+    from their stored facts in the current UI locale; changing locale leaves
+    the notice counter and the live-region DOM in place.
 
 INPUTS / INPUT SOURCES (props)
     - onSwitchDocument, onClose, onError: what App arbitrates.
@@ -53,6 +55,7 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
+import { renderUiMessage } from "../i18n/uiMessage";
 import { useEffect, useId, useRef, useState } from "react";
 import { addShapesDocument, getLanguageReport } from "../api";
 import { validLanguageTag } from "../projects/form";
@@ -440,7 +443,7 @@ export default function ProjectHeader({
 
       <div className="visually-hidden" role="status" aria-live="polite">
         {/* Keyed on the counter, so "Undid: … " said twice is heard twice. */}
-        <span key={state.announcement.id}>{state.announcement.text}</span>
+        <span key={state.announcement.id}>{state.announcement.uiMessage ? renderUiMessage(state.announcement.uiMessage, t) : state.announcement.text}</span>
       </div>
     </div>
   );
