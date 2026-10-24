@@ -2494,3 +2494,17 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `create.failed` | reason | `frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx` | 作成・推論失敗 | 12 | 現在のUI言語で表示、元の値を保持 |
 | `reasonUI.startFailed` | reason | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 作成・推論失敗 | 12 | 現在のUI言語で表示、元の値を保持 |
 | `reasonUI.stopFailed` | reason | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 作成・推論失敗 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `command.created_class` | name | `backend/app/editing.py` | 作成操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.created_object_property` | name | `backend/app/editing.py` | 作成操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.created_datatype_property` | name | `backend/app/editing.py` | 作成操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.created_concept` | name | `backend/app/editing.py` | 作成操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.created_annotation_property` | name | `backend/app/editing.py` | 作成操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `projectNotice.changed.applied.saved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.applied.unsaved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.applied.saving` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.undo.saved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.undo.unsaved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.undo.saving` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.redo.saved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.redo.unsaved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.changed.redo.saving` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |

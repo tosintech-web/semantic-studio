@@ -401,9 +401,9 @@ function announce(message: string | ProjectNotice, legacyText?: string): void {
   set({ announcement });
 }
 
-function announceDetail(detail: ProjectNoticeDetail): void {
+function announceDetail(detail: ProjectNoticeDetail, legacyText?: string): void {
   const announcement: ProjectAnnouncement = { text: "", id: snapshot.announcement.id + 1, detail };
-  announcement.text = renderProjectAnnouncement(announcement, "en", englishTranslator);
+  announcement.text = legacyText ?? renderProjectAnnouncement(announcement, "en", englishTranslator);
   set({ announcement });
 }
 
@@ -411,10 +411,12 @@ function withDocument(next: ProjectDocumentState): ProjectDocumentState[] {
   return snapshot.documents.map((d) => (d.doc === next.doc ? next : d));
 }
 
-function afterChange(result: ChangeResult, verb: string): void {
+function afterChange(result: ChangeResult, operation: "applied" | "undo" | "redo"): void {
   set({ documents: withDocument(result.state) });
-  const status = STATUS_WORDS[saveStatus(snapshot)];
-  announce(`${verb}${result.label}. ${status}.`);
+  const status = saveStatus(snapshot);
+  const verb = operation === "undo" ? "Undid: " : operation === "redo" ? "Redid: " : "";
+  announceDetail({ kind: "change", label: result.label, uiMessage: result.uiMessage, operation, status },
+    `${verb}${result.label}. ${STATUS_WORDS[status]}.`);
 }
 
 function requireProject(): ProjectSummary {
@@ -522,18 +524,18 @@ export const projectStore = {
     // The editor's unapplied text is not touched here: the header asks
     // "Apply, discard, or stay?" before an undo, as every other exit does.
     const result = await undoChange(project.id, snapshot.activeDoc);
-    afterChange(result, "Undid: ");
+    afterChange(result, "undo");
   },
 
   async redo(): Promise<void> {
     const project = requireProject();
     const result = await redoChange(project.id, snapshot.activeDoc);
-    afterChange(result, "Redid: ");
+    afterChange(result, "redo");
   },
 
   /** Record a change made elsewhere (a command) so the views refetch. */
   applied(result: ChangeResult): void {
-    afterChange(result, "");
+    afterChange(result, "applied");
   },
 
   /** Run one command on the open document (visual-modeling 5.1). The views
@@ -560,7 +562,7 @@ export const projectStore = {
       set({ documents: withDocument(result.state) });
       announce(announcement(result));
     } else {
-      afterChange(result, "");
+      afterChange(result, "applied");
     }
     return result;
   },
@@ -803,7 +805,7 @@ export const projectStore = {
     if (text === null) return;
     const result = await applyDocumentSource(project.id, snapshot.activeDoc, text);
     set({ editorDraft: null });
-    afterChange(result, "");
+    afterChange(result, "applied");
   },
 
   /** Save a document, the current one unless named. Resolves "warning" when

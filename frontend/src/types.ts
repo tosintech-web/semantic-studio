@@ -956,8 +956,10 @@ export interface ProjectDocumentState {
   dirty: boolean;
   canUndo: boolean;
   undoLabel: string | null;
+  undoUiMessage?: WireMessage | null;
   canRedo: boolean;
   redoLabel: string | null;
+  redoUiMessage?: WireMessage | null;
   triples: number;
 }
 
@@ -971,6 +973,7 @@ export interface OpenedProject {
 export interface ChangeResult {
   revision: number;
   label: string;
+  uiMessage?: WireMessage | null;
   state: ProjectDocumentState;
   // A create or rename: the entity's IRI, as the server resolved it, so it
   // can be selected.

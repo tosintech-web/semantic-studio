@@ -33,7 +33,7 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData, validateProject, reasonProject, recoverProject } =
+const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData, validateProject, reasonProject, recoverProject, runCommand } =
   vi.hoisted(() => ({
     openProject: vi.fn(),
     undoChange: vi.fn(),
@@ -45,6 +45,7 @@ const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, up
     validateProject: vi.fn(),
     reasonProject: vi.fn(),
     recoverProject: vi.fn(),
+    runCommand: vi.fn(),
   }));
 
 vi.mock("../api", async (importOriginal) => ({
@@ -59,6 +60,7 @@ vi.mock("../api", async (importOriginal) => ({
   validateProject,
   reasonProject,
   recoverProject,
+  runCommand,
 }));
 
 import { projectStore } from "../state/projectStore";
@@ -581,4 +583,44 @@ describe("project operation notices", () => {
     expect(live()).toBe(ending === "stale" ? staleLine(result, "ja") : finishedLine(result, "ja"));
     expect(reasonProject).toHaveBeenCalledTimes(1);
   });
+});
+
+
+it("renders a command and its undo/redo labels and announcements from retained metadata in the current language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc()], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  const name = "犬 <img>{name}";
+  const label = `Created class ${name}`;
+  const wire = { code: "command.created_class", args: { name } } as const;
+  const created = { revision: 4, label, uiMessage: wire, state: doc({ revision: 4, undoLabel: label, undoUiMessage: wire }) };
+  runCommand.mockResolvedValueOnce(created);
+  await act(async () => { await projectStore.command("CreateClass", { label: name, iri: "urn:synthetic:dog" }); });
+  const japaneseLabel = `クラス「${name}」の作成`;
+  expect(screen.getByRole("button", { name: `元に戻す：${japaneseLabel}` })).toBeTruthy();
+  expect(live()).toBe(`${japaneseLabel}が完了しました。未保存の変更があります。`);
+  const notice = projectStore.getSnapshot().announcement;
+  const span = screen.getByRole("status").firstElementChild;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: `Undo: ${label}` })).toBeTruthy();
+  expect(live()).toBe(`${label}. Unsaved changes.`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(screen.getByRole("status").firstElementChild).toBe(span);
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  undoChange.mockResolvedValueOnce({ ...created, revision: 5, state: doc({ revision: 5, dirty: false, canUndo: false, undoLabel: null, canRedo: true, redoLabel: label, redoUiMessage: wire }) });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: `Undo: ${label}` })); });
+  expect(live()).toBe(`Undid: ${label}. Saved.`);
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(live()).toBe(`${japaneseLabel}を元に戻しました。保存済みです。`);
+  expect(screen.getByRole("button", { name: `やり直す：${japaneseLabel}` })).toBeTruthy();
+  redoChange.mockResolvedValueOnce({ ...created, revision: 6, state: doc({ revision: 6, undoLabel: label, undoUiMessage: wire }) });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: `やり直す：${japaneseLabel}` })); });
+  expect(live()).toBe(`${japaneseLabel}をやり直しました。未保存の変更があります。`);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(live()).toBe(`Redid: ${label}. Unsaved changes.`);
+  expect(undoChange).toHaveBeenCalledTimes(1);
+  expect(redoChange).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("status").querySelector("img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

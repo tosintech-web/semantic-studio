@@ -30,6 +30,21 @@
     "reasoning.too_large": {
       "count": "number",
       "limit": "number"
+    },
+    "command.created_class": {
+      "name": "string"
+    },
+    "command.created_object_property": {
+      "name": "string"
+    },
+    "command.created_datatype_property": {
+      "name": "string"
+    },
+    "command.created_concept": {
+      "name": "string"
+    },
+    "command.created_annotation_property": {
+      "name": "string"
     }
   }
 }

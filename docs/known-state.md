@@ -2447,3 +2447,22 @@ known metadata is translated at render time, while unknown diagnostic text stays
 in native details. The reasoning alert is still announced once, without a second
 error announcement in the project live region. Command/undo labels and other
 server producers remain subject to the separate backend metadata migration.
+
+
+### Additive command and history descriptors (P1)
+
+A successful command can return `uiMessage` beside the unchanged English
+`label`. Its in-memory Change and Step retain the descriptor, and document state
+can expose `undoUiMessage` and `redoUiMessage` beside the original labels.
+Absent metadata fields stay absent for legacy producers; defaulted dataclass
+fields preserve positional callers. CreateClass, CreateObjectProperty,
+CreateDatatypeProperty, CreateConcept and CreateAnnotationProperty currently
+produce descriptors from their raw names. The API regression takes each through
+undo and redo and compares RDF graphs before/after by isomorphism.
+ProjectHeader renders both action names and completion announcements from these
+descriptors. The latter keeps action/save status separately and preserves the
+original English announcement text for existing callers. Older producers and unsupported metadata versions keep
+their original successful action label: generic error text would incorrectly
+claim the operation failed. Producer migration remains separate; metadata is
+never guessed from that English text. Neither the history data nor UI language
+changes the RDF delta, revision, save point or stored document.

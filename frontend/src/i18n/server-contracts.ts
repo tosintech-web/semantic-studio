@@ -12,6 +12,21 @@ EXPECTED OUTPUT
 ================================================================================
 */
 export const SERVER_CONTRACTS = {
+  "command.created_annotation_property": {
+    "name": "string"
+  },
+  "command.created_class": {
+    "name": "string"
+  },
+  "command.created_concept": {
+    "name": "string"
+  },
+  "command.created_datatype_property": {
+    "name": "string"
+  },
+  "command.created_object_property": {
+    "name": "string"
+  },
   "entities.page_too_large": {
     "suggested_limit": "number",
     "total": "number"
@@ -44,6 +59,11 @@ export const SERVER_CONTRACTS = {
   }
 } as const;
 export interface ServerMessageArgs {
+  "command.created_annotation_property": { "name": string };
+  "command.created_class": { "name": string };
+  "command.created_concept": { "name": string };
+  "command.created_datatype_property": { "name": string };
+  "command.created_object_property": { "name": string };
   "entities.page_too_large": { "suggested_limit": number; "total": number };
   "entities.view_changed": undefined;
   "model.invalid_value": { "datatype": string; "value": string };

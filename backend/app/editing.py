@@ -113,6 +113,10 @@ BASIC IDEA
     than replaying a journal and survives blank nodes, which a triple journal
     would not.
 
+    Successful command descriptors are additive to their legacy English labels
+    and follow the same in-memory history step through undo/redo. They never
+    affect the RDF delta, save point, lock order or editor-state restoration.
+
 INPUTS / INPUT SOURCES
     - Project folders and manifests, through projects.ProjectStore.
     - Command names and arguments, and Turtle text, from routers/projects.py.
@@ -155,6 +159,7 @@ from typing import Callable, Iterable, Optional
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
+from .messages import make_message
 from .graph_builder import (
     lang_matches,
     name_in,
@@ -563,6 +568,8 @@ class Step:
     after: tuple = (None, True)
     # (old, new) for a RenameIri: undo and redo move the layout entry too.
     renamed: Optional[tuple] = None
+    # Additive display metadata follows this exact change through history.
+    ui_message: Optional[dict] = None
 
 
 @dataclass
@@ -576,6 +583,8 @@ class Change:
     # the interface can select it.
     created: Optional[URIRef] = None
     renamed: Optional[tuple] = None
+    # Additive display metadata follows this exact change through history.
+    ui_message: Optional[dict] = None
 
 
 class Context:
@@ -727,7 +736,10 @@ class Context:
         return "entity"
 
 
-def _change(graph: Graph, label: str, adds: Iterable = (), removes: Iterable = ()) -> Change:
+def _change(
+    graph: Graph, label: str, adds: Iterable = (), removes: Iterable = (),
+    *, ui_message: Optional[dict] = None,
+) -> Change:
     """Only what would really change, so the inverse restores exactly.
 
     A triple both removed and added is no change at all, and stays where it
@@ -739,7 +751,7 @@ def _change(graph: Graph, label: str, adds: Iterable = (), removes: Iterable = (
     both = adding & removing
     added = [t for t in dict.fromkeys(adds) if t in adding and t not in both]
     removed = [t for t in dict.fromkeys(removes) if t in removing and t not in both]
-    return Change(label, added, removed)
+    return Change(label, added, removed, ui_message=ui_message)
 
 
 def _created(change: Change, iri: URIRef) -> Change:
@@ -765,7 +777,13 @@ def cmd_create_class(ctx: Context, a: dict) -> Change:
         ctx.require(parent, "class")
         adds.append((iri, RDFS.subClassOf, parent))
     adds += _definition(ctx, iri, a)
-    return _created(_change(ctx.graph, f"Created class {label}", adds), iri)
+    return _created(
+        _change(
+            ctx.graph, f"Created class {label}", adds,
+            ui_message=make_message("command.created_class", name=label),
+        ),
+        iri,
+    )
 
 
 def _definition(ctx: Context, iri: URIRef, a: dict) -> list:
@@ -819,7 +837,13 @@ def cmd_create_object_property(ctx: Context, a: dict) -> Change:
             target = ctx.iri(a[key], key)
             ctx.require(target, "class")
             adds.append((iri, predicate, target))
-    return _created(_change(ctx.graph, f"Created object property {label}", adds), iri)
+    return _created(
+        _change(
+            ctx.graph, f"Created object property {label}", adds,
+            ui_message=make_message("command.created_object_property", name=label),
+        ),
+        iri,
+    )
 
 
 def cmd_create_datatype_property(ctx: Context, a: dict) -> Change:
@@ -836,7 +860,13 @@ def cmd_create_datatype_property(ctx: Context, a: dict) -> Change:
         if not str(datatype).startswith(str(XSD)) and datatype != RDF.langString:
             raise CommandError(f"{ctx.short(datatype)} is not an XML Schema datatype.")
         adds.append((iri, RDFS.range, datatype))
-    return _created(_change(ctx.graph, f"Created datatype property {label}", adds), iri)
+    return _created(
+        _change(
+            ctx.graph, f"Created datatype property {label}", adds,
+            ui_message=make_message("command.created_datatype_property", name=label),
+        ),
+        iri,
+    )
 
 
 def cmd_create_concept(ctx: Context, a: dict) -> Change:
@@ -873,7 +903,13 @@ def cmd_create_concept(ctx: Context, a: dict) -> Change:
         if broader is None or not _in_scheme(ctx.graph, broader, scheme):
             adds.append((scheme, SKOS.hasTopConcept, iri))
     adds += _definition(ctx, iri, a)
-    return _created(_change(ctx.graph, f"Created concept {label}", adds), iri)
+    return _created(
+        _change(
+            ctx.graph, f"Created concept {label}", adds,
+            ui_message=make_message("command.created_concept", name=label),
+        ),
+        iri,
+    )
 
 
 def _set_text(ctx: Context, a: dict, predicate_for: Callable[[URIRef], URIRef], what: str) -> Change:
@@ -990,7 +1026,12 @@ def cmd_create_annotation_property(ctx: Context, a: dict) -> Change:
     if rng is not None:
         adds.append((iri, RDFS.range, rng))
     return _created(
-        _change(ctx.graph, f"Created annotation property {(label or '').strip() or ctx.short(iri)}", adds),
+        _change(
+            ctx.graph, f"Created annotation property {(label or '').strip() or ctx.short(iri)}", adds,
+            ui_message=make_message(
+                "command.created_annotation_property", name=(label or '').strip() or ctx.short(iri),
+            ),
+        ),
         iri,
     )
 
@@ -2832,7 +2873,7 @@ class OpenDocument:
         return self.last_text if (self.last_text is not None and not self.visual_since_save) else self.clean()
 
     def state(self) -> dict:
-        return {
+        result = {
             "doc": self.doc,
             "ontologyId": self.ontology.id,
             "revision": self.ontology.revision,
@@ -2843,6 +2884,10 @@ class OpenDocument:
             "redoLabel": self.redo[-1].label if self.redo else None,
             "triples": len(self.graph),
         }
+        for stack, field in ((self.undo, "undoUiMessage"), (self.redo, "redoUiMessage")):
+            if stack and stack[-1].ui_message is not None:
+                result[field] = stack[-1].ui_message
+        return result
 
 
 # The save point of a document saved (or opened) with nothing to undo.
@@ -3103,6 +3148,8 @@ class EditingService:
                 "delta": _delta_json(change),
                 "state": document.state(),
             }
+            if change.ui_message is not None:
+                result["uiMessage"] = change.ui_message
             if impact is not None:
                 result["impact"] = impact
             if change.created is not None:
@@ -3155,7 +3202,10 @@ class EditingService:
     def _push(document: OpenDocument, change: Change, before: tuple) -> None:
         """Record a new change as an undo step, dropping the redo branch."""
         document.undo.append(
-            Step(change.label, change.added, change.removed, before, document.editor_state(), change.renamed)
+            Step(
+                change.label, change.added, change.removed, before, document.editor_state(),
+                change.renamed, change.ui_message,
+            )
         )
         dropped = document.undo[:-UNDO_LIMIT]
         del document.undo[:-UNDO_LIMIT]
@@ -3195,7 +3245,10 @@ class EditingService:
                 self._move_layout(document, step.renamed[1], step.renamed[0])
             document.redo.append(step)
             self._settle(document)
-            return {"revision": document.ontology.revision, "label": step.label, "state": document.state()}
+            return {
+                "revision": document.ontology.revision, "label": step.label, "state": document.state(),
+                **({"uiMessage": step.ui_message} if step.ui_message is not None else {}),
+            }
 
     def redo(self, pid: str, doc: str) -> dict:
         document = self.document(pid, doc)
@@ -3209,7 +3262,10 @@ class EditingService:
                 self._move_layout(document, *step.renamed)
             document.undo.append(step)
             self._settle(document)
-            return {"revision": document.ontology.revision, "label": step.label, "state": document.state()}
+            return {
+                "revision": document.ontology.revision, "label": step.label, "state": document.state(),
+                **({"uiMessage": step.ui_message} if step.ui_message is not None else {}),
+            }
 
     def source(self, pid: str, doc: str) -> dict:
         document = self.document(pid, doc)

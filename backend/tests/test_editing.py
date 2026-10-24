@@ -32,6 +32,8 @@ EXPECTED OUTPUT
       byte for byte), and what the form needs from the server: the created
       IRI, plain literals, search by kind, kinds in project details.
     - shacl-authoring Stage A: AC-2 as the server sees it, row S20.
+    - Additive creation/history metadata with unchanged English labels,
+      revisions and before/after RDF isomorphism.
 ================================================================================
 """
 
@@ -1521,3 +1523,42 @@ def test_two_first_shape_commands_at_once_make_shapes_ttl_once(bare):
     assert answers == [200, 200]
     assert [d["role"] for d in project_store.manifest(pid)["documents"]].count("shapes") == 1
     assert len(list(shapes_graph(pid).subjects(RDF.type, SH.NodeShape))) == 2
+
+
+@pytest.mark.parametrize("command,field,code,legacy", [
+    ("CreateClass", "label", "command.created_class", "Created class"),
+    ("CreateObjectProperty", "label", "command.created_object_property", "Created object property"),
+    ("CreateDatatypeProperty", "label", "command.created_datatype_property", "Created datatype property"),
+    ("CreateConcept", "prefLabel", "command.created_concept", "Created concept"),
+    ("CreateAnnotationProperty", "label", "command.created_annotation_property", "Created annotation property"),
+])
+def test_creation_message_survives_history_without_changing_labels_or_graph(pid, command, field, code, legacy):
+    """Metadata follows the same history step; labels and RDF remain literal."""
+    name = "犬 <b>{name}</b>"
+    before = graph_copy(pid)
+    result = ok(pid, command, **{field: name, "iri": EX + "SyntheticCreated"})
+    after = graph_copy(pid)
+    wire = {"code": code, "args": {"name": name}}
+    assert result["label"] == f"{legacy} {name}"
+    assert result.get("uiMessage") == wire
+    assert result["state"]["undoLabel"] == result["label"]
+    assert result["state"].get("undoUiMessage") == wire
+    assert result["state"].get("redoUiMessage") is None
+    undone = undo(pid)
+    assert undone["label"] == result["label"]
+    assert undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, doc(pid).graph)
+    redone = redo(pid)
+    assert redone["label"] == result["label"]
+    assert redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert redone["revision"] > undone["revision"] > result["revision"]
+    assert isomorphic(after, doc(pid).graph)
+
+
+def test_legacy_change_and_step_accept_positional_calls_without_metadata():
+    change = editing.Change("Legacy label", [], [])
+    step = editing.Step("Legacy step", [], [])
+    assert change.label == "Legacy label" and step.label == "Legacy step"
+    assert change.ui_message is None and step.ui_message is None

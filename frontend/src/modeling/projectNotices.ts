@@ -7,6 +7,8 @@ SUMMARY
 BASIC IDEA
     Keep finite message descriptors or a small validation/reasoning summary.
     Reuse the panels' formatters and retain English text for legacy callers.
+    Command history labels use additive server descriptors; each notice also
+    keeps the action and save-state facts needed by its whole sentence.
     A notice may outlive a closed project, so never keep its full result graph,
     witness labels, validation problems or other document content here.
 INPUTS / INPUT SOURCES
@@ -18,7 +20,8 @@ EXPECTED OUTPUT
 
 import type { MessageId, Translator, UiLocale } from "../i18n/types";
 import { renderUiMessage, type UiMessageFor } from "../i18n/uiMessage";
-import type { ReasoningResult, ValidationResult } from "../types";
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import type { ChangeResult, ReasoningResult, ValidationResult } from "../types";
 import { validationSummary, type ValidationSummaryInput } from "./shapeSentences";
 import { finishedLine, isStale, staleLine, type ReasoningLineInput, type ReasoningNow } from "../reasoning/reasonSentences";
 
@@ -33,6 +36,7 @@ export type ProjectNotice = UiMessageFor<
 >;
 
 export type ProjectNoticeDetail =
+  | { kind: "change"; label: string; uiMessage: ChangeResult["uiMessage"]; operation: "applied" | "undo" | "redo"; status: "saved" | "unsaved" | "saving" }
   | { kind: "validation"; result: ValidationSummaryInput }
   | { kind: "reasoning"; result: ReasoningLineInput; stale: boolean };
 
@@ -60,7 +64,18 @@ export function reasoningNotice(result: ReasoningResult, now: ReasoningNow): Pro
   } };
 }
 
+/** Unsupported metadata can mean a different server version. Keep the
+ *  successful operation's original label; an error fallback would falsely
+ *  describe that operation as failed. Never infer metadata from the label. */
+export function historyLabel(label: string | null | undefined, message: unknown, t: Translator): string {
+  return validWireMessage(message) ? renderServerMessage(message, label ?? "", t) : label ?? "";
+}
+
 export function renderProjectAnnouncement(notice: ProjectAnnouncement, locale: UiLocale, t: Translator): string {
+  if (notice.detail?.kind === "change") {
+    const { label, uiMessage, operation, status } = notice.detail;
+    return t(`projectNotice.changed.${operation}.${status}`, { label: historyLabel(label, uiMessage, t) });
+  }
   if (notice.detail?.kind === "validation") return validationSummary(notice.detail.result, locale);
   if (notice.detail?.kind === "reasoning") {
     const { result, stale } = notice.detail;

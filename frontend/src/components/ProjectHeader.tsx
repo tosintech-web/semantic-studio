@@ -58,7 +58,7 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
-import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { historyLabel, renderProjectAnnouncement } from "../modeling/projectNotices";
 import { useEffect, useId, useRef, useState } from "react";
 import { addShapesDocument, getLanguageReport } from "../api";
 import { validLanguageTag } from "../projects/form";
@@ -132,6 +132,8 @@ export default function ProjectHeader({
 
   const canUndo = current?.canUndo ?? false;
   const canRedo = current?.canRedo ?? false;
+  const undoLabel = historyLabel(current?.undoLabel, current?.undoUiMessage, t);
+  const redoLabel = historyLabel(current?.redoLabel, current?.redoUiMessage, t);
   const undo = () => canUndo && guard(() => run(() => projectStore.undo()));
   const redo = () => canRedo && guard(() => run(() => projectStore.redo()));
   const save = () => !state.saving && guard(() => run(() => projectStore.save()));
@@ -267,8 +269,8 @@ export default function ProjectHeader({
       <button
         className="ghost"
         aria-disabled={!canUndo}
-        aria-label={canUndo ? t("projectHeader.undoName", { label: current?.undoLabel ?? "" }) : t("projectHeader.undo")}
-        title={canUndo ? t("projectHeader.undoHelp", { label: current?.undoLabel ?? "" }) : t("projectHeader.noUndo")}
+        aria-label={canUndo ? t("projectHeader.undoName", { label: undoLabel }) : t("projectHeader.undo")}
+        title={canUndo ? t("projectHeader.undoHelp", { label: undoLabel }) : t("projectHeader.noUndo")}
         onClick={undo}
       >
         {/* The word, or an icon where the row is narrow (5.2); the name is
@@ -279,8 +281,8 @@ export default function ProjectHeader({
       <button
         className="ghost"
         aria-disabled={!canRedo}
-        aria-label={canRedo ? t("projectHeader.redoName", { label: current?.redoLabel ?? "" }) : t("projectHeader.redo")}
-        title={canRedo ? t("projectHeader.redoHelp", { label: current?.redoLabel ?? "" }) : t("projectHeader.noRedo")}
+        aria-label={canRedo ? t("projectHeader.redoName", { label: redoLabel }) : t("projectHeader.redo")}
+        title={canRedo ? t("projectHeader.redoHelp", { label: redoLabel }) : t("projectHeader.noRedo")}
         onClick={redo}
       >
         <span className="ph-icon" aria-hidden="true">↷</span>
