@@ -112,7 +112,10 @@ _SHOWN = {
     OWL.equivalentProperty: "same",
     OWL.sameAs: "same",
 }
-_SYMMETRIC = (OWL.equivalentClass, OWL.equivalentProperty, OWL.sameAs)
+# These fixed predicate groups are membership tests, never an iteration order.
+# Resolving namespaces/building tuples for every fact costs work at data scale.
+_SYMMETRIC = frozenset((OWL.equivalentClass, OWL.equivalentProperty, OWL.sameAs))
+_TYPING_PREDICATES = frozenset((RDF.type, RDFS.subClassOf, RDFS.subPropertyOf))
 _PROPERTY_TYPES = (
     OWL.ObjectProperty, OWL.DatatypeProperty, RDF.Property, OWL.TransitiveProperty,
     OWL.SymmetricProperty, OWL.FunctionalProperty, OWL.InverseFunctionalProperty,
@@ -521,25 +524,39 @@ def triple_json(t: tuple, names: Callable) -> dict:
 # ---------------------------------------------------------------------------
 
 
+# Resolve fixed vocabulary names once. Dispatching by predicate avoids a chain
+# of RDF-term comparisons for every fact and every repeated premise, while the
+# rendered sentences and the explainer's candidate order stay exactly the same.
+_FACT_FORMS = {
+    RDF.type: "type",
+    RDFS.subClassOf: "kind", RDFS.subPropertyOf: "kind",
+    OWL.equivalentClass: "equivalent", OWL.equivalentProperty: "equivalent",
+    OWL.sameAs: "same", OWL.differentFrom: "different",
+    OWL.disjointWith: "disjoint", OWL.inverseOf: "inverse",
+    RDFS.domain: "domain", RDFS.range: "range",
+}
+
+
 def fact_sentence(t: tuple, names: Callable) -> str:
     s, p, o = t
-    if p == RDF.type:
+    form = _FACT_FORMS.get(p)
+    if form == "type":
         return f"{names(s)} is {a(names(o))}"
-    if p in (RDFS.subClassOf, RDFS.subPropertyOf):
+    if form == "kind":
         return f"{names(s)} is a kind of {names(o)}"
-    if p in (OWL.equivalentClass, OWL.equivalentProperty):
+    if form == "equivalent":
         return f"{names(s)} and {names(o)} mean the same thing"
-    if p == OWL.sameAs:
+    if form == "same":
         return f"{names(s)} and {names(o)} are the same thing"
-    if p == OWL.differentFrom:
+    if form == "different":
         return f"{names(s)} and {names(o)} are different things"
-    if p == OWL.disjointWith:
+    if form == "disjoint":
         return f"no {names(s)} is {a(names(o))}"
-    if p == OWL.inverseOf:
+    if form == "inverse":
         return f"{names(s)} is {names(o)} the other way round"
-    if p == RDFS.domain:
+    if form == "domain":
         return f"whoever {names(s)} something is {a(names(o))}"
-    if p == RDFS.range:
+    if form == "range":
         return f"whatever something {names(s)} is {a(names(o))}"
     return f"{names(s)} {verb(names(p))} {names(o)}"
 
@@ -610,7 +627,8 @@ class Explainer:
     def _candidates(self, t: tuple):
         s, p, o = t
         c, n = self.c, self._n
-        if p in (RDFS.subClassOf, RDFS.subPropertyOf):
+        form = _FACT_FORMS.get(p)
+        if form == "kind":
             eq = OWL.equivalentClass if p == RDFS.subClassOf else OWL.equivalentProperty
             for x in ((s, eq, o), (o, eq, s)):
                 if x in c:
@@ -634,13 +652,13 @@ class Explainer:
                             f"{self._defines(s, d)}, so every {n(s)} is {a(n(o))}"
                         )
             return
-        if p == RDF.type:
+        if form == "type":
             yield from self._membership(s, o)
             return
-        if p == OWL.sameAs:
+        if form == "same":
             yield from self._same_thing(s, o)
             return
-        if p in (OWL.equivalentClass, OWL.equivalentProperty):
+        if form == "equivalent":
             sub = RDFS.subClassOf if p == OWL.equivalentClass else RDFS.subPropertyOf
             if (s, sub, o) in c and (o, sub, s) in c:
                 yield "same", [(s, sub, o), (o, sub, s)], [], (
@@ -936,7 +954,7 @@ def analyse(
             continue
         if str(s).startswith(PROBE) or str(o).startswith(PROBE):
             continue
-        if built_in(s) or (p in (RDF.type, RDFS.subClassOf, RDFS.subPropertyOf) and built_in(o)):
+        if built_in(s) or (p in _TYPING_PREDICATES and built_in(o)):
             continue
         if p in _SYMMETRIC:
             if (o, p, s) in stated:

@@ -2312,3 +2312,20 @@ EXPECTED OUTPUT
   entity's links go to its 50 best-connected neighbours, the ones the
   budget draws first, and GraphView's merge keeps those whose other end is
   on the canvas, as it does for a neighbourhood.
+
+- **P1 reasoning predicate dispatch** (2026-10-24). The existing
+  6,000-conclusion filter/group/explain budget exceeded its 300 ms limit on
+  Python 3.14.4: 430.487 ms in the isolated synthetic two-snapshot fixture.
+  Fixed predicate groups now use set membership, and fact wording and the
+  explainer's initial choice share a predicate-to-form lookup. The original
+  candidate order and wording are preserved; twelve predicate-meaning cases
+  guard the latter alongside the existing reasoning tests.
+
+  With the same fixture, median of five and budget factor 1, the unprofiled
+  work took 272.903 ms after the change. Profiles taken after the timed
+  samples show namespace attribute resolutions falling from 176,184 to
+  38,010, and RDF-term comparisons from 381,018 to 263,944. This speeds the
+  service's ordinary fact and premise paths as well as the budget's batch
+  traversal. The inference engine, limits and selected facts use the same
+  rules. Full-suite results are tracked separately from this isolated
+  measurement.

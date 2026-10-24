@@ -832,3 +832,22 @@ def test_ending_metadata_does_not_add_an_ending_to_a_finished_run():
     summary = reasoning.Outcome("done", reasoning.Key(1, 0, False, False)).summary()
     assert summary["sentence"] is None
     assert summary.get("uiMessage") is None
+
+
+@pytest.mark.parametrize("predicate,expected", [
+    (RDF.type, "Alice is an Organization"),
+    (RDFS.subClassOf, "Alice is a kind of Organization"),
+    (RDFS.subPropertyOf, "Alice is a kind of Organization"),
+    (OWL.equivalentClass, "Alice and Organization mean the same thing"),
+    (OWL.equivalentProperty, "Alice and Organization mean the same thing"),
+    (OWL.sameAs, "Alice and Organization are the same thing"),
+    (OWL.differentFrom, "Alice and Organization are different things"),
+    (OWL.disjointWith, "no Alice is an Organization"),
+    (OWL.inverseOf, "Alice is Organization the other way round"),
+    (RDFS.domain, "whoever Alice something is an Organization"),
+    (RDFS.range, "whatever something Alice is an Organization"),
+    (U("worksFor"), "Alice works for Organization"),
+])
+def test_fact_wording_preserves_each_predicate_meaning(predicate, expected):
+    names = {U("alice"): "Alice", U("org"): "Organization", U("worksFor"): "works for"}
+    assert reasoning.fact_sentence((U("alice"), predicate, U("org")), names.__getitem__) == expected
