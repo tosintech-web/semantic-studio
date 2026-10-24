@@ -1272,3 +1272,45 @@ it("localizes read-only guidance while preserving the source name", async () => 
   expect(screen.getByText("<b>External</b>からの項目のため、読み取り専用です。")).toBeTruthy();
   expect(document.querySelector("b")).toBeNull();
 });
+
+
+it("keeps the delete strategy and impact across a UI language switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  previewDelete.mockResolvedValue({ dryRun: true, revision: 2, impact: {
+    iri: EX + "Invoice", label: "Invoice", kind: "class", statements: 5, strategy: "reparent",
+    children: [{ iri: EX + "SalesInvoice", label: "Sales Invoice" }],
+    reparentedTo: [{ iri: EX + "Document", label: "Document" }],
+    properties: [{ iri: EX + "belongsTo", label: "belongs to", role: "range", kind: "object property" }],
+    individuals: [{ iri: EX + "i", label: "<b>具体例</b>" }], importMentions: 2,
+  } });
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })));
+  const dialog = screen.getByRole("dialog", { name: "Invoiceを削除しますか？" });
+  expect(within(dialog).getByText("Invoiceを削除すると、5件の記述が削除されます。")).toBeTruthy();
+  const orphan = within(dialog).getByRole("radio", { name: "上位を持たない状態にする" });
+  fireEvent.click(orphan);
+  expect((orphan as HTMLInputElement).checked).toBe(true);
+  // A test can switch the provider without altering the modal's keyboard trap.
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(within(dialog).getByRole("radio", { name: "Leave it without a parent" })).toBe(orphan);
+  expect((orphan as HTMLInputElement).checked).toBe(true);
+  expect(previewDelete).toHaveBeenCalledTimes(1);
+  expect(dialog.querySelector("b")).toBeNull();
+  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Delete" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Invoice", strategy: "orphan" });
+});
+
+
+it("rephrases a failed delete preview after UI switch while keeping the original error", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  previewDelete.mockRejectedValue(new Error("<b>Service unavailable</b>"));
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })));
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByRole("alert").textContent).toBe("Invoiceの削除による影響を確認できませんでした。原文：<b>Service unavailable</b>");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(within(dialog).getByRole("alert").textContent).toBe("What deleting Invoice would take could not be worked out: <b>Service unavailable</b>");
+  expect(within(dialog).getAllByRole("button").map(b => b.textContent)).toEqual(["Cancel"]);
+  expect(dialog.querySelector("b")).toBeNull();
+  expect(previewDelete).toHaveBeenCalledTimes(1);
+});

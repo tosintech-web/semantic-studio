@@ -31,6 +31,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NodeDetails } from "../types";
 import NewEntityForm from "./NewEntityForm";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { SUGGEST_MS } from "./useSuggestions";
 
 const { searchNodes, getNodeDetails } = vi.hoisted(() => ({ searchNodes: vi.fn(), getNodeDetails: vi.fn() }));
@@ -233,4 +235,52 @@ describe("a Create refused because the name exists (5.1)", () => {
     expect(onAnother).toHaveBeenCalled();
     expect(document.activeElement).toBe(screen.getByLabelText("Name (en)"));
   });
+});
+
+
+it("keeps name, identifier and datatype drafts while switching UI language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><NewEntityForm title="Original title" primaryLanguage="en" datatypes onSubmit={onSubmit} onCancel={vi.fn()} /></I18nProvider>);
+  const name = screen.getByRole("textbox", { name: "名前（en）" });
+  fireEvent.change(name, { target: { value: "<b>請求書</b>" } });
+  fireEvent.click(screen.getByRole("button", { name: "詳細オプション" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "識別子（省略時は名前から生成）" }), { target: { value: HR + "Invoice" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "値の型" }), { target: { value: "xsd:integer" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(name);
+  fireEvent.click(screen.getByRole("button", { name: "Create" }));
+  expect(onSubmit).toHaveBeenCalledWith({ name: "<b>請求書</b>", iri: HR + "Invoice", datatype: "xsd:integer" });
+});
+it("rephrases existing suggestions and their count without refetching on UI switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><NewEntityForm title="Original title" primaryLanguage="en" onSubmit={onSubmit} onCancel={vi.fn()}
+    suggest={{ ontologyId: "prj-0123456789ab-model", kind: "datatypeProperty", className: "Manager", onUse }} /></I18nProvider>);
+  await type(screen.getByRole("textbox", { name: "名前（en）" }) as HTMLInputElement, "ha");
+  await pause();
+  expect(screen.getByText("hasName：Employeeの属性（テキスト）。")).toBeTruthy();
+  expect(status()).toBe("既存の属性が2件一致しました");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("hasName, an attribute of Employee (text).")).toBeTruthy();
+  expect(status()).toBe("2 existing attributes match");
+  expect(searchNodes).toHaveBeenCalledTimes(1);
+  expect(getNodeDetails).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole("button", { name: "Use it on Manager (hasName)" }));
+  expect(onUse).toHaveBeenCalledWith({ iri: HR + "hasName", label: "hasName" });
+});
+
+
+it("renders a suggestion reply that arrives after the UI language changes", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  let release!: (nodes: { id: string }[]) => void;
+  searchNodes.mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
+  render(<I18nProvider><UiLanguageSelect /><NewEntityForm title="Original title" primaryLanguage="en" onSubmit={onSubmit} onCancel={vi.fn()}
+    suggest={{ ontologyId: "prj-0123456789ab-model", kind: "datatypeProperty", className: "Manager", onUse }} /></I18nProvider>);
+  await type(screen.getByRole("textbox", { name: "Name (en)" }) as HTMLInputElement, "ha");
+  await pause();
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  await act(async () => release([{ id: HR + "hasName" }]));
+  await pause(0);
+  expect(screen.getByText("hasName：Employeeの属性（テキスト）。")).toBeTruthy();
+  expect(status()).toBe("既存の属性が1件一致しました");
+  expect(searchNodes).toHaveBeenCalledTimes(1);
 });

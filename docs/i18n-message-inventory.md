@@ -51,15 +51,15 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/EditSection.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner・通知の生成元はTask 12） |
 | `frontend/src/components/EditStructure.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（通知・拒否の生成元はTask 12） |
 | `frontend/src/components/EditParts.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner・通知の生成元はTask 12） |
-| `frontend/src/components/CreateForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/NewEntityForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/CreateForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（エラー・衝突の生成元はTask 12） |
+| `frontend/src/components/NewEntityForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（エラー・衝突の生成元はTask 12） |
 | `frontend/src/components/RelationshipForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
 | `frontend/src/components/AttributeForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（共有クラス・警告の生成元は別途移行） |
 | `frontend/src/components/AnnotationAdder.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（エラー生成元はTask 12） |
 | `frontend/src/components/ConceptRelations.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（エラー生成元はTask 12） |
 | `frontend/src/components/SharedDomain.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
 | `frontend/src/components/ReusePlan.tsx` | 探索・編集・クエリ・説明文 | 11 | 表示文を移行（通知・拒否の生成元はTask 12） |
-| `frontend/src/components/DeleteDialog.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/DeleteDialog.tsx` | 探索・編集・クエリ・説明文 | 11 | 影響・選択肢を移行（コマンド通知・拒否の生成元はTask 12） |
 | `frontend/src/components/LinkPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/ExampleForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/QueryPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -97,6 +97,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/modeling/entity.ts` | 所属クラスの表示用結合 | 11 | 表示言語引数を追加、呼び出し元への接続は進行中 |
 
 | `frontend/src/modeling/values.ts` | 注釈の型・検証・説明文 | 11 | 共通表示関数を移行、呼び出し元への接続は進行中 |
+
+| `frontend/src/components/useSuggestions.ts` | 作成候補の説明・件数 | 11 | 元の取得データから現在のUI言語で表示 |
 
 ## 登録済みメッセージ
 
@@ -652,7 +654,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/DeleteDialog.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1089,7 +1091,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `modelSentences.suggestion.attributeTyped` | domain, name, type | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.suggestion.attribute` | domain, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.suggestion.relationship` | domain, end, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
-| `modelSentences.already` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.already` | — | `frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.use` | cls | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.matches.attribute.one` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.matches.attribute.many` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
@@ -1167,16 +1169,16 @@ GraphViewのルール由来ラベルはruleSentencesの移行で接続する。S
 
 modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en）で、文章全体をカタログから選ぶ。英語の冠詞・動詞変形・大文字化は共通モジュールの英語ポリシーだけで行い、他言語では入力の名称を保持する。冠詞付きの表示用引数や結合済みリストは描画時だけに作る値であり、保存する通知の生データにしない。長期保持する通知は生成元で生の名称・配列を保持し、表示時に組み立てる。
 
-| `attributeForm.belongs` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.belongs` | — | `frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/CreateForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.clearClass` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
-| `attributeForm.clear` | — | `frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/RelationshipForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.clear` | — | `frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/RelationshipForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.noClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.classLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.changeClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.chooseClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.changeClassLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.chooseClassLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
-| `attributeForm.valueType` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.valueType` | — | `frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/NewEntityForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.setType` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.changeType` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.changeTypeLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
@@ -1187,8 +1189,8 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `relationshipForm.warnings` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `relationshipForm.fix` | label | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `relationshipForm.ends` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
-| `relationshipForm.from` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
-| `relationshipForm.to` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.from` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.to` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `relationshipForm.clear.start` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `relationshipForm.clear.end` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `relationshipForm.no.start` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
@@ -1300,7 +1302,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `annotation.valuesAre` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.valueType` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.value` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
-| `annotation.saving` | — | `frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.saving` | — | `frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/NewEntityForm.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.create` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.add` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `values.description.string` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
@@ -1313,7 +1315,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 
 | `editParts.copied` | text | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editParts.copyFailed` | — | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
-| `editParts.none` | — | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.none` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editParts.addLabel` | label | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editParts.editLabel` | label | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editParts.add` | — | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
@@ -1377,11 +1379,11 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editStructure.noRelationships` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.newRelationship` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.addRelationship` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
-| `editStructure.chooseTarget` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.chooseTarget` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.targetClass` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.pointsTo` | target | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
-| `editStructure.noTarget` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
-| `editStructure.change` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noTarget` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.change` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.chooseClass` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.broader` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.noBroader` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
@@ -1393,3 +1395,63 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editStructure.newNarrower` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.addNarrower` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.scheme` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+
+| `newEntity.name` | language | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `newEntity.another` | — | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `newEntity.use` | cls, name | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `newEntity.more` | — | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `newEntity.identifier` | — | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `newEntity.create` | — | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `newEntity.expressionDomain` | — | `frontend/src/components/useSuggestions.ts` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.class` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.classParent` | parent | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.concept` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.conceptParent` | parent | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.relationship` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.attribute` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.example` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.choice` | label, value | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.choose` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.missingExample` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.parentClass` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.parentConcept` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.definition` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.exampleClass` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+
+| `delete.title` | name | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.busy` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.action` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.checking` | name | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.noProject` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.failed` | detail, name | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.statements.one` | count, name | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.statements.many` | count, name | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.reparent.one` | parents | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.reparent.many` | parents | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.top.one` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.top.many` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.orphan.one` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.orphan.many` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.role.domain` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.role.range` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertyRef` | label, role | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.properties.one` | count, kind, properties, role | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.properties.many` | count, kind, properties | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.individuals.one` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.individuals.many` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.mentions.one` | count | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.mentions.many` | count | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.listSeparator` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertySeparator` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.children.class.one` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.children.class.many` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.children.concept.one` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.children.concept.many` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.children.property.one` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.children.property.many` | count, names | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertyKind.relationship.one` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertyKind.relationship.many` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertyKind.attribute.one` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertyKind.attribute.many` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertyKind.property.one` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+| `delete.propertyKind.property.many` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |

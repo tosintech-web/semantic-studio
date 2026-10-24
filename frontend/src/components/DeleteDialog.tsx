@@ -10,6 +10,11 @@ SUMMARY
     with the children when there are any, and deletes only on confirmation.
 
 BASIC IDEA
+    Whole UI templates describe the impact and choices in the active locale.
+    The impact and selected strategy survive language changes without another
+    dry run. Preview errors retain original error objects and labelled details;
+    command errors and undo announcements remain the runner's producers.
+
     DeleteEntity has a dry run (authoring-foundations 5.5) that changes
     nothing and returns the impact: the statements removed, the children and
     the parents they would move up to, the properties whose domain or range
@@ -44,6 +49,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import type { Translator } from "../i18n/types";
 import { useEffect, useState } from "react";
 import { previewDelete } from "../api";
 import { projectStore } from "../state/projectStore";
@@ -58,46 +65,33 @@ interface Props {
   onDone: (deleted: boolean) => void;
 }
 
-const CHILD_WORDS: Record<string, [string, string]> = {
-  class: ["subclass", "subclasses"],
-  concept: ["narrower concept", "narrower concepts"],
-};
-
-const PROPERTY_WORDS: Record<string, [string, string]> = {
-  "object property": ["relationship", "relationships"],
-  "datatype property": ["attribute", "attributes"],
-};
-
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`;
+function list(refs: { label: string }[], t: Translator): string {
+  return refs.map(r => r.label).join(t("delete.listSeparator"));
 }
 
-function list(refs: { label: string }[]): string {
-  return refs.map((r) => r.label).join(", ");
-}
-
-/** "1 relationship points to it (belongs to, as its range). It is kept,
- *  without a range." -- 5.3's sentence, for any mix of property kinds. */
-function propertySentence(properties: DeleteImpact["properties"]): string {
-  const kinds = new Set(properties.map((p) => p.kind ?? ""));
-  const [one, many] = kinds.size === 1 ? (PROPERTY_WORDS[[...kinds][0]] ?? ["property", "properties"]) : ["property", "properties"];
-  const n = properties.length;
-  const which = properties.map((p) => `${p.label}, as its ${p.role}`).join("; ");
-  const kept =
-    n === 1 ? `It is kept, without a ${properties[0].role}.` : "They are kept, without it.";
-  return `${plural(n, one, many)} ${n === 1 ? "points" : "point"} to it (${which}). ${kept}`;
+/** Keep count agreement in whole templates, using original reference labels. */
+function propertySentence(properties: DeleteImpact["properties"], t: Translator): string {
+  const kinds = new Set(properties.map(p => p.kind ?? ""));
+  const sole = kinds.size === 1 ? properties[0].kind : null;
+  const kind = sole === "object property" ? "relationship" : sole === "datatype property" ? "attribute" : "property";
+  const count = properties.length;
+  const propertiesText = properties.map(p => t("delete.propertyRef", { label: p.label, role: t(`delete.role.${p.role}`) })).join(t("delete.propertySeparator"));
+  return count === 1
+    ? t("delete.properties.one", { count, kind: t(`delete.propertyKind.${kind}.one`), properties: propertiesText, role: t(`delete.role.${properties[0].role}`) })
+    : t("delete.properties.many", { count, kind: t(`delete.propertyKind.${kind}.many`), properties: propertiesText });
 }
 
 export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
+  const { t } = useI18n();
   const [impact, setImpact] = useState<DeleteImpact | null>(null);
   const [strategy, setStrategy] = useState<"reparent" | "orphan">("reparent");
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<{ kind: "noProject" } | { kind: "preview"; error: unknown } | null>(null);
   const { busy, errors, run } = runner;
 
   useEffect(() => {
     const state = projectStore.getSnapshot();
     if (!state.project) {
-      setLoadError("The delete cannot be checked: no project is open.");
+      setLoadError({ kind: "noProject" });
       return;
     }
     let cancelled = false;
@@ -106,7 +100,7 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
       .catch(
         (e: unknown) =>
           !cancelled &&
-          setLoadError(`What deleting ${label} would take could not be worked out: ${e instanceof Error ? e.message : String(e)}`),
+          setLoadError({ kind: "preview", error: e }),
       );
     return () => {
       cancelled = true;
@@ -122,32 +116,34 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
     if (result) onDone(true);
   };
 
-  const [one, many] = CHILD_WORDS[impact?.kind ?? ""] ?? ["subproperty", "subproperties"];
+  const childKind = impact?.kind === "class" ? "class" : impact?.kind === "concept" ? "concept" : "property";
   const name = impact?.label ?? label;
   const parents = impact?.reparentedTo ?? [];
-  const them = impact?.children.length === 1 ? "it" : "them";
-  const error = loadError || errors.delete || null;
+  const childNumber = impact?.children.length === 1 ? "one" : "many";
+  const error = loadError
+    ? loadError.kind === "noProject" ? t("delete.noProject") : t("delete.failed", { name: label, detail: loadError.error instanceof Error ? loadError.error.message : String(loadError.error) })
+    : errors.delete || null;
   return (
     <ConfirmDialog
-      title={`Delete ${name}?`}
+      title={t("delete.title", { name })}
       escape="cancel"
       busy={busy}
       actions={[
-        ...(impact ? [{ id: "delete", label: busy ? "Deleting…" : "Delete", danger: true }] : []),
-        { id: "cancel", label: "Cancel", primary: true },
+        ...(impact ? [{ id: "delete", label: t(busy ? "delete.busy" : "delete.action"), danger: true }] : []),
+        { id: "cancel", label: t("common.cancel"), primary: true },
       ]}
       onAnswer={(id) => void answer(id)}
     >
-      {!impact && !error && <p role="status">Working out what deleting {label} takes…</p>}
+      {!impact && !error && <p role="status">{t("delete.checking", { name: label })}</p>}
       {impact && (
         <>
           <p>
-            Deleting {name} removes {plural(impact.statements, "statement", "statements")}.
+            {t(impact.statements === 1 ? "delete.statements.one" : "delete.statements.many", { name, count: impact.statements })}
           </p>
           {impact.children.length > 0 && (
             <fieldset className="delete-strategy">
               <legend>
-                Its {plural(impact.children.length, one, many)} ({list(impact.children)}):
+                {t(`delete.children.${childKind}.${childNumber}`, { count: impact.children.length, names: list(impact.children, t) })}
               </legend>
               <label>
                 <input
@@ -156,7 +152,7 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
                   checked={strategy === "reparent"}
                   onChange={() => setStrategy("reparent")}
                 />{" "}
-                {parents.length ? `Move ${them} up to ${list(parents)}` : `Move ${them} up to the top level`}
+                {parents.length ? t(`delete.reparent.${childNumber}`, { parents: list(parents, t) }) : t(`delete.top.${childNumber}`)}
               </label>
               <label>
                 <input
@@ -165,23 +161,19 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
                   checked={strategy === "orphan"}
                   onChange={() => setStrategy("orphan")}
                 />{" "}
-                Leave {them} without a parent
+                {t(`delete.orphan.${childNumber}`)}
               </label>
             </fieldset>
           )}
-          {impact.properties.length > 0 && <p>{propertySentence(impact.properties)}</p>}
+          {impact.properties.length > 0 && <p>{propertySentence(impact.properties, t)}</p>}
           {impact.individuals.length > 0 && (
             <p>
-              {plural(impact.individuals.length, "individual", "individuals")} in this document{" "}
-              {impact.individuals.length === 1 ? "is" : "are"} typed with it (
-              {list(impact.individuals)}); {impact.individuals.length === 1 ? "it keeps" : "they keep"} everything
-              else.
+              {t(impact.individuals.length === 1 ? "delete.individuals.one" : "delete.individuals.many", { count: impact.individuals.length, names: list(impact.individuals, t) })}
             </p>
           )}
           {impact.importMentions > 0 && (
             <p>
-              It is used {plural(impact.importMentions, "time", "times")} in read-only imports, which are not
-              changed.
+              {t(impact.importMentions === 1 ? "delete.mentions.one" : "delete.mentions.many", { count: impact.importMentions })}
             </p>
           )}
         </>

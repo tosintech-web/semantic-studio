@@ -355,7 +355,7 @@ it("localizes property groups and keeps their original references", async () => 
   fireEvent.click(screen.getByRole("button", { name: "hasName" }));
   expect(onSelect).toHaveBeenCalledWith(HR + "hasName");
   fireEvent.click(screen.getByRole("button", { name: "下位クラスを追加" }));
-  const input = screen.getByRole("textbox", { name: "Name (en)" });
+  const input = screen.getByRole("textbox", { name: "名前（en）" });
   fireEvent.change(input, { target: { value: "<b>主任</b>" } });
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(input);

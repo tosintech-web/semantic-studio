@@ -28,6 +28,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api";
 import { projectStore } from "../state/projectStore";
 import CreateForm, { creatingTitle } from "./CreateForm";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, searchNodes } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -231,4 +233,22 @@ describe("CreateForm", () => {
     elsewhere.remove();
     box.remove();
   });
+});
+
+
+it("keeps the shared creation draft and definition on UI language changes", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  act(() => projectStore.startCreating("class"));
+  render(<I18nProvider><UiLanguageSelect /><CreateForm ontologyId={`${PID}-model`} primaryLanguage="en" /></I18nProvider>);
+  expect(screen.getByText("クラスを作成")).toBeTruthy();
+  const input = screen.getByRole("textbox", { name: "名前（en）" });
+  fireEvent.change(input, { target: { value: "請求書" } });
+  fireEvent.change(screen.getByRole("textbox", { name: "定義（任意）" }), { target: { value: "<b>定義</b>" } });
+  const token = projectStore.getSnapshot().creating?.token;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(input);
+  expect((screen.getByRole("textbox", { name: "Definition (optional)" }) as HTMLTextAreaElement).value).toBe("<b>定義</b>");
+  expect(projectStore.getSnapshot().creating?.token).toBe(token);
+  await create();
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", expect.objectContaining({ label: "請求書", definition: "<b>定義</b>" }));
 });
