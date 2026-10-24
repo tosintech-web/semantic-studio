@@ -209,7 +209,9 @@ describe("SnapshotList", () => {
     await act(async () => {
       fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
     });
-    expect(screen.getByRole("alert").textContent).toMatch(/^rml:source must name/);
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    const originalDetail = screen.getByText("rml:source must name this snapshot's own source.csv; this mapping names ../model.ttl.");
+    expect(originalDetail.closest("details")?.querySelector("summary")?.textContent).toBe("Technical details");
     const outside = { ...SNAP, mapping: { status: "outside" as const, message: "rml:function is outside what Semantic Studio runs." } };
     updateData.mockResolvedValue({ snapshot: outside, generation: 2 });
     listData.mockResolvedValue({ generation: 2, snapshots: [outside] });

@@ -16,6 +16,10 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "rmlEditor.title": { source: string };
+  "rmlEditor.applying": undefined;
+  "rmlEditor.apply": undefined;
+  "rmlEditor.help": undefined;
   "home.compositionBand": { kind: string; count: number };
   "brand.tagline": undefined;
   "reasonUI.reason": undefined;

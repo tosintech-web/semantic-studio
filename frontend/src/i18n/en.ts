@@ -15,6 +15,10 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "rmlEditor.title": "RML mapping of {source} · mapping.rml.ttl",
+  "rmlEditor.applying": "Applying…",
+  "rmlEditor.apply": "Apply",
+  "rmlEditor.help": "Within the subset Semantic Studio runs, Apply produces the data again. rml:source must stay source.csv.",
   "home.compositionBand": "{kind}: {count}",
   "brand.tagline": "ONTOLOGY WORKSPACE",
   "reasonUI.reason": "Reason",

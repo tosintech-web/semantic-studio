@@ -15,6 +15,10 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "rmlEditor.title": "{source} のRMLマッピング · mapping.rml.ttl",
+  "rmlEditor.applying": "適用中…",
+  "rmlEditor.apply": "適用",
+  "rmlEditor.help": "Semantic Studioが実行できる範囲のRMLであれば、適用するとデータを再生成します。rml:sourceはsource.csvのままにしてください。",
   "home.compositionBand": "{kind}：{count}件",
   "brand.tagline": "オントロジー作業スペース",
   "reasonUI.reason": "推論",

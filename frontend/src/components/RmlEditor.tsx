@@ -20,7 +20,8 @@ BASIC IDEA
     outside the engine (the feature is named, and the last good data
     stays), or refused -- a source other than the snapshot's own copy, or
     text that is not Turtle -- with nothing kept (Section 9). Each is said
-    in text under the box.
+    in text under the box. Controls and error frames use the current UI
+    locale; the draft and original diagnostics remain unchanged.
 
 INPUTS / INPUT SOURCES (props)
     - projectId, snapshot: whose mapping, and its text.
@@ -33,6 +34,8 @@ EXPECTED OUTPUT
 
 import { useId, useState, type KeyboardEvent } from "react";
 import { updateData } from "../api";
+import { useI18n } from "../i18n/I18nProvider";
+import { renderServerError } from "../i18n/serverMessage";
 import type { SnapshotSummary } from "../types";
 
 interface Props {
@@ -43,9 +46,10 @@ interface Props {
 }
 
 export default function RmlEditor({ projectId, snapshot, onApplied, onCancel }: Props) {
+  const { t } = useI18n();
   const [text, setText] = useState(snapshot.mappingText ?? "");
   const [applying, setApplying] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<{ error: unknown } | null>(null);
   const labelId = useId();
   const stateId = useId();
 
@@ -57,7 +61,7 @@ export default function RmlEditor({ projectId, snapshot, onApplied, onCancel }: 
       const result = await updateData(projectId, snapshot.id, { mapping: text });
       onApplied(result.snapshot);
     } catch (e: unknown) {
-      setProblem(e instanceof Error ? e.message : String(e));
+      setProblem({ error: e });
     } finally {
       setApplying(false);
     }
@@ -73,7 +77,7 @@ export default function RmlEditor({ projectId, snapshot, onApplied, onCancel }: 
   return (
     <div className="rml-editor">
       <label id={labelId} className="rml-title">
-        RML mapping of {snapshot.source} · mapping.rml.ttl
+        {t("rmlEditor.title", { source: snapshot.source })}
       </label>
       <textarea
         aria-labelledby={labelId}
@@ -87,16 +91,16 @@ export default function RmlEditor({ projectId, snapshot, onApplied, onCancel }: 
       />
       <p id={stateId} className={problem ? "detail-error" : "detail-note"} role={problem ? "alert" : undefined}>
         {applying
-          ? "Applying…"
-          : (problem ??
-            "Within the subset Semantic Studio runs, Apply produces the data again. rml:source must stay source.csv.")}
+          ? t("rmlEditor.applying")
+          : problem ? renderServerError(problem.error, t) : t("rmlEditor.help")}
       </p>
+      {problem && <details><summary>{t("common.details")}</summary><pre>{problem.error instanceof Error ? problem.error.message : String(problem.error)}</pre></details>}
       <p className="rml-actions">
         <button type="button" className="primary" aria-disabled={applying} onClick={() => void apply()}>
-          Apply
+          {t("rmlEditor.apply")}
         </button>{" "}
         <button type="button" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </p>
     </div>
