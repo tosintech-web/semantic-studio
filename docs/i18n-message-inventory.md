@@ -81,11 +81,11 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/explain/explainSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/explain/glossary.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/sparql/starters.ts` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
-| `frontend/src/canvas/useCanvasData.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/relate.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/layered.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/kindColours.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/curves.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/useCanvasData.ts` | 探索・編集・クエリ・説明文 | 11 | API・保存エラーの生成元はTask 12で移行 |
+| `frontend/src/canvas/relate.ts` | 探索・編集・クエリ・説明文 | 11 | 関係候補・拒否文・ボックスの読み上げを移行、画面接続済み |
+| `frontend/src/canvas/layered.ts` | 探索・編集・クエリ・説明文 | 11 | 表示文言なし（配置計算のみ） |
+| `frontend/src/canvas/kindColours.ts` | 探索・編集・クエリ・説明文 | 11 | 種類名の表示を移行、色の定義は保持 |
+| `frontend/src/canvas/curves.ts` | 探索・編集・クエリ・説明文 | 11 | 表示文言なし（SVGパス計算のみ） |
 | `frontend/src/canvas/RelateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner通知・APIエラー等はTask 12、ブラウザ確認はTask 13） |
 | `frontend/src/canvas/ModelCanvas.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner通知・APIエラー等はTask 12、ブラウザ確認はTask 13） |
 | `frontend/src/canvas/ConceptNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner通知・APIエラー等はTask 12、ブラウザ確認はTask 13） |
@@ -105,6 +105,9 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/modeling/shapeSentences.ts` | ルール・検証の文章 | 12 | 結果パネルの共通見出しを先行移行、その他はTask 12 |
 
 | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 全体テンプレートを移行、enの既存語形処理を保持 |
+
+| `frontend/src/components/RuleBuilder.tsx` | クラスのルール編集 | 11 | 画面所有文言と説明文を移行、編集内容を保持 |
+| `frontend/src/components/RulesBlock.tsx` | ルールの一覧・操作 | 11/12 | 画面所有文言を移行、通知・サーバー警告はTask 12 |
 
 ## 登録済みメッセージ
 
@@ -1909,3 +1912,45 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `canvasUI.selectedLine` | text | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
 | `canvasUI.drop.class` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
 | `canvasUI.drop.concept` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
+
+| `ruleForm.cap.properties` | shown, total | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.cap.classes` | shown, total | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.cap.things` | shown, total | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.rule` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.with` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.anyClass` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.thatProperty` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.property` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.choose` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.propertyOption` | kind, name | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.propertyKind.relationship` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.propertyKind.attribute` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.kind` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.count` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.optionalClass` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.fillerClass` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.anyThing` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.valueType` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.anyValue` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.thingValue` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.value` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.never` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.equivalent` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.reads` | sentence | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.saving` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.save` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.add` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `ruleForm.cancel` | — | `frontend/src/components/RuleBuilder.tsx`<br>`frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.heading` | name | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.warnings` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.empty` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.turtle` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.editTurtle` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.editLabel` | sentence | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.edit` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.removeLabel` | sentence | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.remove` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.readonly` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.checkLabel` | sentence | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.check` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+| `rules.add` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |

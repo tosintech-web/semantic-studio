@@ -42,10 +42,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useId, useMemo, useState } from "react";
 import {
   EMPTY_BUILDER,
-  RULE_TYPES,
+  ruleTypeChoices,
   VALUE_TYPES,
   builderCommand,
   builderProblem,
@@ -84,13 +85,10 @@ function Options({ list }: { list: RuleRef[] }) {
 }
 
 /** The true total beside a capped list (rule 6). */
-function Capped({ shown, total, what }: { shown: number; total: number; what: string }) {
+function Capped({ shown, total, what }: { shown: number; total: number; what: "properties" | "classes" | "things" }) {
+  const { t } = useI18n();
   if (total <= shown) return null;
-  return (
-    <p className="detail-note">
-      Showing the first {shown.toLocaleString()} of {total.toLocaleString()} {what}; write a rule on another in Turtle.
-    </p>
-  );
+  return <p className="detail-note">{t(`ruleForm.cap.${what}`, { shown, total })}</p>;
 }
 
 export default function RuleBuilder({
@@ -104,19 +102,21 @@ export default function RuleBuilder({
   onSubmit,
   onCancel,
 }: Props) {
+  const { t, locale } = useI18n();
   const id = useId();
   const [state, setState] = useState<BuilderState>(initial ?? EMPTY_BUILDER);
   const set = (part: Partial<BuilderState>) => setState((s) => ({ ...s, ...part }));
-  const sentence = useMemo(() => builderSentence(name, state, choices), [name, state, choices]);
-  const problem = builderProblem(state, choices);
+  const sentence = useMemo(() => builderSentence(name, state, choices, locale), [name, state, choices, locale]);
+  const problem = builderProblem(state, choices, locale);
   const command = builderCommand(cls, state, choices, replacing);
   const pkind = propertyKind(state, choices);
-  const kinds = kindsFor(pkind);
+  const kinds = kindsFor(pkind, locale);
   const classes = choices?.classes.items ?? [];
   const properties = choices?.properties.items ?? [];
   const things = choices?.things.items ?? [];
   const restriction = state.type === "every" || state.type === "defines";
-  const types = replacing ? RULE_TYPES.filter((t) => t.id === "every" || t.id === "defines") : RULE_TYPES;
+  const offeredTypes = ruleTypeChoices(locale);
+  const types = replacing ? offeredTypes.filter((type) => type.id === "every" || type.id === "defines") : offeredTypes;
 
   const chooseProperty = (iri: string) => {
     const chosen = properties.find((p) => p.iri === iri);
@@ -149,7 +149,7 @@ export default function RuleBuilder({
       }}
     >
       <label className="edit-field-label" htmlFor={`${id}-type`}>
-        Rule
+        {t("ruleForm.rule")}
       </label>
       <select id={`${id}-type`} autoFocus value={state.type} onChange={(e) => set({ type: e.target.value as RuleType })}>
         {types.map((t) => (
@@ -164,32 +164,32 @@ export default function RuleBuilder({
           {state.type === "defines" && (
             <>
               <label className="edit-field-label" htmlFor={`${id}-with`}>
-                Exactly a (class)
+                {t("ruleForm.with")}
               </label>
               <select id={`${id}-with`} value={state.with ?? ""} onChange={(e) => set({ with: e.target.value || null })}>
-                <option value="">something (no class)</option>
+                <option value="">{t("ruleForm.anyClass")}</option>
                 <Options list={classes.filter((c) => c.iri !== cls)} />
               </select>
             </>
           )}
           <label className="edit-field-label" htmlFor={`${id}-property`}>
-            {state.type === "defines" ? "That (relationship or attribute)" : "Relationship or attribute"}
+            {t(state.type === "defines" ? "ruleForm.thatProperty" : "ruleForm.property")}
           </label>
           <select id={`${id}-property`} value={state.property ?? ""} onChange={(e) => chooseProperty(e.target.value)}>
-            <option value="">Choose…</option>
+            <option value="">{t("ruleForm.choose")}</option>
             {properties.map((p) => (
               <option key={p.iri} value={p.iri}>
-                {p.label} ({p.kind})
+                {t("ruleForm.propertyOption", { name: p.label, kind: p.kind === "relationship" ? t("ruleForm.propertyKind.relationship") : p.kind === "attribute" ? t("ruleForm.propertyKind.attribute") : p.kind ?? "" })}
               </option>
             ))}
           </select>
-          {choices && <Capped shown={properties.length} total={choices.properties.total} what="relationships and attributes" />}
+          {choices && <Capped shown={properties.length} total={choices.properties.total} what="properties" />}
 
           <label className="edit-field-label" htmlFor={`${id}-kind`}>
-            What is true of it
+            {t("ruleForm.kind")}
           </label>
           <select id={`${id}-kind`} value={state.kind ?? ""} onChange={(e) => set({ kind: (e.target.value || null) as RuleKind | null, filler: null, value: "" })}>
-            <option value="">Choose…</option>
+            <option value="">{t("ruleForm.choose")}</option>
             {kinds.map((k) => (
               <option key={k.id} value={k.id}>
                 {k.words}
@@ -200,7 +200,7 @@ export default function RuleBuilder({
           {isCount(state.kind) && (
             <>
               <label className="edit-field-label" htmlFor={`${id}-n`}>
-                How many (0 to 1,000)
+                {t("ruleForm.count")}
               </label>
               <input
                 id={`${id}-n`}
@@ -218,10 +218,10 @@ export default function RuleBuilder({
           {state.kind && state.kind !== "value" && pkind !== "attribute" && (
             <>
               <label className="edit-field-label" htmlFor={`${id}-filler`}>
-                {isCount(state.kind) ? "That are (a class, optional)" : "That is a (class)"}
+                {t(isCount(state.kind) ? "ruleForm.optionalClass" : "ruleForm.fillerClass")}
               </label>
               <select id={`${id}-filler`} value={state.filler ?? ""} onChange={(e) => set({ filler: e.target.value || null })}>
-                <option value="">{isCount(state.kind) ? "any thing" : "Choose…"}</option>
+                <option value="">{t(isCount(state.kind) ? "ruleForm.anyThing" : "ruleForm.choose")}</option>
                 <Options list={classes} />
               </select>
               {choices && <Capped shown={classes.length} total={choices.classes.total} what="classes" />}
@@ -231,10 +231,10 @@ export default function RuleBuilder({
           {isCount(state.kind) && pkind === "attribute" && (
             <>
               <label className="edit-field-label" htmlFor={`${id}-filler`}>
-                Type of value (optional)
+                {t("ruleForm.valueType")}
               </label>
               <select id={`${id}-filler`} value={state.filler ?? ""} onChange={(e) => set({ filler: e.target.value || null })}>
-                <option value="">any value</option>
+                <option value="">{t("ruleForm.anyValue")}</option>
                 <Options list={VALUE_TYPES} />
               </select>
             </>
@@ -243,10 +243,10 @@ export default function RuleBuilder({
           {state.kind === "value" && pkind !== "attribute" && (
             <>
               <label className="edit-field-label" htmlFor={`${id}-filler`}>
-                The value (a thing)
+                {t("ruleForm.thingValue")}
               </label>
               <select id={`${id}-filler`} value={state.filler ?? ""} onChange={(e) => set({ filler: e.target.value || null })}>
-                <option value="">Choose…</option>
+                <option value="">{t("ruleForm.choose")}</option>
                 <Options list={things} />
               </select>
               {choices && <Capped shown={things.length} total={choices.things.total} what="things" />}
@@ -256,7 +256,7 @@ export default function RuleBuilder({
           {state.kind === "value" && pkind === "attribute" && (
             <>
               <label className="edit-field-label" htmlFor={`${id}-value`}>
-                The value
+                {t("ruleForm.value")}
               </label>
               <input id={`${id}-value`} type="text" value={state.value} onChange={(e) => set({ value: e.target.value })} />
             </>
@@ -265,10 +265,10 @@ export default function RuleBuilder({
       ) : (
         <>
           <label className="edit-field-label" htmlFor={`${id}-other`}>
-            {state.type === "disjoint" ? "Never a (class)" : "Means the same as (class)"}
+            {t(state.type === "disjoint" ? "ruleForm.never" : "ruleForm.equivalent")}
           </label>
           <select id={`${id}-other`} value={state.other ?? ""} onChange={(e) => set({ other: e.target.value || null })}>
-            <option value="">Choose…</option>
+            <option value="">{t("ruleForm.choose")}</option>
             <Options list={classes.filter((c) => c.iri !== cls)} />
           </select>
           {choices && <Capped shown={classes.length} total={choices.classes.total} what="classes" />}
@@ -276,7 +276,7 @@ export default function RuleBuilder({
       )}
 
       <p className="rule-preview" aria-hidden="true">
-        Reads: {sentence}.
+        {t("ruleForm.reads", { sentence })}
       </p>
       {problem && (
         <p id={`${id}-problem`} className="detail-note">
@@ -291,10 +291,10 @@ export default function RuleBuilder({
           aria-describedby={problem ? `${id}-problem` : undefined}
           onClick={submit}
         >
-          {busy ? "Saving change…" : replacing ? "Save rule" : "Add"}
+          {t(busy ? "ruleForm.saving" : replacing ? "ruleForm.save" : "ruleForm.add")}
         </button>
         <button type="button" className="ghost" onClick={onCancel}>
-          Cancel
+          {t("ruleForm.cancel")}
         </button>
       </div>
       {error && <p className="edit-error">{error}</p>}

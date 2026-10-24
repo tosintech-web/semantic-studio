@@ -32,6 +32,8 @@ EXPECTED OUTPUT
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleRestriction } from "../types";
 import { useRunner } from "./EditParts";
@@ -343,4 +345,43 @@ it("restores keyboard focus when the closing builder DOM commit completes", asyn
   // The replacement button must be focused once React has committed it: a
   // zero-delay timer can run before that button exists under concurrent work.
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Add a rule" }));
+});
+
+
+it("switches rule editing controls without changing the selected identifiers or count draft", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><Harness initial={rulesOf([])} /></I18nProvider>); });
+  fireEvent.click(screen.getByRole("button", { name: "ルールを追加" }));
+  const group = screen.getByRole("group", { name: "すべてのOrderは…" });
+  fireEvent.change(within(group).getByRole("combobox", { name: "関係または属性" }), { target: { value: EX + "hasLine" } });
+  fireEvent.change(within(group).getByRole("combobox", { name: "成立する条件" }), { target: { value: "atLeast" } });
+  const count = within(group).getByRole("spinbutton", { name: "件数（0〜1,000）" });
+  fireEvent.change(count, { target: { value: "3" } });
+  expect(group.getAttribute("aria-label")).toBe("すべてのOrderは「has line」の値を3件以上持ちます");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("group", { name: "Every Order has at least 3 lines" })).toBe(group);
+  expect(within(group).getByRole("spinbutton", { name: "How many (0 to 1,000)" })).toBe(count);
+  expect((count as HTMLInputElement).value).toBe("3");
+  expect(runCommand).not.toHaveBeenCalled();
+  await act(async () => fireEvent.click(within(group).getByRole("button", { name: "Add" })));
+  expect(runCommand.mock.calls[0].slice(1)).toEqual(["model", "AddRestriction", { class: EX + "Order", form: "every", property: EX + "hasLine", kind: "atLeast", filler: null, n: 3 }]);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords existing rules and capped choices while preserving the underlying rules", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const rules = rulesOf([some(), disjoint], { choices: { ...CHOICES, properties: { ...CHOICES.properties, total: 500 } } });
+  const original = JSON.stringify(rules);
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><Harness initial={rules} /></I18nProvider>); });
+  expect(screen.getByRole("region", { name: "すべてのOrderに成立するルール" })).toBeTruthy();
+  expect(screen.getByText("すべてのOrderは「has line」でOrder lineに少なくとも1件結び付きます")).toBeTruthy();
+  expect(screen.getByText("OrderはPersonとは重なりません")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "ルールを追加" }));
+  expect(screen.getByText("関係と属性500件のうち先頭1件を表示しています。他の項目のルールはTurtleで記述してください。")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("No Order is a Person")).toBeTruthy();
+  expect(screen.getByText("Showing the first 1 of 500 relationships and attributes; write a rule on another in Turtle.")).toBeTruthy();
+  expect(JSON.stringify(rules)).toBe(original);
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

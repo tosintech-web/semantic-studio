@@ -44,6 +44,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   EMPTY_BUILDER,
@@ -75,6 +76,7 @@ interface Props {
 type Open = null | { initial: BuilderState | null; replacing: RuleKey | null; from: string; token: number };
 
 export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props) {
+  const { t, locale } = useI18n();
   const { busy, errors, run, clear } = runner;
   const shapes = useRunner("shapes");
   const [open, setOpenState] = useState<Open>(null);
@@ -164,9 +166,9 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
 
   return (
     <section className="rules-block" aria-labelledby={`rules-${cssId(iri)}`}>
-      <h5 id={`rules-${cssId(iri)}`}>What is true of every {name}</h5>
+      <h5 id={`rules-${cssId(iri)}`}>{t("rules.heading", { name })}</h5>
       {general.length > 0 && (
-        <ul className="form-warnings" aria-label="Warnings">
+        <ul className="form-warnings" aria-label={t("rules.warnings")}>
           {general.map((w) => (
             <li key={w.text} className="form-warning">
               {w.text}
@@ -175,25 +177,25 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
         </ul>
       )}
       {items.length === 0 ? (
-        <p className="detail-note">No rules yet.</p>
+        <p className="detail-note">{t("rules.empty")}</p>
       ) : (
         <ul className="edit-list rules-list" ref={listRef}>
           {items.map((item, index) => {
             const key = itemKey(item);
-            const sentence = itemSentence(name, item);
+            const sentence = itemSentence(name, item, locale);
             const mine = warningsFor(item);
             return (
               <li key={key} className="rule-item" data-rule={key} tabIndex={-1}>
                 {item.type === "turtle" ? (
                   <>
-                    <p className="detail-note">Written in Turtle, outside the sentences this form writes:</p>
+                    <p className="detail-note">{t("rules.turtle")}</p>
                     <pre className="rule-turtle">{item.turtle}</pre>
                     <button
                       type="button"
                       className="ghost edit-btn"
                       onClick={() => projectStore.showInEditor([`<${iri}>`, ...prefixedFind(iri)])}
                     >
-                      Edit in Turtle
+                      {t("rules.editTurtle")}
                     </button>
                   </>
                 ) : (
@@ -213,27 +215,27 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
                           <button
                             type="button"
                             className="ghost edit-btn"
-                            aria-label={`Edit: ${sentence}`}
+                            aria-label={t("rules.editLabel", { sentence: sentence ?? "" })}
                             onClick={() => setOpen({ initial: stateOf(item), replacing: item.key, from: key })}
                           >
-                            Edit
+                            {t("rules.edit")}
                           </button>
                         )}
                         <button
                           type="button"
                           className="ghost edit-btn"
-                          aria-label={`Remove: ${sentence}`}
+                          aria-label={t("rules.removeLabel", { sentence: sentence ?? "" })}
                           aria-disabled={busy}
                           onClick={() => void remove(item, index)}
                         >
-                          Remove
+                          {t("rules.remove")}
                         </button>
                       </span>
                     ) : (
-                      !item.editable && <span className="detail-note"> (read-only)</span>
+                      !item.editable && <span className="detail-note">{t("rules.readonly")}</span>
                     )}
                     {mine.length > 0 && (
-                      <ul className="form-warnings" aria-label="Warnings">
+                      <ul className="form-warnings" aria-label={t("rules.warnings")}>
                         {mine.map((w) => (
                           <li key={w.text} className="form-warning">
                             {w.text}
@@ -243,16 +245,16 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
                     )}
                     {item.type === "restriction" && (
                       <div className="rule-note">
-                        <p className="detail-note">{openWorldNote(name, partsOf(item))}</p>
+                        <p className="detail-note">{openWorldNote(name, partsOf(item), locale)}</p>
                         {item.editable && canEdit && (
                           <button
                             type="button"
                             className="link-btn"
                             aria-disabled={shapes.busy}
-                            aria-label={`Check it in data too: ${sentence}`}
+                            aria-label={t("rules.checkLabel", { sentence: sentence ?? "" })}
                             onClick={() => !shapes.busy && void checkInData(item)}
                           >
-                            Check it in data too
+                            {t("rules.check")}
                           </button>
                         )}
                         {shapes.errors[`check:${key}`] && (
@@ -305,7 +307,7 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
       ) : (
         canEdit && (
           <button ref={addRef} type="button" className="ghost" onClick={() => setOpen({ initial: null, replacing: null, from: "add" })}>
-            Add a rule
+            {t("rules.add")}
           </button>
         )
       )}
