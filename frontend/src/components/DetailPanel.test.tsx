@@ -41,6 +41,7 @@ EXPECTED OUTPUT
 
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DictionaryViewContext } from "../dictionary/DictionaryViewContext";
 import DetailPanel from "./DetailPanel";
 import type { Explain, NodeDetails } from "../types";
 
@@ -291,7 +292,7 @@ describe("DetailPanel imports (external-access Stage 2)", () => {
 
   it("asks for the merged view only when told to", async () => {
     await renderPanel(detailsWith(1));
-    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, false, undefined, undefined);
+    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, false, expect.any(AbortSignal), undefined);
     cleanup();
     getNodeDetails.mockResolvedValue(detailsWith(1));
     await act(async () => {
@@ -299,7 +300,7 @@ describe("DetailPanel imports (external-access Stage 2)", () => {
         <DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} imports />,
       );
     });
-    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, true, undefined, undefined);
+    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, true, expect.any(AbortSignal), undefined);
   });
 });
 
@@ -811,4 +812,22 @@ describe("DetailPanel: In plain words (explain-panel 5.1, 5.2, AC-1, AC-2, AC-5)
     expect(screen.getByRole("heading", { level: 2, name: "Crewed mission" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "In plain words" })).toBeNull();
   });
+});
+
+it("refetches on same-flag imports re-resolution and ignores the older detail answer", async () => {
+  let old!: (details: NodeDetails) => void;
+  getNodeDetails.mockImplementationOnce(() => new Promise<NodeDetails>(resolve => { old = resolve; }));
+  getNodeDetails.mockResolvedValue(detailsWith(0));
+  const { rerender } = render(<DictionaryViewContext.Provider value={{ revision: 0, viewGeneration: "1:0" }}>
+    <DetailPanel ontologyId="o1" iri={SUBJECT} imports onNavigate={vi.fn()} onClose={vi.fn()} />
+  </DictionaryViewContext.Provider>);
+  await act(async () => {});
+  rerender(<DictionaryViewContext.Provider value={{ revision: 0, viewGeneration: "2:0" }}>
+    <DetailPanel ontologyId="o1" iri={SUBJECT} imports onNavigate={vi.fn()} onClose={vi.fn()} />
+  </DictionaryViewContext.Provider>);
+  await act(async () => {});
+  expect(getNodeDetails).toHaveBeenCalledTimes(2);
+  expect((getNodeDetails.mock.calls[0][3] as AbortSignal).aborted).toBe(true);
+  await act(async () => { old({ ...detailsWith(0), label: "Old label" }); });
+  expect(screen.queryByText("Old label")).toBeNull();
 });

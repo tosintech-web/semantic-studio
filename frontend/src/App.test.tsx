@@ -1285,7 +1285,7 @@ describe("App explore column", () => {
     });
     expect(document.querySelector(".detail-panel")).toBeTruthy();
     expect(startPanel()).toBeNull();
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, undefined, "en");
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, expect.any(AbortSignal), "en");
 
     // By title rather than by accessible name: that control's name is the glyph
     // it contains, "✕", because name-from-contents wins over a title attribute.
@@ -1427,7 +1427,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, undefined, "en");
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, expect.any(AbortSignal), "en");
   });
 
   it("clicking a drawn result makes no request", async () => {
@@ -1490,7 +1490,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Issuer", false, undefined, "en");
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Issuer", false, expect.any(AbortSignal), "en");
     expect(document.querySelector(".detail-panel")).toBeTruthy();
   });
 
@@ -2448,7 +2448,7 @@ describe("App Hierarchy mode", () => {
     // The panel appears beside the tree (still in Hierarchy mode), naming the
     // entity and listing its statement.
     await waitFor(() => expect(document.querySelector(".detail-panel")).toBeTruthy());
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Instrument", false, undefined, "en");
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Instrument", false, expect.any(AbortSignal), "en");
     expect(screen.getByRole("heading", { name: /statements/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Contract/ })).toBeTruthy();
     // The tree is still there — the panel is beside it, not instead of it.
@@ -2491,7 +2491,7 @@ describe("App Hierarchy mode", () => {
 
     // It becomes the selection: the panel re-fetches Contract, and — being off
     // the budgeted graph — it is drawn through the shared outside-graph route.
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Contract", false, undefined, "en"));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Contract", false, expect.any(AbortSignal), "en"));
     expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Contract", undefined, false, "en");
   });
 
@@ -2546,7 +2546,7 @@ describe("App Hierarchy mode", () => {
       .find((el) => el.textContent?.includes("hasParty"))!;
     await act(async () => fireEvent.click(row));
 
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/hasParty", false, undefined, "en"));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/hasParty", false, expect.any(AbortSignal), "en"));
     // The property's domain and range are shown as connections, the same panel a
     // class uses.
     expect(screen.getByRole("button", { name: /Contract/ })).toBeTruthy();
@@ -3102,7 +3102,7 @@ describe("App and the modeling canvas (visual-modeling Stage 2)", () => {
     await act(async () => onSelect("http://x#Invoice"));
     expect(canvasProps.last!.selected).toBe("http://x#Invoice");
     // The form opens on it.
-    expect(getNodeDetails).toHaveBeenCalledWith(OID, "http://x#Invoice", false, undefined, "en");
+    expect(getNodeDetails).toHaveBeenCalledWith(OID, "http://x#Invoice", false, expect.any(AbortSignal), "en");
   });
 });
 
@@ -3441,7 +3441,7 @@ describe("App Edit page (edit-page-rework)", () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
     });
     expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", definition: "A debt." });
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Bond", false, undefined, "en"));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Bond", false, expect.any(AbortSignal), "en"));
     // Nothing dropped to the page meanwhile.
     expect(document.activeElement).not.toBe(document.body);
   });
@@ -3619,7 +3619,7 @@ describe("App Edit page (edit-page-rework)", () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Instrument is a kind of Asset" }));
     });
     expect(within(panel).getByRole("tab", { name: "Details" }).getAttribute("aria-selected")).toBe("true");
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Instrument", false, undefined, "en"));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Instrument", false, expect.any(AbortSignal), "en"));
   });
 
   it("Turtle in the project bar opens the document in View's editor", async () => {

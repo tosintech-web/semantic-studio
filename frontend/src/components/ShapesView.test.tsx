@@ -511,7 +511,7 @@ describe("ShapesView: Stage A follow-ups fixed in Stage B (5.9)", () => {
     const field = screen.getByRole("combobox", { name: "Each value must be of the class" });
     await act(async () => {
       fireEvent.change(field, { target: { value: "Per" } });
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 350));
     });
     fireEvent.keyDown(field, { key: "ArrowDown" });
     fireEvent.keyDown(field, { key: "Enter" });

@@ -155,6 +155,7 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "./i18n/I18nProvider";
+import { DictionaryViewContext } from "./dictionary/DictionaryViewContext";
 import { DictionaryLanguageContext, useDictionaryLanguage } from "./dictionary/useDictionaryLanguage";
 import DictionaryLanguageSelect from "./components/DictionaryLanguageSelect";
 import UiLanguageSelect from "./components/UiLanguageSelect";
@@ -608,6 +609,7 @@ export default function App() {
   // blocks from the languages array, and a new array per render would
   // redo that on every keystroke anywhere in App.
   const openDocName = projectDocuments.find((d) => d.ontologyId === activeId)?.doc ?? null;
+  const dictionaryView = useMemo(() => ({ revision: editingProjectDoc ? revision : 0, viewGeneration: `${importsVersion}:${editingProjectDoc ? dataGeneration : 0}` }), [revision, importsVersion, editingProjectDoc, dataGeneration]);
   const viewRevision = openDocName === "model" ? revision + dataGeneration : revision;
   // Where the model's data came from, for the Explore and Query source lines.
   const dataSources = useMemo(
@@ -1840,6 +1842,7 @@ export default function App() {
   // depends on the mode), a status bar, and the Load dialog when open.
   return (
     <DictionaryLanguageContext.Provider value={displayLanguage}>
+    <DictionaryViewContext.Provider value={dictionaryView}>
     <div className="app">
       <header className="app-header">
         <div className="nav-row">
@@ -2617,6 +2620,7 @@ export default function App() {
         />
       )}
     </div>
+    </DictionaryViewContext.Provider>
     </DictionaryLanguageContext.Provider>
   );
 }

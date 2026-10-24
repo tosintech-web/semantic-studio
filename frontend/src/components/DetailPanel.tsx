@@ -78,6 +78,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryView } from "../dictionary/DictionaryViewContext";
 import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useRef, useState } from "react";
 import { getNodeDetails } from "../api";
@@ -192,6 +193,7 @@ export default function DetailPanel({
   const headingRef = useRef<HTMLHeadingElement>(null);
   // The entity the details on screen describe. A new revision of the same
   // entity keeps them until the refetch lands (see the header).
+  const { viewGeneration } = useDictionaryView();
   const shownKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -204,7 +206,8 @@ export default function DetailPanel({
     if (!ontologyId || !iri) return;
     setLoading(true);
     let cancelled = false;
-    getNodeDetails(ontologyId, iri, imports, undefined, dictionaryLanguage)
+    const controller = new AbortController();
+    getNodeDetails(ontologyId, iri, imports, controller.signal, dictionaryLanguage)
       .then((d) => !cancelled && setDetails(d))
       .catch((e) => {
         if (cancelled) return;
@@ -217,8 +220,9 @@ export default function DetailPanel({
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [ontologyId, iri, imports, revision, language, dictionaryLanguage]);
+  }, [ontologyId, iri, imports, revision, language, dictionaryLanguage, viewGeneration]);
 
   // Take focus when this selection asked for it, rather than when the details
   // arrive, because the wait is a request: keystrokes made in between would go

@@ -15,6 +15,27 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "common.cancel": "キャンセル",
+  "search.prompt": "辞書の項目を検索…",
+  "search.queryPrompt": "ステップに追加する項目を検索…",
+  "search.results": "検索結果",
+  "search.loading": "検索中…",
+  "search.one": "1件の候補",
+  "search.none": "一致する項目はありません",
+  "search.count": "{count}件の候補",
+  "search.more": "{count}件を表示しています。ほかにも一致する項目があります",
+  "search.narrow": "{count}件を超えています。検索語を追加すると絞り込めます。",
+  "search.showAll": "項目一覧で全件を見る",
+  "search.undrawn": "グラフ外",
+  "search.undrawnTitle": "この項目はグラフの描画範囲外にあります",
+  "search.from": "参照元：{name}",
+  "search.importNone": "参照先に一致する概念はありません。ほかの辞書の概念へ対応付けるには、参照を解決してください。",
+  "match.name": "名称：{value}",
+  "match.alias": "別名：{value}",
+  "match.reading": "読み：{value}",
+  "match.search": "検索語：{value}",
+  "match.identifier": "識別子：{value}",
+
   "nav.home": "ホーム",
   "nav.view": "ソース",
   "nav.explore": "探索",

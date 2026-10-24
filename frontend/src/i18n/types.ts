@@ -15,6 +15,27 @@ EXPECTED OUTPUT
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs {
+  "common.cancel": undefined;
+  "search.prompt": undefined;
+  "search.queryPrompt": undefined;
+  "search.results": undefined;
+  "search.loading": undefined;
+  "search.one": undefined;
+  "search.none": undefined;
+  "search.count": { count: number };
+  "search.more": { count: number };
+  "search.narrow": { count: number };
+  "search.showAll": undefined;
+  "search.undrawn": undefined;
+  "search.undrawnTitle": undefined;
+  "search.from": { name: string };
+  "search.importNone": undefined;
+  "match.name": { value: string };
+  "match.alias": { value: string };
+  "match.reading": { value: string };
+  "match.search": { value: string };
+  "match.identifier": { value: string };
+
   "nav.home": undefined;
   "nav.view": undefined;
   "nav.explore": undefined;
