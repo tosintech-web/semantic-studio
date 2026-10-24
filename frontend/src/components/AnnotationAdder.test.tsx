@@ -27,6 +27,8 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../state/projectStore";
 import AnnotationAdder from "./AnnotationAdder";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { useRunner } from "./EditParts";
 
 const { openProject, runCommand, getAnnotationProperties } = vi.hoisted(() => ({
@@ -228,5 +230,25 @@ describe("AnnotationAdder, found in review", () => {
     fireEvent.change(property(), { target: { value: LIST[1].iri } });
     expect((screen.getByRole("textbox", { name: "Value" }) as HTMLInputElement).value).toBe("");
     expect(document.querySelector(".edit-error")).toBeNull();
+  });
+});
+
+
+it("keeps annotation content and RDF language while switching the UI language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><Adder /></I18nProvider>));
+  const select = screen.getByRole("combobox", { name: "プロパティ" });
+  fireEvent.change(select, { target: { value: LIST[0].iri } });
+  const value = screen.getByRole("textbox", { name: "値" });
+  fireEvent.change(value, { target: { value: "<b>辞書の説明</b>" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "言語" }), { target: { value: "fr" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Value" })).toBe(value);
+  expect((value as HTMLTextAreaElement).value).toBe("<b>辞書の説明</b>");
+  expect((screen.getByRole("combobox", { name: "Language" }) as HTMLSelectElement).value).toBe("fr");
+  expect(getAnnotationProperties).toHaveBeenCalledTimes(1);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "AddAnnotation", {
+    iri: EX + "Invoice", property: LIST[0].iri, value: { kind: "text", value: "<b>辞書の説明</b>", lang: "fr" },
   });
 });

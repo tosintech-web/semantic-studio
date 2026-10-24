@@ -55,8 +55,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/NewEntityForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/RelationshipForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
 | `frontend/src/components/AttributeForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（共有クラス・警告の生成元は別途移行） |
-| `frontend/src/components/AnnotationAdder.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/ConceptRelations.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/AnnotationAdder.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（エラー生成元はTask 12） |
+| `frontend/src/components/ConceptRelations.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（エラー生成元はTask 12） |
 | `frontend/src/components/SharedDomain.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
 | `frontend/src/components/ReusePlan.tsx` | 探索・編集・クエリ・説明文 | 11 | 表示文を移行（通知・拒否の生成元はTask 12） |
 | `frontend/src/components/DeleteDialog.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -95,6 +95,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/SideTabs.tsx` | 編集・推論の共通タブ表示 | 11 | 既定表示を移行、カスタム表示の生成元は別途移行 |
 
 | `frontend/src/modeling/entity.ts` | 所属クラスの表示用結合 | 11 | 表示言語引数を追加、呼び出し元への接続は進行中 |
+
+| `frontend/src/modeling/values.ts` | 注釈の型・検証・説明文 | 11 | 共通表示関数を移行、呼び出し元への接続は進行中 |
 
 ## 登録済みメッセージ
 
@@ -650,7 +652,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1228,7 +1230,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `relationshipForm.pointerExample` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `relationshipForm.shapes` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `sharedDomain.remove` | cls, name | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
-| `sharedDomain.removeButton` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `sharedDomain.removeButton` | — | `frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `sharedDomain.warning` | — | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `sharedDomain.another` | name | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
 | `sharedDomain.add` | name | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
@@ -1243,3 +1245,68 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `reusePlan.yes` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
 | `reusePlan.moveUp` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
 | `reusePlan.turtle` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
+
+| `conceptRelations.related` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.noRelated` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.removeRelated` | name, related | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.pickRelated` | name | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.addRelated` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.mappings` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.noMappings` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.removeMapping` | kind, target | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.newMapping` | name | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.kind` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.pickImported` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.link` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.addMapping` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+| `conceptRelations.imported` | — | `frontend/src/components/ConceptRelations.tsx` | 概念の関連・対応付け | 11 | 画面所有文言を移行済み |
+
+| `values.type.text` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.string` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.integer` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.decimal` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.boolean` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.date` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.dateTime` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.anyURI` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.type.link` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.emptyText` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.badLanguage` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.emptyLink` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.linkSpace` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.badLink` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.badUri` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.problem.integer` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.problem.decimal` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.problem.boolean` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.problem.date` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.problem.dateTime` | value | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.textLang` | language | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.link` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.yes` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.no` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.language` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.other` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.languageTag` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.common` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.document` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.import` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.addTitle` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.property` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.choose` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.loading` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.new` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.newName` | language | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.valuesAre` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.valueType` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.value` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.saving` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.create` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.add` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.string` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.integer` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.decimal` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.boolean` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.date` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.dateTime` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `values.description.anyURI` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
