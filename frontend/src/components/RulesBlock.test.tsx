@@ -335,3 +335,12 @@ describe("the Rules block (5.9)", () => {
     expect(document.querySelectorAll(".rules-block [disabled]").length).toBe(0);
   });
 });
+
+it("restores keyboard focus when the closing builder DOM commit completes", async () => {
+  await show(rulesOf([]));
+  fireEvent.click(screen.getByRole("button", { name: "Add a rule" }));
+  fireEvent.keyDown(screen.getByRole("combobox", { name: "Rule" }), { key: "Escape" });
+  // The replacement button must be focused once React has committed it: a
+  // zero-delay timer can run before that button exists under concurrent work.
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Add a rule" }));
+});

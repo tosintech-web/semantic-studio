@@ -44,7 +44,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   EMPTY_BUILDER,
   itemKey,
@@ -101,15 +101,21 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
     });
   }, [draft, iri, rules.choices]);
 
-  const focusAdd = () => window.setTimeout(() => addRef.current?.focus(), 0);
-  const focusItem = (key: string) =>
-    window.setTimeout(() => {
-      const row = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-rule]") ?? []).find(
-        (el) => el.dataset.rule === key,
-      );
-      if (row) row.focus();
-      else addRef.current?.focus();
-    }, 0);
+  const [focusRequest, setFocusRequest] = useState<string | null>(null);
+  const focusAdd = () => setFocusRequest("add");
+  const focusItem = (key: string) => setFocusRequest(key);
+  // A timer can beat a concurrent commit that replaces the builder with its
+  // opener. Resolve the target only after that DOM exists, before the next key.
+  useLayoutEffect(() => {
+    if (focusRequest === null) return;
+    const row = focusRequest === "add" ? undefined : Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>("[data-rule]") ?? [],
+    ).find(el => el.dataset.rule === focusRequest);
+    const target = row ?? addRef.current;
+    if (!target) return;
+    target.focus();
+    setFocusRequest(null);
+  }, [focusRequest, open, items]);
 
   useEffect(() => {
     const wait = pending.current;
