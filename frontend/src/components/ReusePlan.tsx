@@ -11,6 +11,9 @@ SUMMARY
     new class.
 
 BASIC IDEA
+    UI locale changes render-time guidance without refetching the plan or
+    replacing a parent-name draft; stored notices remain producer-owned.
+
     The server alone decides the case: the plan is ShareDomain's dry run,
     asked once as the form opens, and its answer is worded here through
     modeling/sentences.ts. Case A gives the property to the class, case B
@@ -41,11 +44,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState } from "react";
 import { planShare } from "../api";
 import {
-  OR_PARENT,
-  SHARE_IT,
   gainsSentence,
   giveParent,
   givenAnnouncement,
@@ -77,6 +79,7 @@ interface Props {
 }
 
 export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDone, onCancel, onAlready }: Props) {
+  const { locale, t } = useI18n();
   const { busy, errors, run } = runner;
   const id = useId();
   const [plan, setPlan] = useState<SharePlan | null>(null);
@@ -133,14 +136,14 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
 
   const cancel = (
     <button type="button" className="ghost" onClick={onCancel}>
-      Cancel
+      {t("common.cancel")}
     </button>
   );
   const error = errors.reuse ? <p className="edit-error">{errors.reuse}</p> : null;
 
   if (failed) {
     return (
-      <div className="reuse-plan" role="group" aria-label={`Use ${name}`}>
+      <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })}>
         <p className="edit-error">{failed}</p>
         <div className="edit-actions">{cancel}</div>
       </div>
@@ -149,14 +152,14 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   if (!plan) {
     return (
       <p className="detail-note" role="status">
-        Checking {name}…
+        {t("reusePlan.checking", { name })}
       </p>
     );
   }
   if (plan.case === null || plan.case === "B") {
     return (
-      <div className="reuse-plan" role="group" aria-label={`Use ${name}`} ref={box}>
-        <p>{plan.case === "B" && cls ? planAlready(name, cls.label, plan.via?.label ?? cls.label) : plan.refused}</p>
+      <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })} ref={box}>
+        <p>{plan.case === "B" && cls ? planAlready(name, cls.label, plan.via?.label ?? cls.label, locale) : plan.refused}</p>
         <div className="edit-actions">{cancel}</div>
       </div>
     );
@@ -169,7 +172,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
         <EntityPicker
           ontologyId={ontologyId}
           kind="class"
-          label="An existing class as the parent"
+          label={t("reusePlan.pickParent")}
           exclude={plan.domain.classes.map((c) => c.iri).concat(cls ? [cls.iri] : [])}
           busy={busy}
           onCancel={() => setPicking(false)}
@@ -183,7 +186,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
           }}
         >
           <label htmlFor={`${id}-parent`} className="edit-field-label">
-            {parentQuestion(everyone)}
+            {parentQuestion(everyone, locale)}
           </label>
           <input
             id={`${id}-parent`}
@@ -194,10 +197,10 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
           />
           <div className="edit-actions">
             <button type="submit" className="primary" aria-disabled={busy || !parentName.trim()}>
-              {giveParent(everyone)}
+              {giveParent(everyone, locale)}
             </button>
             <button type="button" className="link-btn" onClick={() => setPicking(true)}>
-              Choose an existing class instead
+              {t("reusePlan.existingParent")}
             </button>
           </div>
         </form>
@@ -206,26 +209,26 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   );
 
   return (
-    <div className="reuse-plan" role="group" aria-label={`Use ${name}`} ref={box}>
+    <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })} ref={box}>
       {plan.case === "A" && cls && (
         <>
-          <p>{planNoClass(name, cls.label)}</p>
+          <p>{planNoClass(name, cls.label, locale)}</p>
           <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, givenAnnouncement(name, cls.label))}>
-            Yes
+            {t("reusePlan.yes")}
           </button>
         </>
       )}
       {plan.case === "C" && cls && (
         <>
-          <p>{planMoveUp(name, cls.label, domain)}</p>
+          <p>{planMoveUp(name, cls.label, domain, locale)}</p>
           <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, givenAnnouncement(name, cls.label))}>
-            Move it up
+            {t("reusePlan.moveUp")}
           </button>
         </>
       )}
       {choices && choices.subclass && cls && (
         <div className="reuse-choice">
-          <p>{planSubclass(name, cls.label, domain[0])}</p>
+          <p>{planSubclass(name, cls.label, domain[0], locale)}</p>
           <button
             type="button"
             aria-disabled={busy}
@@ -235,24 +238,24 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
               if (await run("reuse", "AddSubClassOf", { child: cls.iri, parent: plan.domain.classes[0].iri }, () => said)) onDone();
             }}
           >
-            {makeKindOf(cls.label, domain[0])}
+            {makeKindOf(cls.label, domain[0], locale)}
           </button>
         </div>
       )}
       {choices && choices.union && (
         <div className="reuse-choice">
-          <p>{planUnion(word, name, united)}</p>
+          <p>{planUnion(word, name, united, locale)}</p>
           {plan.turtle && (
-            <pre className="reuse-turtle" aria-label="The Turtle it writes">
+            <pre className="reuse-turtle" aria-label={t("reusePlan.turtle")}>
               <code>{plan.turtle}</code>
             </pre>
           )}
           <button type="button" aria-disabled={busy} onClick={() => void share({ how: "union" }, sharedAnnouncement(name, united))}>
-            {SHARE_IT}
+            {t("modelSentences.shareIt")}
           </button>
           {choices.parent && !parentOpen && (
             <button type="button" className="link-btn" onClick={() => setParentOpen(true)}>
-              {OR_PARENT}
+              {t("modelSentences.orParent")}
             </button>
           )}
           {choices.parent && parentOpen && parentForm}
@@ -260,18 +263,18 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
       )}
       {choices && !choices.union && choices.parent && (
         <div className="reuse-choice">
-          <p>{planRdfsParent(name, everyone)}</p>
+          <p>{planRdfsParent(name, everyone, locale)}</p>
           {parentForm}
         </div>
       )}
       {choices && !choices.parent && plan.imported && plan.imported.length > 0 && (
-        <p className="detail-note">{importedParentNote(plan.imported[0].label, plan.imported[0].from)}</p>
+        <p className="detail-note">{importedParentNote(plan.imported[0].label, plan.imported[0].from, locale)}</p>
       )}
       {choices?.up.map((up) => (
         <div className="reuse-choice" key={up.iri}>
-          <p className="detail-note">{gainsSentence(name, up.label, up.gains.map((g) => g.label), up.gainsTotal)}</p>
+          <p className="detail-note">{gainsSentence(name, up.label, up.gains.map((g) => g.label), up.gainsTotal, locale)}</p>
           <button type="button" aria-disabled={busy} onClick={() => void share({ how: "up", parent: up.iri }, givenAnnouncement(name, up.label))}>
-            {moveUpTo(name, up.label)}
+            {moveUpTo(name, up.label, locale)}
           </button>
         </div>
       ))}

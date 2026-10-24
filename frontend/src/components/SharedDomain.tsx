@@ -12,6 +12,9 @@ SUMMARY
     (Section 7); and the reuse plan for a class added here or for the Fix.
 
 BASIC IDEA
+    UI locale changes the domain explanation and controls, preserving each
+    original class reference and the server-selected sharing semantics.
+
     The domain is the server's one reading (`domainReading`), never the
     statements, which reach a union only through a blank node. Remove is
     UnshareDomain: the server never leaves a union of one. *Add a class*
@@ -32,9 +35,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useRef, useState } from "react";
 import type { EntityModel } from "../modeling/entity";
-import { REASONER_NOTE, SHARE_IT, domainListNote, removedAnnouncement, sharedAnnouncement } from "../modeling/sentences";
+import { domainListNote, removedAnnouncement, sharedAnnouncement } from "../modeling/sentences";
 import { useProjectSelector } from "../state/projectStore";
 import type { ModelWarning } from "../types";
 import type { Runner } from "./EditParts";
@@ -53,6 +57,7 @@ interface Props {
 }
 
 export default function SharedDomain({ ontologyId, iri, name, model, runner, onSelect, warnings = [], members }: Props) {
+  const { locale, t } = useI18n();
   const { busy, errors, run } = runner;
   const pid = useProjectSelector((s) => s.project?.id ?? null);
   const [picking, setPicking] = useState(false);
@@ -68,7 +73,7 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
     <>
       {members && reading && (reading.form === "union" || reading.form === "separate") && (
         <>
-          <p className="detail-note">{domainListNote(reading.form)}</p>
+          <p className="detail-note">{domainListNote(reading.form, locale)}</p>
           <ul className="edit-list">
             {classes.map((c) => (
               <li key={c.iri}>
@@ -78,7 +83,7 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
                 <button
                   type="button"
                   className="ghost edit-btn"
-                  aria-label={`Remove ${c.label} from ${name}`}
+                  aria-label={t("sharedDomain.remove", { cls: c.label, name })}
                   aria-disabled={busy}
                   onClick={async () => {
                     if (busy) return;
@@ -87,16 +92,16 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
                     }
                   }}
                 >
-                  Remove
+                  {t("sharedDomain.removeButton")}
                 </button>
               </li>
             ))}
           </ul>
-          {reading.form === "union" && <p className="detail-note">{REASONER_NOTE}</p>}
+          {reading.form === "union" && <p className="detail-note">{t("modelSentences.reasonerNote")}</p>}
         </>
       )}
       {separate && (
-        <div className="form-warnings" role="group" aria-label="Warning">
+        <div className="form-warnings" role="group" aria-label={t("sharedDomain.warning")}>
           <p className="form-warning">{separate.text}</p>
           {separate.fix && (
             <button
@@ -109,7 +114,7 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
                 else void run("fix", separate.fix.command, separate.fix.args, () => sharedAnnouncement(name, classes.map((c) => c.label)));
               }}
             >
-              {SHARE_IT}
+              {t("modelSentences.shareIt")}
             </button>
           )}
           {errors.fix && <p className="edit-error">{errors.fix}</p>}
@@ -138,7 +143,7 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
         <EntityPicker
           ontologyId={ontologyId}
           kind="class"
-          label={`Another class for ${name}`}
+          label={t("sharedDomain.another", { name })}
           exclude={classes.map((c) => c.iri)}
           busy={busy}
           onCancel={() => {
@@ -152,8 +157,8 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
         />
       ) : (
         classes.length > 0 && (
-          <button ref={addRef} type="button" className="ghost" aria-label={`Add a class to ${name}`} onClick={() => setPicking(true)}>
-            Add a class
+          <button ref={addRef} type="button" className="ghost" aria-label={t("sharedDomain.add", { name })} onClick={() => setPicking(true)}>
+            {t("sharedDomain.addButton")}
           </button>
         )
       )}

@@ -23,13 +23,15 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { entityModel } from "../modeling/entity";
 import { projectStore } from "../state/projectStore";
 import type { DomainReading, ModelWarning, NodeDetails } from "../types";
 import { useRunner } from "./EditParts";
-import RelationshipForm from "./RelationshipForm";
+import RelationshipForm, { PropertyHead } from "./RelationshipForm";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, planShare } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -186,4 +188,46 @@ describe("found in code review", () => {
     await act(async () => swap.click());
     expect(runCommand).not.toHaveBeenCalled();
   });
+});
+
+
+it("keeps an inverse-name draft and dictionary language while switching UI language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const details = propertyDetails("objectProperty", { form: "one", classes: [ref("Employee")] });
+  render(<I18nProvider><UiLanguageSelect /><Harness details={details} warnings={[]} /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "始点と終点" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "逆向きの関係に名前を付ける…" }));
+  const input = screen.getByRole("textbox", { name: "逆向きの関係の名前（en）" });
+  fireEvent.change(input, { target: { value: "<b>雇用する</b>" } });
+  expect(document.querySelector(".relate-sentence")?.textContent).toContain("<b>雇用する</b>");
+  expect(document.querySelector(".relate-sentence b")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name of the other way round (en)" })).toBe(input);
+  expect((input as HTMLInputElement).value).toBe("<b>雇用する</b>");
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Create" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetInverse", { property: HR + "hasName", label: "<b>雇用する</b>" });
+});
+
+it("localizes the property head and preserves the rule pointer's original references", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const details = propertyDetails("objectProperty", { form: "one", classes: [ref("Employee")] });
+  const select = vi.fn();
+  render(<I18nProvider><PropertyHead model={entityModel(details, "en", [])} name={details.label} iri={details.iri} warnings={[]} />
+    <RelationshipForm ontologyId={`${PID}-model`} primaryLanguage="en" iri={details.iri} name={details.label}
+      model={entityModel(details, "en", [])} runner={{ busy: false, errors: {}, run: vi.fn(), clear: vi.fn(), alive: () => true }} onSelect={select} />
+  </I18nProvider>);
+  expect(screen.getByRole("heading", { name: "関係の説明" })).toBeTruthy();
+  expect(document.querySelector(".form-sentence")?.textContent).toBe("Employeeは「hasName」という関連でManagerに結び付きます。");
+  fireEvent.click(screen.getByRole("button", { name: "Employeeにルールを追加" }));
+  expect(select).toHaveBeenCalledWith(HR + "Employee");
+  expect(projectStore.getSnapshot().ruleDraft).toMatchObject({ cls: HR + "Employee", filler: HR + "Manager", property: HR + "hasName" });
+});
+
+it("localizes shared-domain controls and removes the original class", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><Harness details={propertyDetails("objectProperty", UNION)} warnings={[]} /></I18nProvider>);
+  expect(screen.getByText("これらのクラスのいずれか：")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "hasNameにクラスを追加" })).toBeTruthy();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "hasNameからContractorを外す" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Contractor" });
 });

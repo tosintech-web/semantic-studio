@@ -53,12 +53,12 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/EditParts.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/CreateForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/NewEntityForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/RelationshipForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/RelationshipForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
 | `frontend/src/components/AttributeForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（共有クラス・警告の生成元は別途移行） |
 | `frontend/src/components/AnnotationAdder.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/ConceptRelations.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/SharedDomain.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/ReusePlan.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/SharedDomain.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
+| `frontend/src/components/ReusePlan.tsx` | 探索・編集・クエリ・説明文 | 11 | 表示文を移行（通知・拒否の生成元はTask 12） |
 | `frontend/src/components/DeleteDialog.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/LinkPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/ExampleForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -650,7 +650,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1103,8 +1103,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `modelSentences.plan.subclass` | articleDomain, cls, domain, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.makeKind` | cls, domain | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.plan.union` | classes, either, name, whoever | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
-| `modelSentences.shareIt` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
-| `modelSentences.orParent` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.shareIt` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/SharedDomain.tsx`<br>`frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.orParent` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.plan.rdfsParent` | classes, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.parentQuestion` | classes | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.giveParent` | classes | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
@@ -1119,7 +1119,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `modelSentences.removed` | cls, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.domain.union` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.domain.separate` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
-| `modelSentences.reasonerNote` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.reasonerNote` | — | `frontend/src/components/SharedDomain.tsx`<br>`frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.shareEntry` | from, name, to, verb | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 | `modelSentences.memberDelete` | member, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 
@@ -1167,7 +1167,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 
 | `attributeForm.belongs` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.clearClass` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
-| `attributeForm.clear` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.clear` | — | `frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/RelationshipForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.noClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.classLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.changeClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
@@ -1180,3 +1180,66 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `attributeForm.changeTypeLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.howMany` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
 | `attributeForm.oneValue` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+
+| `relationshipForm.sentence` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.warnings` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.fix` | label | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.ends` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.from` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.to` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.clear.start` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.clear.end` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.no.start` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.no.end` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pick.start` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pick.end` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.change.start` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.change.end` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.set.start` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.set.end` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.changeLabel.start` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.changeLabel.end` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.setLabel.start` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.setLabel.end` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.swapTitle` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.noSwap` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.swap` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.inverse` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.none` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.removeInverse` | inverse, name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.nameInverse` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.inverseField` | language | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.create` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.existingInverse` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pickInverse` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.changeInverse` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.newInverse` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.characteristics` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.characteristicsLabel` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.more` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.parent` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.noParent` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.removeParent` | name, parent | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pickParent` | name | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.addParent` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pointers` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pointer` | action, domain, to | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pointerAction` | domain | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.pointerExample` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `relationshipForm.shapes` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `sharedDomain.remove` | cls, name | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `sharedDomain.removeButton` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `sharedDomain.warning` | — | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `sharedDomain.another` | name | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `sharedDomain.add` | name | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+| `sharedDomain.addButton` | — | `frontend/src/components/SharedDomain.tsx` | 関係・共有クラスの編集 | 11 | 画面所有文言を移行済み |
+
+| `relationshipForm.fixButton` | — | `frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 警告の修正ボタン | 11 | 画面所有文言を移行済み |
+
+| `reusePlan.use` | name | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
+| `reusePlan.checking` | name | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
+| `reusePlan.pickParent` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
+| `reusePlan.existingParent` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
+| `reusePlan.yes` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
+| `reusePlan.moveUp` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |
+| `reusePlan.turtle` | — | `frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 共有計画の表示 | 11 | 画面所有文言を移行済み |

@@ -15,6 +15,10 @@ SUMMARY
     the class's sentence builder with this relationship and its end.
 
 BASIC IDEA
+    Whole catalog templates supply UI prose and the rule-pointer action.
+    Dictionary names, IRIs, inverse drafts and primaryLanguage stay original.
+    Stored warning/command announcements are handled at their producers.
+
     Every control is one command, so one labelled undo step, sent through
     EditSection's runner so busy and refusals are shared with the rest of the
     form. Nothing is kept here but what is being chosen or typed: the blocks
@@ -53,11 +57,13 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { translateParts } from "../i18n/parts";
 import { useEffect, useId, useRef, useState } from "react";
 import { domainLabel, sharedDomain, type EntityModel, type Ref } from "../modeling/entity";
 import {
   attributeSentence,
-  CHARACTERISTICS,
+  characteristicChoices,
   characteristicExample,
   formSentence,
   inverseSentence,
@@ -112,13 +118,14 @@ export function PropertyHead({
   iri: string;
   warnings: ModelWarning[];
 }) {
+  const { locale, t } = useI18n();
   useWarningAnnouncer(iri, warnings);
   const attribute = model.kind === "datatypeProperty";
   const sentence = attribute
-    ? attributeSentence(domainLabel(model), name, datatypeOf(model.range))
-    : formSentence(domainLabel(model), name, model.range?.label ?? null);
+    ? attributeSentence(domainLabel(model, locale), name, datatypeOf(model.range), locale)
+    : formSentence(domainLabel(model, locale), name, model.range?.label ?? null, locale);
   return (
-    <Block title="Sentence">
+    <Block title={t("relationshipForm.sentence")}>
       <p className="form-sentence">{sentence}</p>
     </Block>
   );
@@ -134,13 +141,14 @@ export function Warnings({
   block: NonNullable<ModelWarning["block"]>;
   runner: Runner;
 }) {
+  const { t } = useI18n();
   const { busy, errors, run } = runner;
   // One without a block (an older server) goes with the characteristics.
   const mine = warnings.filter((w) => (w.block ?? "characteristics") === block);
   if (mine.length === 0) return null;
   return (
     <>
-      <ul className="form-warnings" aria-label="Warnings">
+      <ul className="form-warnings" aria-label={t("relationshipForm.warnings")}>
         {mine.map((w) => (
           <li key={w.text} className="form-warning">
             <span>{w.text}</span>
@@ -149,10 +157,10 @@ export function Warnings({
                 type="button"
                 className="ghost edit-btn"
                 aria-disabled={busy}
-                aria-label={`Fix: ${w.fix.label}`}
+                aria-label={t("relationshipForm.fix", { label: w.fix.label })}
                 onClick={() => !busy && void run("fix", w.fix!.command, w.fix!.args)}
               >
-                Fix
+                {t("relationshipForm.fixButton")}
               </button>
             )}
           </li>
@@ -187,14 +195,16 @@ export default function RelationshipForm({
   onSelect,
   warnings = [],
 }: Props) {
+  const { locale, t } = useI18n();
+  const characteristics = characteristicChoices(t);
   const { busy, errors, run, clear } = runner;
   const [open, setOpen] = useState<Open>(null);
-  const [more, setMore] = useState(() => CHARACTERISTICS.some((c) => c.more && model.characteristics.has(c.id)));
+  const [more, setMore] = useState(() => characteristics.some((c) => c.more && model.characteristics.has(c.id)));
   const [inverseName, setInverseName] = useState("");
   const id = useId();
   // The button each small form was opened from, to give focus back to.
   const openers = useRef<Record<string, HTMLButtonElement | null>>({});
-  const from = domainLabel(model);
+  const from = domainLabel(model, locale);
   const to = model.range?.label ?? null;
 
   const close = () => {
@@ -231,13 +241,13 @@ export default function RelationshipForm({
       }}
     />
   );
-  const end = (which: "domain" | "range", word: "From" | "To", value: Ref | null) => {
+  const end = (which: "domain" | "range", value: Ref | null) => {
     const command = which === "domain" ? "SetDomain" : "SetRange";
     const clearCommand = which === "domain" ? "ClearDomain" : "ClearRange";
     const role = which === "domain" ? "start" : "end";
     return (
       <div className="relationship-end">
-        <h5>{word}</h5>
+        <h5>{t(which === "domain" ? "relationshipForm.from" : "relationshipForm.to")}</h5>
         {value ? (
           <p className="edit-value">
             <button type="button" className="term-link" title={value.iri} onClick={() => onSelect(value.iri)}>
@@ -246,21 +256,21 @@ export default function RelationshipForm({
             <button
               type="button"
               className="ghost edit-btn"
-              aria-label={`Clear the ${role} of ${name}`}
+              aria-label={t(`relationshipForm.clear.${role}`, { name })}
               aria-disabled={busy}
               onClick={() => !busy && void run("ends", clearCommand, { property: iri })}
             >
-              Clear
+              {t("attributeForm.clear")}
             </button>
           </p>
         ) : (
-          <p className="detail-note">No {role} yet.</p>
+          <p className="detail-note">{t(`relationshipForm.no.${role}`)}</p>
         )}
         {open === which
-          ? pick(which, "class", `${word} (a class)`, value ? [value.iri] : [], (target) =>
+          ? pick(which, "class", t(`relationshipForm.pick.${role}`), value ? [value.iri] : [], (target) =>
               run(which, command, { property: iri, target }),
             )
-          : opener(which, value ? `Change ${word.toLowerCase()}` : `Set ${word.toLowerCase()}`, `${value ? "Change" : "Set"} the ${role} of ${name}`)}
+          : opener(which, t(value ? `relationshipForm.change.${role}` : `relationshipForm.set.${role}`), t(value ? `relationshipForm.changeLabel.${role}` : `relationshipForm.setLabel.${role}`, { name }))}
       </div>
     );
   };
@@ -269,7 +279,7 @@ export default function RelationshipForm({
     if (busy) return;
     void run("characteristic", "SetCharacteristic", { property: iri, characteristic, on });
   };
-  const box = (c: (typeof CHARACTERISTICS)[number]) => {
+  const box = (c: (typeof characteristics)[number]) => {
     const exampleId = `${id}-${c.id}`;
     return (
       <li key={c.id} className="characteristic">
@@ -284,7 +294,7 @@ export default function RelationshipForm({
           {c.name} <span className="owl-term">{c.owl}</span>
         </label>
         <p id={exampleId} className="characteristic-example">
-          {characteristicExample(c.id, name, from, to)}
+          {characteristicExample(c.id, name, from, to, locale)}
         </p>
       </li>
     );
@@ -295,10 +305,10 @@ export default function RelationshipForm({
 
   return (
     <>
-      <Block title="From and to">
+      <Block title={t("relationshipForm.ends")}>
         {sharedDomain(model) ? (
           <div className="relationship-end">
-            <h5>From</h5>
+            <h5>{t("relationshipForm.from")}</h5>
             <SharedDomain
               ontologyId={ontologyId}
               iri={iri}
@@ -312,7 +322,7 @@ export default function RelationshipForm({
           </div>
         ) : (
           <>
-            {end("domain", "From", model.domain)}
+            {end("domain", model.domain)}
             {model.domain && (
               <SharedDomain
                 ontologyId={ontologyId}
@@ -326,40 +336,40 @@ export default function RelationshipForm({
             )}
           </>
         )}
-        {end("range", "To", model.range)}
+        {end("range", model.range)}
         <div className="edit-actions">
           <button
             type="button"
             className="ghost"
             aria-disabled={busy || !swappable}
-            title={swappable ? "Swap the direction" : "Nothing to swap"}
+            title={t(swappable ? "relationshipForm.swapTitle" : "relationshipForm.noSwap")}
             onClick={() => !busy && swappable && void run("ends", "SwapEnds", { property: iri })}
           >
-            <span aria-hidden="true">⇄</span> Swap
+            <span aria-hidden="true">⇄</span> {t("relationshipForm.swap")}
           </button>
         </div>
         {errors.ends && <p className="edit-error">{errors.ends}</p>}
-        <p className="detail-note">{oneStartOneEnd(name, from)}</p>
+        <p className="detail-note">{oneStartOneEnd(name, from, locale)}</p>
       </Block>
 
-      <Block title="The other way round">
+      <Block title={t("relationshipForm.inverse")}>
         {model.inverses.length === 0 ? (
-          <p className="detail-note">None yet.</p>
+          <p className="detail-note">{t("relationshipForm.none")}</p>
         ) : (
           <ul className="edit-list">
             {model.inverses.map((inverse) => (
               <li key={inverse.iri}>
                 <button type="button" className="term-link" title={inverse.iri} onClick={() => onSelect(inverse.iri)}>
-                  {inverseSentence(inverse.label, from, to)}
+                  {inverseSentence(inverse.label, from, to, locale)}
                 </button>
                 <button
                   type="button"
                   className="ghost edit-btn"
-                  aria-label={`Remove ${inverse.label} as the other way round of ${name}`}
+                  aria-label={t("relationshipForm.removeInverse", { inverse: inverse.label, name })}
                   aria-disabled={busy}
                   onClick={() => !busy && void run("inverse", "ClearInverse", { property: iri, inverse: inverse.iri })}
                 >
-                  Remove
+                  {t("sharedDomain.removeButton")}
                 </button>
               </li>
             ))}
@@ -370,7 +380,7 @@ export default function RelationshipForm({
         {open === "inverseName" ? (
           <form
             className="new-entity-form"
-            aria-label={`Name the other way round of ${name}`}
+            aria-label={t("relationshipForm.nameInverse", { name })}
             onSubmit={async (e) => {
               e.preventDefault();
               if (busy || !inverseName.trim()) return;
@@ -385,7 +395,7 @@ export default function RelationshipForm({
             }}
           >
             <label className="edit-field-label" htmlFor={`${id}-inverse`}>
-              Name of the other way round ({primaryLanguage})
+              {t("relationshipForm.inverseField", { language: primaryLanguage })}
             </label>
             <input
               id={`${id}-inverse`}
@@ -397,34 +407,34 @@ export default function RelationshipForm({
               onChange={(e) => setInverseName(e.target.value)}
             />
             <p id={`${id}-inverse-sentence`} className="relate-sentence">
-              {inverseSentence(inverseName, from, to)}
+              {inverseSentence(inverseName, from, to, locale)}
             </p>
             {errors.inverseName && <p className="edit-error">{errors.inverseName}</p>}
             <div className="edit-actions">
               <button type="submit" className="primary" aria-disabled={busy || !inverseName.trim()}>
-                Create
+                {t("relationshipForm.create")}
               </button>
               <button type="button" className="link-btn" onClick={() => setOpen("inversePick")}>
-                or choose an existing relationship
+                {t("relationshipForm.existingInverse")}
               </button>
               <button type="button" className="ghost" onClick={close}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </form>
         ) : open === "inversePick" ? (
-          pick("inversePick", "objectProperty", `The other way round of ${name}`, model.inverses.map((r) => r.iri), (inverse) =>
+          pick("inversePick", "objectProperty", t("relationshipForm.pickInverse", { name }), model.inverses.map((r) => r.iri), (inverse) =>
             run("inversePick", "SetInverse", { property: iri, inverse }),
           )
         ) : (
-          opener("inverseName", model.inverses.length ? "Change the other way round…" : "Name the other way round…")
+          opener("inverseName", t(model.inverses.length ? "relationshipForm.changeInverse" : "relationshipForm.newInverse"))
         )}
       </Block>
 
-      <Block title="What else is true">
+      <Block title={t("relationshipForm.characteristics")}>
         <fieldset className="characteristics">
-          <legend className="visually-hidden">What else is true of {name}</legend>
-          <ul className="edit-list">{CHARACTERISTICS.filter((c) => !c.more).map(box)}</ul>
+          <legend className="visually-hidden">{t("relationshipForm.characteristicsLabel", { name })}</legend>
+          <ul className="edit-list">{characteristics.filter((c) => !c.more).map(box)}</ul>
           <button
             type="button"
             className="link-btn"
@@ -432,10 +442,10 @@ export default function RelationshipForm({
             aria-controls={`${id}-more`}
             onClick={() => setMore((m) => !m)}
           >
-            More
+            {t("relationshipForm.more")}
           </button>
           <ul id={`${id}-more`} className="edit-list" hidden={!more}>
-            {CHARACTERISTICS.filter((c) => c.more).map(box)}
+            {characteristics.filter((c) => c.more).map(box)}
           </ul>
         </fieldset>
         <Warnings warnings={warnings} block="characteristics" runner={runner} />
@@ -446,24 +456,24 @@ export default function RelationshipForm({
         )}
       </Block>
 
-      <Block title="More general relationship">
+      <Block title={t("relationshipForm.parent")}>
         {model.superProperties.length === 0 ? (
-          <p className="detail-note">None: {name} is not a more specific kind of another relationship.</p>
+          <p className="detail-note">{t("relationshipForm.noParent", { name })}</p>
         ) : (
           <ul className="edit-list">
             {model.superProperties.map((parent) => (
               <li key={parent.iri}>
                 <button type="button" className="term-link" title={parent.iri} onClick={() => onSelect(parent.iri)}>
-                  {parentSentence(name, parent.label)}
+                  {parentSentence(name, parent.label, t)}
                 </button>
                 <button
                   type="button"
                   className="ghost edit-btn"
-                  aria-label={`Remove ${parent.label} as more general than ${name}`}
+                  aria-label={t("relationshipForm.removeParent", { parent: parent.label, name })}
                   aria-disabled={busy}
                   onClick={() => !busy && void run("parents", "RemoveSubPropertyOf", { child: iri, parent: parent.iri })}
                 >
-                  Remove
+                  {t("sharedDomain.removeButton")}
                 </button>
               </li>
             ))}
@@ -471,37 +481,34 @@ export default function RelationshipForm({
         )}
         {errors.parents && <p className="edit-error">{errors.parents}</p>}
         {open === "parent"
-          ? pick("parent", "objectProperty", `More general than ${name}`, model.superProperties.map((r) => r.iri), (parent) =>
+          ? pick("parent", "objectProperty", t("relationshipForm.pickParent", { name }), model.superProperties.map((r) => r.iri), (parent) =>
               run("parent", "AddSubPropertyOf", { child: iri, parent }),
             )
-          : opener("parent", "Add a more general relationship")}
+          : opener("parent", t("relationshipForm.addParent"))}
       </Block>
 
-      <Block title="Pointers">
+      <Block title={t("relationshipForm.pointers")}>
         {model.domain ? (
           // axioms 5.9: the pointer is now the way there. It opens the start
           // class's Rules block with this relationship and its end chosen.
           <p className="detail-note">
-            To say "every {model.domain.label} has at least one {to ?? "…"}",{" "}
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => {
-                projectStore.startRule(model.domain!.iri, model.range?.iri ?? "", iri);
-                onSelect(model.domain!.iri);
-              }}
-            >
-              add a rule to {model.domain.label}
-            </button>
-            .
+            {translateParts(locale, "relationshipForm.pointer", {
+              domain: model.domain.label,
+              to: to ?? "…",
+              action: { iri: model.domain.iri, label: t("relationshipForm.pointerAction", { domain: model.domain.label }) },
+            }).map((part, index) => typeof part === "string" ? part : (
+              <button key={index} type="button" className="link-btn" onClick={() => {
+                projectStore.startRule(part.iri, model.range?.iri ?? "", iri);
+                onSelect(part.iri);
+              }}>{part.label}</button>
+            ))}
           </p>
         ) : (
           <p className="detail-note">
-            To say "every Invoice has at least one Invoice Item", add a rule in the class's form, under What is true
-            of every Invoice.
+            {t("relationshipForm.pointerExample")}
           </p>
         )}
-        <p className="detail-note">To require values in data, see Shapes (SHACL).</p>
+        <p className="detail-note">{t("relationshipForm.shapes")}</p>
       </Block>
     </>
   );
