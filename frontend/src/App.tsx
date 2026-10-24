@@ -154,6 +154,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import UiLanguageSelect from "./components/UiLanguageSelect";
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ApiError,
@@ -1832,6 +1833,7 @@ export default function App() {
       <header className="app-header">
         <div className="nav-row">
           <Logo />
+          <UiLanguageSelect />
           <nav className="main-nav" role="tablist" aria-label="Workspace">
             {/* Home is a real fourth view of the workspace, so it is a tab
                 rather than a plain button: it swaps the main region exactly as
