@@ -26,6 +26,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../state/projectStore";
 import LinkPanel from "./LinkPanel";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand } = vi.hoisted(() => ({ openProject: vi.fn(), runCommand: vi.fn() }));
 vi.mock("../api", async (importOriginal) => {
@@ -178,4 +180,24 @@ describe("LinkPanel", () => {
     });
     expect(screen.queryByRole("alert")).toBeNull();
   });
+});
+
+
+it("switches link guidance without changing references or removal arguments", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  runCommand.mockResolvedValue({ revision: 3, label: "Removed", state: STATE });
+  const onSelect = vi.fn();
+  const onClose = vi.fn();
+  const link = { ...SUBCLASS, sourceLabel: "<b>Employee</b>" };
+  render(<I18nProvider><UiLanguageSelect /><LinkPanel link={link} onSelect={onSelect} onClose={onClose} /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "<b>Employee</b>はPersonの一種です" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "パネルを閉じる" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "<b>Employee</b>" }));
+  expect(onSelect).toHaveBeenCalledWith(EX + "Employee");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("heading", { name: "<b>Employee</b> is a kind of Person" })).toBeTruthy();
+  expect(document.querySelector("b")).toBeNull();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Remove this link" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" });
+  expect(onClose).toHaveBeenCalledTimes(1);
 });

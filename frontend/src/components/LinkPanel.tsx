@@ -12,6 +12,10 @@ SUMMARY
     removes it both ways, as it was made.
 
 BASIC IDEA
+    Titles, relation prose and actions use the current UI translator while
+    original labels and endpoint IRIs remain intact. Read-only reasons and
+    command refusals are supplied by their producers.
+
     A subclass or broader line is not an entity, so it has no form of its
     own; it is a statement, and this says it and offers the one thing to do
     with it. Removing is one command through the shared runner, so one undo
@@ -39,6 +43,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect } from "react";
 import { linkSentence } from "../modeling/sentences";
 import type { CanvasLink } from "../types";
@@ -52,22 +57,11 @@ interface Props {
 
 const HEADING_ID = "link-panel-heading";
 
-const KIND_TITLE: Record<CanvasLink["kind"], string> = {
-  subClassOf: "Subclass link",
-  broader: "Broader link",
-  related: "Related link",
-};
-
-const KIND_WORDS: Record<CanvasLink["kind"], string> = {
-  subClassOf: "is a kind of",
-  broader: "is narrower than",
-  related: "is related to",
-};
-
 export default function LinkPanel({ link, onSelect, onClose }: Props) {
+  const { t } = useI18n();
   const { busy, errors, run, alive, clear } = useRunner();
   useEffect(() => clear("link"), [clear, link.kind, link.source, link.target]);
-  const sentence = linkSentence(link.kind, link.sourceLabel, link.targetLabel);
+  const sentence = linkSentence(link.kind, link.sourceLabel, link.targetLabel, t);
 
   const remove = async () => {
     if (busy || link.readOnly) return;
@@ -84,12 +78,12 @@ export default function LinkPanel({ link, onSelect, onClose }: Props) {
     <aside className="detail-panel link-panel" aria-labelledby={HEADING_ID} aria-busy={busy}>
       <div className="detail-header">
         <div>
-          <p className="detail-prefixed">{KIND_TITLE[link.kind]}</p>
+          <p className="detail-prefixed">{t(`linkPanel.title.${link.kind}`)}</p>
           <h2 id={HEADING_ID} tabIndex={-1}>
             {sentence}
           </h2>
         </div>
-        <button className="icon-btn" onClick={onClose} title="Close panel" aria-label="Close panel">
+        <button className="icon-btn" onClick={onClose} title={t("detail.close")} aria-label={t("detail.close")}>
           ✕
         </button>
       </div>
@@ -100,11 +94,11 @@ export default function LinkPanel({ link, onSelect, onClose }: Props) {
         {link.kind === "related" ? (
           // Works both ways, so no arrow: *Apple and Orchard*, as the canvas
           // line has read since E-9 (PR #49 review).
-          <span> and </span>
+          <span>{t("linkPanel.and")}</span>
         ) : (
           <>
             <span aria-hidden="true"> → </span>
-            <span className="visually-hidden"> {KIND_WORDS[link.kind]} </span>
+            <span className="visually-hidden"> {t(`linkPanel.words.${link.kind}`)} </span>
           </>
         )}
         <button type="button" className="term-link" onClick={() => onSelect(link.target)}>
@@ -116,7 +110,7 @@ export default function LinkPanel({ link, onSelect, onClose }: Props) {
       ) : (
         <div className="edit-actions">
           <button type="button" className="ghost danger" aria-disabled={busy} onClick={() => void remove()}>
-            {busy ? "Removing…" : "Remove this link"}
+            {t(busy ? "linkPanel.removing" : "linkPanel.remove")}
           </button>
         </div>
       )}

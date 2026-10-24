@@ -31,6 +31,8 @@ import { P } from "../modeling/entity";
 import { projectStore } from "../state/projectStore";
 import type { ExampleField, NodeDetails, TermRef } from "../types";
 import EditSection from "./EditSection";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, getAnnotationProperties } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -333,5 +335,24 @@ describe("an example's form: PR #51 review", () => {
     await settle();
     expect(document.activeElement).not.toBe(document.body);
     expect(field().contains(document.activeElement)).toBe(true);
+  });
+});
+
+
+it("keeps an example value draft through a UI switch and sends the original typed value", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={bob()} primaryLanguage="en" languages={["fr"]} onSelect={onSelect} onDeleted={vi.fn()} /></I18nProvider>));
+  expect(screen.getByRole("heading", { name: "所属するクラス" })).toBeTruthy();
+  const input = screen.getByRole("textbox", { name: "birth date" });
+  fireEvent.change(input, { target: { value: "yesterday" } });
+  expect(screen.getByText("「yesterday」は有効な日付ではありません（YYYY-MM-DD形式）。")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "birth dateを追加" }).getAttribute("aria-disabled")).toBe("true");
+  fireEvent.change(input, { target: { value: "2026-10-01" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "birth date" })).toBe(input);
+  expect((input as HTMLInputElement).value).toBe("2026-10-01");
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add birth date" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetExampleValue", {
+    iri: EX + "bob", property: BIRTH.property, value: { kind: "typed", value: "2026-10-01", datatype: "xsd:date" },
   });
 });

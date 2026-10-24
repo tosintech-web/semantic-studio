@@ -60,8 +60,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/SharedDomain.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
 | `frontend/src/components/ReusePlan.tsx` | 探索・編集・クエリ・説明文 | 11 | 表示文を移行（通知・拒否の生成元はTask 12） |
 | `frontend/src/components/DeleteDialog.tsx` | 探索・編集・クエリ・説明文 | 11 | 影響・選択肢を移行（コマンド通知・拒否の生成元はTask 12） |
-| `frontend/src/components/LinkPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/ExampleForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/LinkPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（拒否・読み取り専用理由の生成元は別途移行） |
+| `frontend/src/components/ExampleForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（拒否・読み取り専用理由の生成元は別途移行） |
 | `frontend/src/components/QueryPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/QueryStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
 | `frontend/src/components/ResultsTable.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行済み |
@@ -99,6 +99,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/modeling/values.ts` | 注釈の型・検証・説明文 | 11 | 共通表示関数を移行、呼び出し元への接続は進行中 |
 
 | `frontend/src/components/useSuggestions.ts` | 作成候補の説明・件数 | 11 | 元の取得データから現在のUI言語で表示 |
+
+| `frontend/src/modeling/examples.ts` | 具体例の型説明・入力検証 | 11 | 共通表示関数を移行 |
 
 ## 登録済みメッセージ
 
@@ -1019,7 +1021,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `detail.imported` | name | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `detail.data` | label | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `detail.dataRow` | label, row | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
-| `detail.close` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.close` | — | `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/LinkPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `detail.openIri` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `detail.copyIri` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `detail.fetchingHint` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
@@ -1353,7 +1355,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editSection.copyValue` | value | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.editValue` | words | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.removeValue` | words | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
-| `editSection.remove` | — | `frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EditStructure.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.remove` | — | `frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EditStructure.tsx`<br>`frontend/src/components/ExampleForm.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.turtleOnly` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 
 | `editStructure.both` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
@@ -1455,3 +1457,48 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `delete.propertyKind.attribute.many` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
 | `delete.propertyKind.property.one` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
 | `delete.propertyKind.property.many` | — | `frontend/src/components/DeleteDialog.tsx` | 削除影響・確認 | 11 | 画面所有文言を移行済み |
+
+| `linkPanel.title.subClassOf` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.title.broader` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.title.related` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.words.subClassOf` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.words.broader` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.words.related` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.and` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.removing` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `linkPanel.remove` | — | `frontend/src/components/LinkPanel.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.classes` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.noClass` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.values` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.noFields` | classes | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.nothing` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.classJoin` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.hint.single` | description | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.hint.multi` | description | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.to` | target | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.anyEnd` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.remove` | label, name, value | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.noOther` | target | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.noTarget` | cls, target | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.example` | — | `frontend/src/components/ExampleForm.tsx`<br>`frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.class` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.changeLabel` | label | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.linkTo` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.choose` | target | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.anyExample` | — | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.options` | shown, total | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.newValue` | label | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.action.change` | label | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.action.link` | label | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleForm.action.add` | label | `frontend/src/components/ExampleForm.tsx` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.string` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.integer` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.decimal` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.boolean` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.date` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.dateTime` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.anyURI` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.other` | datatype | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.type.text` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.choose` | target | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+| `exampleValue.give` | label | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |

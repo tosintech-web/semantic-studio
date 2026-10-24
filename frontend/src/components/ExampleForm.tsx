@@ -11,6 +11,10 @@ SUMMARY
     class. EditSection shows them in place of a class's structure.
 
 BASIC IDEA
+    UI locale changes only guidance, value hints and actions. Each property
+    keeps the same editor, value/language draft and original command facts.
+    English articles are applied only for the English example-choice prompt.
+
     The fields come from the server with the entity's statements, so the
     form costs no request of its own and refreshes with the panel on each
     revision. Every change is one command (modeling/examples.ts says which),
@@ -36,6 +40,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState } from "react";
 import { fieldCommand, fieldProblem, fieldStart, fieldType, fieldValue, typeWords } from "../modeling/examples";
 import { a } from "../modeling/sentences";
@@ -54,13 +59,14 @@ interface Props {
 }
 
 export default function ExampleForm({ iri, name, example, primaryLanguage, languages, runner, onSelect }: Props) {
+  const { t } = useI18n();
   const langs = [primaryLanguage, ...languages.filter((l) => l !== primaryLanguage)];
   const classes = example.classes;
   return (
     <>
-      <Block title="Example of">
+      <Block title={t("exampleForm.classes")}>
         {classes.length === 0 ? (
-          <p className="detail-note">No class yet: give it one in Turtle, and its fields appear here.</p>
+          <p className="detail-note">{t("exampleForm.noClass")}</p>
         ) : (
           <ul className="edit-list">
             {classes.map((c) => (
@@ -73,12 +79,12 @@ export default function ExampleForm({ iri, name, example, primaryLanguage, langu
           </ul>
         )}
       </Block>
-      <Block title="Values">
+      <Block title={t("exampleForm.values")}>
         {example.fields.length === 0 ? (
           <p className="detail-note">
             {classes.length
-              ? `${classes.map((c) => c.label).join(" and ")} has no attributes or relationships yet. Add them on the class's form, and they appear here.`
-              : "Nothing to fill in yet."}
+              ? t("exampleForm.noFields", { classes: classes.map(c => c.label).join(t("exampleForm.classJoin")) })
+              : t("exampleForm.nothing")}
           </p>
         ) : (
           example.fields.map((field) => (
@@ -110,6 +116,7 @@ interface FieldProps {
 }
 
 function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onSelect }: FieldProps) {
+  const { locale, t } = useI18n();
   const id = useId();
   const { busy, errors, run } = runner;
   const key = `example:${field.property}`;
@@ -117,13 +124,13 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
   const [lang, setLang] = useState(primaryLanguage);
   // What the learner has typed is judged once they have typed something; an
   // empty field is not yet wrong, only not ready.
-  const problem = fieldProblem(field, raw, lang);
+  const problem = fieldProblem(field, raw, lang, t);
   const shown = raw !== "" && field.kind === "attribute" ? problem : null;
   const inputArea = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const relationship = field.kind === "relationship";
   const command = fieldCommand(field);
-  const verb = command === "SetExampleValue" && field.values.length ? "Change" : relationship ? "Link" : "Add";
+  const action = command === "SetExampleValue" && field.values.length ? "change" : relationship ? "link" : "add";
   const options = (field.options ?? []).filter((o) => !field.values.some((v) => v.value === o.iri));
 
   /** The field's next control once the one that had focus has gone, or its
@@ -163,9 +170,9 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
       <h5 id={`${id}-name`} ref={headingRef} tabIndex={-1}>
         {field.label}
         <span className="detail-note">
-          {" "}
-          ({relationship ? `${field.rangeLabel ? `to ${field.rangeLabel}` : "to any example"}` : typeWords(field)}
-          {field.functional ? ", one value" : ""})
+          {t(field.functional ? "exampleForm.hint.single" : "exampleForm.hint.multi", {
+            description: relationship ? field.rangeLabel ? t("exampleForm.to", { target: field.rangeLabel }) : t("exampleForm.anyEnd") : typeWords(field, t),
+          })}
         </span>
       </h5>
       {field.values.length > 0 && (
@@ -185,7 +192,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
               <button
                 type="button"
                 className="ghost edit-btn"
-                aria-label={`Remove ${v.label ?? v.value} from ${field.label} of ${name}`}
+                aria-label={t("exampleForm.remove", { value: v.label ?? v.value, label: field.label, name })}
                 aria-disabled={busy}
                 onClick={async () => {
                   if (busy) return;
@@ -193,7 +200,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
                   if (await run(key, "RemoveExampleValue", { iri, property: field.property, value })) settle();
                 }}
               >
-                Remove
+                {t("editSection.remove")}
               </button>
             </li>
           ))}
@@ -204,16 +211,16 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
           options.length === 0 && !raw ? (
             <p className="detail-note">
               {field.values.length
-                ? `No other ${field.rangeLabel ?? "example"} to link.`
-                : `No ${field.rangeLabel ?? "example"} yet. Add one from the ${field.rangeLabel ?? "class"} form, then link it here.`}
+                ? t("exampleForm.noOther", { target: field.rangeLabel ?? t("exampleForm.example") })
+                : t("exampleForm.noTarget", { target: field.rangeLabel ?? t("exampleForm.example"), cls: field.rangeLabel ?? t("exampleForm.class") })}
             </p>
           ) : (
             <>
               <label htmlFor={`${id}-choice`} className="edit-field-label">
-                {verb === "Change" ? `Change ${field.label}` : `Link to`}
+                {action === "change" ? t("exampleForm.changeLabel", { label: field.label }) : t("exampleForm.linkTo")}
               </label>
               <select id={`${id}-choice`} value={raw} aria-disabled={busy} onChange={(e) => !busy && setRaw(e.target.value)}>
-                <option value="">Choose {field.rangeLabel ? a(field.rangeLabel) : "an example"}…</option>
+                <option value="">{t("exampleForm.choose", { target: field.rangeLabel ? locale === "en" ? a(field.rangeLabel) : field.rangeLabel : t("exampleForm.anyExample") })}</option>
                 {options.map((o) => (
                   <option key={o.iri} value={o.iri}>
                     {o.label}
@@ -222,7 +229,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
               </select>
               {(field.optionsTotal ?? 0) > (field.options?.length ?? 0) && (
                 <p className="detail-note">
-                  The first {field.options?.length} of {field.optionsTotal} are listed.
+                  {t("exampleForm.options", { shown: field.options?.length ?? 0, total: field.optionsTotal ?? 0 })}
                 </p>
               )}
             </>
@@ -233,7 +240,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
             value={raw}
             lang={lang}
             languages={languages}
-            label={verb === "Change" ? `New ${field.label}` : `${field.label}`}
+            label={action === "change" ? t("exampleForm.newValue", { label: field.label }) : field.label}
             busy={busy}
             describedBy={shown ? `${id}-problem` : undefined}
             invalid={Boolean(shown)}
@@ -257,7 +264,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
               aria-describedby={shown ? `${id}-problem` : undefined}
               onClick={() => void submit()}
             >
-              {verb} {field.label}
+              {t(`exampleForm.action.${action}`, { label: field.label })}
             </button>
           </div>
         )}

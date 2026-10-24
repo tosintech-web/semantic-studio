@@ -20,6 +20,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import { describe, expect, it } from "vitest";
 import type { ExampleField, NodeDetails, TermRef } from "../types";
 import { examplesOf, fieldCommand, fieldProblem, fieldStart, fieldType, fieldValue, otherType, typeWords } from "./examples";
@@ -102,4 +104,15 @@ describe("PR #51 review", () => {
     expect(fieldStart(field({ datatype: "xsd:boolean" }))).toBe("true");
     expect(fieldStart(field({}))).toBe("");
   });
+});
+
+
+it("localizes example type guidance and refusals without changing commands or values", () => {
+  const ja = ((code, args) => translate("ja", code, args)) as Translator;
+  expect(typeWords(field({}), ja)).toBe("日付（YYYY-MM-DD）");
+  expect(typeWords(field({ datatype: "xsd:float" }), ja)).toBe("xsd:float型の値");
+  expect(fieldProblem(field({}), "yesterday", undefined, ja)).toBe("「yesterday」は有効な日付ではありません（YYYY-MM-DD形式）。");
+  expect(fieldProblem(field({ label: "<b>値</b>" }), "", undefined, ja)).toBe("<b>値</b>に値を入力してください。");
+  expect(fieldProblem(field({ kind: "relationship", rangeLabel: "Organization" }), "", undefined, ja)).toBe("リンク先のOrganizationを選択してください。");
+  expect(fieldValue(field({ datatype: "xsd:float" }), " 4.5 ")).toEqual({ kind: "typed", value: "4.5", datatype: "xsd:float" });
 });
