@@ -403,6 +403,7 @@ leaves one behind.
 - Links to no row are counted when asked, against the switched-on snapshots, never stored. [Excel workbooks]
 
 **Reasoning**
+- A Why disclosure owns state for its exact project and RDF fact; translated labels never change that identity. Read failures retain source objects and escaped details across UI locale changes. [Reasoning disclosure targets]
 - The reasoner runs in a `spawn` process on every platform, killed at 30 s or on Stop; only `reasoning_worker.py` imports `owlrl` (D-102). [Reasoning]
 - The worker gives blank nodes back under the labels it was sent, and the server parses its answer with `_SameLabels`: else a restriction's conclusions name blank nodes the server never had. [Reasoning]
 - A statement with a literal subject stays in the worker: N-Triples cannot carry it. [Reasoning]

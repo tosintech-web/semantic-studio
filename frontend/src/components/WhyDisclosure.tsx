@@ -11,6 +11,10 @@ SUMMARY
     walks back to what they wrote one step at a time.
 
 BASIC IDEA
+    Retain original failure objects and render their metadata in the current UI
+    locale, with escaped details. State belongs to one project and fact; a new
+    target mounts a new disclosure and late responses to the old one are ignored.
+
     The reason is asked of the server only when the disclosure first opens,
     and kept while it stays mounted: a long result has thousands of facts
     and nobody opens most of them. The button is a real disclosure
@@ -33,7 +37,8 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
-import { useId, useState } from "react";
+import { renderServerError } from "../i18n/serverMessage";
+import { useEffect, useId, useRef, useState } from "react";
 import { getWhy } from "../api";
 import { premiseMark } from "../reasoning/reasonSentences";
 import type { ReasoningPremise, WhyReason } from "../types";
@@ -46,11 +51,22 @@ interface Props {
   onSelect?: (iri: string) => void;
 }
 
-export default function WhyDisclosure({ projectId, fact, label, onSelect }: Props) {
+export default function WhyDisclosure(props: Props) {
+  // Locale-dependent labels do not change the target or close its disclosure.
+  const { projectId, fact } = props;
+  return <Disclosure key={JSON.stringify([projectId, fact.s, fact.p, fact.o])} {...props} />;
+}
+
+function Disclosure({ projectId, fact, label, onSelect }: Props) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<WhyReason | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ cause: unknown } | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
   const listId = useId();
 
   const toggle = () => {
@@ -59,8 +75,8 @@ export default function WhyDisclosure({ projectId, fact, label, onSelect }: Prop
     if (next && reason === null) {
       setError(null);
       getWhy(projectId, fact)
-        .then(setReason)
-        .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+        .then((found) => { if (alive.current) setReason(found); })
+        .catch((cause: unknown) => { if (alive.current) setError({ cause }); });
     }
   };
 
@@ -78,11 +94,10 @@ export default function WhyDisclosure({ projectId, fact, label, onSelect }: Prop
       </button>
       {open && (
         <div id={listId} className="why-reason">
-          {error && (
-            <p className="edit-error" role="alert">
-              {error}
-            </p>
-          )}
+          {error && <>
+            <p className="edit-error" role="alert">{renderServerError(error.cause, t)}</p>
+            <details className="technical-details"><summary>{t("common.details")}</summary><pre>{error.cause instanceof Error ? error.cause.message : String(error.cause)}</pre></details>
+          </>}
           {!error && reason === null && <p className="detail-note">{t("reasonUI.finding")}</p>}
           {reason && <Reason projectId={projectId} reason={reason} onSelect={onSelect} />}
         </div>

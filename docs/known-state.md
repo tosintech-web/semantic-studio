@@ -2544,3 +2544,20 @@ prefix: allocating one before the legacy name is computed would change it from
 `ns1:S` to `ns2:S`. Authored shape labels stay data; only an unlabeled blank
 shape gets the translated unnamed-shape marker. Original reasons remain in
 keyboard-accessible details, and Edit in Turtle receives the same shape object.
+
+### Reasoning disclosure targets and read failures (P1)
+
+A Why disclosure keeps its loaded reason and open state while UI labels change
+language. That state belongs to the exact project and RDF fact, not just the
+component's position: a new target mounts a new inner disclosure, keyed by the
+project id and the three original term strings. Cleanup guards ignore late
+responses to the former target. The localized label is deliberately outside
+that key.
+
+Why and inferred-detail read failures keep their original objects, including
+validated display metadata. Explanations render in the current UI language;
+unknown failures use the common explanation with the untouched original in
+a native technical-details disclosure. Inferred-detail errors also carry the
+request identity, so a new target cannot briefly show a previous error before
+its effect clears it. Locale changes do not repeat the request, close details,
+or replace the focused summary.

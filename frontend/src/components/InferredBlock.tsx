@@ -11,6 +11,10 @@ SUMMARY
     behind Show inferred, and never editable.
 
 BASIC IDEA
+    Failures retain their original object and request identity. UI language
+    changes translate the explanation without another read; old errors and late
+    responses cannot replace a new target's facts.
+
     The facts are the server's (GET reasoning?about=), fetched again when
     the entity, the result or the revision moves, and shown only for what
     they were fetched for; App only mounts this while the result is current,
@@ -29,6 +33,7 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
+import { renderServerError } from "../i18n/serverMessage";
 import { useEffect, useState } from "react";
 import { getReasoningAbout } from "../api";
 import type { ReasoningAbout } from "../types";
@@ -51,15 +56,16 @@ export default function InferredBlock({ projectId, iri, imports, resultKey, revi
   // came (PR #55 review).
   const key = [projectId, iri, imports, resultKey, revision].join("|");
   const [held, setHeld] = useState<{ key: string; about: ReasoningAbout } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ key: string; cause: unknown } | null>(null);
+  const error = failure?.key === key ? failure : null;
   const about = held?.key === key ? held.about : null;
 
   useEffect(() => {
     let cancelled = false;
-    setError(null);
+    setFailure(null);
     getReasoningAbout(projectId, iri, imports)
       .then((found) => !cancelled && setHeld({ key, about: found }))
-      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : String(e)));
+      .catch((cause: unknown) => !cancelled && setFailure({ key, cause }));
     return () => {
       cancelled = true;
     };
@@ -69,7 +75,8 @@ export default function InferredBlock({ projectId, iri, imports, resultKey, revi
     return (
       <section className="detail-inferred">
         <h3>{t("inferred.title")}</h3>
-        <p className="detail-error">{error}</p>
+        <p className="detail-error">{renderServerError(error.cause, t)}</p>
+        <details className="technical-details"><summary>{t("common.details")}</summary><pre>{error.cause instanceof Error ? error.cause.message : String(error.cause)}</pre></details>
       </section>
     );
   }

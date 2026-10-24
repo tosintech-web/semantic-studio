@@ -12,6 +12,9 @@ SUMMARY
     plain reason.
 
 BASIC IDEA
+    Failed reads preserve original details across locale changes, and a pending
+    response cannot migrate to another project's disclosure.
+
     api.ts is mocked; each test hands getWhy the reasons a server would
     give, and walks the disclosure open, then a nested one.
 
@@ -148,7 +151,8 @@ describe("Why? (5.6)", () => {
     getWhy.mockRejectedValue(new Error("That fact is not in the last result."));
     render(<WhyDisclosure projectId="prj-1" fact={{ s: "a", p: "p", o: "b" }} label="a p b" />);
     await open(screen.getByRole("button", { name: "Why? a p b" }));
-    expect(screen.getByRole("alert").textContent).toBe("That fact is not in the last result.");
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText("That fact is not in the last result.").closest("details")).toBeTruthy();
   });
 });
 
@@ -169,4 +173,49 @@ it("keeps the loaded reason open when labels and premise marks change language",
   expect(document.querySelector(".why-mark")?.textContent).toBe("inferred");
   expect(getWhy).toHaveBeenCalledTimes(1);
   localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each([true, false])("retains the original failed reason and renders its metadata at the current UI locale (known=%s)", async (known) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const original = "理由 <img src=x> {name}";
+  const cause = Object.assign(new Error(original), { uiMessage: known
+    ? { code: "reasoning.failed", args: {} } : { code: "future.reason", args: {} } });
+  getWhy.mockRejectedValue(cause);
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  const alert = screen.getByRole("alert");
+  expect(alert.textContent).toBe(known ? "推論中にエラーが発生して停止しました。詳細を確認してください。" : "操作を完了できませんでした。詳細を確認してください。");
+  const details = screen.getByText(original).closest("details")!;
+  expect(details).toBeTruthy(); details.open = true;
+  const summary = within(details).getByText("技術的な詳細"); summary.focus();
+  expect(details.querySelector("img")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("alert")).toBe(alert);
+  expect(alert.textContent).toBe(known ? "The reasoner stopped with an error. Check the original details." : "The operation could not be completed. Check the details.");
+  expect(screen.getByText(original).closest("details")).toBe(details);
+  expect(details.open).toBe(true); expect(document.activeElement).toBe(summary);
+  expect(getWhy).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each([
+  ["resolve", "project"], ["reject", "project"], ["resolve", "fact"], ["reject", "fact"],
+])("does not carry a pending reason into another target (%s, %s)", async (ending, target) => {
+  let resolve!: (reason: WhyReason) => void;
+  let reject!: (error: Error) => void;
+  getWhy.mockReturnValueOnce(new Promise<WhyReason>((ok, no) => { resolve = ok; reject = no; }));
+  const props = { fact: { s: "a", p: "p", o: "b" }, label: "fact" };
+  const view = render(<WhyDisclosure projectId="one" {...props} />);
+  await open(screen.getByRole("button", { name: "Why? fact" }));
+  const next = { ...props, projectId: target === "project" ? "two" : "one", fact: { ...props.fact, o: target === "fact" ? "c" : "b" } };
+  view.rerender(<WhyDisclosure {...next} />);
+  expect(screen.getByRole("button", { name: "Why? fact" }).getAttribute("aria-expanded")).toBe("false");
+  await act(async () => { ending === "resolve" ? resolve(MANAGER) : reject(new Error("old failure")); });
+  expect(screen.queryByText(MANAGER.premises[0].sentence)).toBeNull();
+  expect(screen.queryByText("old failure")).toBeNull();
+  getWhy.mockResolvedValueOnce(PERSON);
+  await open(screen.getByRole("button", { name: "Why? fact" }));
+  expect(getWhy).toHaveBeenLastCalledWith(next.projectId, next.fact);
+  expect(screen.getByText("Alice works for Acme")).toBeTruthy();
 });
