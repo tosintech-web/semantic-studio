@@ -290,6 +290,7 @@ describe("SearchBox imports (external-access Stage 2)", () => {
       undefined,
       expect.any(AbortSignal),
       26,
+      undefined,
     );
     const rows = options();
     expect(rows.find((r) => r.textContent?.includes("Hidden Thing"))!.textContent).toContain(

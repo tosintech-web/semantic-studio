@@ -36,6 +36,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useId, useRef, useState } from "react";
 import { searchNodes } from "../api";
 import type { SearchKind, VizNode } from "../types";
@@ -70,6 +71,7 @@ export default function EntityPicker({
 }: Props) {
   const id = useId();
   const listId = `${id}-list`;
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<VizNode[]>([]);
   const [active, setActive] = useState(-1);
@@ -91,7 +93,7 @@ export default function EntityPicker({
     }
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      searchNodes(ontologyId, q, true, kind)
+      searchNodes(ontologyId, q, true, kind, undefined, undefined, dictionaryLanguage)
         .then((found) => {
           if (cancelled) return;
           const shown = found.filter((n) => !exclude.includes(n.id) && (!importedOnly || n.importedFrom));
@@ -108,7 +110,7 @@ export default function EntityPicker({
     };
     // exclude is a fresh array on every render of the caller; its content is
     // what matters and it only changes with the entity, which remounts this.
-  }, [query, ontologyId, kind, importedOnly]);
+  }, [query, ontologyId, kind, importedOnly, dictionaryLanguage]);
 
   const open = results.length > 0;
   const pick = (node: VizNode) => {

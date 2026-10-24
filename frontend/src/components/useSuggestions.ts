@@ -29,6 +29,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useRef, useState } from "react";
 import { getNodeDetails, searchNodes } from "../api";
 import { domainWords, matchesSaid, suggestionLine, type PropertyWord } from "../modeling/sentences";
@@ -70,6 +71,7 @@ export function useSuggestions(
   kind: "datatypeProperty" | "objectProperty",
   name: string,
 ): { suggestions: Suggestion[]; said: string } {
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [said, setSaid] = useState("");
   const asked = useRef(0);
@@ -87,9 +89,9 @@ export function useSuggestions(
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
-        const found = await searchNodes(ontologyId, q, false, kind, controller.signal, SUGGESTED);
+        const found = await searchNodes(ontologyId, q, false, kind, controller.signal, SUGGESTED, dictionaryLanguage);
         const details = await Promise.all(
-          found.slice(0, SUGGESTED).map((n) => getNodeDetails(ontologyId, n.id, false, controller.signal)),
+          found.slice(0, SUGGESTED).map((n) => getNodeDetails(ontologyId, n.id, false, controller.signal, dictionaryLanguage)),
         );
         if (ask !== asked.current) return;
         const next = details.map((d) => ({ iri: d.iri, label: d.label, line: lineOf(word, d) }));
@@ -106,7 +108,7 @@ export function useSuggestions(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [name, ontologyId, kind, word]);
+  }, [name, ontologyId, kind, word, dictionaryLanguage]);
 
   return { suggestions, said };
 }

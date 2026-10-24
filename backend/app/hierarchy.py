@@ -83,6 +83,7 @@ from .graph_builder import (
     KIND_OBJECT_PROPERTY,
     TYPE_TO_KIND,
     labeler,
+    label_metadata,
     prefixed,
     subclass_parents,
 )
@@ -541,6 +542,11 @@ def build_hierarchy(
         examples_forest, example_total = _build_examples_forest(graph, label, own)
         if example_total:
             forests["examples"] = (examples_forest, example_total)
+
+    if langs:
+        for forest, _ in forests.values():
+            for iri, row in forest["nodes"].items():
+                row.update(label_metadata(graph, URIRef(iri), langs))
 
     grand_total = sum(total for _, total in forests.values())
     truncated = grand_total > max_nodes

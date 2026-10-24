@@ -124,7 +124,7 @@ describe("suggestions while typing (attribute-reuse 5.1)", () => {
     expect(searchNodes).not.toHaveBeenCalled();
     await pause(1);
     // The document only, not its imports; one kind; five at most.
-    expect(searchNodes).toHaveBeenCalledWith("prj-0123456789ab-model", "ha", false, "datatypeProperty", expect.any(AbortSignal), 5);
+    expect(searchNodes).toHaveBeenCalledWith("prj-0123456789ab-model", "ha", false, "datatypeProperty", expect.any(AbortSignal), 5, undefined);
     expect(screen.getByText("Already in this project")).toBeTruthy();
     expect(screen.getByText("hasName, an attribute of Employee (text).")).toBeTruthy();
     expect(screen.getByText("hasNick, an attribute of Employee or Contractor.")).toBeTruthy();

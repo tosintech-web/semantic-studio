@@ -40,12 +40,10 @@ BASIC IDEA
     server keeps nothing until the import. "Change the mapping" names the
     snapshot instead, whose copy the browser does not have.
 
-    Projects (authoring-foundations) add their own calls at the foot. An open
-    project document is read through the same ontology calls under its
-    prj-<hex>-<doc> id; the five that show names also carry the project's
-    display language, set here once by the project store (setDisplayLanguage)
-    rather than threaded through every component, and sent only while a
-    project has one, so every library request is unchanged.
+    Project documents use the same ontology calls under prj-<hex>-<doc> IDs.
+    Name-showing requests accept an explicit dictionary display language.
+    Project-store module language remains a compatibility shim for older
+    embedded callers; the application passes its own per-dictionary choice.
 
 INPUTS / INPUT SOURCES
     - Arguments from the components (ids, IRIs, query text, files, payloads).
@@ -266,9 +264,9 @@ function withImports(url: string, imports: boolean): string {
   return url + (url.includes("?") ? "&" : "?") + "imports=true";
 }
 
-// The open project's display language, or null (D-085). Module state rather
-// than a parameter: five calls read it and a dozen components make them, and
-// none of those components has any other reason to know about languages.
+// The open project's display language, or null (D-085). Compatibility state
+// for older embedded callers. Application views now pass their dictionary
+// language explicitly, so a Library cannot inherit another project's choice.
 let displayLanguage: string | null = null;
 
 /** The project store sets this when a project opens, closes or switches. */
@@ -276,9 +274,10 @@ export function setDisplayLanguage(lang: string | null): void {
   displayLanguage = lang;
 }
 
-function withLang(url: string): string {
-  if (!displayLanguage) return url;
-  return url + (url.includes("?") ? "&" : "?") + `lang=${encodeURIComponent(displayLanguage)}`;
+function withLang(url: string, explicitLanguage?: string): string {
+  const language = explicitLanguage ?? displayLanguage;
+  if (!language) return url;
+  return url + (url.includes("?") ? "&" : "?") + `lang=${encodeURIComponent(language)}`;
 }
 
 // List loaded ontologies (dropdown summaries).
@@ -425,9 +424,9 @@ export function deleteOntology(id: string): Promise<OntologyDeletion> {
  * nothing, which is the setting the whole choice of default relies on.
  * Callers pass a limit only once the user has asked for more.
  */
-export function getGraph(id: string, limit?: number, imports = false): Promise<VizGraph> {
+export function getGraph(id: string, limit?: number, imports = false, displayLanguage?: string): Promise<VizGraph> {
   const query = limit === undefined ? "" : `?limit=${limit}`;
-  return send(withLang(withImports(`/api/ontologies/${id}/graph${query}`, imports))).then((r) =>
+  return send(withLang(withImports(`/api/ontologies/${id}/graph${query}`, imports), displayLanguage)).then((r) =>
     handle<VizGraph>(r),
   );
 }
@@ -445,6 +444,7 @@ export function getNeighborhood(
   iri: string,
   limit?: number,
   imports = false,
+  displayLanguage?: string,
 ): Promise<VizNeighborhood> {
   const extra = limit === undefined ? "" : `&limit=${limit}`;
   return send(
@@ -453,6 +453,7 @@ export function getNeighborhood(
         `/api/ontologies/${id}/neighborhood?iri=${encodeURIComponent(iri)}${extra}`,
         imports,
       ),
+      displayLanguage,
     ),
   ).then((r) => handle<VizNeighborhood>(r));
 }
@@ -462,8 +463,8 @@ export function getNeighborhood(
  * left out (query-page-rework 5.2). A POST because 200 IRIs do not fit a
  * URL; it changes nothing, and carries the client header as every POST does.
  */
-export function getResultNodes(id: string, iris: string[], imports = false): Promise<VizNodes> {
-  return send(withLang(withImports(`/api/ontologies/${id}/nodes`, imports)), {
+export function getResultNodes(id: string, iris: string[], imports = false, displayLanguage?: string): Promise<VizNodes> {
+  return send(withLang(withImports(`/api/ontologies/${id}/nodes`, imports), displayLanguage), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...CLIENT_HEADER },
     body: JSON.stringify({ iris }),
@@ -477,20 +478,20 @@ export function getResultNodes(id: string, iris: string[], imports = false): Pro
  * the frontend virtualizes it, so the whole asserted structure comes back. The
  * server caches it on the ontology, so re-opening the tab is cheap.
  */
-export function fetchHierarchy(id: string, imports = false, inferred = false): Promise<Hierarchy> {
+export function fetchHierarchy(id: string, imports = false, inferred = false, displayLanguage?: string): Promise<Hierarchy> {
   // With `inferred`, a current reasoning result's edges come with the origin
   // "inferred" (D-046); a stale one adds nothing.
   const url = withImports(`/api/ontologies/${id}/hierarchy`, imports);
-  return send(withLang(inferred ? `${url}${url.includes("?") ? "&" : "?"}inferred=true` : url)).then((r) =>
+  return send(withLang(inferred ? `${url}${url.includes("?") ? "&" : "?"}inferred=true` : url, displayLanguage)).then((r) =>
     handle<Hierarchy>(r),
   );
 }
 
 // Every statement about one entity, for the detail panel.
 // `signal` lets a caller abort a request a newer one has replaced (CF-4).
-export function getNodeDetails(id: string, iri: string, imports = false, signal?: AbortSignal): Promise<NodeDetails> {
+export function getNodeDetails(id: string, iri: string, imports = false, signal?: AbortSignal, displayLanguage?: string): Promise<NodeDetails> {
   return send(
-    withLang(withImports(`/api/ontologies/${id}/node?iri=${encodeURIComponent(iri)}`, imports)),
+    withLang(withImports(`/api/ontologies/${id}/node?iri=${encodeURIComponent(iri)}`, imports), displayLanguage),
     signal ? { signal } : undefined,
   ).then((r) => handle<NodeDetails>(r));
 }
@@ -508,11 +509,13 @@ export function searchNodes(
    *  its cap (100) above. The search box asks for one more than it shows, to
    *  know whether more match (explore-and-query-layout 5.7). */
   limit?: number,
+  displayLanguage?: string,
 ): Promise<VizNode[]> {
   const extra = (kind ? `&kind=${kind}` : "") + (limit !== undefined ? `&limit=${limit}` : "");
   return send(
     withLang(
       withImports(`/api/ontologies/${id}/search?q=${encodeURIComponent(q)}${extra}`, imports),
+      displayLanguage,
     ),
     signal ? { signal } : undefined,
   ).then((r) => handle<VizNode[]>(r));
@@ -528,22 +531,22 @@ export function getSource(id: string, pretty = false): Promise<OntologySource> {
 /* --- visual query builder ------------------------------------------------ */
 
 // The class-level schema powering the query builder.
-export function getQuerySchema(id: string, imports = false): Promise<QuerySchema> {
-  return send(withImports(`/api/ontologies/${id}/query-schema`, imports)).then((r) =>
+export function getQuerySchema(id: string, imports = false, displayLanguage?: string): Promise<QuerySchema> {
+  return send(withLang(withImports(`/api/ontologies/${id}/query-schema`, imports), displayLanguage ?? "")).then((r) =>
     handle<QuerySchema>(r),
   );
 }
 
 // Map a clicked graph node to the class/type the builder should step on.
-export function getQueryNode(id: string, iri: string, imports = false): Promise<QueryNodeInfo> {
+export function getQueryNode(id: string, iri: string, imports = false, displayLanguage?: string): Promise<QueryNodeInfo> {
   return send(
-    withImports(`/api/ontologies/${id}/query-node?iri=${encodeURIComponent(iri)}`, imports),
+    withLang(withImports(`/api/ontologies/${id}/query-node?iri=${encodeURIComponent(iri)}`, imports), displayLanguage ?? ""),
   ).then((r) => handle<QueryNodeInfo>(r));
 }
 
 // Execute a SPARQL SELECT and return the result rows.
-export function runSparql(id: string, query: string, imports = false): Promise<SparqlResults> {
-  return send(withImports(`/api/ontologies/${id}/sparql`, imports), {
+export function runSparql(id: string, query: string, imports = false, displayLanguage?: string): Promise<SparqlResults> {
+  return send(withLang(withImports(`/api/ontologies/${id}/sparql`, imports), displayLanguage ?? ""), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...CLIENT_HEADER },
     body: JSON.stringify({ query }),

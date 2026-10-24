@@ -78,6 +78,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useRef, useState } from "react";
 import { getNodeDetails } from "../api";
 import { panelTerms } from "../explain/glossary";
@@ -184,6 +185,7 @@ export default function DetailPanel({
   canvas = null,
   inferred = null,
 }: Props) {
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [details, setDetails] = useState<NodeDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -202,7 +204,7 @@ export default function DetailPanel({
     if (!ontologyId || !iri) return;
     setLoading(true);
     let cancelled = false;
-    getNodeDetails(ontologyId, iri, imports)
+    getNodeDetails(ontologyId, iri, imports, undefined, dictionaryLanguage)
       .then((d) => !cancelled && setDetails(d))
       .catch((e) => {
         if (cancelled) return;
@@ -216,7 +218,7 @@ export default function DetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [ontologyId, iri, imports, revision, language]);
+  }, [ontologyId, iri, imports, revision, language, dictionaryLanguage]);
 
   // Take focus when this selection asked for it, rather than when the details
   // arrive, because the wait is a request: keystrokes made in between would go

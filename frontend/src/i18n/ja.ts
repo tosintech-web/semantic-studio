@@ -23,6 +23,8 @@ export const ja: Catalog = {
   "nav.shapes": "検証ルール",
   "nav.entities": "項目一覧",
   "ui.language": "UIの言語",
+  "dictionary.invalidLanguage": "ja、en、ja-JPなどの言語タグを入力してください。",
+  "dictionary.apply": "表示言語を適用",
   "dictionary.language": "辞書の表示言語",
   "common.error": "操作を完了できませんでした。詳細を確認してください。",
   "common.notSet": "未設定",

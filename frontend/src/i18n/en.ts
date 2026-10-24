@@ -23,6 +23,8 @@ export const en: Catalog = {
   "nav.shapes": "Shapes",
   "nav.entities": "Entities",
   "ui.language": "UI language",
+  "dictionary.invalidLanguage": "Enter a language tag such as ja, en or ja-JP.",
+  "dictionary.apply": "Apply display language",
   "dictionary.language": "Dictionary display language",
   "common.error": "The operation could not be completed. Check the details.",
   "common.notSet": "Not set",

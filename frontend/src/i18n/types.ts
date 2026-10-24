@@ -24,6 +24,8 @@ export interface MessageArgs {
   "nav.entities": undefined;
   "ui.language": undefined;
   "dictionary.language": undefined;
+  "dictionary.apply": undefined;
+  "dictionary.invalidLanguage": undefined;
   "common.error": undefined;
   "common.notSet": undefined;
   "crash.title": undefined;

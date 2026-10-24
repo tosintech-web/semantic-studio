@@ -60,7 +60,7 @@ from rdflib.namespace import OWL, RDF, RDFS, SKOS, XSD
 # with the hierarchy view so both read the class hierarchy identically.
 from . import axioms
 from .embedded_queries import count_embedded_queries
-from .graph_builder import pick_label, prefixed, subclass_parents
+from .graph_builder import labeler, prefixed, subclass_parents
 
 # Meta-classes: the RDF/OWL vocabulary terms themselves. These describe the
 # schema language, so they are never offered as steppable classes to query.
@@ -250,7 +250,7 @@ def _restriction_targets(
                     )
 
 
-def build_query_schema(graph: Graph) -> dict:
+def build_query_schema(graph: Graph, *, langs=None) -> dict:
     """Extract the class-level schema used by the visual query builder.
 
     Runs in five phases (typing -> restrictions -> domain/range -> observed
@@ -439,11 +439,12 @@ def build_query_schema(graph: Graph) -> dict:
     # --- 5. serialize ----------------------------------------------------
     # Label lookups are repeated across classes/links; cache them.
     label_cache: dict[URIRef, str] = {}
+    name = labeler(graph, langs)
 
     def label_of(iri: URIRef) -> str:
         cached = label_cache.get(iri)
         if cached is None:
-            cached = pick_label(graph, iri)
+            cached = name(iri)
             label_cache[iri] = cached
         return cached
 
@@ -596,7 +597,7 @@ def used_prefixes(graph: Graph) -> dict[str, str]:
     return dict(sorted(used.items()))
 
 
-def describe_query_node(graph: Graph, iri: str, schema: dict) -> Optional[dict]:
+def describe_query_node(graph: Graph, iri: str, schema: dict, *, langs=None) -> Optional[dict]:
     """Map a clicked graph node to the class the query builder should use.
 
     Returns the node itself when it *is* a class, otherwise the types it is
@@ -624,6 +625,6 @@ def describe_query_node(graph: Graph, iri: str, schema: dict) -> Optional[dict]:
     return {
         "iri": iri,
         "isClass": False,
-        "label": pick_label(graph, ref),
+        "label": labeler(graph, langs)(ref),
         "types": types,
     }

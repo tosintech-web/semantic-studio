@@ -70,7 +70,7 @@ from rdflib.plugins.sparql.parser import expandUnicodeEscapes, parseQuery
 
 # Reuse the shared label/prefix helpers so URI cells carry a readable label.
 from . import sparql_service
-from .graph_builder import pick_label, prefixed
+from .graph_builder import labeler, prefixed
 from .network_broker import NetworkDecision
 
 # Server-side result cap, independent of the query's own LIMIT.
@@ -314,7 +314,7 @@ def prepare_select(query: str):
     return _prepare(query)[0]
 
 
-def _term_json(graph: Graph, term, cache: dict[str, dict]):
+def _term_json(graph: Graph, term, cache: dict[str, dict], langs=None):
     """Serialize one result cell to JSON.
 
     URIs are enriched with a label and prefixed form (and cached, since the
@@ -331,7 +331,7 @@ def _term_json(graph: Graph, term, cache: dict[str, dict]):
             entry = {
                 "type": "uri",
                 "value": key,
-                "label": pick_label(graph, term),
+                "label": labeler(graph, langs)(term),
                 "prefixed": prefixed(graph, term),
             }
             cache[key] = entry
@@ -356,6 +356,7 @@ def execute_select(
     timeout: Optional[float] = None,
     key: Optional[str] = None,
     reading: Callable[[], contextlib.AbstractContextManager] = contextlib.nullcontext,
+    langs=None,
 ) -> dict:
     """Run a SELECT query and return JSON-serializable results.
 
@@ -416,7 +417,7 @@ def execute_select(
         # row's labels are of the revision it was computed on. The cache
         # dedupes label lookups across rows.
         cache: dict[str, dict] = {}
-        serialized = [[_term_json(graph, term, cache) for term in row] for row in rows]
+        serialized = [[_term_json(graph, term, cache, langs) for term in row] for row in rows]
         return variables, serialized, hit_cap
 
     # The worker holds the read lock itself, so a stopped query lets go of it

@@ -1126,9 +1126,10 @@ def merged_hierarchy(
     )
 
 
-def merged_query_schema(ontology: Ontology, parse_timeout: Optional[float] = None) -> dict:
+def merged_query_schema(ontology: Ontology, parse_timeout: Optional[float] = None, lang: Optional[str] = None) -> dict:
     imports_service.merged(ontology, parse_timeout)
-    return imports_service.derived(ontology, "schema", build_query_schema)
+    langs = ontology.label_langs(lang)
+    return imports_service.derived(ontology, ("schema", langs), lambda g: build_query_schema(g, langs=langs))
 
 
 def snapshot_graphs(ontology: Ontology) -> tuple[int, list]:
@@ -1188,13 +1189,14 @@ def view_hierarchy(
     )
 
 
-def view_query_schema(ontology: Ontology, imports: bool, parse_timeout: Optional[float] = None) -> dict:
+def view_query_schema(ontology: Ontology, imports: bool, parse_timeout: Optional[float] = None, lang: Optional[str] = None) -> dict:
     view = imports_service.reading(ontology, imports, parse_timeout)
     if view is None:
-        return ontology.query_schema()
+        return ontology.query_schema(lang)
     if "dataFrom" not in view:
-        return merged_query_schema(ontology, parse_timeout)
-    return _data_derived(ontology, view, "schema", build_query_schema)
+        return merged_query_schema(ontology, parse_timeout, lang)
+    langs = ontology.label_langs(lang)
+    return _data_derived(ontology, view, ("schema", langs), lambda g: build_query_schema(g, langs=langs))
 
 
 def mark_data_viz(viz: dict, data_from: dict[str, dict]) -> dict:

@@ -1033,7 +1033,7 @@ describe("PR #47 review", () => {
     getNodeDetails.mockResolvedValue({ iri: EX + "billedTo", kind: "objectProperty" });
     await renderCanvas(viewOf({ limited: true, nodes: [], edges: [] }), EX + "billedTo");
     await act(async () => undefined);
-    expect(getNodeDetails).toHaveBeenCalledWith(`${PID}-model`, EX + "billedTo");
+    expect(getNodeDetails).toHaveBeenCalledWith(`${PID}-model`, EX + "billedTo", false, undefined, undefined);
     expect(putLayout).not.toHaveBeenCalled();
     cleanup();
     getNodeDetails.mockResolvedValue({ iri: EX + "Paid", kind: "concept" });

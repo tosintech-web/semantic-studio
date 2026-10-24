@@ -112,6 +112,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import {
   useCallback,
   useEffect,
@@ -567,6 +568,7 @@ export default function HierarchyView({
   canvasShown = false,
   onCounts,
 }: Props) {
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [fetched, setData] = useState<Hierarchy | null>(null);
   // Snapshot rows named by their snapshot's label (csv-data-import 5.6).
   const data = useMemo(
@@ -592,7 +594,7 @@ export default function HierarchyView({
     setFilter("");
     setExpanded(new Set());
     let cancelled = false;
-    fetchHierarchy(ontologyId, imports, inferred)
+    fetchHierarchy(ontologyId, imports, inferred, language ?? dictionaryLanguage)
       .then((h) => !cancelled && setData(h))
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -609,13 +611,13 @@ export default function HierarchyView({
   // An edit, a language switch, or the inferred marks coming or going: the
   // same ontology, new forests. Only the data is replaced; the first run is
   // the effect above's.
-  const refreshKey = `${revision}|${language}|${inferred ? inferredToken : "off"}`;
+  const refreshKey = `${revision}|${language ?? dictionaryLanguage}|${inferred ? inferredToken : "off"}`;
   const lastRefresh = useRef(refreshKey);
   useEffect(() => {
     if (!ontologyId || lastRefresh.current === refreshKey) return;
     lastRefresh.current = refreshKey;
     let cancelled = false;
-    fetchHierarchy(ontologyId, imports, inferred)
+    fetchHierarchy(ontologyId, imports, inferred, language ?? dictionaryLanguage)
       .then((h) => !cancelled && setData(h))
       .catch((e: unknown) => !cancelled && setError(e instanceof ApiError ? e.message : String(e)));
     return () => {

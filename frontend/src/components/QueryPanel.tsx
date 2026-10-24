@@ -69,6 +69,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteSavedQuery,
@@ -252,6 +253,7 @@ export default function QueryPanel({
     textIsDirty,
   } = builder;
 
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
   const [auto, setAuto] = useState(true);
   const [frozen, setFrozen] = useState<string | null>(null);
@@ -397,7 +399,7 @@ export default function QueryPanel({
     setRunning(true);
     setError(null);
     try {
-      const answer = await runSparql(ontologyId, text, includeImports);
+      const answer = await runSparql(ontologyId, text, includeImports, dictionaryLanguage);
       if (run !== latest.current) return;
       setIsPreview(false);
       show(answer, true);
@@ -449,7 +451,7 @@ export default function QueryPanel({
     let cancelled = false;
     const timer = window.setTimeout(() => {
       const run = ++latest.current;
-      runSparql(ontologyId, previewQuery, includeImports)
+      runSparql(ontologyId, previewQuery, includeImports, dictionaryLanguage)
         .then((res) => {
           if (cancelled || run !== latest.current) return;
           setIsPreview(true);
@@ -464,7 +466,7 @@ export default function QueryPanel({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [inText, autoPreviewable, ontologyId, schema, state, includeImports, show]);
+  }, [inText, autoPreviewable, ontologyId, schema, state, includeImports, show, dictionaryLanguage]);
 
   const doSave = async (name: string) => {
     if (!ontologyId || !name.trim()) return;

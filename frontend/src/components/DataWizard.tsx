@@ -69,6 +69,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ApiError, fetchHierarchy, importData, inspectData, previewData, refreshData, updateData } from "../api";
 import type { DataSourceRef } from "../api";
@@ -888,6 +889,7 @@ function RowStep({
   onRowNumber: (on: boolean) => void;
   onError: (message: string) => void;
 }) {
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [classes, setClasses] = useState<{ iri: string; label: string }[]>([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -899,7 +901,7 @@ function RowStep({
   useEffect(() => {
     if (taxonomy) return;
     let live = true;
-    fetchHierarchy(modelOntologyId)
+    fetchHierarchy(modelOntologyId, false, false, dictionaryLanguage)
       .then((tree) => {
         if (!live) return;
         const found = Object.entries(tree.classes.nodes)
@@ -912,7 +914,7 @@ function RowStep({
     return () => {
       live = false;
     };
-  }, [modelOntologyId, taxonomy, loadToken]);
+  }, [modelOntologyId, taxonomy, loadToken, dictionaryLanguage]);
 
   const createClass = async () => {
     const label = newName.trim();

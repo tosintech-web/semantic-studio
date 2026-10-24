@@ -653,3 +653,24 @@ describe("loads that can be followed and cancelled (load-progress 5.2, 5.3)", ()
     ]);
   });
 });
+
+describe("explicit dictionary language", () => {
+  it("takes precedence over the legacy project module language on every label API", async () => {
+    api.setDisplayLanguage("en");
+    try {
+      await api.getGraph("lib", undefined, false, "ja");
+      await api.getNeighborhood("lib", "urn:dog", undefined, false, "ja");
+      await api.getResultNodes("lib", ["urn:dog"], false, "ja");
+      await api.fetchHierarchy("lib", false, false, "ja");
+      await api.getNodeDetails("lib", "urn:dog", false, undefined, "ja");
+      await api.searchNodes("lib", "犬", false, undefined, undefined, undefined, "ja");
+      await api.getQuerySchema("lib", false, "ja");
+      await api.getQueryNode("lib", "urn:dog", false, "ja");
+      await api.runSparql("lib", "SELECT ?s WHERE { ?s ?p ?o }", false, "ja");
+      expect(recorded).toHaveLength(9);
+      for (const request of recorded) {
+        expect(new URL(request.url, "http://localhost").searchParams.getAll("lang")).toEqual(["ja"]);
+      }
+    } finally { api.setDisplayLanguage(null); }
+  });
+});

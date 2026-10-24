@@ -373,12 +373,13 @@ class Ontology:
     def label_langs(self, display: Optional[str] = None) -> Optional[tuple]:
         """The ordered label languages for a view: display, then primary.
 
-        None for the library, which keeps English-then-untagged. A display
+        No explicit language keeps the library's legacy label rule. An
+        explicit Library preference is independent of project languages. A display
         language the project does not carry falls back to the primary rather
         than being refused, so a stale switch in the browser cannot break a view.
         """
         if not self.languages:
-            return None
+            return (display,) if display else None
         primary = self.languages[0]
         chosen = display if display in self.languages else primary
         return (chosen, primary)
@@ -462,10 +463,11 @@ class Ontology:
                 return self.source_provider()
         return self.data_path.read_bytes()
 
-    def query_schema(self) -> dict:
+    def query_schema(self, lang: Optional[str] = None) -> dict:
         """Class-level schema for the visual query builder (cached)."""
+        langs = self.label_langs(lang)
         return self._cached(
-            "schema_cache", self.revision, lambda: build_query_schema(self.ensure_loaded())
+            "schema_cache", (self.revision, langs), lambda: build_query_schema(self.ensure_loaded(), langs=langs)
         )
 
     def hierarchy(self, lang: Optional[str] = None) -> dict:

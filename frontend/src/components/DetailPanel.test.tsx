@@ -291,7 +291,7 @@ describe("DetailPanel imports (external-access Stage 2)", () => {
 
   it("asks for the merged view only when told to", async () => {
     await renderPanel(detailsWith(1));
-    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, false);
+    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, false, undefined, undefined);
     cleanup();
     getNodeDetails.mockResolvedValue(detailsWith(1));
     await act(async () => {
@@ -299,7 +299,7 @@ describe("DetailPanel imports (external-access Stage 2)", () => {
         <DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} imports />,
       );
     });
-    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, true);
+    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, true, undefined, undefined);
   });
 });
 

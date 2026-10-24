@@ -41,6 +41,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import {
   CHOOSE_KIND,
@@ -98,7 +99,8 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
   };
   const [baseIri, setBaseIri] = useState<string | null>(null);
   const [prefix, setPrefix] = useState<string | null>(null);
-  const [primaryLanguage, setPrimaryLanguage] = useState("en");
+  const { locale } = useI18n();
+  const [primaryLanguage, setPrimaryLanguage] = useState<string>(locale);
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

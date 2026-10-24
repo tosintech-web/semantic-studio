@@ -434,7 +434,7 @@ describe("HierarchyView imports (external-access Stage 2)", () => {
     fetchHierarchy.mockResolvedValue(mixed());
     render(<HierarchyView ontologyId="o1" selected={null} onSelect={vi.fn()} imports />);
     await screen.findByText("Alpha");
-    expect(fetchHierarchy).toHaveBeenCalledWith("o1", true, false);
+    expect(fetchHierarchy).toHaveBeenCalledWith("o1", true, false, undefined);
   });
 });
 
@@ -1109,7 +1109,7 @@ describe("HierarchyView inferred edges (axioms-and-reasoning 5.7)", () => {
   it("asks for the inferred edges while marks show, and drops them at once when they go", async () => {
     fetchHierarchy.mockResolvedValue(concluded());
     const { rerender } = render(view(true));
-    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, true);
+    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, true, undefined);
     await waitFor(() => expect(itemByLabel("Agent")).toBeTruthy());
     await act(async () => fireEvent.click(screen.getByRole("button", { name: /expand all/i })));
     const inferredRows = () => items().filter((el) => el.querySelector('[aria-label="inferred, derived"]'));
@@ -1118,7 +1118,7 @@ describe("HierarchyView inferred edges (axioms-and-reasoning 5.7)", () => {
     // inferred row is gone already (found in Chrome, R5).
     fetchHierarchy.mockReturnValue(new Promise(() => {}));
     rerender(view(false));
-    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, false);
+    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, false, undefined);
     expect(inferredRows()).toEqual([]);
     // Employee is still under Person, as stated.
     expect(items().filter((el) => el.querySelector(".hierarchy-label")!.textContent === "Employee")).toHaveLength(1);
@@ -1190,7 +1190,7 @@ describe("HierarchyView inferred edges (axioms-and-reasoning 5.7)", () => {
     // Reason again with the data ticked: same revision, a new result.
     rerender(marked(2));
     await waitFor(() => expect(fetchHierarchy.mock.calls.length).toBe(before + 1));
-    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, true);
+    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, true, undefined);
   });
 
   it("renders each of 200 inferred rows once (count, not timing)", async () => {

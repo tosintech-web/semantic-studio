@@ -29,6 +29,8 @@ EXPECTED OUTPUT
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import NewProjectDialog, { type NewProjectRequest } from "./NewProjectDialog";
 import { defaultBaseIri, defaultPrefix, validate } from "../projects/form";
 
@@ -220,4 +222,14 @@ describe("the form's rules (projects/form.ts)", () => {
       validate({ name: "A", baseIri: "urn:acme:vocab/", prefix: "acme", primaryLanguage: "en-US" }),
     ).toEqual({});
   });
+});
+
+it("new_project_defaults_to_ui_locale_but_can_override", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><NewProjectDialog library={LIBRARY} onCreate={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
+  expect(field("Primary language").value).toBe("ja");
+  fireEvent.change(field("Primary language"), { target: { value: "fr" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(field("Primary language").value).toBe("fr");
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

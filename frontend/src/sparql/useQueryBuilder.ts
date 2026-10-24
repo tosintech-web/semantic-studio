@@ -200,6 +200,7 @@ export function useQueryBuilder(
   // A project document's revision (authoring-foundations): the schema is
   // fetched again when an edit moves it. 0 for the library, which never does.
   revision = 0,
+  displayLanguage?: string,
 ) {
   const [schema, setSchema] = useState<QuerySchema | null>(null);      // class-level schema
   const [schemaError, setSchemaError] = useState<string | null>(null); // schema fetch error
@@ -237,12 +238,12 @@ export function useQueryBuilder(
   // fetched for the other setting would offer steps the query cannot use. The
   // query being built is kept across the switch; only the schema is replaced.
   useEffect(() => {
-    const key = `${ontologyId}|${imports}|${revision}`;
+    const key = `${ontologyId}|${imports}|${revision}|${displayLanguage}`;
     if (!active || !ontologyId || requestedFor.current === key) return;
     requestedFor.current = key;
     setLoadingSchema(true);
     let cancelled = false;
-    getQuerySchema(ontologyId, imports)
+    getQuerySchema(ontologyId, imports, displayLanguage)
       .then((result) => !cancelled && setSchema(result))
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -253,7 +254,7 @@ export function useQueryBuilder(
     return () => {
       cancelled = true;
     };
-  }, [active, ontologyId, imports, revision]);
+  }, [active, ontologyId, imports, revision, displayLanguage]);
 
   // The live SPARQL, regenerated whenever the state or namespaces change.
   const sparql = useMemo(
@@ -400,7 +401,7 @@ export function useQueryBuilder(
       setHint(null);
       let info: QueryNodeInfo;
       try {
-        info = await getQueryNode(ontologyId, nodeIri, imports);
+        info = await getQueryNode(ontologyId, nodeIri, imports, displayLanguage);
       } catch {
         setHint("That node has no type, so it cannot be used as a query step.");
         return;
@@ -422,7 +423,7 @@ export function useQueryBuilder(
         );
       }
     },
-    [ontologyId, schema, appendClass, imports],
+    [ontologyId, schema, appendClass, imports, displayLanguage],
   );
 
   /** Every continuation available from the current path, best first. */
@@ -461,7 +462,7 @@ export function useQueryBuilder(
         if (!existing || link.count > existing.count) {
           byKey.set(key, {
             anchor: index,
-            anchorLabel: step.label,
+            anchorLabel: classLabels.get(step.classIri) ?? step.label,
             predicate: link.predicate,
             predicateLabel: link.label,
             inverse,
@@ -644,12 +645,50 @@ export function useQueryBuilder(
     return !!current && textRef.current !== current.baseline;
   }, []);
 
+  // Names are view metadata, not query structure. Keep the raw state/text
+  // intact while a language-specific schema relabels an already open query.
+  const pins = useMemo(() => [...new Set(state.steps.flatMap(step => step.pin ? [step.pin.iri] : []))], [state.steps]);
+  const pinScope = JSON.stringify([ontologyId, displayLanguage, pins]);
+  const [pinNames, setPinNames] = useState<{ scope: string; labels: Record<string, string> }>({ scope: "", labels: {} });
+  useEffect(() => {
+    if (!active || !ontologyId || displayLanguage === undefined || pins.length === 0) return;
+    let cancelled = false;
+    Promise.all(pins.map(async iri => {
+      try {
+        const info = await getQueryNode(ontologyId, iri, imports, displayLanguage);
+        return info ? [iri, info.label] as const : null;
+      } catch { return null; }
+    })).then(rows => {
+      if (!cancelled) setPinNames({ scope: pinScope, labels: Object.fromEntries(rows.filter(row => row !== null)) });
+    });
+    return () => { cancelled = true; };
+  }, [active, ontologyId, displayLanguage, pinScope, imports]);
+
+  const displayState = useMemo(() => {
+    if (!schema) return state;
+    const classes = new Map(schema.classes.map(cls => [cls.iri, cls.label]));
+    const properties = new Map(Object.values(schema.dataProperties).flat().map(prop => [prop.predicate, prop.label]));
+    let changed = false;
+    const steps = state.steps.map(step => {
+      const label = classes.get(step.classIri) ?? step.label;
+      const pinLabel = step.pin && pinNames.scope === pinScope ? pinNames.labels[step.pin.iri] : undefined;
+      const props = step.props.map(prop => {
+        const name = properties.get(prop.predicateIri);
+        return name && name !== prop.label ? { ...prop, label: name } : prop;
+      });
+      if (label === step.label && (!pinLabel || pinLabel === step.pin?.label) && props.every((prop, i) => prop === step.props[i])) return step;
+      changed = true;
+      return { ...step, label, props, ...(step.pin && pinLabel ? { pin: { ...step.pin, label: pinLabel } } : {}) };
+    });
+    return changed ? { ...state, steps } : state;
+  }, [schema, state, pinNames, pinScope]);
+
   // Everything the graph and the panel need, in one object.
   return {
     schema,
     schemaError,
     loadingSchema,
-    state,
+    state: displayState,
     setState,
     sparql,
     hint,

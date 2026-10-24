@@ -1029,10 +1029,10 @@ def get_hierarchy(
 
 
 @router.get("/{oid}/query-schema")
-def get_query_schema(oid: str, imports: bool = IMPORTS_PARAM) -> dict:
+def get_query_schema(oid: str, imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM) -> dict:
     """Class-level schema powering the visual query builder."""
     ontology = _get_or_404(oid)
-    return imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS)
+    return imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS, lang)
 
 
 @router.get("/{oid}/embedded-queries")
@@ -1049,7 +1049,7 @@ def get_embedded_queries(oid: str, imports: bool = IMPORTS_PARAM) -> dict:
 
 
 @router.get("/{oid}/query-node")
-def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARAM) -> dict:
+def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM) -> dict:
     """Map a clicked graph node to the class (and optional instance pin).
 
     Takes the imports flag although the spec's list of changed endpoints does
@@ -1057,10 +1057,10 @@ def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARA
     classes too, and describing one against the file alone would refuse it.
     """
     ontology = _get_or_404(oid)
-    schema = imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS)
+    schema = imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS, lang)
     graph = _graph(ontology, imports)
     with ontology.reading():
-        described = describe_query_node(graph, iri, schema)
+        described = describe_query_node(graph, iri, schema, langs=ontology.label_langs(lang))
     if described is None:
         raise HTTPException(
             status_code=404,
@@ -1070,7 +1070,7 @@ def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARA
 
 
 @router.post("/{oid}/sparql")
-def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM) -> dict:
+def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM) -> dict:
     """POST /{oid}/sparql -> run a SELECT query and return the result rows.
 
     Maps the executor's exceptions to HTTP: timeout -> 504, bad/forbidden
@@ -1084,7 +1084,7 @@ def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM) 
     try:
         # The worker takes the read lock itself: held here, the worker would
         # wait on it, and a stopped query would read on after it was let go.
-        result = execute_select(graph, request.query, key=oid, reading=ontology.reading)
+        result = execute_select(graph, request.query, key=oid, reading=ontology.reading, langs=ontology.label_langs(lang))
         if imports:
             result["importDocuments"] = imports_service.merged(ontology)["documents"]
         # What the results covered: the switched-on data snapshots, which

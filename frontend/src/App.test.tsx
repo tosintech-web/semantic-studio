@@ -697,7 +697,7 @@ describe("App startup chooser", () => {
 
     expect(homeShown()).toBe(false);
     expect(document.querySelector(".query-panel")).toBeTruthy();
-    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false, "en");
   });
 
   it("opening a library entry hides the chooser and loads it", async () => {
@@ -705,7 +705,7 @@ describe("App startup chooser", () => {
     await renderAppOpened();
 
     expect(getGraph).toHaveBeenCalledTimes(1);
-    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false, "en");
     expect(homeShown()).toBe(false);
     expect(screen.getByTestId("graph")).toBeTruthy();
     expect(statusBar()).toContain("FIBO");
@@ -843,13 +843,13 @@ describe("App status bar", () => {
     // from stats.budget, so a clamped response doubles from what was granted,
     // not what was asked for.
     await renderAppOpened();
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false, "en");
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /show more/i }));
     });
 
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false, "en");
   });
 });
 
@@ -903,10 +903,10 @@ describe("App graph budget range", () => {
     await renderAppOpened();
     await press(showMore);
     await press(showMore);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 8000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 8000, false, "en");
 
     await press(showLess);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false, "en");
   });
 
   it("show less clamps to the floor rather than going below", async () => {
@@ -917,10 +917,10 @@ describe("App graph budget range", () => {
     serverLike({ nodeTotal: 40000, serverDefault: 15000 });
     await renderAppOpened();
     await press(showMore);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 30000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 30000, false, "en");
 
     await press(showLess);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 15000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 15000, false, "en");
   });
 
   it("show more and show less are inverses", async () => {
@@ -970,10 +970,10 @@ describe("App graph budget range", () => {
     serverLike({ serverDefault: 500 });
     await renderAppOpened();
     await press(showMore);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 1000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 1000, false, "en");
 
     await press(showLess);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 500, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 500, false, "en");
     expect(showLess().disabled).toBe(true);
   });
 
@@ -1165,7 +1165,7 @@ describe("App expand on demand", () => {
     // whatever the panel happens to have loaded: the two can differ while the
     // detail request is still in flight.
     await expandTheSelectedNode();
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/issuedBy", undefined, false);
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/issuedBy", undefined, false, "en");
   });
 
   it("expanding announces the new drawn count", async () => {
@@ -1285,7 +1285,7 @@ describe("App explore column", () => {
     });
     expect(document.querySelector(".detail-panel")).toBeTruthy();
     expect(startPanel()).toBeNull();
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, undefined, "en");
 
     // By title rather than by accessible name: that control's name is the glyph
     // it contains, "✕", because name-from-contents wins over a title attribute.
@@ -1427,7 +1427,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, undefined, "en");
   });
 
   it("clicking a drawn result makes no request", async () => {
@@ -1454,7 +1454,7 @@ describe("App result navigation", () => {
     await clickResultChip();
 
     expect(getNeighborhood).toHaveBeenCalledTimes(1);
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Issuer", undefined, false);
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Issuer", undefined, false, "en");
   });
 
   it("clicking an undrawn result announces what was added", async () => {
@@ -1490,7 +1490,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Issuer", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Issuer", false, undefined, "en");
     expect(document.querySelector(".detail-panel")).toBeTruthy();
   });
 
@@ -1556,7 +1556,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "fake search hit" }));
     });
-    expect(getQueryNode).toHaveBeenCalledWith("o1", "http://x/Issuer", false);
+    expect(getQueryNode).toHaveBeenCalledWith("o1", "http://x/Issuer", false, "en");
   });
 
   it("view in source switches mode and passes the target", async () => {
@@ -2102,7 +2102,7 @@ describe("App home screen", () => {
     });
 
     expect(getGraph).toHaveBeenCalledTimes(1);
-    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false, "en");
     expect(homeShown()).toBe(false);
     expect(document.querySelector(".query-panel")).toBeTruthy();
   });
@@ -2384,7 +2384,7 @@ describe("App Hierarchy mode", () => {
       .find((el) => el.textContent?.includes("Instrument"))!;
     await act(async () => fireEvent.click(row));
 
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Instrument", undefined, false);
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Instrument", undefined, false, "en");
 
     // And the selection survives into Explore: switching there shows the detail
     // panel rather than the starting panel.
@@ -2405,7 +2405,7 @@ describe("App Hierarchy mode", () => {
     });
     await screen.findByRole("button", { name: /^Classes, \d/ });
     // The third argument: a reasoning result's inferred edges, none here.
-    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, false);
+    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, false, "en");
   });
 
   it("nothing selected shows the detail panel empty state", async () => {
@@ -2448,7 +2448,7 @@ describe("App Hierarchy mode", () => {
     // The panel appears beside the tree (still in Hierarchy mode), naming the
     // entity and listing its statement.
     await waitFor(() => expect(document.querySelector(".detail-panel")).toBeTruthy());
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Instrument", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Instrument", false, undefined, "en");
     expect(screen.getByRole("heading", { name: /statements/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Contract/ })).toBeTruthy();
     // The tree is still there — the panel is beside it, not instead of it.
@@ -2491,8 +2491,8 @@ describe("App Hierarchy mode", () => {
 
     // It becomes the selection: the panel re-fetches Contract, and — being off
     // the budgeted graph — it is drawn through the shared outside-graph route.
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Contract", false));
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Contract", undefined, false);
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Contract", false, undefined, "en"));
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Contract", undefined, false, "en");
   });
 
   it("a selected property shows its connections in the panel", async () => {
@@ -2546,7 +2546,7 @@ describe("App Hierarchy mode", () => {
       .find((el) => el.textContent?.includes("hasParty"))!;
     await act(async () => fireEvent.click(row));
 
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/hasParty", false));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/hasParty", false, undefined, "en"));
     // The property's domain and range are shown as connections, the same panel a
     // class uses.
     expect(screen.getByRole("button", { name: /Contract/ })).toBeTruthy();
@@ -2696,7 +2696,7 @@ describe("App imports (external-access Stage 2)", () => {
   it("opening an ontology in Explore asks nothing about its imports (AC-16)", async () => {
     await renderAppOpened();
     expect(listImports).not.toHaveBeenCalled();
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false, "en");
   });
 
   it("the switch in the imports panel turns every view over to the merged view (AC-20)", async () => {
@@ -2713,7 +2713,7 @@ describe("App imports (external-access Stage 2)", () => {
     await act(async () => {
       fireEvent.click(toggle);
     });
-    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", true, false);
+    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", true, false, "en");
     expect(screen.getByRole("switch", { name: "Include imports" }).getAttribute("aria-checked")).toBe(
       "true",
     );
@@ -2724,19 +2724,19 @@ describe("App imports (external-access Stage 2)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true, "en");
   });
 
   it("the switch is remembered per ontology", async () => {
     localStorage.setItem("semantic-studio-include-imports", JSON.stringify({ o1: true }));
     await renderAppOpened();
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true, "en");
   });
 
   it("the query panel is told the switch and how many imports resolved", async () => {
     // The count is asked for on entering Query mode, not before: the mount
     // test above and the Explore test here hold the other half.
-    getQuerySchema.mockResolvedValue({ classes: [], links: [], namespaces: {}, truncated: false });
+    getQuerySchema.mockResolvedValue({ classes: [], links: [], superClasses: {}, dataProperties: {}, namespaces: {}, truncated: false });
     await renderAppOpened();
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Query" }));
@@ -2820,7 +2820,7 @@ describe("App projects (authoring-foundations)", () => {
     expect(screen.getByText("Invoices", { selector: ".project-name" })).toBeTruthy();
     expect(screen.queryByLabelText("ONTOLOGY")).toBeNull();
 
-    getQuerySchema.mockResolvedValue({ classes: [], links: [], namespaces: {}, truncated: false, embeddedQueryCount: 0 });
+    getQuerySchema.mockResolvedValue({ classes: [], links: [], superClasses: {}, dataProperties: {}, namespaces: {}, truncated: false, embeddedQueryCount: 0 });
     await act(async () => {
       fireEvent.click(tab("Query"));
     });
@@ -3102,7 +3102,7 @@ describe("App and the modeling canvas (visual-modeling Stage 2)", () => {
     await act(async () => onSelect("http://x#Invoice"));
     expect(canvasProps.last!.selected).toBe("http://x#Invoice");
     // The form opens on it.
-    expect(getNodeDetails).toHaveBeenCalledWith(OID, "http://x#Invoice", false);
+    expect(getNodeDetails).toHaveBeenCalledWith(OID, "http://x#Invoice", false, undefined, "en");
   });
 });
 
@@ -3441,7 +3441,7 @@ describe("App Edit page (edit-page-rework)", () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
     });
     expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", definition: "A debt." });
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Bond", false));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Bond", false, undefined, "en"));
     // Nothing dropped to the page meanwhile.
     expect(document.activeElement).not.toBe(document.body);
   });
@@ -3619,7 +3619,7 @@ describe("App Edit page (edit-page-rework)", () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Instrument is a kind of Asset" }));
     });
     expect(within(panel).getByRole("tab", { name: "Details" }).getAttribute("aria-selected")).toBe("true");
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Instrument", false));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Instrument", false, undefined, "en"));
   });
 
   it("Turtle in the project bar opens the document in View's editor", async () => {
@@ -3829,7 +3829,7 @@ describe("App: the graph frames the results (query-page-rework 5.2)", () => {
     const before = frames();
     await click("fake explicit run");
     expect(getResultNodes).toHaveBeenCalledTimes(1);
-    expect(getResultNodes).toHaveBeenCalledWith("o1", ["http://x/Coupon", "http://x/Rate"], false);
+    expect(getResultNodes).toHaveBeenCalledWith("o1", ["http://x/Coupon", "http://x/Rate"], false, "en");
     expect(graph().getAttribute("data-expansion")).toBe("http://x/Coupon http://x/Rate");
     expect(frames()).toBe(before + 1);
     expect(liveRegion()).toContain("3 results shown on the graph.");

@@ -298,7 +298,7 @@ describe("QueryPanel imports (external-access Stage 2, AC-20)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /Execute/ }));
     });
-    expect(runSparql).toHaveBeenCalledWith("ont-1", expect.any(String), true);
+    expect(runSparql).toHaveBeenCalledWith("ont-1", expect.any(String), true, undefined);
   });
 });
 

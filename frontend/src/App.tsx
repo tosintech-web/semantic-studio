@@ -154,6 +154,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "./i18n/I18nProvider";
+import { DictionaryLanguageContext, useDictionaryLanguage } from "./dictionary/useDictionaryLanguage";
+import DictionaryLanguageSelect from "./components/DictionaryLanguageSelect";
 import UiLanguageSelect from "./components/UiLanguageSelect";
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -569,7 +572,7 @@ export default function App() {
   }, []);
   // The open project (authoring-foundations). Its revision and display
   // language are part of every fetch key below, so a change refreshes the
-  // views; for a library ontology both are constant (0 and null).
+  // views; a Library keeps revision 0 but has its own display language.
   // Read slice by slice: the editor's text is in the store too and changes on
   // every keystroke, which must not re-render all of App.
   const openProjectSummary = useProjectSelector((s) => s.project);
@@ -592,7 +595,14 @@ export default function App() {
   // Only a project document's views are named by it; a library ontology open
   // beside a project ignores it, and must not refetch when it moves.
   const storeLanguage = useProjectSelector((s) => s.displayLanguage);
-  const displayLanguage = editingProjectDoc ? storeLanguage : null;
+  const { locale: uiLocale } = useI18n();
+  const { language: displayLanguage, setLanguage: setDictionaryLanguage } = useDictionaryLanguage({
+    ontologyId: activeId,
+    projectLanguage: editingProjectDoc ? storeLanguage : null,
+    uiLocale,
+  });
+  const displayLanguageRef = useRef(displayLanguage);
+  displayLanguageRef.current = displayLanguage;
   // The editing form and the tree's actions (visual-modeling 5.1, 5.2) are
   // for the open project's model.ttl only. Memoized: the form derives its
   // blocks from the languages array, and a new array per render would
@@ -822,7 +832,7 @@ export default function App() {
   const pendingSelection = useRef<string | null>(null);
 
   // The shared query-builder state; the schema is only fetched in Query mode.
-  const builder = useQueryBuilder(activeId, mode === "query", includeImports, viewRevision);
+  const builder = useQueryBuilder(activeId, mode === "query", includeImports, viewRevision, displayLanguage);
 
   // Apply and persist the theme whenever it changes (data-theme drives the CSS).
   useEffect(() => {
@@ -917,7 +927,7 @@ export default function App() {
     if (!activeId) return;
     setLoadingGraph(true);
     let cancelled = false;
-    getGraph(activeId, graphBudget ?? undefined, includeImports)
+    getGraph(activeId, graphBudget ?? undefined, includeImports, displayLanguage)
       .then((g) => {
         if (cancelled) return;
         setGraphData(g);
@@ -1277,7 +1287,7 @@ export default function App() {
     if (!id) return;
     setExpandingIri(iri);
     try {
-      const data = await getNeighborhood(id, iri, undefined, includeImportsRef.current);
+      const data = await getNeighborhood(id, iri, undefined, includeImportsRef.current, displayLanguageRef.current);
       if (activeIdRef.current !== id) return;
       // The token, not the data, is what tells GraphView this is a new merge:
       // expanding the same entity twice hands over an equal object.
@@ -1360,7 +1370,7 @@ export default function App() {
       finish(shown);
       return;
     }
-    getResultNodes(id, sendable(hidden), includeImportsRef.current)
+    getResultNodes(id, sendable(hidden), includeImportsRef.current, displayLanguageRef.current)
       .then((answer) => {
         if (resultsRun.current !== run || activeIdRef.current !== id) return;
         if (answer.nodes.length > 0) {
@@ -1829,11 +1839,13 @@ export default function App() {
   // Layout: a header (brand + nav rows), a main area (graph + right panel that
   // depends on the mode), a status bar, and the Load dialog when open.
   return (
+    <DictionaryLanguageContext.Provider value={displayLanguage}>
     <div className="app">
       <header className="app-header">
         <div className="nav-row">
           <Logo />
           <UiLanguageSelect />
+          {activeId && !editingProjectDoc && <DictionaryLanguageSelect language={displayLanguage} onChange={setDictionaryLanguage} />}
           <nav className="main-nav" role="tablist" aria-label="Workspace">
             {/* Home is a real fourth view of the workspace, so it is a tab
                 rather than a plain button: it swaps the main region exactly as
@@ -2605,5 +2617,6 @@ export default function App() {
         />
       )}
     </div>
+    </DictionaryLanguageContext.Provider>
   );
 }

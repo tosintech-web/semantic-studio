@@ -50,6 +50,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { searchNodes } from "../api";
@@ -86,6 +87,7 @@ export default function SearchBox({
   placeholder = "Search concepts, properties…",
   imports = false,
 }: Props) {
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<VizNode[]>([]);
   const [open, setOpen] = useState(false);
@@ -126,7 +128,7 @@ export default function SearchBox({
       const controller = new AbortController();
       inFlight.current = controller;
       const latest = () => ticket === searchCount.current;
-      searchNodes(ontologyId, query, imports, undefined, controller.signal, SHOWN_RESULTS + 1)
+      searchNodes(ontologyId, query, imports, undefined, controller.signal, SHOWN_RESULTS + 1, dictionaryLanguage)
         .then((r) => {
           if (!latest()) return;
           const overflow = r.length > SHOWN_RESULTS;
@@ -148,7 +150,7 @@ export default function SearchBox({
           if (latest()) setResults([]);
         });
     }, 200);
-  }, [query, ontologyId, imports]);
+  }, [query, ontologyId, imports, dictionaryLanguage]);
 
   // A search still on its way when the box goes is not wanted either.
   useEffect(() => () => inFlight.current?.abort(), []);

@@ -278,14 +278,14 @@ describe("running (AC-6)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /Run/ }));
     });
-    expect(api.runSparql).toHaveBeenLastCalledWith("ont-1", "SELECT ?x WHERE { ?x ?p ?o }", true);
+    expect(api.runSparql).toHaveBeenLastCalledWith("ont-1", "SELECT ?x WHERE { ?x ?p ?o }", true, undefined);
     await waitFor(() => expect(document.querySelector(".results-table")).not.toBeNull());
 
     type("SELECT ?y WHERE { ?y ?p ?o }");
     await act(async () => {
       fireEvent.keyDown(textarea(), { key: "Enter", ctrlKey: true });
     });
-    expect(api.runSparql).toHaveBeenLastCalledWith("ont-1", "SELECT ?y WHERE { ?y ?p ?o }", true);
+    expect(api.runSparql).toHaveBeenLastCalledWith("ont-1", "SELECT ?y WHERE { ?y ?p ?o }", true, undefined);
   });
 
   it("shows the server's sentence above the editor", async () => {
@@ -385,7 +385,7 @@ describe("Add PREFIX (query-page-rework 5.3, AC-6)", () => {
     });
     const added = "# Bonds\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nSELECT ?b WHERE { ?b a rdfs:Resource }";
     expect(textarea().value).toBe(added);
-    expect(api.runSparql).toHaveBeenLastCalledWith("ont-1", added, false);
+    expect(api.runSparql).toHaveBeenLastCalledWith("ont-1", added, false, undefined);
     expect(document.activeElement).toBe(textarea());
   });
 
@@ -650,7 +650,7 @@ describe("queries stored in the file (AC-11)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /Run/ }));
     });
-    expect(api.runSparql).toHaveBeenCalledWith("ont-1", QUERIES[0].text, false);
+    expect(api.runSparql).toHaveBeenCalledWith("ont-1", QUERIES[0].text, false, undefined);
 
     // An ASK opens read-only with Run disabled and its reason as the label.
     fireEvent.click(screen.getByRole("button", { name: "Person shape" }));
@@ -846,7 +846,7 @@ describe("a ready-made question (query-page-rework 5.4, AC-8)", () => {
     });
     expect(textarea().value).toBe(QUESTION.text);
     expect(document.querySelector(".sparql-editor-name")?.textContent).toBe(QUESTION.title);
-    expect(api.runSparql).toHaveBeenCalledWith("ont-1", QUESTION.text, false);
+    expect(api.runSparql).toHaveBeenCalledWith("ont-1", QUESTION.text, false, undefined);
     await waitFor(() => expect(onResults).toHaveBeenLastCalledWith(expect.anything(), true));
     expect(document.activeElement).toBe(textarea());
     // Never copied into the saved queries: nothing is saved until asked.

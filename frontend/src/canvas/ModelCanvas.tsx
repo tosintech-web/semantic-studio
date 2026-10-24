@@ -106,6 +106,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   applyNodeChanges,
@@ -268,6 +269,7 @@ interface DraftPlace {
 }
 
 function Canvas(props: ModelCanvasProps) {
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const { projectId, doc, revision, language, primaryLanguage, selected, onSelect, onSelectLink, onDeleted, onCanvasSet } =
     props;
   const data = useCanvasData(projectId, doc, revision, language, props.inferred ?? null);
@@ -760,7 +762,7 @@ function Canvas(props: ModelCanvasProps) {
     if (selectedKind.current === selected) return;
     selectedKind.current = selected;
     let cancelled = false;
-    getNodeDetails(`${projectId}-${doc}`, selected)
+    getNodeDetails(`${projectId}-${doc}`, selected, false, undefined, dictionaryLanguage)
       .then((details) => {
         if (!cancelled && (details.kind === "class" || details.kind === "concept")) void data.show(selected);
       })
@@ -768,7 +770,7 @@ function Canvas(props: ModelCanvasProps) {
     return () => {
       cancelled = true;
     };
-  }, [view, data.shown, selected, data.show, projectId, doc]);
+  }, [view, data.shown, selected, data.show, projectId, doc, dictionaryLanguage]);
   // The deleted box is gone from the view: its focus counts again, so an
   // undo that restores it can select it (found in review).
   useEffect(() => {
