@@ -43,6 +43,10 @@ BASIC IDEA
     loads.py while it runs, and a cancel marks it: the store checks the mark
     before it writes, so a cancelled load leaves nothing (D-115).
 
+    Dictionary lists use /{oid}/entities: filtered true totals, opaque view
+    revisions, 50 default / 100 maximum rows and a 256 KiB encoded response
+    bound. Search keeps its legacy array and kind filters over the same index.
+
 INPUTS / INPUT SOURCES
     - HTTP requests from the frontend / API clients.
     - Uploaded files (multipart) and JSON fetch/sparql request bodies.
@@ -98,6 +102,8 @@ from starlette.concurrency import run_in_threadpool
 
 # Delegate the real work to the domain modules.
 from .. import parse_errors, provenance
+from ..entity_views import (EntityPageTooLarge, EntityViewChanged, encode_entity_response,
+                            entity_page, entity_search, get_entity_view)
 from ..docs_export import DocsExportError, build_zip
 from ..embedded_queries import MAX_TEXT_CHARS as MAX_QUERY_CHARS
 from ..embedded_queries import list_embedded_queries
@@ -110,7 +116,6 @@ from ..graph_builder import (
     neighborhood_viz,
     node_details,
     nodes_viz,
-    search_nodes,
     term_kind,
 )
 from .. import axioms, examples, library_examples, modeling_checks
@@ -850,21 +855,50 @@ def get_node(
     return details
 
 
+def _entity_refusal(error: Exception):
+    if isinstance(error, EntityPageTooLarge):
+        raise HTTPException(status_code=400, detail={"code": "ENTITY_PAGE_TOO_LARGE", "message": str(error),
+                            "total": error.total, "suggested_limit": error.suggested_limit}) from error
+    raise HTTPException(status_code=409, detail={"code": "ENTITY_VIEW_CHANGED", "message": "The dictionary is updating. Try again."}) from error
+
+
+@router.get("/{oid}/entities")
+def get_entities(
+    oid: str, q: str = Query("", max_length=512),
+    kind: Literal["all", "concept", "individual", "class", "properties", "other"] = "all",
+    lang: Optional[str] = LANG_PARAM, imports: bool = IMPORTS_PARAM,
+    offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100),
+    sort: Literal["label", "iri"] = "label",
+) -> Response:
+    """Every named dictionary item, independently of the visual graph budget."""
+    ontology = _get_or_404(oid)
+    try:
+        # FastAPI runs this synchronous route in a worker. The lock covers the
+        # complete projection/encoding, not only index selection: own graph
+        # descriptions must belong to the same revision as index values.
+        with ontology.reading():
+            view = get_entity_view(ontology, include_imports=imports, language=lang)
+            page = entity_page(view, query=q, kind=kind, offset=offset, limit=limit, sort=sort)
+            return Response(encode_entity_response(page, total=page["total"], limit=limit), media_type="application/json")
+    except (EntityPageTooLarge, EntityViewChanged) as error:
+        _entity_refusal(error)
+
+
 @router.get("/{oid}/search")
 def search(
-    oid: str,
-    q: str = Query(...),
-    limit: int = Query(default=25, le=100),
-    imports: bool = IMPORTS_PARAM,
-    lang: Optional[str] = LANG_PARAM,
+    oid: str, q: str = Query(..., max_length=512), limit: int = Query(default=25, ge=1, le=100),
+    imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM,
     kind: Optional[SearchKind] = Query(default=None),
-) -> list[dict]:
-    """GET /{oid}/search?q=... -> ranked label/IRI matches for the search box.
-
-    In a project every name matches, whatever the display language. `kind`
-    keeps one kind of entity, before the limit (the editing form's pickers)."""
+) -> Response:
+    """Legacy VizNode array backed by complete dictionary search values."""
     ontology = _get_or_404(oid)
-    return search_nodes(_viz(ontology, imports, lang), q, limit, kind)
+    try:
+        with ontology.reading():
+            view = get_entity_view(ontology, include_imports=imports, language=lang)
+            rows, total = entity_search(view, q, kind=kind, limit=limit)
+            return Response(encode_entity_response(rows, total=total, limit=limit), media_type="application/json")
+    except (EntityPageTooLarge, EntityViewChanged) as error:
+        _entity_refusal(error)
 
 
 @router.get("/{oid}/source")

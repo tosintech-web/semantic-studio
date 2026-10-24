@@ -52,6 +52,8 @@ class Entity:
     reference_only: bool
     names: tuple[tuple[int, Literal], ...]
     fields: tuple[SearchValue, ...]
+    degree: int = 0
+    class_type: str | None = None
 
     def display_name(self, languages: tuple[str, ...] | None) -> str:
         value = preferred_literal(self.names, languages)
@@ -88,7 +90,8 @@ def build_entity_index(graph: Graph, graph_nodes: list[dict]) -> EntityIndex:
         kind = drawn.get(key, {}).get('kind')
         if not kind or kind == 'other':
             kind = node_kind(graph, iri)
-        entities[key] = Entity(key, kind, iri not in subjects, names, fields)
+        entities[key] = Entity(key, kind, iri not in subjects, names, fields,
+                               drawn.get(key, {}).get("degree", 0), drawn.get(key, {}).get("classType"))
     return EntityIndex(MappingProxyType(entities))
 
 

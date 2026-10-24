@@ -127,6 +127,7 @@ const CALLS: Record<string, () => Promise<unknown>> = {
   cancelLoad: () => api.cancelLoad("0b8a3f5e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"),
   deleteOntology: () => api.deleteOntology("ont-1"),
   getGraph: () => api.getGraph("ont-1"),
+  getEntities: () => api.getEntities("ont-1", {}),
   getNeighborhood: () => api.getNeighborhood("ont-1", "http://example.org/a"),
   getResultNodes: () => api.getResultNodes("ont-1", ["http://example.org/a"]),
   fetchHierarchy: () => api.fetchHierarchy("ont-1"),
@@ -671,6 +672,22 @@ describe("explicit dictionary language", () => {
       for (const request of recorded) {
         expect(new URL(request.url, "http://localhost").searchParams.getAll("lang")).toEqual(["ja"]);
       }
+    } finally { api.setDisplayLanguage(null); }
+  });
+});
+
+describe("entity list API", () => {
+  it("passes explicit paging/filter/language/sort and cancellation without project language leakage", async () => {
+    api.setDisplayLanguage("fr");
+    const controller = new AbortController();
+    try {
+      await api.getEntities("ont-1", { q: "犬 & 猫", kind: "concept", lang: "ja", imports: true, offset: 50, limit: 50, sort: "iri" }, controller.signal);
+      const request = recorded[0];
+      const url = new URL(request.url, "http://localhost");
+      expect(url.pathname).toBe("/api/ontologies/ont-1/entities");
+      expect(Object.fromEntries(url.searchParams)).toEqual({ q: "犬 & 猫", kind: "concept", lang: "ja", imports: "true", offset: "50", limit: "50", sort: "iri" });
+      expect(request.method).toBe("GET");
+      expect(vi.mocked(fetch).mock.calls[0][1]?.signal).toBe(controller.signal);
     } finally { api.setDisplayLanguage(null); }
   });
 });

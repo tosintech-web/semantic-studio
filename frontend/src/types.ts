@@ -26,6 +26,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { EntityMatchWire } from "./entities/types";
 import type { QueryState } from "./sparql/types";
 import {
   EDGES,
@@ -264,6 +265,11 @@ export interface OntologyDeletion {
 
 // One node in the graph view.
 export interface VizNode {
+  match?: EntityMatchWire;
+  label_language?: string | null;
+  label_fallback?: boolean;
+  label_truncated?: boolean;
+  names_truncated?: boolean;
   id: string;
   label: string;
   kind: string;    // colours the node and keys the legend

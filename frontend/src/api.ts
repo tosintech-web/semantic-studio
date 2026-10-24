@@ -54,6 +54,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { EntityPage, EntityParams } from "./entities/types";
 import type { QueryState } from "./sparql/types";
 import type {
   AlreadyDefined,
@@ -519,6 +520,17 @@ export function searchNodes(
     ),
     signal ? { signal } : undefined,
   ).then((r) => handle<VizNode[]>(r));
+}
+
+/** Complete dictionary page; explicit params never inherit project module state. */
+export function getEntities(id: string, params: EntityParams, signal?: AbortSignal): Promise<EntityPage> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.set(key, String(value));
+  }
+  const suffix = query.size ? `?${query}` : "";
+  return send(`/api/ontologies/${id}/entities${suffix}`, signal ? { signal } : undefined)
+    .then(response => handle<EntityPage>(response));
 }
 
 // The source text for the View tab (original bytes, or pretty Turtle).
