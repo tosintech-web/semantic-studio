@@ -41,7 +41,8 @@ INPUTS / INPUT SOURCES (props)
     - onSelect: select another entity (a class named in a rule).
 
 EXPECTED OUTPUT
-    - Commands through the runners; current-locale notices from selected rule facts.
+    - Commands through the runners; current-locale notices and warning rows
+      from selected rule facts, with original warning details.
 ================================================================================
 */
 
@@ -63,6 +64,7 @@ import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleKey, RuleRestriction } from "../types";
 import { RunnerErrorDetails, useRunner, type Runner } from "./EditParts";
 import { useWarningAnnouncer } from "./RelationshipForm";
+import WarningMessage from "./WarningMessage";
 import RuleBuilder from "./RuleBuilder";
 
 interface Props {
@@ -174,7 +176,7 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
         <ul className="form-warnings" aria-label={t("rules.warnings")}>
           {general.map((w) => (
             <li key={w.text} className="form-warning">
-              {w.text}
+              <WarningMessage warning={w} />
             </li>
           ))}
         </ul>
@@ -241,7 +243,7 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
                       <ul className="form-warnings" aria-label={t("rules.warnings")}>
                         {mine.map((w) => (
                           <li key={w.text} className="form-warning">
-                            {w.text}
+                            <WarningMessage warning={w} />
                           </li>
                         ))}
                       </ul>

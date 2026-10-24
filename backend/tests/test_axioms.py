@@ -20,6 +20,8 @@ SUMMARY
     form and never rewritten by it (AC-12, row R13 as the server sees it).
 
 BASIC IDEA
+    Legacy warning views retain exact original fields; metadata has separate
+    source and API coverage in test_model_message_metadata.py.
     Through the HTTP API, as the frontend drives it, with the graph read
     directly for exact triples and isomorphism, as test_relationships.py
     does. The round trip is proved by two graphs: one made by the command,
@@ -139,7 +141,12 @@ def apply(pid: str, extra: str) -> None:
 def rules(pid: str, iri: str) -> dict:
     response = client.get(f"/api/ontologies/{pid}-model/node", params={"iri": iri})
     assert response.status_code == 200, response.text
-    return response.json()["rules"]
+    result = response.json()["rules"]
+    # Existing compatibility assertions keep all legacy warning fields exact;
+    # the additive descriptors are exercised by the metadata/API tests.
+    result["warnings"] = [{key: value for key, value in warning.items() if key != "uiMessage"}
+                          for warning in result["warnings"]]
+    return result
 
 
 def revision(pid: str) -> int:

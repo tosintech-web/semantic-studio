@@ -18,6 +18,8 @@ SUMMARY
     after a remove, and never to the page.
 
 BASIC IDEA
+    Warning metadata and original disclosures follow UI language while preserving
+    class-group meaning, native focus and fix arguments.
     The block is rendered with its runner, the api mocked as the other form
     tests mock it, and the rules handed in by a harness that can change them,
     as a refetch for the new revision does.
@@ -473,6 +475,21 @@ it("rewords a refused rule's live notice without replacing its original details 
   expect(said()).toBe(raw);
   expect(projectStore.getSnapshot().announcement.id).toBe(id);
   expect(runCommand).toHaveBeenCalledTimes(1);
+  expect(document.querySelector("b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("renders a class-membership warning from raw facts in either language", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const warning = { text: "Original class warning <b>{name}", disjoint: EX + "Person",
+    uiMessage: { code: "model.members.parent", args: { name: "甲 <b>{name}", parent: "乙 {parent}" } },
+  };
+  render(<I18nProvider><UiLanguageSelect /><Harness initial={rulesOf([disjoint], { warnings: [warning] })} /></I18nProvider>);
+  const row = screen.getByText("Original class warning <b>{name}").closest("li")!;
+  expect(row.textContent).toContain("クラス「甲 <b>{name}」は「乙 {parent}」の下位クラスであり、同時に「乙 {parent}」とは重ならないため、メンバーを持てません。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(row.textContent).toContain("甲 <b>{name} can never have members: it is a kind of 乙 {parent} and disjoint with it.");
+  expect(runCommand).not.toHaveBeenCalled();
   expect(document.querySelector("b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

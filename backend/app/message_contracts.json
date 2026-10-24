@@ -389,6 +389,139 @@
     "editing.refusal.value_bounds_conflict": {},
     "editing.refusal.value_bounds_kind": {},
     "editing.refusal.undo_unavailable": {},
-    "editing.refusal.redo_unavailable": {}
+    "editing.refusal.redo_unavailable": {},
+    "words.list.or": {},
+    "model.conflict.symmetric_asymmetric": {},
+    "model.conflict.reflexive_irreflexive": {},
+    "model.chain.counted_self": {
+      "name": "string"
+    },
+    "model.chain.counted_under": {
+      "name": "string",
+      "source": "string"
+    },
+    "model.chain.counted_inverse": {
+      "name": "string",
+      "source": "string"
+    },
+    "model.chain.self": {
+      "characteristic": "parts"
+    },
+    "model.chain.changed_under": {
+      "name": "string",
+      "source": "string",
+      "characteristic": "parts"
+    },
+    "model.chain.changed_inverse": {
+      "name": "string",
+      "source": "string",
+      "characteristic": "parts"
+    },
+    "model.chain.under": {
+      "name": "string",
+      "characteristic": "parts"
+    },
+    "model.chain.inverse": {
+      "name": "string",
+      "characteristic": "parts"
+    },
+    "model.count.self": {
+      "name": "string"
+    },
+    "model.count.under": {
+      "name": "string",
+      "source": "string"
+    },
+    "model.count.inverse": {
+      "name": "string"
+    },
+    "model.count.conflict": {
+      "name": "string",
+      "property": "string",
+      "low": "number",
+      "high": "number"
+    },
+    "model.inverse.self": {
+      "name": "string"
+    },
+    "model.loop.broader": {
+      "name": "string"
+    },
+    "model.loop.property": {
+      "name": "string"
+    },
+    "model.related.broader": {
+      "narrow": "string",
+      "broad": "string"
+    },
+    "model.broader.related": {
+      "narrow": "string",
+      "broad": "string"
+    },
+    "model.class.disjoint_self": {},
+    "model.class.equivalent_self": {},
+    "model.class.disjoint_equivalent": {
+      "first": "string",
+      "second": "string"
+    },
+    "model.class.equivalent_disjoint": {
+      "first": "string",
+      "second": "string"
+    },
+    "model.members.self": {
+      "name": "string"
+    },
+    "model.members.parent": {
+      "name": "string",
+      "parent": "string"
+    },
+    "model.members.both": {
+      "name": "string",
+      "first": "string",
+      "second": "string"
+    },
+    "model.warning.symmetric.one": {
+      "name": "string",
+      "end": "string",
+      "classes": "parts"
+    },
+    "model.warning.reflexive.one": {
+      "classes": "parts"
+    },
+    "model.warning.symmetric.all": {
+      "name": "string",
+      "end": "string",
+      "classes": "parts"
+    },
+    "model.warning.reflexive.all": {
+      "classes": "parts"
+    },
+    "model.warning.symmetric.any": {
+      "name": "string",
+      "end": "string",
+      "classes": "parts"
+    },
+    "model.warning.reflexive.any": {
+      "classes": "parts"
+    },
+    "model.warning.inverse_ends": {
+      "name": "string",
+      "from_name": "string",
+      "to_name": "string"
+    },
+    "model.fix.inverse_ends": {
+      "name": "string",
+      "from_name": "string",
+      "to_name": "string"
+    },
+    "model.fix.share": {},
+    "model.warning.domain.relationship": {
+      "name": "string",
+      "classes": "parts"
+    },
+    "model.warning.domain.attribute": {
+      "name": "string",
+      "classes": "parts"
+    }
   }
 }

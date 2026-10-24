@@ -14,7 +14,8 @@ SUMMARY
 BASIC IDEA
     UI locale changes the domain explanation and controls, preserving each
     original class reference and the server-selected sharing semantics.
-    Completed sharing notices retain names for later UI language changes.
+    Completed sharing notices and warning rows retain facts for later UI language
+    changes; the warning's original text remains in a native disclosure.
 
     The domain is the server's one reading (`domainReading`), never the
     statements, which reach a union only through a blank node. Remove is
@@ -43,6 +44,7 @@ import { domainListNote } from "../modeling/sentences";
 import { useProjectSelector } from "../state/projectStore";
 import type { ModelWarning } from "../types";
 import type { Runner } from "./EditParts";
+import WarningMessage from "./WarningMessage";
 import { reuseNotice } from "../modeling/projectNotices";
 import EntityPicker from "./EntityPicker";
 import ReusePlan from "./ReusePlan";
@@ -104,7 +106,7 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
       )}
       {separate && (
         <div className="form-warnings" role="group" aria-label={t("sharedDomain.warning")}>
-          <p className="form-warning">{separate.text}</p>
+          <div className="form-warning"><WarningMessage warning={separate} /></div>
           {separate.fix && (
             <button
               type="button"

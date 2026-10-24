@@ -6,6 +6,7 @@ SUMMARY
 BASIC IDEA
     A single JSON contract defines primitive arguments and flat noun parts. Legacy
     English remains intact; clients choose their own UI locale at render time.
+    String carriers preserve legacy check signatures; boundaries forward metadata.
 INPUTS / INPUT SOURCES
     Stable code and facts available at the point a message is created.
 EXPECTED OUTPUT
@@ -74,6 +75,18 @@ def make_message(code: str, **args) -> dict:
         for key, value in args.items()
     }
     return {"code": code, "args": captured}
+
+class MessageText(str):
+    """A legacy string carrying validated facts, without another graph read.
+
+    JSON still serializes this as the original string. API records and exception
+    boundaries explicitly forward ui_message alongside that legacy text.
+    """
+    def __new__(cls, text: str, code: str, **args):
+        value = super().__new__(cls, text)
+        value.ui_message = make_message(code, **args)
+        return value
+
 
 class UiHTTPException(HTTPException):
     """HTTP refusal whose old detail and status retain their existing types."""

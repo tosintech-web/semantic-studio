@@ -16,6 +16,7 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "warning.unknown": undefined;
   "projectNotice.relationshipCompleted": { name: string; from: string; to: string };
   "projectNotice.undoAvailable": { operation: string };
   "projectNotice.rule.added": { sentence: string; operation: string };

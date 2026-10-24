@@ -532,7 +532,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -2673,3 +2673,44 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editing.refusal.value_bounds_kind` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
 | `editing.refusal.undo_unavailable` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
 | `editing.refusal.redo_unavailable` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+
+| `words.list.or` | — | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.conflict.symmetric_asymmetric` | — | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.conflict.reflexive_irreflexive` | — | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.counted_self` | name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.counted_under` | name, source | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.counted_inverse` | name, source | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.self` | characteristic | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.changed_under` | characteristic, name, source | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.changed_inverse` | characteristic, name, source | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.under` | characteristic, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.chain.inverse` | characteristic, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.count.self` | name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.count.under` | name, source | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.count.inverse` | name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.count.conflict` | high, low, name, property | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.inverse.self` | name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.loop.broader` | name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.loop.property` | name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.related.broader` | broad, narrow | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.broader.related` | broad, narrow | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.class.disjoint_self` | — | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.class.equivalent_self` | — | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.class.disjoint_equivalent` | first, second | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.class.equivalent_disjoint` | first, second | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.members.self` | name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.members.parent` | name, parent | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.members.both` | first, name, second | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.symmetric.one` | classes, end, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.reflexive.one` | classes | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.symmetric.all` | classes, end, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.reflexive.all` | classes | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.symmetric.any` | classes, end, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.reflexive.any` | classes | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.inverse_ends` | from_name, name, to_name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.fix.inverse_ends` | from_name, name, to_name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.fix.share` | — | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.domain.relationship` | classes, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+| `model.warning.domain.attribute` | classes, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
+
+| `warning.unknown` | — | `frontend/src/components/WarningMessage.tsx` | 未対応の警告の案内 | 12 | 警告として案内し、元の文を詳細に保持 |

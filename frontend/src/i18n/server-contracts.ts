@@ -345,9 +345,141 @@ export const SERVER_CONTRACTS = {
     "total": "number"
   },
   "entities.view_changed": {},
+  "model.broader.related": {
+    "broad": "string",
+    "narrow": "string"
+  },
+  "model.chain.changed_inverse": {
+    "characteristic": "parts",
+    "name": "string",
+    "source": "string"
+  },
+  "model.chain.changed_under": {
+    "characteristic": "parts",
+    "name": "string",
+    "source": "string"
+  },
+  "model.chain.counted_inverse": {
+    "name": "string",
+    "source": "string"
+  },
+  "model.chain.counted_self": {
+    "name": "string"
+  },
+  "model.chain.counted_under": {
+    "name": "string",
+    "source": "string"
+  },
+  "model.chain.inverse": {
+    "characteristic": "parts",
+    "name": "string"
+  },
+  "model.chain.self": {
+    "characteristic": "parts"
+  },
+  "model.chain.under": {
+    "characteristic": "parts",
+    "name": "string"
+  },
+  "model.class.disjoint_equivalent": {
+    "first": "string",
+    "second": "string"
+  },
+  "model.class.disjoint_self": {},
+  "model.class.equivalent_disjoint": {
+    "first": "string",
+    "second": "string"
+  },
+  "model.class.equivalent_self": {},
+  "model.conflict.reflexive_irreflexive": {},
+  "model.conflict.symmetric_asymmetric": {},
+  "model.count.conflict": {
+    "high": "number",
+    "low": "number",
+    "name": "string",
+    "property": "string"
+  },
+  "model.count.inverse": {
+    "name": "string"
+  },
+  "model.count.self": {
+    "name": "string"
+  },
+  "model.count.under": {
+    "name": "string",
+    "source": "string"
+  },
+  "model.fix.inverse_ends": {
+    "from_name": "string",
+    "name": "string",
+    "to_name": "string"
+  },
+  "model.fix.share": {},
   "model.invalid_value": {
     "datatype": "string",
     "value": "string"
+  },
+  "model.inverse.self": {
+    "name": "string"
+  },
+  "model.loop.broader": {
+    "name": "string"
+  },
+  "model.loop.property": {
+    "name": "string"
+  },
+  "model.members.both": {
+    "first": "string",
+    "name": "string",
+    "second": "string"
+  },
+  "model.members.parent": {
+    "name": "string",
+    "parent": "string"
+  },
+  "model.members.self": {
+    "name": "string"
+  },
+  "model.related.broader": {
+    "broad": "string",
+    "narrow": "string"
+  },
+  "model.warning.domain.attribute": {
+    "classes": "parts",
+    "name": "string"
+  },
+  "model.warning.domain.relationship": {
+    "classes": "parts",
+    "name": "string"
+  },
+  "model.warning.inverse_ends": {
+    "from_name": "string",
+    "name": "string",
+    "to_name": "string"
+  },
+  "model.warning.reflexive.all": {
+    "classes": "parts"
+  },
+  "model.warning.reflexive.any": {
+    "classes": "parts"
+  },
+  "model.warning.reflexive.one": {
+    "classes": "parts"
+  },
+  "model.warning.symmetric.all": {
+    "classes": "parts",
+    "end": "string",
+    "name": "string"
+  },
+  "model.warning.symmetric.any": {
+    "classes": "parts",
+    "end": "string",
+    "name": "string"
+  },
+  "model.warning.symmetric.one": {
+    "classes": "parts",
+    "end": "string",
+    "name": "string"
   },
   "parse.syntax": {
     "format": "string",
@@ -388,6 +520,7 @@ export const SERVER_CONTRACTS = {
   "words.kind.objectProperty": {},
   "words.kind.property": {},
   "words.list.and": {},
+  "words.list.or": {},
   "words.mapping.broadMatch": {},
   "words.mapping.closeMatch": {},
   "words.mapping.exactMatch": {},
@@ -530,7 +663,44 @@ export interface ServerMessageArgs {
   "editing.value.unsupported_datatype": { "datatype": string };
   "entities.page_too_large": { "suggested_limit": number; "total": number };
   "entities.view_changed": undefined;
+  "model.broader.related": { "broad": string; "narrow": string };
+  "model.chain.changed_inverse": { "characteristic": string; "name": string; "source": string };
+  "model.chain.changed_under": { "characteristic": string; "name": string; "source": string };
+  "model.chain.counted_inverse": { "name": string; "source": string };
+  "model.chain.counted_self": { "name": string };
+  "model.chain.counted_under": { "name": string; "source": string };
+  "model.chain.inverse": { "characteristic": string; "name": string };
+  "model.chain.self": { "characteristic": string };
+  "model.chain.under": { "characteristic": string; "name": string };
+  "model.class.disjoint_equivalent": { "first": string; "second": string };
+  "model.class.disjoint_self": undefined;
+  "model.class.equivalent_disjoint": { "first": string; "second": string };
+  "model.class.equivalent_self": undefined;
+  "model.conflict.reflexive_irreflexive": undefined;
+  "model.conflict.symmetric_asymmetric": undefined;
+  "model.count.conflict": { "high": number; "low": number; "name": string; "property": string };
+  "model.count.inverse": { "name": string };
+  "model.count.self": { "name": string };
+  "model.count.under": { "name": string; "source": string };
+  "model.fix.inverse_ends": { "from_name": string; "name": string; "to_name": string };
+  "model.fix.share": undefined;
   "model.invalid_value": { "datatype": string; "value": string };
+  "model.inverse.self": { "name": string };
+  "model.loop.broader": { "name": string };
+  "model.loop.property": { "name": string };
+  "model.members.both": { "first": string; "name": string; "second": string };
+  "model.members.parent": { "name": string; "parent": string };
+  "model.members.self": { "name": string };
+  "model.related.broader": { "broad": string; "narrow": string };
+  "model.warning.domain.attribute": { "classes": string; "name": string };
+  "model.warning.domain.relationship": { "classes": string; "name": string };
+  "model.warning.inverse_ends": { "from_name": string; "name": string; "to_name": string };
+  "model.warning.reflexive.all": { "classes": string };
+  "model.warning.reflexive.any": { "classes": string };
+  "model.warning.reflexive.one": { "classes": string };
+  "model.warning.symmetric.all": { "classes": string; "end": string; "name": string };
+  "model.warning.symmetric.any": { "classes": string; "end": string; "name": string };
+  "model.warning.symmetric.one": { "classes": string; "end": string; "name": string };
   "parse.syntax": { "format": string; "line": number | null };
   "reasoning.failed": undefined;
   "reasoning.stopped": undefined;
@@ -556,6 +726,7 @@ export interface ServerMessageArgs {
   "words.kind.objectProperty": undefined;
   "words.kind.property": undefined;
   "words.list.and": undefined;
+  "words.list.or": undefined;
   "words.mapping.broadMatch": undefined;
   "words.mapping.closeMatch": undefined;
   "words.mapping.exactMatch": undefined;

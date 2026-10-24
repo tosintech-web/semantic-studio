@@ -10,6 +10,7 @@ SUMMARY
     maps used to render the graph.
 
 BASIC IDEA
+    Warning and fix descriptors are additive; original text and command facts stay intact.
     One source of truth for the data shapes crossing the API boundary keeps the
     frontend honest about what the backend sends. The palette/label section
     lives here too because colours are keyed by the same node/edge "kind"
@@ -726,7 +727,7 @@ export interface ClassRules {
   items: RuleItem[];
   // The 5.10 warnings: a class that can never have members. `disjoint` names
   // the class of the disjoint rule it stands under; without it, the block.
-  warnings: { text: string; disjoint?: string }[];
+  warnings: { text: string; uiMessage?: WireMessage | null; disjoint?: string }[];
   choices: RuleChoices | null;
 }
 
@@ -753,6 +754,7 @@ export interface ExampleField {
 
 export interface ModelWarning {
   text: string;
+  uiMessage?: WireMessage | null;
   // The block it concerns, where the form shows it: "characteristics" (What
   // else is true, How many values), "inverse" (The other way round) or
   // "domain" (Belongs to, From: two domain lines, attribute-reuse 5.4).
@@ -760,7 +762,7 @@ export interface ModelWarning {
   code?: string;
   // `needs`: what the form must ask before the fix can run (a shared
   // parent's name).
-  fix?: { command: string; args: Record<string, unknown>; label: string; needs?: "parentName" };
+  fix?: { command: string; args: Record<string, unknown>; label: string; uiMessage?: WireMessage | null; needs?: "parentName" };
 }
 
 /* --- theme-aware palettes ------------------------------------------------ */

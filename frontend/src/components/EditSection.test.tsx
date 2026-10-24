@@ -7,7 +7,9 @@ FILE: frontend/src/components/EditSection.test.tsx
 SUMMARY
     The editing form (visual-modeling Stage 1): each block sends the command
     and arguments 5.1 names, a refusal has a current-language explanation under
-    its field and an untouched original in technical details, read-only cases say why, names are listed per
+    its field and an untouched original in technical details. Legacy warnings
+    retain original text and fix arguments in their current-language context.
+    Read-only cases say why, names are listed per
     project language, pickers ask for one kind, and the delete flow shows the
     dry run, asks about children only when there are some, and deletes only
     on confirmation.
@@ -1005,9 +1007,12 @@ describe("relationship form (AC-7)", () => {
       }),
     );
     const list = screen.getByRole("list", { name: "Warnings" });
-    expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "employs should go from Organization to Person.Fix",
-      "Another warning.",
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows.map(row => row.querySelector("span")?.textContent)).toEqual([
+      "There is a warning. Check the details.", "There is a warning. Check the details.",
+    ]);
+    expect(rows.map(row => row.querySelector("pre")?.textContent)).toEqual([
+      "employs should go from Organization to Person.", "Another warning.",
     ]);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Fix: Set employs from Organization to Person" }));

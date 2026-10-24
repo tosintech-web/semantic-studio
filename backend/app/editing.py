@@ -1492,7 +1492,7 @@ def cmd_set_inverse(ctx: Context, a: dict) -> Change:
         inverse = ctx.iri(a["inverse"], "relationship")
         refusal = modeling_checks.own_inverse_refusal(prop, inverse, ctx.name(prop))
         if refusal:
-            raise CommandError(refusal)
+            raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
         ctx.require(inverse, "relationship")
         kinds = set(ctx.graph.objects(inverse, RDF.type))
         if ctx.imported is not None:
@@ -1505,7 +1505,7 @@ def cmd_set_inverse(ctx: Context, a: dict) -> Change:
         # (5.9). One made from a name has no characteristics, so it is fine.
         refusal = modeling_checks.inverse_chaining_refusal(ctx.graph, prop, inverse, ctx.name)
         if refusal:
-            raise CommandError(refusal)
+            raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
         removes += _inverse_triples(ctx, inverse)
         adds.append((inverse, OWL.inverseOf, prop))
         target_name = ctx.name(inverse)
@@ -1580,7 +1580,7 @@ def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
         )
     refusal = modeling_checks.characteristic_refusal(ctx.graph, prop, name, on, ctx.name)
     if refusal:
-        raise CommandError(refusal)
+        raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     triple = (prop, RDF.type, modeling_checks.CHARACTERISTICS[name])
     attribute = (prop, RDF.type, OWL.DatatypeProperty) in ctx.graph
     words = "one value only" if attribute else modeling_checks.WORDS[name]
@@ -1640,7 +1640,7 @@ def cmd_add_subproperty(ctx: Context, a: dict) -> Change:
     # A chaining relationship under one that must stay simple (5.9).
     refusal = refusal or modeling_checks.subproperty_chaining_refusal(ctx.graph, child, parent, ctx.name)
     if refusal:
-        raise CommandError(refusal)
+        raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     if (child, RDFS.subPropertyOf, parent) in ctx.graph:
         raise CommandError(f"{ctx.name(child)} is already a more specific kind of {ctx.name(parent)}.")
     return _change(
@@ -1711,7 +1711,7 @@ def cmd_add_broader(ctx: Context, a: dict) -> Change:
     refusal = modeling_checks.broader_loop_refusal(ctx.graph, concept, broader, ctx.name)
     refusal = refusal or modeling_checks.broader_related_refusal(ctx.graph, concept, broader, ctx.name)
     if refusal:
-        raise CommandError(refusal)
+        raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     concept, broader = _pair(ctx, a, "concept", "broader", "concept")
     if (concept, SKOS.broader, broader) in ctx.graph:
         raise CommandError(f"{ctx.name(concept)} is already narrower than {ctx.name(broader)}.")
@@ -1755,7 +1755,7 @@ def cmd_add_related(ctx: Context, a: dict) -> Change:
     concept, related = _concepts(ctx, a, "concept", "related")
     refusal = modeling_checks.related_refusal(ctx.graph, concept, related, ctx.name)
     if refusal:
-        raise CommandError(refusal)
+        raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     both = [(concept, SKOS.related, related), (related, SKOS.related, concept)]
     if all(t in ctx.graph for t in both):
         raise CommandError(f"{ctx.name(concept)} is already related to {ctx.name(related)}.")
@@ -2452,7 +2452,7 @@ def _check_restriction(ctx: Context, cls: URIRef, new: axioms.Content, ignoring=
     if _property_kind(ctx, new.property) == OWL.ObjectProperty:
         refusal = modeling_checks.counting_refusal(_view(ctx), new.property, lambda i: _rule_name(ctx, i))
         if refusal:
-            raise CommandError(refusal)
+            raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     if new.form != "every":
         return
     low, high = _bounds(new)
@@ -2469,7 +2469,7 @@ def _check_restriction(ctx: Context, cls: URIRef, new: axioms.Content, ignoring=
                 ctx.name(cls), _rule_name(ctx, new.property), max(lows), min(highs)
             )
             if refusal:
-                raise CommandError(refusal)
+                raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
 
 
 def _restriction_adds(ctx: Context, cls: URIRef, content: axioms.Content) -> list:
@@ -2538,7 +2538,7 @@ def _class_pair(ctx: Context, a: dict, predicate) -> tuple[URIRef, URIRef]:
     second = _rule_class(ctx, a.get("b"), "class")
     refusal = modeling_checks.pair_refusal(_view(ctx), first, second, predicate, lambda i: _rule_name(ctx, i))
     if refusal:
-        raise CommandError(refusal)
+        raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     return first, second
 
 

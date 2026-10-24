@@ -10,7 +10,8 @@ SUMMARY
     characteristics each with an example in the relationship's own names,
     its more general relationship, and pointers to what it cannot say. Also
     PropertyHead, the sentence at the top of both property forms, and
-    Warning announcements retain whole raw records and translate at render time.
+    Warning announcements and rows retain whole records and translate at render
+    time; originals remain in native disclosures and fix arguments stay intact.
     Warnings, the 5.9 warnings shown under the block each concerns. The
     Pointers block links to the start class's rules (axioms 5.9): it opens
     the class's sentence builder with this relationship and its end.
@@ -58,6 +59,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import WarningMessage from "./WarningMessage";
+import { historyLabel } from "../modeling/projectNotices";
 import { warningNotice, type NoticeWarning } from "../modeling/projectNotices";
 import { useI18n } from "../i18n/I18nProvider";
 import { translateParts } from "../i18n/parts";
@@ -152,13 +155,13 @@ export function Warnings({
       <ul className="form-warnings" aria-label={t("relationshipForm.warnings")}>
         {mine.map((w) => (
           <li key={w.text} className="form-warning">
-            <span>{w.text}</span>
+            <WarningMessage warning={w} />
             {w.fix && (
               <button
                 type="button"
                 className="ghost edit-btn"
                 aria-disabled={busy}
-                aria-label={t("relationshipForm.fix", { label: w.fix.label })}
+                aria-label={t("relationshipForm.fix", { label: historyLabel(w.fix.label, w.fix.uiMessage, t) })}
                 onClick={() => !busy && void run("fix", w.fix!.command, w.fix!.args)}
               >
                 {t("relationshipForm.fixButton")}
