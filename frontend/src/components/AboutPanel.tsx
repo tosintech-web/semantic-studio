@@ -15,6 +15,8 @@ BASIC IDEA
     why it opens identically on the chooser screen with nothing loaded — the
     moment a newcomer most wants to know what they are looking at.
 
+    Upstream attribution and unofficial fork links are shown separately.
+    Third-party notices apply to data and dependencies independently of MIT.
     The copy is exported as ABOUT rather than written inline, for two reasons:
     a test asserts the copyright holder and licence match the repository's
     LICENSE file, so a change to one that is not mirrored here fails the suite
@@ -174,6 +176,14 @@ export default function AboutPanel({ onClose }: Props) {
         <hr className="about-rule" />
 
         <div className="about-block">
+          <p>Unofficial modified version</p>
+          <a className="about-link" href={linkTarget("https://github.com/tosintech-web/semantic-studio")} target="_blank" rel="noreferrer">
+            Modified version source and issues →
+          </a>
+          <p>Data and dependencies retain their own licences.</p>
+          <a className="about-link" href={linkTarget("https://github.com/tosintech-web/semantic-studio/blob/main/THIRD_PARTY_NOTICES.md")} target="_blank" rel="noreferrer">
+            Third-party notices →
+          </a>
           <p className="about-author">{ABOUT.author}</p>
           {/* rel="noreferrer" implies noopener, which is what stops the opened
               page reaching back through window.opener. Same pattern as the IRI

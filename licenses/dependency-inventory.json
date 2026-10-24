@@ -1,0 +1,4223 @@
+{
+  "basis": "Local P1 preparation environment; regenerate for every distribution and dependency resolution. Includes development dependencies for traceability. text-collected is evidence of source notice collection, not a legal approval.",
+  "components": [
+    {
+      "ecosystem": "npm",
+      "name": "@asamuzakjp/css-color",
+      "version": "6.0.5",
+      "source": "https://registry.npmjs.org/@asamuzakjp/css-color/-/css-color-6.0.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/bd4539377980dd797fc6a51d90e664e52b2b2625b2158f01d4c68b5fe107eacb.txt",
+          "sha256": "bd4539377980dd797fc6a51d90e664e52b2b2625b2158f01d4c68b5fe107eacb"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@asamuzakjp/dom-selector",
+      "version": "8.3.0",
+      "source": "https://registry.npmjs.org/@asamuzakjp/dom-selector/-/dom-selector-8.3.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/7cdf9db3b91cc77b9ec947ad0c7126140f00e34528b67c3a58e9fc1a98055e14.txt",
+          "sha256": "7cdf9db3b91cc77b9ec947ad0c7126140f00e34528b67c3a58e9fc1a98055e14"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/code-frame",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/compat-data",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/compat-data/-/compat-data-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/core",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/core/-/core-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/generator",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/generator/-/generator-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-compilation-targets",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-compilation-targets/-/helper-compilation-targets-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-globals",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-globals/-/helper-globals-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-module-imports",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-module-imports/-/helper-module-imports-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-module-transforms",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-module-transforms/-/helper-module-transforms-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-plugin-utils",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-plugin-utils/-/helper-plugin-utils-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-string-parser",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helper-validator-option",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helper-validator-option/-/helper-validator-option-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/helpers",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/helpers/-/helpers-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/4be9d87b56a306293223b490c0d0b245e9e94f39884147bf051a6c7b825aeb30.txt",
+          "sha256": "4be9d87b56a306293223b490c0d0b245e9e94f39884147bf051a6c7b825aeb30"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/parser",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/parser/-/parser-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/2e97627cb278aa7556fb9e8817368302301a595b6c7582512b8d74c57b773652.txt",
+          "sha256": "2e97627cb278aa7556fb9e8817368302301a595b6c7582512b8d74c57b773652"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/plugin-transform-react-jsx-self",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/plugin-transform-react-jsx-self/-/plugin-transform-react-jsx-self-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/plugin-transform-react-jsx-source",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/plugin-transform-react-jsx-source/-/plugin-transform-react-jsx-source-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/runtime",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/template",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/template/-/template-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/traverse",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/traverse/-/traverse-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@babel/types",
+      "version": "7.29.7",
+      "source": "https://registry.npmjs.org/@babel/types/-/types-7.29.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@bramus/specificity",
+      "version": "2.4.2",
+      "source": "https://registry.npmjs.org/@bramus/specificity/-/specificity-2.4.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/ae842a63dd9bc829c95a2ec22dda25a08e422a368b71dbca67a45cde7c4a4b81.txt",
+          "sha256": "ae842a63dd9bc829c95a2ec22dda25a08e422a368b71dbca67a45cde7c4a4b81"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@csstools/color-helpers",
+      "version": "6.1.0",
+      "source": "https://registry.npmjs.org/@csstools/color-helpers/-/color-helpers-6.1.0.tgz",
+      "license": "MIT-0",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/947e32047a166cd05f04e45938d172b412c07cbee0b9735afd14bae30e02c2f6.txt",
+          "sha256": "947e32047a166cd05f04e45938d172b412c07cbee0b9735afd14bae30e02c2f6"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@csstools/css-calc",
+      "version": "3.3.0",
+      "source": "https://registry.npmjs.org/@csstools/css-calc/-/css-calc-3.3.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665.txt",
+          "sha256": "d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@csstools/css-color-parser",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@csstools/css-color-parser/-/css-color-parser-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665.txt",
+          "sha256": "d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@csstools/css-parser-algorithms",
+      "version": "4.0.0",
+      "source": "https://registry.npmjs.org/@csstools/css-parser-algorithms/-/css-parser-algorithms-4.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665.txt",
+          "sha256": "d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@csstools/css-syntax-patches-for-csstree",
+      "version": "1.1.7",
+      "source": "https://registry.npmjs.org/@csstools/css-syntax-patches-for-csstree/-/css-syntax-patches-for-csstree-1.1.7.tgz",
+      "license": "MIT-0",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/947e32047a166cd05f04e45938d172b412c07cbee0b9735afd14bae30e02c2f6.txt",
+          "sha256": "947e32047a166cd05f04e45938d172b412c07cbee0b9735afd14bae30e02c2f6"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@csstools/css-tokenizer",
+      "version": "4.0.0",
+      "source": "https://registry.npmjs.org/@csstools/css-tokenizer/-/css-tokenizer-4.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665.txt",
+          "sha256": "d00d032f517721b45c56c70c46bf904ebb71ad313df4d4db7722266b38069665"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/aix-ppc64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "aix"
+        ],
+        "cpu": [
+          "ppc64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/android-arm",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "android"
+        ],
+        "cpu": [
+          "arm"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/android-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "android"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/android-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "android"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "darwin"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/darwin-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "darwin"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/freebsd-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "freebsd"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/freebsd-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "freebsd"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-arm",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "arm"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-ia32",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "ia32"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-loong64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "loong64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-mips64el",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "mips64el"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-ppc64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "ppc64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-riscv64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "riscv64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-s390x",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "s390x"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/linux-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681.txt",
+          "sha256": "b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681"
+        }
+      ],
+      "status": "project-text-collected",
+      "notice_basis": "License of the corresponding upstream project at matching package version, collected from esbuild"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/netbsd-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/netbsd-arm64/-/netbsd-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "netbsd"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/netbsd-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "netbsd"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/openbsd-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/openbsd-arm64/-/openbsd-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "openbsd"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/openbsd-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "openbsd"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/openharmony-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/openharmony-arm64/-/openharmony-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "openharmony"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/sunos-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "sunos"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/win32-arm64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "win32"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/win32-ia32",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "win32"
+        ],
+        "cpu": [
+          "ia32"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@esbuild/win32-x64",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "win32"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@exodus/bytes",
+      "version": "1.15.1",
+      "source": "https://registry.npmjs.org/@exodus/bytes/-/bytes-1.15.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/dbffd380d59504ba19fcf87ff5a1a33c37edf66d5b09966b0ad5368ab87bc2af.txt",
+          "sha256": "dbffd380d59504ba19fcf87ff5a1a33c37edf66d5b09966b0ad5368ab87bc2af"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "source": "https://registry.npmjs.org/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c.txt",
+          "sha256": "769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@jridgewell/remapping",
+      "version": "2.3.5",
+      "source": "https://registry.npmjs.org/@jridgewell/remapping/-/remapping-2.3.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c.txt",
+          "sha256": "769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "source": "https://registry.npmjs.org/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/b8778b155bfde5a28b023a558753c0fa058a52bb9de35c343c250be1bbcdedab.txt",
+          "sha256": "b8778b155bfde5a28b023a558753c0fa058a52bb9de35c343c250be1bbcdedab"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.5.5",
+      "source": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c.txt",
+          "sha256": "769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "source": "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c.txt",
+          "sha256": "769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rolldown/pluginutils",
+      "version": "1.0.0-beta.27",
+      "source": "https://registry.npmjs.org/@rolldown/pluginutils/-/pluginutils-1.0.0-beta.27.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/23ecfff35a5a2e80d92142f75228912c3b1abc4b5a8337a821ff4397e2f9f734.txt",
+          "sha256": "23ecfff35a5a2e80d92142f75228912c3b1abc4b5a8337a821ff4397e2f9f734"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-android-arm-eabi",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "android"
+        ],
+        "cpu": [
+          "arm"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-android-arm64",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "android"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-darwin-arm64",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "darwin"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-darwin-x64",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "darwin"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-freebsd-arm64",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "freebsd"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-freebsd-x64",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-freebsd-x64/-/rollup-freebsd-x64-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "freebsd"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-arm-gnueabihf",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "arm"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-arm-musleabihf",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "arm"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-arm64-gnu",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-arm64-musl",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-loong64-gnu",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "loong64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-loong64-musl",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-musl/-/rollup-linux-loong64-musl-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "loong64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-ppc64-gnu",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "ppc64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-ppc64-musl",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-musl/-/rollup-linux-ppc64-musl-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "ppc64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-riscv64-gnu",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "riscv64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-riscv64-musl",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "riscv64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-s390x-gnu",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "s390x"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-x64-gnu",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8.txt",
+          "sha256": "fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8"
+        }
+      ],
+      "status": "project-text-collected",
+      "notice_basis": "License of the corresponding upstream project at matching package version, collected from rollup"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-linux-x64-musl",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-openbsd-x64",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-openbsd-x64/-/rollup-openbsd-x64-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "openbsd"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-openharmony-arm64",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "openharmony"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-win32-arm64-msvc",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-win32-arm64-msvc/-/rollup-win32-arm64-msvc-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "win32"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-win32-ia32-msvc",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "win32"
+        ],
+        "cpu": [
+          "ia32"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-win32-x64-gnu",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "win32"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@rollup/rollup-win32-x64-msvc",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "win32"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@sigma/export-image",
+      "version": "3.0.0",
+      "source": "https://registry.npmjs.org/@sigma/export-image/-/export-image-3.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/27cbfd441bbb1b37315afdc35f8d3911b9ddfc48c8489ee2c895194808dd7568.txt",
+          "sha256": "27cbfd441bbb1b37315afdc35f8d3911b9ddfc48c8489ee2c895194808dd7568"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@standard-schema/spec",
+      "version": "1.1.0",
+      "source": "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/653b779005a3a4d64a7288c940f7b9a0e8f0b1e0375f6aa6af9473caf131e564.txt",
+          "sha256": "653b779005a3a4d64a7288c940f7b9a0e8f0b1e0375f6aa6af9473caf131e564"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@testing-library/dom",
+      "version": "10.4.1",
+      "source": "https://registry.npmjs.org/@testing-library/dom/-/dom-10.4.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/bf8fd38056b7606deccfcadb4d8ca1c210082d8ef5513426d2650daedc30bed3.txt",
+          "sha256": "bf8fd38056b7606deccfcadb4d8ca1c210082d8ef5513426d2650daedc30bed3"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@testing-library/react",
+      "version": "16.3.2",
+      "source": "https://registry.npmjs.org/@testing-library/react/-/react-16.3.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/9680978280d509520d2a7b51e93ffbf7d9ec2b9de4411a6989daba5b659048e0.txt",
+          "sha256": "9680978280d509520d2a7b51e93ffbf7d9ec2b9de4411a6989daba5b659048e0"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/aria-query",
+      "version": "5.0.4",
+      "source": "https://registry.npmjs.org/@types/aria-query/-/aria-query-5.0.4.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/babel__core",
+      "version": "7.20.5",
+      "source": "https://registry.npmjs.org/@types/babel__core/-/babel__core-7.20.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/babel__generator",
+      "version": "7.27.0",
+      "source": "https://registry.npmjs.org/@types/babel__generator/-/babel__generator-7.27.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/babel__template",
+      "version": "7.4.4",
+      "source": "https://registry.npmjs.org/@types/babel__template/-/babel__template-7.4.4.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/babel__traverse",
+      "version": "7.28.0",
+      "source": "https://registry.npmjs.org/@types/babel__traverse/-/babel__traverse-7.28.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/chai",
+      "version": "5.2.3",
+      "source": "https://registry.npmjs.org/@types/chai/-/chai-5.2.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-color",
+      "version": "3.1.3",
+      "source": "https://registry.npmjs.org/@types/d3-color/-/d3-color-3.1.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-drag",
+      "version": "3.0.7",
+      "source": "https://registry.npmjs.org/@types/d3-drag/-/d3-drag-3.0.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-interpolate",
+      "version": "3.0.4",
+      "source": "https://registry.npmjs.org/@types/d3-interpolate/-/d3-interpolate-3.0.4.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-selection",
+      "version": "3.0.12",
+      "source": "https://registry.npmjs.org/@types/d3-selection/-/d3-selection-3.0.12.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-transition",
+      "version": "3.0.9",
+      "source": "https://registry.npmjs.org/@types/d3-transition/-/d3-transition-3.0.9.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-zoom",
+      "version": "3.0.8",
+      "source": "https://registry.npmjs.org/@types/d3-zoom/-/d3-zoom-3.0.8.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/deep-eql",
+      "version": "4.0.2",
+      "source": "https://registry.npmjs.org/@types/deep-eql/-/deep-eql-4.0.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/estree",
+      "version": "1.0.9",
+      "source": "https://registry.npmjs.org/@types/estree/-/estree-1.0.9.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/prop-types",
+      "version": "15.7.15",
+      "source": "https://registry.npmjs.org/@types/prop-types/-/prop-types-15.7.15.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/react",
+      "version": "18.3.31",
+      "source": "https://registry.npmjs.org/@types/react/-/react-18.3.31.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/react-dom",
+      "version": "18.3.7",
+      "source": "https://registry.npmjs.org/@types/react-dom/-/react-dom-18.3.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383.txt",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitejs/plugin-react",
+      "version": "4.7.0",
+      "source": "https://registry.npmjs.org/@vitejs/plugin-react/-/plugin-react-4.7.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/29b68325fe026047d13e187b44c33b2acacf7dc647dec4583702e59f235e13b5.txt",
+          "sha256": "29b68325fe026047d13e187b44c33b2acacf7dc647dec4583702e59f235e13b5"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitest/expect",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@vitest/expect/-/expect-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551.txt",
+          "sha256": "04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitest/mocker",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@vitest/mocker/-/mocker-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551.txt",
+          "sha256": "04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitest/pretty-format",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@vitest/pretty-format/-/pretty-format-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551.txt",
+          "sha256": "04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitest/runner",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@vitest/runner/-/runner-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551.txt",
+          "sha256": "04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitest/snapshot",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@vitest/snapshot/-/snapshot-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551.txt",
+          "sha256": "04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitest/spy",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@vitest/spy/-/spy-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551.txt",
+          "sha256": "04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@vitest/utils",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/@vitest/utils/-/utils-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551.txt",
+          "sha256": "04575fc5bfae19a9b63100f8691f901a2e15a399011ac02db435a9ef27295551"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@xyflow/react",
+      "version": "12.12.0",
+      "source": "https://registry.npmjs.org/@xyflow/react/-/react-12.12.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/023119ac20fb1c8c9930abe0bcd196989a1960388529a96fc43cebf96f07c9ff.txt",
+          "sha256": "023119ac20fb1c8c9930abe0bcd196989a1960388529a96fc43cebf96f07c9ff"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@xyflow/system",
+      "version": "0.0.83",
+      "source": "https://registry.npmjs.org/@xyflow/system/-/system-0.0.83.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/023119ac20fb1c8c9930abe0bcd196989a1960388529a96fc43cebf96f07c9ff.txt",
+          "sha256": "023119ac20fb1c8c9930abe0bcd196989a1960388529a96fc43cebf96f07c9ff"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ansi-regex",
+      "version": "5.0.1",
+      "source": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-5.0.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "license",
+          "text": "licenses/texts/48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0.txt",
+          "sha256": "48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ansi-styles",
+      "version": "5.2.0",
+      "source": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-5.2.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "license",
+          "text": "licenses/texts/48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0.txt",
+          "sha256": "48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "aria-query",
+      "version": "5.3.0",
+      "source": "https://registry.npmjs.org/aria-query/-/aria-query-5.3.0.tgz",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c8df456c7ccba74b959087dff494d4ac2a12dfb0400c08b46b2494a08a000567.txt",
+          "sha256": "c8df456c7ccba74b959087dff494d4ac2a12dfb0400c08b46b2494a08a000567"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "assertion-error",
+      "version": "2.0.1",
+      "source": "https://registry.npmjs.org/assertion-error/-/assertion-error-2.0.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/2130216d5ab4c02134f8247f32999feda0abe1eaf028218baeac445c19ce4cea.txt",
+          "sha256": "2130216d5ab4c02134f8247f32999feda0abe1eaf028218baeac445c19ce4cea"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "baseline-browser-mapping",
+      "version": "2.11.1",
+      "source": "https://registry.npmjs.org/baseline-browser-mapping/-/baseline-browser-mapping-2.11.1.tgz",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4.txt",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bidi-js",
+      "version": "1.0.3",
+      "source": "https://registry.npmjs.org/bidi-js/-/bidi-js-1.0.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/49d4d143fed599deb502a0fe6e02f49832f87e9a3a4cd0502e469596d50faa6d.txt",
+          "sha256": "49d4d143fed599deb502a0fe6e02f49832f87e9a3a4cd0502e469596d50faa6d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "browserslist",
+      "version": "4.28.7",
+      "source": "https://registry.npmjs.org/browserslist/-/browserslist-4.28.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/21c2679a63d7699c0e644409e2f17d0adbc7a965003feb06b3ff4b833d21f722.txt",
+          "sha256": "21c2679a63d7699c0e644409e2f17d0adbc7a965003feb06b3ff4b833d21f722"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "caniuse-lite",
+      "version": "1.0.30001806",
+      "source": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001806.tgz",
+      "license": "CC-BY-4.0",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/fd3a263fe19ed8faa9068b43abaebafc02c77897b0c6fc09abc04bb592e5f16e.txt",
+          "sha256": "fd3a263fe19ed8faa9068b43abaebafc02c77897b0c6fc09abc04bb592e5f16e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "chai",
+      "version": "6.2.2",
+      "source": "https://registry.npmjs.org/chai/-/chai-6.2.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/b181da80336ff9dd1043fc8be1a764d7382363433319aa872e4d2cb5ce2a3066.txt",
+          "sha256": "b181da80336ff9dd1043fc8be1a764d7382363433319aa872e4d2cb5ce2a3066"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "classcat",
+      "version": "5.0.5",
+      "source": "https://registry.npmjs.org/classcat/-/classcat-5.0.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/f101c761d255d0dddc77dd8a9327733b03d381798ec54a1bb718367207b48a8e.txt",
+          "sha256": "f101c761d255d0dddc77dd8a9327733b03d381798ec54a1bb718367207b48a8e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "convert-source-map",
+      "version": "2.0.0",
+      "source": "https://registry.npmjs.org/convert-source-map/-/convert-source-map-2.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/1fa6ee8bb95a81ae3d73a5bd074a3ac380ffec13697051063ca1a601921b91db.txt",
+          "sha256": "1fa6ee8bb95a81ae3d73a5bd074a3ac380ffec13697051063ca1a601921b91db"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "css-tree",
+      "version": "3.2.1",
+      "source": "https://registry.npmjs.org/css-tree/-/css-tree-3.2.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/719a251ceca49c057ea90a1152af6546b767ec88e6d573bb6324454267b32c22.txt",
+          "sha256": "719a251ceca49c057ea90a1152af6546b767ec88e6d573bb6324454267b32c22"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "csstype",
+      "version": "3.2.3",
+      "source": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/11d55bd4541c75ee7879547ac49089c489163dae49551389713c3d026cab383e.txt",
+          "sha256": "11d55bd4541c75ee7879547ac49089c489163dae49551389713c3d026cab383e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-color",
+      "version": "3.1.0",
+      "source": "https://registry.npmjs.org/d3-color/-/d3-color-3.1.0.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884.txt",
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-dispatch",
+      "version": "3.0.1",
+      "source": "https://registry.npmjs.org/d3-dispatch/-/d3-dispatch-3.0.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee.txt",
+          "sha256": "e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-drag",
+      "version": "3.0.0",
+      "source": "https://registry.npmjs.org/d3-drag/-/d3-drag-3.0.0.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee.txt",
+          "sha256": "e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-ease",
+      "version": "3.0.1",
+      "source": "https://registry.npmjs.org/d3-ease/-/d3-ease-3.0.1.tgz",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/b989d9085148d21ff64a75e14462aefa06b2589a55553b07b1460c70081c7d08.txt",
+          "sha256": "b989d9085148d21ff64a75e14462aefa06b2589a55553b07b1460c70081c7d08"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-interpolate",
+      "version": "3.0.1",
+      "source": "https://registry.npmjs.org/d3-interpolate/-/d3-interpolate-3.0.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee.txt",
+          "sha256": "e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-selection",
+      "version": "3.0.0",
+      "source": "https://registry.npmjs.org/d3-selection/-/d3-selection-3.0.0.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee.txt",
+          "sha256": "e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-timer",
+      "version": "3.0.1",
+      "source": "https://registry.npmjs.org/d3-timer/-/d3-timer-3.0.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee.txt",
+          "sha256": "e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-transition",
+      "version": "3.0.1",
+      "source": "https://registry.npmjs.org/d3-transition/-/d3-transition-3.0.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee.txt",
+          "sha256": "e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-zoom",
+      "version": "3.0.0",
+      "source": "https://registry.npmjs.org/d3-zoom/-/d3-zoom-3.0.0.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee.txt",
+          "sha256": "e008c5e25a6be382593089c29bfabbc553c6378eee02895aec46ce396cc404ee"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "data-urls",
+      "version": "7.0.0",
+      "source": "https://registry.npmjs.org/data-urls/-/data-urls-7.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa.txt",
+          "sha256": "528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "debug",
+      "version": "4.4.3",
+      "source": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/3a61c6c96caf5c1d9b623fb9b04c822b783dfcb78aa7e49c76a3f643e6ed7f95.txt",
+          "sha256": "3a61c6c96caf5c1d9b623fb9b04c822b783dfcb78aa7e49c76a3f643e6ed7f95"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "decimal.js",
+      "version": "10.6.0",
+      "source": "https://registry.npmjs.org/decimal.js/-/decimal.js-10.6.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENCE.md",
+          "text": "licenses/texts/3108b546bcff5d346923a82f48b2d252ca722f9088076db6d145f6b67757ad6c.txt",
+          "sha256": "3108b546bcff5d346923a82f48b2d252ca722f9088076db6d145f6b67757ad6c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "dequal",
+      "version": "2.0.3",
+      "source": "https://registry.npmjs.org/dequal/-/dequal-2.0.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "license",
+          "text": "licenses/texts/306fa513e39b23a6e8747520de761809d206b99800ef41907b530226574c59ae.txt",
+          "sha256": "306fa513e39b23a6e8747520de761809d206b99800ef41907b530226574c59ae"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "dom-accessibility-api",
+      "version": "0.5.16",
+      "source": "https://registry.npmjs.org/dom-accessibility-api/-/dom-accessibility-api-0.5.16.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/0ffe67fe630169de46df2d29dc18f5857b4c98f0f95b0cd9e3c21fef51f9a9b8.txt",
+          "sha256": "0ffe67fe630169de46df2d29dc18f5857b4c98f0f95b0cd9e3c21fef51f9a9b8"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "electron-to-chromium",
+      "version": "1.5.396",
+      "source": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.5.396.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/25ba5c59dad3e0dd8f9540beaa0f0a86a10e3aec35af5fdc8e88c5f6a5c0d8c6.txt",
+          "sha256": "25ba5c59dad3e0dd8f9540beaa0f0a86a10e3aec35af5fdc8e88c5f6a5c0d8c6"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "entities",
+      "version": "8.0.0",
+      "source": "https://registry.npmjs.org/entities/-/entities-8.0.0.tgz",
+      "license": "BSD-2-Clause",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164.txt",
+          "sha256": "cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "es-module-lexer",
+      "version": "2.3.1",
+      "source": "https://registry.npmjs.org/es-module-lexer/-/es-module-lexer-2.3.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/8a4b6c44eebfb026d23719a348145a661a555568dbfdc11618ff2d0dd9306b00.txt",
+          "sha256": "8a4b6c44eebfb026d23719a348145a661a555568dbfdc11618ff2d0dd9306b00"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "esbuild",
+      "version": "0.25.12",
+      "source": "https://registry.npmjs.org/esbuild/-/esbuild-0.25.12.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681.txt",
+          "sha256": "b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "escalade",
+      "version": "3.2.0",
+      "source": "https://registry.npmjs.org/escalade/-/escalade-3.2.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "license",
+          "text": "licenses/texts/9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97.txt",
+          "sha256": "9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "estree-walker",
+      "version": "3.0.3",
+      "source": "https://registry.npmjs.org/estree-walker/-/estree-walker-3.0.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/8a6dcbabe7179f9c8489c08a7d874d0f1e093ae7449e03756ccf87cb9d0e296e.txt",
+          "sha256": "8a6dcbabe7179f9c8489c08a7d874d0f1e093ae7449e03756ccf87cb9d0e296e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "events",
+      "version": "3.3.0",
+      "source": "https://registry.npmjs.org/events/-/events-3.3.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/631987b7616a325a5b97566c232418481ddf7dbb5ecadefb991e791876cc2599.txt",
+          "sha256": "631987b7616a325a5b97566c232418481ddf7dbb5ecadefb991e791876cc2599"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "expect-type",
+      "version": "1.4.0",
+      "source": "https://registry.npmjs.org/expect-type/-/expect-type-1.4.0.tgz",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/7c6cc83c84eaa249a85bf12fe3eedd831bb50c696e8890b5248223ae68c7b408.txt",
+          "sha256": "7c6cc83c84eaa249a85bf12fe3eedd831bb50c696e8890b5248223ae68c7b408"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "fdir",
+      "version": "6.5.0",
+      "source": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/9a39f2aadab11a3697edd668ff2d8ad885b649737b7ab4d3bf12b34e5ada0c86.txt",
+          "sha256": "9a39f2aadab11a3697edd668ff2d8ad885b649737b7ab4d3bf12b34e5ada0c86"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "file-saver",
+      "version": "2.0.5",
+      "source": "https://registry.npmjs.org/file-saver/-/file-saver-2.0.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/2d1d7a93b46e4274355ac2904428707c4ee47ee8c6029fa394ebf405648d3f63.txt",
+          "sha256": "2d1d7a93b46e4274355ac2904428707c4ee47ee8c6029fa394ebf405648d3f63"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "fsevents",
+      "version": "2.3.3",
+      "source": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
+      "license": "MIT",
+      "notices": [],
+      "status": "not-installed-on-this-platform",
+      "platform": {
+        "os": [
+          "darwin"
+        ],
+        "optional": true
+      }
+    },
+    {
+      "ecosystem": "npm",
+      "name": "gensync",
+      "version": "1.0.0-beta.2",
+      "source": "https://registry.npmjs.org/gensync/-/gensync-1.0.0-beta.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/e3a956681ee067f971ac413994171b3d90ca801ec6324e76c9c55366cfe31cb0.txt",
+          "sha256": "e3a956681ee067f971ac413994171b3d90ca801ec6324e76c9c55366cfe31cb0"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "graphology",
+      "version": "0.26.0",
+      "source": "https://registry.npmjs.org/graphology/-/graphology-0.26.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/9d396b4882c329077f32861c0d6822dcee48f2d0ff6196d8459af70844196275.txt",
+          "sha256": "9d396b4882c329077f32861c0d6822dcee48f2d0ff6196d8459af70844196275"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "graphology-layout",
+      "version": "0.6.1",
+      "source": "https://registry.npmjs.org/graphology-layout/-/graphology-layout-0.6.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/9d396b4882c329077f32861c0d6822dcee48f2d0ff6196d8459af70844196275.txt",
+          "sha256": "9d396b4882c329077f32861c0d6822dcee48f2d0ff6196d8459af70844196275"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "graphology-layout-forceatlas2",
+      "version": "0.10.1",
+      "source": "https://registry.npmjs.org/graphology-layout-forceatlas2/-/graphology-layout-forceatlas2-0.10.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/9d396b4882c329077f32861c0d6822dcee48f2d0ff6196d8459af70844196275.txt",
+          "sha256": "9d396b4882c329077f32861c0d6822dcee48f2d0ff6196d8459af70844196275"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "graphology-types",
+      "version": "0.24.8",
+      "source": "https://registry.npmjs.org/graphology-types/-/graphology-types-0.24.8.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/ccd21f75fe569cc7c87f7b5c34c3263bfa123d565bfae1ac475814e0dcbf9f9c.txt",
+          "sha256": "ccd21f75fe569cc7c87f7b5c34c3263bfa123d565bfae1ac475814e0dcbf9f9c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "graphology-utils",
+      "version": "2.5.2",
+      "source": "https://registry.npmjs.org/graphology-utils/-/graphology-utils-2.5.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/597c30078622c20d8e62f9d96b4d2b9f9013b9668b778a55eb00810d093cd08c.txt",
+          "sha256": "597c30078622c20d8e62f9d96b4d2b9f9013b9668b778a55eb00810d093cd08c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "html-encoding-sniffer",
+      "version": "6.0.0",
+      "source": "https://registry.npmjs.org/html-encoding-sniffer/-/html-encoding-sniffer-6.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa.txt",
+          "sha256": "528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-potential-custom-element-name",
+      "version": "1.0.1",
+      "source": "https://registry.npmjs.org/is-potential-custom-element-name/-/is-potential-custom-element-name-1.0.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE-MIT.txt",
+          "text": "licenses/texts/483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a.txt",
+          "sha256": "483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "js-tokens",
+      "version": "4.0.0",
+      "source": "https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/2213d91c606205c71eb051a199478cdc2adde945893404d7f1421436dd6d5cc1.txt",
+          "sha256": "2213d91c606205c71eb051a199478cdc2adde945893404d7f1421436dd6d5cc1"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "jsdom",
+      "version": "30.0.0",
+      "source": "https://registry.npmjs.org/jsdom/-/jsdom-30.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/242d37e7cab25cbafc36cc973ee88f9345fddf066afe4f72b7ac3d9ad4e24cce.txt",
+          "sha256": "242d37e7cab25cbafc36cc973ee88f9345fddf066afe4f72b7ac3d9ad4e24cce"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "jsesc",
+      "version": "3.1.0",
+      "source": "https://registry.npmjs.org/jsesc/-/jsesc-3.1.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE-MIT.txt",
+          "text": "licenses/texts/483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a.txt",
+          "sha256": "483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "json5",
+      "version": "2.2.3",
+      "source": "https://registry.npmjs.org/json5/-/json5-2.2.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/53e59feb13058722d977c699eb0407c7bce2f93c949b681bbd2ff31698535927.txt",
+          "sha256": "53e59feb13058722d977c699eb0407c7bce2f93c949b681bbd2ff31698535927"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "loose-envify",
+      "version": "1.4.0",
+      "source": "https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/4eb7543b08d955a6d23fcc224601d43ff566e775be918805e26210d7f6eb4893.txt",
+          "sha256": "4eb7543b08d955a6d23fcc224601d43ff566e775be918805e26210d7f6eb4893"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lru-cache",
+      "version": "11.5.2",
+      "source": "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.2.tgz",
+      "license": "BlueOak-1.0.0",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004.txt",
+          "sha256": "8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lru-cache",
+      "version": "11.5.2",
+      "source": "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.2.tgz",
+      "license": "BlueOak-1.0.0",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004.txt",
+          "sha256": "8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lru-cache",
+      "version": "11.5.2",
+      "source": "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.2.tgz",
+      "license": "BlueOak-1.0.0",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004.txt",
+          "sha256": "8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lru-cache",
+      "version": "5.1.1",
+      "source": "https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b.txt",
+          "sha256": "4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lz-string",
+      "version": "1.5.0",
+      "source": "https://registry.npmjs.org/lz-string/-/lz-string-1.5.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/433fc9dfe659dbfb1e91eed8351f13651e97bfa3ac6d03394c3d63f61d4bbc80.txt",
+          "sha256": "433fc9dfe659dbfb1e91eed8351f13651e97bfa3ac6d03394c3d63f61d4bbc80"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "magic-string",
+      "version": "0.30.21",
+      "source": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/1cbe51b907662f6cb1492b16c359384a595180bf0e4d101603ed525e75c4e484.txt",
+          "sha256": "1cbe51b907662f6cb1492b16c359384a595180bf0e4d101603ed525e75c4e484"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdn-data",
+      "version": "2.27.1",
+      "source": "https://registry.npmjs.org/mdn-data/-/mdn-data-2.27.1.tgz",
+      "license": "CC0-1.0",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673.txt",
+          "sha256": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mnemonist",
+      "version": "0.39.8",
+      "source": "https://registry.npmjs.org/mnemonist/-/mnemonist-0.39.8.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/dfa5b838b877406f163d57ed736fd6d7f99ed442dfde2152c11d7b34dff3dd81.txt",
+          "sha256": "dfa5b838b877406f163d57ed736fd6d7f99ed442dfde2152c11d7b34dff3dd81"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ms",
+      "version": "2.1.3",
+      "source": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "license.md",
+          "text": "licenses/texts/1662fae9b5314d11cf51284e2dcd1f006a354f7343f08712a730fcff9a359801.txt",
+          "sha256": "1662fae9b5314d11cf51284e2dcd1f006a354f7343f08712a730fcff9a359801"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "nanoid",
+      "version": "3.3.16",
+      "source": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.16.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/da4db1480d9beea3483a2eda5c53b22238d0827d57da162b48f122e04d2d9987.txt",
+          "sha256": "da4db1480d9beea3483a2eda5c53b22238d0827d57da162b48f122e04d2d9987"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "node-releases",
+      "version": "2.0.51",
+      "source": "https://registry.npmjs.org/node-releases/-/node-releases-2.0.51.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/3706296ed611888111ceccc1dff4712844dea4bde0b185c82d718c3b69895abe.txt",
+          "sha256": "3706296ed611888111ceccc1dff4712844dea4bde0b185c82d718c3b69895abe"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "obliterator",
+      "version": "2.0.5",
+      "source": "https://registry.npmjs.org/obliterator/-/obliterator-2.0.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/597c30078622c20d8e62f9d96b4d2b9f9013b9668b778a55eb00810d093cd08c.txt",
+          "sha256": "597c30078622c20d8e62f9d96b4d2b9f9013b9668b778a55eb00810d093cd08c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "obug",
+      "version": "2.1.4",
+      "source": "https://registry.npmjs.org/obug/-/obug-2.1.4.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/ee48679d379ca6b4493d5e231094d85f818dd9be40b1a4f234fb7ff657ee35d9.txt",
+          "sha256": "ee48679d379ca6b4493d5e231094d85f818dd9be40b1a4f234fb7ff657ee35d9"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pandemonium",
+      "version": "2.4.1",
+      "source": "https://registry.npmjs.org/pandemonium/-/pandemonium-2.4.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/b63d4dcdfcb0aa516388263914aa2d758419db59284b674120cbe3148d9412dc.txt",
+          "sha256": "b63d4dcdfcb0aa516388263914aa2d758419db59284b674120cbe3148d9412dc"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "parse5",
+      "version": "8.0.1",
+      "source": "https://registry.npmjs.org/parse5/-/parse5-8.0.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/8c535800331e1e4439835555b3f9edc7fe9dee2fab0d8bbbd5a982e8b8343d4d.txt",
+          "sha256": "8c535800331e1e4439835555b3f9edc7fe9dee2fab0d8bbbd5a982e8b8343d4d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pathe",
+      "version": "2.0.3",
+      "source": "https://registry.npmjs.org/pathe/-/pathe-2.0.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/52e92576851154bad7737e90cc72818936f43665cb0e3f7428ed8edc8cc5709b.txt",
+          "sha256": "52e92576851154bad7737e90cc72818936f43665cb0e3f7428ed8edc8cc5709b"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "picocolors",
+      "version": "1.1.1",
+      "source": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/6582629e2979466878f6014313dcc2f3756c9616148682227ce3063dde310750.txt",
+          "sha256": "6582629e2979466878f6014313dcc2f3756c9616148682227ce3063dde310750"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "picomatch",
+      "version": "4.0.5",
+      "source": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.5.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/d0cd141b0c322fded5dfad1d4645bb2fedfc05b7321fe1009469638190d59ef9.txt",
+          "sha256": "d0cd141b0c322fded5dfad1d4645bb2fedfc05b7321fe1009469638190d59ef9"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "postcss",
+      "version": "8.5.23",
+      "source": "https://registry.npmjs.org/postcss/-/postcss-8.5.23.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/5be1f3465bba68a626777f984878814aaf35e7ef8e9fd314d469bcf887050fb8.txt",
+          "sha256": "5be1f3465bba68a626777f984878814aaf35e7ef8e9fd314d469bcf887050fb8"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pretty-format",
+      "version": "27.5.1",
+      "source": "https://registry.npmjs.org/pretty-format/-/pretty-format-27.5.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85.txt",
+          "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "punycode",
+      "version": "2.3.1",
+      "source": "https://registry.npmjs.org/punycode/-/punycode-2.3.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE-MIT.txt",
+          "text": "licenses/texts/483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a.txt",
+          "sha256": "483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react",
+      "version": "18.3.1",
+      "source": "https://registry.npmjs.org/react/-/react-18.3.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85.txt",
+          "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-dom",
+      "version": "18.3.1",
+      "source": "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85.txt",
+          "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-is",
+      "version": "17.0.2",
+      "source": "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85.txt",
+          "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-refresh",
+      "version": "0.17.0",
+      "source": "https://registry.npmjs.org/react-refresh/-/react-refresh-0.17.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93.txt",
+          "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "source": "https://registry.npmjs.org/require-from-string/-/require-from-string-2.0.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "license",
+          "text": "licenses/texts/6ee0feb1f6ef996ff5a68600f8cf98909cf412d39ef3cdceaefd87d636fa1b7f.txt",
+          "sha256": "6ee0feb1f6ef996ff5a68600f8cf98909cf412d39ef3cdceaefd87d636fa1b7f"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "rollup",
+      "version": "4.62.2",
+      "source": "https://registry.npmjs.org/rollup/-/rollup-4.62.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8.txt",
+          "sha256": "fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "saxes",
+      "version": "6.0.0",
+      "source": "https://registry.npmjs.org/saxes/-/saxes-6.0.0.tgz",
+      "license": "ISC",
+      "notices": [],
+      "status": "unconfirmed"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "scheduler",
+      "version": "0.23.2",
+      "source": "https://registry.npmjs.org/scheduler/-/scheduler-0.23.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85.txt",
+          "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "semver",
+      "version": "6.3.1",
+      "source": "https://registry.npmjs.org/semver/-/semver-6.3.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b.txt",
+          "sha256": "4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "siginfo",
+      "version": "2.0.0",
+      "source": "https://registry.npmjs.org/siginfo/-/siginfo-2.0.0.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/3bdddf0b9b08aaa2fe4365b803fc958ed32c0597ca0bd727be8d9fcb8b248d18.txt",
+          "sha256": "3bdddf0b9b08aaa2fe4365b803fc958ed32c0597ca0bd727be8d9fcb8b248d18"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "sigma",
+      "version": "3.0.3",
+      "source": "https://registry.npmjs.org/sigma/-/sigma-3.0.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/2d6beb4435a5186414986ef25facdea68619d0f3e1043b9a795f5c6233914013.txt",
+          "sha256": "2d6beb4435a5186414986ef25facdea68619d0f3e1043b9a795f5c6233914013"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "source-map-js",
+      "version": "1.2.1",
+      "source": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/6cb0631f71c7749763fd3dd1d5bee52dd1070ec17f2edc1710079ad070bd2fbd.txt",
+          "sha256": "6cb0631f71c7749763fd3dd1d5bee52dd1070ec17f2edc1710079ad070bd2fbd"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "stackback",
+      "version": "0.0.2",
+      "source": "https://registry.npmjs.org/stackback/-/stackback-0.0.2.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "formatstack.js: opening V8 BSD notice",
+          "text": "licenses/texts/b154c4cabeeb587f5cc63a41d0551ae69504460762d189a72ae141558ec5d184.txt",
+          "sha256": "b154c4cabeeb587f5cc63a41d0551ae69504460762d189a72ae141558ec5d184"
+        }
+      ],
+      "status": "unconfirmed"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "std-env",
+      "version": "4.2.0",
+      "source": "https://registry.npmjs.org/std-env/-/std-env-4.2.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENCE",
+          "text": "licenses/texts/a6f36438e46fb911859f3b9c4cad045ba64e1af3d8f4512c60258fa2d7552d28.txt",
+          "sha256": "a6f36438e46fb911859f3b9c4cad045ba64e1af3d8f4512c60258fa2d7552d28"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "symbol-tree",
+      "version": "3.2.4",
+      "source": "https://registry.npmjs.org/symbol-tree/-/symbol-tree-3.2.4.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/9ea1eccdabe469767a9edb9249a840b2461cf91b2434bf8a3e2fc1f414311cb1.txt",
+          "sha256": "9ea1eccdabe469767a9edb9249a840b2461cf91b2434bf8a3e2fc1f414311cb1"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tinybench",
+      "version": "2.9.0",
+      "source": "https://registry.npmjs.org/tinybench/-/tinybench-2.9.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/cebc084d54e6dd99e53292ddb4bc1cdb63d9bfcd9ce438fe3aa6eb106d79e2ea.txt",
+          "sha256": "cebc084d54e6dd99e53292ddb4bc1cdb63d9bfcd9ce438fe3aa6eb106d79e2ea"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tinyexec",
+      "version": "1.2.4",
+      "source": "https://registry.npmjs.org/tinyexec/-/tinyexec-1.2.4.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/f95f668fe64081ddb4153b322e34fdd719b991285ed08177d5ad7133b7988d92.txt",
+          "sha256": "f95f668fe64081ddb4153b322e34fdd719b991285ed08177d5ad7133b7988d92"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tinyglobby",
+      "version": "0.2.17",
+      "source": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/22c68811e174cbbfb3813d4135918df4f540959c14d872e601d9abe83d3cde8f.txt",
+          "sha256": "22c68811e174cbbfb3813d4135918df4f540959c14d872e601d9abe83d3cde8f"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tinyrainbow",
+      "version": "3.1.0",
+      "source": "https://registry.npmjs.org/tinyrainbow/-/tinyrainbow-3.1.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENCE",
+          "text": "licenses/texts/cebc084d54e6dd99e53292ddb4bc1cdb63d9bfcd9ce438fe3aa6eb106d79e2ea.txt",
+          "sha256": "cebc084d54e6dd99e53292ddb4bc1cdb63d9bfcd9ce438fe3aa6eb106d79e2ea"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tldts",
+      "version": "7.4.9",
+      "source": "https://registry.npmjs.org/tldts/-/tldts-7.4.9.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb.txt",
+          "sha256": "c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tldts-core",
+      "version": "7.4.9",
+      "source": "https://registry.npmjs.org/tldts-core/-/tldts-core-7.4.9.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb.txt",
+          "sha256": "c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tough-cookie",
+      "version": "6.0.2",
+      "source": "https://registry.npmjs.org/tough-cookie/-/tough-cookie-6.0.2.tgz",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/22ec6791c91ba42c0516a05f4cbdde019aae4687f8a38c5ca7e8a69ee68f851d.txt",
+          "sha256": "22ec6791c91ba42c0516a05f4cbdde019aae4687f8a38c5ca7e8a69ee68f851d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tr46",
+      "version": "6.0.0",
+      "source": "https://registry.npmjs.org/tr46/-/tr46-6.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/499d6d466d064e0460427967a344e2a32fcb86ea8c6cd1a285ec4f1fa03fba67.txt",
+          "sha256": "499d6d466d064e0460427967a344e2a32fcb86ea8c6cd1a285ec4f1fa03fba67"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "typescript",
+      "version": "5.6.3",
+      "source": "https://registry.npmjs.org/typescript/-/typescript-5.6.3.tgz",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47.txt",
+          "sha256": "a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "undici",
+      "version": "8.9.0",
+      "source": "https://registry.npmjs.org/undici/-/undici-8.9.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27.txt",
+          "sha256": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "update-browserslist-db",
+      "version": "1.2.3",
+      "source": "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.2.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c414dde36704bd9c8a76c7aa2921b19270ff9abeb478ea0050250d16cf29b0f6.txt",
+          "sha256": "c414dde36704bd9c8a76c7aa2921b19270ff9abeb478ea0050250d16cf29b0f6"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "use-sync-external-store",
+      "version": "1.7.0",
+      "source": "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.7.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93.txt",
+          "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "vite",
+      "version": "6.4.3",
+      "source": "https://registry.npmjs.org/vite/-/vite-6.4.3.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/008938a3441801ca3960f8e3ccb4c0738e7996442a53063141d57d3769a7344d.txt",
+          "sha256": "008938a3441801ca3960f8e3ccb4c0738e7996442a53063141d57d3769a7344d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "vitest",
+      "version": "4.1.10",
+      "source": "https://registry.npmjs.org/vitest/-/vitest-4.1.10.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/881d660c26831481b697e39724d4a35c9f86e07b67156d4aeb693a0b39910435.txt",
+          "sha256": "881d660c26831481b697e39724d4a35c9f86e07b67156d4aeb693a0b39910435"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "w3c-xmlserializer",
+      "version": "5.0.0",
+      "source": "https://registry.npmjs.org/w3c-xmlserializer/-/w3c-xmlserializer-5.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/ab654de803cdaa9e2819ab2e934bdf7f757e308649ec231d78e80e92425cdc34.txt",
+          "sha256": "ab654de803cdaa9e2819ab2e934bdf7f757e308649ec231d78e80e92425cdc34"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "webidl-conversions",
+      "version": "8.0.1",
+      "source": "https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-8.0.1.tgz",
+      "license": "BSD-2-Clause",
+      "notices": [
+        {
+          "original_path": "LICENSE.md",
+          "text": "licenses/texts/a889cc4dbee2ae172c179856b25d75b0b7a5a136e1b97109b9b590b2ff1a879c.txt",
+          "sha256": "a889cc4dbee2ae172c179856b25d75b0b7a5a136e1b97109b9b590b2ff1a879c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "whatwg-mimetype",
+      "version": "5.0.0",
+      "source": "https://registry.npmjs.org/whatwg-mimetype/-/whatwg-mimetype-5.0.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa.txt",
+          "sha256": "528eec83cb836a0adda9f8fc3d6a2a70a710d6cc0be9a155f92212c8df28acfa"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "whatwg-url",
+      "version": "16.0.1",
+      "source": "https://registry.npmjs.org/whatwg-url/-/whatwg-url-16.0.1.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/db480f236292a093e77a83c35431a8496624e1e664a3547768a9ce2bdde39877.txt",
+          "sha256": "db480f236292a093e77a83c35431a8496624e1e664a3547768a9ce2bdde39877"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "whatwg-url",
+      "version": "17.1.0",
+      "source": "https://registry.npmjs.org/whatwg-url/-/whatwg-url-17.1.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/db480f236292a093e77a83c35431a8496624e1e664a3547768a9ce2bdde39877.txt",
+          "sha256": "db480f236292a093e77a83c35431a8496624e1e664a3547768a9ce2bdde39877"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "why-is-node-running",
+      "version": "2.3.0",
+      "source": "https://registry.npmjs.org/why-is-node-running/-/why-is-node-running-2.3.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/6a134e51aa31496c15a741592fc5d782b2dbf8d8b6b8524e15c8520ae0cd6374.txt",
+          "sha256": "6a134e51aa31496c15a741592fc5d782b2dbf8d8b6b8524e15c8520ae0cd6374"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "xml-name-validator",
+      "version": "5.0.0",
+      "source": "https://registry.npmjs.org/xml-name-validator/-/xml-name-validator-5.0.0.tgz",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "LICENSE.txt",
+          "text": "licenses/texts/a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9.txt",
+          "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "xmlchars",
+      "version": "2.2.0",
+      "source": "https://registry.npmjs.org/xmlchars/-/xmlchars-2.2.0.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/45d196313c2647d313cc65ca9b093d2d6974b64d35ee7346f2c60c9d518dff2c.txt",
+          "sha256": "45d196313c2647d313cc65ca9b093d2d6974b64d35ee7346f2c60c9d518dff2c"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "yallist",
+      "version": "3.1.1",
+      "source": "https://registry.npmjs.org/yallist/-/yallist-3.1.1.tgz",
+      "license": "ISC",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b.txt",
+          "sha256": "4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "zustand",
+      "version": "4.5.7",
+      "source": "https://registry.npmjs.org/zustand/-/zustand-4.5.7.tgz",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "LICENSE",
+          "text": "licenses/texts/c1e6e266563517467b1bf874817d23e426f3149252bd7d42758cd697514b8417.txt",
+          "sha256": "c1e6e266563517467b1bf874817d23e426f3149252bd7d42758cd697514b8417"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "annotated-doc",
+      "version": "0.0.5",
+      "source": "https://pypi.org/project/annotated-doc/0.0.5/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "annotated_doc-0.0.5.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/fff170779a6acbf65abdb405c087f1cee1786691e4a96a4034517e4a504a0cdf.txt",
+          "sha256": "fff170779a6acbf65abdb405c087f1cee1786691e4a96a4034517e4a504a0cdf"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "source": "https://pypi.org/project/annotated-types/0.8.0/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "annotated_types-0.8.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/fe1049884b1a0d9342901e88e07f32925d24b3121d9972b6a6805fb9824b095d.txt",
+          "sha256": "fe1049884b1a0d9342901e88e07f32925d24b3121d9972b6a6805fb9824b095d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "anyio",
+      "version": "4.15.1",
+      "source": "https://pypi.org/project/anyio/4.15.1/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "anyio-4.15.1.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/5361ac9dc58f2ef5fd2e9b09c68297c17f04950909bbc8023bdb82eacf22c2b0.txt",
+          "sha256": "5361ac9dc58f2ef5fd2e9b09c68297c17f04950909bbc8023bdb82eacf22c2b0"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "certifi",
+      "version": "2026.10.23",
+      "source": "https://pypi.org/project/certifi/2026.10.23/",
+      "license": "MPL-2.0",
+      "notices": [
+        {
+          "original_path": "certifi-2026.10.23.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/e93716da6b9c0d5a4a1df60fe695b370f0695603d21f6f83f053e42cfc10caf7.txt",
+          "sha256": "e93716da6b9c0d5a4a1df60fe695b370f0695603d21f6f83f053e42cfc10caf7"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "click",
+      "version": "8.5.0",
+      "source": "https://pypi.org/project/click/8.5.0/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "click-8.5.0.dist-info/licenses/LICENSE.txt",
+          "text": "licenses/texts/9a8ad106a394e853bfe21f42f4e72d592819a22805d991b5f3275029292b658d.txt",
+          "sha256": "9a8ad106a394e853bfe21f42f4e72d592819a22805d991b5f3275029292b658d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "defusedxml",
+      "version": "0.7.1",
+      "source": "https://pypi.org/project/defusedxml/0.7.1/",
+      "license": "PSFL",
+      "notices": [
+        {
+          "original_path": "defusedxml-0.7.1.dist-info/LICENSE",
+          "text": "licenses/texts/b80ce9da8c42a1f91079627fbbe2bf27210ae108a0ffe5f077d5b08e076c24c8.txt",
+          "sha256": "b80ce9da8c42a1f91079627fbbe2bf27210ae108a0ffe5f077d5b08e076c24c8"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "et_xmlfile",
+      "version": "2.0.0",
+      "source": "https://pypi.org/project/et_xmlfile/2.0.0/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "et_xmlfile-2.0.0.dist-info/LICENCE.python",
+          "text": "licenses/texts/4ccdaaebc0f44b83720ec0399bb7ab329adce067dd62f73c5535a2dc05628ab2.txt",
+          "sha256": "4ccdaaebc0f44b83720ec0399bb7ab329adce067dd62f73c5535a2dc05628ab2"
+        },
+        {
+          "original_path": "et_xmlfile-2.0.0.dist-info/LICENCE.rst",
+          "text": "licenses/texts/0c84bb42f5d367e5ebf9fc2dde35b16141df5ee0fdc189250858bc6c5560f69e.txt",
+          "sha256": "0c84bb42f5d367e5ebf9fc2dde35b16141df5ee0fdc189250858bc6c5560f69e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "fastapi",
+      "version": "0.162.0",
+      "source": "https://pypi.org/project/fastapi/0.162.0/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "fastapi-0.162.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/4ec89ffc81485b97fec584b2d4a961032eeffe834453894fd9c1274906cc744e.txt",
+          "sha256": "4ec89ffc81485b97fec584b2d4a961032eeffe834453894fd9c1274906cc744e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "h11",
+      "version": "0.16.0",
+      "source": "https://pypi.org/project/h11/0.16.0/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "h11-0.16.0.dist-info/licenses/LICENSE.txt",
+          "text": "licenses/texts/37db5bb85926db28a427a25867f10b1232003aea1be69ccb851138adb8e6f361.txt",
+          "sha256": "37db5bb85926db28a427a25867f10b1232003aea1be69ccb851138adb8e6f361"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "html5rdf",
+      "version": "1.2.1",
+      "source": "https://pypi.org/project/html5rdf/1.2.1/",
+      "license": "Copyright (c) 2006-2013 James Graham and other contributors\n\nPermission is hereby granted, free of charge, to any person obtaining\na copy of this software and associated documentation files (the\n\"Software\"), to deal in the Software without restriction, including\nwithout limitation the rights to use, copy, modify, merge, publish,\ndistribute, sublicense, and/or sell copies of the Software, and to\npermit persons to whom the Software is furnished to do so, subject to\nthe following conditions:\n\nThe above copyright notice and this permission notice shall be\nincluded in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND\nNONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE\nLIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION\nWITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n",
+      "notices": [
+        {
+          "original_path": "html5rdf-1.2.1.dist-info/LICENSE",
+          "text": "licenses/texts/16a39991619e92f18680932da2a9199fdf7d95df3ecaedc52ea06218aabafd6f.txt",
+          "sha256": "16a39991619e92f18680932da2a9199fdf7d95df3ecaedc52ea06218aabafd6f"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "httpcore",
+      "version": "1.0.9",
+      "source": "https://pypi.org/project/httpcore/1.0.9/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "httpcore-1.0.9.dist-info/licenses/LICENSE.md",
+          "text": "licenses/texts/fdcb59154c74cbaba16a11242f7740bea9f23d6feb5547917d8c5f94a80392a5.txt",
+          "sha256": "fdcb59154c74cbaba16a11242f7740bea9f23d6feb5547917d8c5f94a80392a5"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "httptools",
+      "version": "0.9.0",
+      "source": "https://pypi.org/project/httptools/0.9.0/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "httptools-0.9.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/f4573e7cb7676745fb5b8d36fa548aa93e391cfb6872ddacd65130c45ea6a92d.txt",
+          "sha256": "f4573e7cb7676745fb5b8d36fa548aa93e391cfb6872ddacd65130c45ea6a92d"
+        },
+        {
+          "original_path": "httptools-0.9.0.dist-info/licenses/vendor/http-parser/LICENSE-MIT",
+          "text": "licenses/texts/79e6ba8b687cb54786207342b9b6fcee0ac10218453ed9009b84d949b2233cc0.txt",
+          "sha256": "79e6ba8b687cb54786207342b9b6fcee0ac10218453ed9009b84d949b2233cc0"
+        },
+        {
+          "original_path": "httptools-0.9.0.dist-info/licenses/vendor/llhttp/LICENSE",
+          "text": "licenses/texts/628168d68bb5a8a17e0bbefb3bd74e326e1edc20583d76f52f457c82c921867d.txt",
+          "sha256": "628168d68bb5a8a17e0bbefb3bd74e326e1edc20583d76f52f457c82c921867d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "httpx",
+      "version": "0.28.1",
+      "source": "https://pypi.org/project/httpx/0.28.1/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "httpx-0.28.1.dist-info/licenses/LICENSE.md",
+          "text": "licenses/texts/4ec59d544f12b5f539a3a716fd321ac58ccd8030b465221f2c880200cdf28d8d.txt",
+          "sha256": "4ec59d544f12b5f539a3a716fd321ac58ccd8030b465221f2c880200cdf28d8d"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "idna",
+      "version": "3.20",
+      "source": "https://pypi.org/project/idna/3.20/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "idna-3.20.dist-info/licenses/LICENSE.md",
+          "text": "licenses/texts/1a9a4f0e3d479a27240ddd59a9137a66ab4a0f9dfdc8ca6188cc0bfd85187f04.txt",
+          "sha256": "1a9a4f0e3d479a27240ddd59a9137a66ab4a0f9dfdc8ca6188cc0bfd85187f04"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "iniconfig",
+      "version": "2.3.1",
+      "source": "https://pypi.org/project/iniconfig/2.3.1/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "iniconfig-2.3.1.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4.txt",
+          "sha256": "3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "openpyxl",
+      "version": "3.1.5",
+      "source": "https://pypi.org/project/openpyxl/3.1.5/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "openpyxl-3.1.5.dist-info/LICENCE.rst",
+          "text": "licenses/texts/0c84bb42f5d367e5ebf9fc2dde35b16141df5ee0fdc189250858bc6c5560f69e.txt",
+          "sha256": "0c84bb42f5d367e5ebf9fc2dde35b16141df5ee0fdc189250858bc6c5560f69e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "opentelemetry-api",
+      "version": "1.45.1",
+      "source": "https://pypi.org/project/opentelemetry-api/1.45.1/",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "opentelemetry_api-1.45.1.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4.txt",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "owlrl",
+      "version": "7.6.2",
+      "source": "https://pypi.org/project/owlrl/7.6.2/",
+      "license": "W3C-20150513",
+      "notices": [
+        {
+          "original_path": "owlrl-7.6.2.dist-info/LICENSE.txt",
+          "text": "licenses/texts/4314f05aad7a217e792d310af1b4381d132e03d2f823c29bb7ab0f87c6849257.txt",
+          "sha256": "4314f05aad7a217e792d310af1b4381d132e03d2f823c29bb7ab0f87c6849257"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "packaging",
+      "version": "26.3",
+      "source": "https://pypi.org/project/packaging/26.3/",
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "notices": [
+        {
+          "original_path": "packaging-26.3.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48.txt",
+          "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48"
+        },
+        {
+          "original_path": "packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+          "text": "licenses/texts/0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594.txt",
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        {
+          "original_path": "packaging-26.3.dist-info/licenses/LICENSE.BSD",
+          "text": "licenses/texts/b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5.txt",
+          "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pip",
+      "version": "25.1.1",
+      "source": "https://pypi.org/project/pip/25.1.1/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "pip-25.1.1.dist-info/licenses/AUTHORS.txt",
+          "text": "licenses/texts/6330c54d8a5e627c2998e0c315383229934a59c7dd3b5d0be44c7f53a9092d17.txt",
+          "sha256": "6330c54d8a5e627c2998e0c315383229934a59c7dd3b5d0be44c7f53a9092d17"
+        },
+        {
+          "original_path": "pip-25.1.1.dist-info/licenses/LICENSE.txt",
+          "text": "licenses/texts/634300a669d49aeae65b12c6c48c924c51a4cdf3d1ff086dc3456dc8bcaa2104.txt",
+          "sha256": "634300a669d49aeae65b12c6c48c924c51a4cdf3d1ff086dc3456dc8bcaa2104"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pluggy",
+      "version": "1.7.0",
+      "source": "https://pypi.org/project/pluggy/1.7.0/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "pluggy-1.7.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606.txt",
+          "sha256": "d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "prettytable",
+      "version": "3.18.0",
+      "source": "https://pypi.org/project/prettytable/3.18.0/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "prettytable-3.18.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/0c8adcc204c8af6cdfdf7887dfd1f99c29901f6c1d505a78bba96efa4fb2cb05.txt",
+          "sha256": "0c8adcc204c8af6cdfdf7887dfd1f99c29901f6c1d505a78bba96efa4fb2cb05"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pydantic",
+      "version": "2.14.1",
+      "source": "https://pypi.org/project/pydantic/2.14.1/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "pydantic-2.14.1.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3.txt",
+          "sha256": "a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pydantic_core",
+      "version": "2.50.1",
+      "source": "https://pypi.org/project/pydantic_core/2.50.1/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "pydantic_core-2.50.1.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/2afdd30d54b4d62b6f488a6bcc1546e84ec5061f13f4209c03d012348783795a.txt",
+          "sha256": "2afdd30d54b4d62b6f488a6bcc1546e84ec5061f13f4209c03d012348783795a"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "Pygments",
+      "version": "2.21.0",
+      "source": "https://pypi.org/project/Pygments/2.21.0/",
+      "license": "BSD-2-Clause",
+      "notices": [
+        {
+          "original_path": "pygments-2.21.0.dist-info/licenses/AUTHORS",
+          "text": "licenses/texts/71a83872ad82f57be692cf827e048e2cd51d45169cfa1ea3f28706d97a872c0f.txt",
+          "sha256": "71a83872ad82f57be692cf827e048e2cd51d45169cfa1ea3f28706d97a872c0f"
+        },
+        {
+          "original_path": "pygments-2.21.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/a9d66f1d526df02e29dce73436d34e56e8632f46c275bbdffc70569e882f9f17.txt",
+          "sha256": "a9d66f1d526df02e29dce73436d34e56e8632f46c275bbdffc70569e882f9f17"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pyparsing",
+      "version": "3.3.3",
+      "source": "https://pypi.org/project/pyparsing/3.3.3/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "pyparsing-3.3.3.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/a5425f9dc14ac74d4c5f0b679e941f2442e32cca7452a4418d5b1a49893ebe4e.txt",
+          "sha256": "a5425f9dc14ac74d4c5f0b679e941f2442e32cca7452a4418d5b1a49893ebe4e"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pyshacl",
+      "version": "0.40.1",
+      "source": "https://pypi.org/project/pyshacl/0.40.1/",
+      "license": "Apache License\n                            Version 2.0, January 2004\n                         http://www.apache.org/licenses/\n\n    TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION\n\n    1. Definitions.\n\n       \"License\" shall mean the terms and conditions for use, reproduction,\n       and distribution as defined by Sections 1 through 9 of this document.\n\n       \"Licensor\" shall mean the copyright owner or entity authorized by\n       the copyright owner that is granting the License.\n\n       \"Legal Entity\" shall mean the union of the acting entity and all\n       other entities that control, are controlled by, or are under common\n       control with that entity. For the purposes of this definition,\n       \"control\" means (i) the power, direct or indirect, to cause the\n       direction or management of such entity, whether by contract or\n       otherwise, or (ii) ownership of fifty percent (50%) or more of the\n       outstanding shares, or (iii) beneficial ownership of such entity.\n\n       \"You\" (or \"Your\") shall mean an individual or Legal Entity\n       exercising permissions granted by this License.\n\n       \"Source\" form shall mean the preferred form for making modifications,\n       including but not limited to software source code, documentation\n       source, and configuration files.\n\n       \"Object\" form shall mean any form resulting from mechanical\n       transformation or translation of a Source form, including but\n       not limited to compiled object code, generated documentation,\n       and conversions to other media types.\n\n       \"Work\" shall mean the work of authorship, whether in Source or\n       Object form, made available under the License, as indicated by a\n       copyright notice that is included in or attached to the work\n       (an example is provided in the Appendix below).\n\n       \"Derivative Works\" shall mean any work, whether in Source or Object\n       form, that is based on (or derived from) the Work and for which the\n       editorial revisions, annotations, elaborations, or other modifications\n       represent, as a whole, an original work of authorship. For the purposes\n       of this License, Derivative Works shall not include works that remain\n       separable from, or merely link (or bind by name) to the interfaces of,\n       the Work and Derivative Works thereof.\n\n       \"Contribution\" shall mean any work of authorship, including\n       the original version of the Work and any modifications or additions\n       to that Work or Derivative Works thereof, that is intentionally\n       submitted to Licensor for inclusion in the Work by the copyright owner\n       or by an individual or Legal Entity authorized to submit on behalf of\n       the copyright owner. For the purposes of this definition, \"submitted\"\n       means any form of electronic, verbal, or written communication sent\n       to the Licensor or its representatives, including but not limited to\n       communication on electronic mailing lists, source code control systems,\n       and issue tracking systems that are managed by, or on behalf of, the\n       Licensor for the purpose of discussing and improving the Work, but\n       excluding communication that is conspicuously marked or otherwise\n       designated in writing by the copyright owner as \"Not a Contribution.\"\n\n       \"Contributor\" shall mean Licensor and any individual or Legal Entity\n       on behalf of whom a Contribution has been received by Licensor and\n       subsequently incorporated within the Work.\n\n    2. Grant of Copyright License. Subject to the terms and conditions of\n       this License, each Contributor hereby grants to You a perpetual,\n       worldwide, non-exclusive, no-charge, royalty-free, irrevocable\n       copyright license to reproduce, prepare Derivative Works of,\n       publicly display, publicly perform, sublicense, and distribute the\n       Work and such Derivative Works in Source or Object form.\n\n    3. Grant of Patent License. Subject to the terms and conditions of\n       this License, each Contributor hereby grants to You a perpetual,\n       worldwide, non-exclusive, no-charge, royalty-free, irrevocable\n       (except as stated in this section) patent license to make, have made,\n       use, offer to sell, sell, import, and otherwise transfer the Work,\n       where such license applies only to those patent claims licensable\n       by such Contributor that are necessarily infringed by their\n       Contribution(s) alone or by combination of their Contribution(s)\n       with the Work to which such Contribution(s) was submitted. If You\n       institute patent litigation against any entity (including a\n       cross-claim or counterclaim in a lawsuit) alleging that the Work\n       or a Contribution incorporated within the Work constitutes direct\n       or contributory patent infringement, then any patent licenses\n       granted to You under this License for that Work shall terminate\n       as of the date such litigation is filed.\n\n    4. Redistribution. You may reproduce and distribute copies of the\n       Work or Derivative Works thereof in any medium, with or without\n       modifications, and in Source or Object form, provided that You\n       meet the following conditions:\n\n       (a) You must give any other recipients of the Work or\n           Derivative Works a copy of this License; and\n\n       (b) You must cause any modified files to carry prominent notices\n           stating that You changed the files; and\n\n       (c) You must retain, in the Source form of any Derivative Works\n           that You distribute, all copyright, patent, trademark, and\n           attribution notices from the Source form of the Work,\n           excluding those notices that do not pertain to any part of\n           the Derivative Works; and\n\n       (d) If the Work includes a \"NOTICE\" text file as part of its\n           distribution, then any Derivative Works that You distribute must\n           include a readable copy of the attribution notices contained\n           within such NOTICE file, excluding those notices that do not\n           pertain to any part of the Derivative Works, in at least one\n           of the following places: within a NOTICE text file distributed\n           as part of the Derivative Works; within the Source form or\n           documentation, if provided along with the Derivative Works; or,\n           within a display generated by the Derivative Works, if and\n           wherever such third-party notices normally appear. The contents\n           of the NOTICE file are for informational purposes only and\n           do not modify the License. You may add Your own attribution\n           notices within Derivative Works that You distribute, alongside\n           or as an addendum to the NOTICE text from the Work, provided\n           that such additional attribution notices cannot be construed\n           as modifying the License.\n\n       You may add Your own copyright statement to Your modifications and\n       may provide additional or different license terms and conditions\n       for use, reproduction, or distribution of Your modifications, or\n       for any such Derivative Works as a whole, provided Your use,\n       reproduction, and distribution of the Work otherwise complies with\n       the conditions stated in this License.\n\n    5. Submission of Contributions. Unless You explicitly state otherwise,\n       any Contribution intentionally submitted for inclusion in the Work\n       by You to the Licensor shall be under the terms and conditions of\n       this License, without any additional terms or conditions.\n       Notwithstanding the above, nothing herein shall supersede or modify\n       the terms of any separate license agreement you may have executed\n       with Licensor regarding such Contributions.\n\n    6. Trademarks. This License does not grant permission to use the trade\n       names, trademarks, service marks, or product names of the Licensor,\n       except as required for reasonable and customary use in describing the\n       origin of the Work and reproducing the content of the NOTICE file.\n\n    7. Disclaimer of Warranty. Unless required by applicable law or\n       agreed to in writing, Licensor provides the Work (and each\n       Contributor provides its Contributions) on an \"AS IS\" BASIS,\n       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or\n       implied, including, without limitation, any warranties or conditions\n       of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A\n       PARTICULAR PURPOSE. You are solely responsible for determining the\n       appropriateness of using or redistributing the Work and assume any\n       risks associated with Your exercise of permissions under this License.\n\n    8. Limitation of Liability. In no event and under no legal theory,\n       whether in tort (including negligence), contract, or otherwise,\n       unless required by applicable law (such as deliberate and grossly\n       negligent acts) or agreed to in writing, shall any Contributor be\n       liable to You for damages, including any direct, indirect, special,\n       incidental, or consequential damages of any character arising as a\n       result of this License or out of the use or inability to use the\n       Work (including but not limited to damages for loss of goodwill,\n       work stoppage, computer failure or malfunction, or any and all\n       other commercial damages or losses), even if such Contributor\n       has been advised of the possibility of such damages.\n\n    9. Accepting Warranty or Additional Liability. While redistributing\n       the Work or Derivative Works thereof, You may choose to offer,\n       and charge a fee for, acceptance of support, warranty, indemnity,\n       or other liability obligations and/or rights consistent with this\n       License. However, in accepting such obligations, You may act only\n       on Your own behalf and on Your sole responsibility, not on behalf\n       of any other Contributor, and only if You agree to indemnify,\n       defend, and hold each Contributor harmless for any liability\n       incurred by, or claims asserted against, such Contributor by reason\n       of your accepting any such warranty or additional liability.\n\n    END OF TERMS AND CONDITIONS\n\n    APPENDIX: How to apply the Apache License to your work.\n\n       To apply the Apache License to your work, attach the following\n       boilerplate notice, with the fields enclosed by brackets \"[]\"\n       replaced with your own identifying information. (Don't include\n       the brackets!)  The text should be enclosed in the appropriate\n       comment syntax for the file format. We also recommend that a\n       file or class name and description of purpose be included on the\n       same \"printed page\" as the copyright notice for easier\n       identification within third-party archives.\n\n    Copyright [yyyy] [name of copyright owner]\n\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n        http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.",
+      "notices": [
+        {
+          "original_path": "pyshacl-0.40.1.dist-info/licenses/LICENSE.txt",
+          "text": "licenses/texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pytest",
+      "version": "9.1.1",
+      "source": "https://pypi.org/project/pytest/9.1.1/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "pytest-9.1.1.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b.txt",
+          "sha256": "ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "python-dotenv",
+      "version": "1.2.4",
+      "source": "https://pypi.org/project/python-dotenv/1.2.4/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "python_dotenv-1.2.4.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/80619b7049f08c81683ad0e01f08f257a840652dd71ee83146d36658c7d2c2b9.txt",
+          "sha256": "80619b7049f08c81683ad0e01f08f257a840652dd71ee83146d36658c7d2c2b9"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "python-multipart",
+      "version": "0.0.32",
+      "source": "https://pypi.org/project/python-multipart/0.0.32/",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "python_multipart-0.0.32.dist-info/licenses/LICENSE.txt",
+          "text": "licenses/texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "PyYAML",
+      "version": "6.0.3",
+      "source": "https://pypi.org/project/PyYAML/6.0.3/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "pyyaml-6.0.3.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4.txt",
+          "sha256": "8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "rdflib",
+      "version": "7.6.0",
+      "source": "https://pypi.org/project/rdflib/7.6.0/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "rdflib-7.6.0.dist-info/LICENSE",
+          "text": "licenses/texts/53a705e51bfd199e8c97d0442376cb4bbd4ffcf13ba4f2c4c2794211400e4012.txt",
+          "sha256": "53a705e51bfd199e8c97d0442376cb4bbd4ffcf13ba4f2c4c2794211400e4012"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "starlette",
+      "version": "1.9.0",
+      "source": "https://pypi.org/project/starlette/1.9.0/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "starlette-1.9.0.dist-info/licenses/LICENSE.md",
+          "text": "licenses/texts/dcb95677a02240243187e964f941847d19b17821cf99e5afae684fab328c19bf.txt",
+          "sha256": "dcb95677a02240243187e964f941847d19b17821cf99e5afae684fab328c19bf"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "source": "https://pypi.org/project/typing-inspection/0.4.4/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "typing_inspection-0.4.4.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/804b59b25f2c31bd278f9202a19ae49a3945aa2664387e2d0a128c7cacc61ec3.txt",
+          "sha256": "804b59b25f2c31bd278f9202a19ae49a3945aa2664387e2d0a128c7cacc61ec3"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "source": "https://pypi.org/project/typing_extensions/4.16.0/",
+      "license": "PSF-2.0",
+      "notices": [
+        {
+          "original_path": "typing_extensions-4.16.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf.txt",
+          "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "uvicorn",
+      "version": "0.54.0",
+      "source": "https://pypi.org/project/uvicorn/0.54.0/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "uvicorn-0.54.0.dist-info/licenses/LICENSE.md",
+          "text": "licenses/texts/efe1acf3e62fb99c288b0ec73e5a773b7268ef4320fe757ea994214e4b63c371.txt",
+          "sha256": "efe1acf3e62fb99c288b0ec73e5a773b7268ef4320fe757ea994214e4b63c371"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "uvloop",
+      "version": "0.23.0",
+      "source": "https://pypi.org/project/uvloop/0.23.0/",
+      "license": "MIT License",
+      "notices": [
+        {
+          "original_path": "uvloop-0.23.0.dist-info/licenses/LICENSE-APACHE",
+          "text": "licenses/texts/377025287798f9dcd819e1f826fa5fc5e2f382528691ab0528c5cf8c8c282c27.txt",
+          "sha256": "377025287798f9dcd819e1f826fa5fc5e2f382528691ab0528c5cf8c8c282c27"
+        },
+        {
+          "original_path": "uvloop-0.23.0.dist-info/licenses/LICENSE-MIT",
+          "text": "licenses/texts/6dd4c399f26de043d77a2ad7e31db4cb5bf08ea8368b0a42d6e158635cc8ab62.txt",
+          "sha256": "6dd4c399f26de043d77a2ad7e31db4cb5bf08ea8368b0a42d6e158635cc8ab62"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "watchfiles",
+      "version": "1.3.0",
+      "source": "https://pypi.org/project/watchfiles/1.3.0/",
+      "license": "MIT",
+      "notices": [
+        {
+          "original_path": "watchfiles-1.3.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/4fd78355b67ce2677ede9fb6f63a250f377bb7e22088136a5f4699adb4bc069f.txt",
+          "sha256": "4fd78355b67ce2677ede9fb6f63a250f377bb7e22088136a5f4699adb4bc069f"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "wcwidth",
+      "version": "0.9.3",
+      "source": "https://pypi.org/project/wcwidth/0.9.3/",
+      "license": "License :: OSI Approved :: MIT License",
+      "notices": [
+        {
+          "original_path": "wcwidth-0.9.3.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/70b98a95a2144eb70af8017fa8c6d95ce247e40867436e8bc649e137fe13d21a.txt",
+          "sha256": "70b98a95a2144eb70af8017fa8c6d95ce247e40867436e8bc649e137fe13d21a"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "websockets",
+      "version": "17.3",
+      "source": "https://pypi.org/project/websockets/17.3/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "websockets-17.3.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/3d6a0c050d8bec52fabad502e45fb25bd02bcadbd70dea34d447b6a0ff4e6da8.txt",
+          "sha256": "3d6a0c050d8bec52fabad502e45fb25bd02bcadbd70dea34d447b6a0ff4e6da8"
+        }
+      ],
+      "status": "text-collected"
+    }
+  ]
+}

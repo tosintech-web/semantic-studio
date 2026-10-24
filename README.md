@@ -11,6 +11,38 @@ A self-contained web application that turns Semantic Web ontologies and
 vocabularies into an interactive, force-directed graph — and lets you query
 them by clicking, without writing SPARQL by hand.
 
+## この改変版について
+
+これは [Imran Khan氏のSemantic Studio](https://github.com/imrankhan1984/semantic-studio) の
+非公式改変版です。日本語の辞書編集・閲覧を使いやすくするP1開発を進めています。
+現在の対応範囲と検証結果は [P1実装計画](docs/superpowers/plans/2026-10-24-p1-dictionary-workspace.md)
+を参照してください。改変版の問い合わせは
+[このリポジトリのIssues](https://github.com/tosintech-web/semantic-studio/issues) へお願いします。
+
+ソフトウェア本体は元作者の著作権表示を含む [MIT License](LICENSE) を維持します。
+データ・標準語彙・依存ライブラリはそれぞれの条件に従い、MITへ一括変更しません。
+[第三者通知](THIRD_PARTY_NOTICES.md) と [依存物一覧](licenses/dependency-inventory.json) を確認してください。
+改変部分の追加の権利者表示は確認後に追記し、ドメイン名から推測しません。
+
+実データ・秘密情報をリポジトリへ追加しないでください。`.gitignore`だけでは既追跡ファイルを
+保護できません。公開前には `python scripts/check_publication.py --staged` または
+`--git-ref <対象コミット>` で実際のGit blobを検査します。結果0は定義済みルールの合格であり、
+未検出の秘密や未知の業務データがないという保証ではありません。
+データセットの追加は `publication-policy.json` に出典・条件・SHA-256を登録し、内容をレビューします。
+例外はパス・ルール・理由を限定してレビューしてください。
+
+公開試験用辞書は次のコマンドで一時フォルダへ生成できます（3,035組織＋境界例）。
+元Excel/JSONや非公開の変換物を読みません。
+
+```bash
+cd backend
+.venv/bin/python -c 'from tests.synthetic_dictionary import build_synthetic_organizations; build_synthetic_organizations().serialize("/tmp/semantic-studio-synthetic.ttl", format="turtle")'
+```
+
+このTurtleをアプリのLoadから開きます。Libraryは閲覧用です。編集する場合は既存のProject作成・
+フォーク操作を使います。原本ZIPや文書ZIPは内部バックアップとして扱い、実データを含む出力を
+そのまま公開しないでください。
+
 ## Features
 
 - **Load ontologies** three ways:

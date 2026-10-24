@@ -121,6 +121,18 @@ describe("AboutPanel content", () => {
     expect(link.getAttribute("rel")).toBe("noreferrer");
   });
 
+  it("distinguishes the unofficial fork and its notice from upstream", () => {
+    open();
+    expect(panelText()).toContain("Unofficial modified version");
+    expect((screen.getByRole("link", { name: /modified version source/i }) as HTMLAnchorElement).href)
+      .toBe("https://github.com/tosintech-web/semantic-studio");
+    expect((screen.getByRole("link", { name: /third-party notices/i }) as HTMLAnchorElement).href)
+      .toBe("https://github.com/tosintech-web/semantic-studio/blob/main/THIRD_PARTY_NOTICES.md");
+    expect(panelText()).toContain("Data and dependencies retain their own licences.");
+    expect((screen.getByRole("link", { name: /view source/i }) as HTMLAnchorElement).href)
+      .toBe("https://github.com/imrankhan1984/semantic-studio");
+  });
+
   it("the licence facts match the LICENSE file", () => {
     // AC-6, as a regression rather than as a reading. A ?raw import that
     // resolves to "" passes every assertion below while proving nothing, so
