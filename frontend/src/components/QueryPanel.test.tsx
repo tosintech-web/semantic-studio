@@ -34,6 +34,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import QueryPanel, { queryScopeText } from "./QueryPanel";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import type { useQueryBuilder } from "../sparql/useQueryBuilder";
 import type { QueryState } from "../sparql/types";
 
@@ -681,4 +683,41 @@ describe("only the latest answer is shown (query-page-rework 5.2)", () => {
       vi.useRealTimers();
     }
   });
+});
+
+
+it("keeps a save-name draft and query switches when the UI language changes", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const builder = builderStub();
+  saveQuery.mockReset().mockResolvedValue({ id: "ja-query", name: "日本語検索", ontologyId: "ont-1", mode: "visual", state: STATE, sparql: builder.sparql, updatedAt: "2026-10-01T00:00:00Z" });
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><QueryPanel ontologyId="ont-1" theme="light" builder={builder} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} includeImports importsCount={2} /></I18nProvider>));
+  expect(screen.getByRole("complementary", { name: "クエリビルダー" })).toBeTruthy();
+  expect(screen.getByText("このオントロジーと2件のインポートを検索します。")).toBeTruthy();
+  expect(document.querySelector(".plain-english")?.textContent).toBe("すべてのBondを起点にします。最大100行を返します。");
+  fireEvent.click(screen.getByRole("button", { name: "自動" }));
+  fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+  const input = screen.getByPlaceholderText("クエリ名");
+  fireEvent.change(input, { target: { value: "日本語検索" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByPlaceholderText("Query name")).toBe(input);
+  expect(document.querySelector(".plain-english")?.textContent).toBe("Start from every bond. Return at most 100 rows.");
+  expect((input as HTMLInputElement).value).toBe("日本語検索");
+  expect(screen.getByRole("button", { name: "Auto" }).getAttribute("aria-pressed")).toBe("false");
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+  expect(saveQuery).toHaveBeenCalledWith(expect.objectContaining({ name: "日本語検索", sparql: builder.sparql, state: STATE }));
+  expect(runSparql).not.toHaveBeenCalled();
+  expect(listSavedQueries).toHaveBeenCalledTimes(2);
+});
+it("does not claim the query was copied when the clipboard is unavailable", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+  try {
+    await act(async () => render(<I18nProvider><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} /></I18nProvider>));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "⧉ コピー" })));
+    expect(await screen.findByRole("button", { name: "コピーできませんでした" })).toBeTruthy();
+  } finally {
+    if (previous) Object.defineProperty(navigator, "clipboard", previous);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
 });

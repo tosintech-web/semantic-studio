@@ -62,7 +62,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/DeleteDialog.tsx` | 探索・編集・クエリ・説明文 | 11 | 影響・選択肢を移行（コマンド通知・拒否の生成元はTask 12） |
 | `frontend/src/components/LinkPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（拒否・読み取り専用理由の生成元は別途移行） |
 | `frontend/src/components/ExampleForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（拒否・読み取り専用理由の生成元は別途移行） |
-| `frontend/src/components/QueryPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/QueryPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 操作・保存・一覧を移行（生成説明・hint・拒否・textQuery通知は継続） |
 | `frontend/src/components/QueryStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
 | `frontend/src/components/ResultsTable.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行済み |
 | `frontend/src/components/ResultPanels.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（違反・グループ・データラベルの生成元はTask 12） |
@@ -103,6 +103,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/modeling/examples.ts` | 具体例の型説明・入力検証 | 11 | 共通表示関数を移行 |
 
 | `frontend/src/modeling/shapeSentences.ts` | ルール・検証の文章 | 12 | 結果パネルの共通見出しを先行移行、その他はTask 12 |
+
+| `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 全体テンプレートを移行、enの既存語形処理を保持 |
 
 ## 登録済みメッセージ
 
@@ -658,7 +660,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/DeleteDialog.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/DeleteDialog.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/QueryPanel.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1324,7 +1326,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editParts.editLabel` | label | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editParts.add` | — | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editParts.edit` | — | `frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
-| `editParts.save` | — | `frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.save` | — | `frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/QueryPanel.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.imported` | source | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.fromData` | source | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.external` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
@@ -1627,3 +1629,87 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `results.passes` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
 | `results.value` | value | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
 | `results.more` | count | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | 検証結果の見出し・操作 | 11/12 | 結果パネルの表示を移行（違反説明の生成元はTask 12） |
+
+| `queryPanel.builder` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.options` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.scope.one` | count | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.scope.many` | count | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.scope.alone` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.includesData` | source | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.analysing` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.autoHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.auto` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.pathsHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.paths` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.distinctHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.distinct` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.countGroupedHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.countHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.count` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.refreshHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.refresh` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.limitHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.copyHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.copied` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.copy` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.copyFailed` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.updateHint` | name | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.saveHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.update` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.running` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.execute` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.name` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.duplicate` | name | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.dimmed` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.sampled` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.preview` | count | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.saved` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.open` | name | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.textBadge` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.deleteHint` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.deleteConfirm` | name | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.embedded` | count | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.reading` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.embeddedLimit` | shown, total | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.openEmbedded` | name | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.shaclBadge` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.discard` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.onlySelect` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.cutShort` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+| `queryPanel.shaclVariables` | — | `frontend/src/components/QueryPanel.tsx` | クエリ画面の操作・保存・一覧 | 11 | 画面所有文言を移行（保存された通知・生成説明は継続） |
+
+| `queryDescription.start.pin` | cls, pin | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.start.all` | cls | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.rootOnly` | start | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.traversal` | hops, start | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.hop` | anchor, modifier, names, target | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.hopOptional` | anchor, modifier, names, target | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.it` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.inverse` | name | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.or` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.modifier.` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.modifier.*` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.modifier.+` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.modifier.?` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.hopsJoin` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.listJoin` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.conditionsJoin` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.sentencesJoin` | — | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.property` | cls, label | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.condition` | cls, condition | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.pinCondition` | cls, pin | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.countGrouped` | root, target | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.count` | target | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.shown` | properties | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.only` | conditions | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.limit` | count | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.limitDistinct` | count | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.=` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.!=` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.>` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.>=` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.<` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.<=` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.contains` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.startsWith` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+| `queryDescription.filter.lang` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |

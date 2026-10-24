@@ -166,3 +166,27 @@ describe("describeQuery", () => {
     );
   });
 });
+
+
+it("describes a query in Japanese without inflecting the dictionary class name", () => {
+  expect(describeQuery(state([step("Planet")]), labelFor, "ja")).toBe("すべてのPlanetを起点にします。最大100行を返します。");
+});
+it("describes Japanese filters and shown properties without changing query facts", () => {
+  const query = state([step("宇宙船", { props: [
+    { predicateIri: NS + "name", label: "名前", optional: true },
+    { predicateIri: NS + "mass", label: "質量", optional: false, filter: { op: ">=", value: "50" } },
+  ] })]);
+  const original = JSON.stringify(query);
+  const text = describeQuery(query, labelFor, "ja");
+  expect(text).toContain("次の値も表示します：宇宙船の名前。");
+  expect(text).toContain("宇宙船の質量が「50」以上");
+  expect(JSON.stringify(query)).toBe(original);
+});
+it("describes optional repeated inverse paths and counting in Japanese", () => {
+  const query = state([step("Person"), step("Organization", { link: { anchor: 0, predicates: [{ iri: NS + "worksFor", inverse: true }], modifier: "+", optional: true } })], { aggregate: "count" });
+  const text = describeQuery(query, () => "<b>worksFor</b>", "ja");
+  expect(text).toContain("必要に応じてPersonから<b>worksFor</b>（逆方向）を1回以上、Organizationへたどります");
+  expect(text).toContain("PersonごとのOrganizationの件数を多い順に表示します。");
+  expect(text).not.toContain("Organizations");
+  expect(text).not.toContain("最大100行");
+});

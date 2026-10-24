@@ -10,6 +10,11 @@ SUMMARY
     Count/LIMIT/Copy/Save/Execute), the results table, and the saved-query list.
 
 BASIC IDEA
+    Owned controls and confirmations use the current UI translator. Query
+    text, save-name drafts, query options and original author labels remain
+    unchanged; generated descriptions and stored notices migrate at their
+    producers separately. Clipboard success waits for the actual write.
+
     QueryPanel is mostly orchestration. The real state lives in the shared
     useQueryBuilder hook (passed in as `builder`); this component renders it and
     wires the buttons. It adds a few local concerns: an auto-preview that runs a
@@ -69,6 +74,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -175,20 +183,19 @@ function QuerySwitch({
 
 /** What the panel says about what a query runs over. Null says nothing: an
  *  ontology with no resolved imports has only one thing to query. */
-export function queryScopeText(includeImports: boolean, importsCount: number | null): string | null {
+export function queryScopeText(includeImports: boolean, importsCount: number | null, t: Translator = englishTranslator): string | null {
   if (includeImports) {
     const n = importsCount ?? 0;
-    return `Querying this ontology and ${n} ${n === 1 ? "import" : "imports"}.`;
+    return t(n === 1 ? "queryPanel.scope.one" : "queryPanel.scope.many", { count: n });
   }
-  if (importsCount && importsCount > 0) return "Querying this ontology on its own, without its imports.";
+  if (importsCount && importsCount > 0) return t("queryPanel.scope.alone");
   return null;
 }
 
-export const DISCARD_TEXT = "Your text changes will be discarded.";
-export const ONLY_SELECT = "Only SELECT queries can run here.";
-export const CUT_SHORT = "This query is longer than 100 KB and was cut short, so it cannot run.";
-export const SHACL_VARIABLES_NOTE =
-  "This query uses $this or $value, which a SHACL engine fills in. Run here, they are ordinary variables.";
+export const DISCARD_TEXT = englishTranslator("queryPanel.discard");
+export const ONLY_SELECT = englishTranslator("queryPanel.onlySelect");
+export const CUT_SHORT = englishTranslator("queryPanel.cutShort");
+export const SHACL_VARIABLES_NOTE = englishTranslator("queryPanel.shaclVariables");
 
 /** What opening a query stored in the ontology gives the editor. */
 export function embeddedOptions(query: EmbeddedQuery) {
@@ -253,6 +260,7 @@ export default function QueryPanel({
     textIsDirty,
   } = builder;
 
+  const { locale, t } = useI18n();
   const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
   const [auto, setAuto] = useState(true);
@@ -260,7 +268,7 @@ export default function QueryPanel({
   const [results, setResults] = useState<SparqlResults | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"copied" | "failed" | null>(null);
   const [saved, setSaved] = useState<SavedQuery[]>([]);
   const [saveName, setSaveName] = useState("");
   const [savePrompt, setSavePrompt] = useState(false);
@@ -385,11 +393,11 @@ export default function QueryPanel({
   }, [openMenu, state.steps.length]);
 
   const plainEnglish = useMemo(
-    () => describeQuery(state, labelFor),
-    [state, labelFor],
+    () => describeQuery(state, labelFor, locale),
+    [state, labelFor, locale],
   );
 
-  const scope = queryScopeText(includeImports, importsCount);
+  const scope = queryScopeText(includeImports, importsCount, t);
 
   // An explicit run: Execute, Run, Ctrl+Enter, a starter. Its results
   // frame the graph; an Auto preview's never do.
@@ -517,7 +525,7 @@ export default function QueryPanel({
   // --- text queries (sparql-text-and-query-files) --------------------------
 
   /** Whether typed text may be dropped: asks only when some would be lost. */
-  const mayDiscard = () => !textIsDirty() || window.confirm(DISCARD_TEXT);
+  const mayDiscard = () => !textIsDirty() || window.confirm(t("queryPanel.discard"));
 
   const runText = async (text: string) => {
     if (!ontologyId) return;
@@ -576,7 +584,7 @@ export default function QueryPanel({
   // Asks every time, as the spec says: going back is the one way out of a
   // fork that always throws the text away.
   const backToVisual = () => {
-    if (!window.confirm(DISCARD_TEXT)) return;
+    if (!window.confirm(t("queryPanel.discard"))) return;
     leaveText();
     setEditorOpen(false);
     setSavePrompt(false);
@@ -710,14 +718,14 @@ export default function QueryPanel({
     // land in Query mode: this is the only one of the four panels beside the
     // graph with no heading of its own. tabIndex -1 adds no stop to the tab
     // order. Backlog X-1.
-    <aside className="query-panel" id="query-panel-region" aria-label="Query builder" tabIndex={-1}>
+    <aside className="query-panel" id="query-panel-region" aria-label={t("queryPanel.builder")} tabIndex={-1}>
       {scope && <p className="query-scope">{scope}</p>}
       {dataSources.map((source) => (
         <p key={source.id} className="query-scope data-source-line">
-          Includes data {dataLabel(source)}.
+          {t("queryPanel.includesData", { source: dataLabel(source) })}
         </p>
       ))}
-      {loadingSchema && <div className="detail-note">Analysing the ontology…</div>}
+      {loadingSchema && <div className="detail-note">{t("queryPanel.analysing")}</div>}
       {schemaError && <p className="detail-error">{schemaError}</p>}
 
       {/* The toolbar, the save prompt and the query text are one sticky
@@ -742,30 +750,30 @@ export default function QueryPanel({
                 (explore-and-query-layout 5.5). One joined group, each button
                 announcing pressed or not, and a check mark beside the tint so
                 the state never rests on colour. */}
-            <div className="query-switches" role="group" aria-label="Query options">
+            <div className="query-switches" role="group" aria-label={t("queryPanel.options")}>
               <QuerySwitch
                 on={auto}
                 onToggle={() => {
                   if (auto) setFrozen(sparql);
                   setAuto(!auto);
                 }}
-                title="Regenerate the query on every edit"
+                title={t("queryPanel.autoHint")}
               >
-                Auto
+                {t("queryPanel.auto")}
               </QuerySwitch>
               <QuerySwitch
                 on={state.pathsMode}
                 onToggle={() => setState({ ...state, pathsMode: !state.pathsMode })}
-                title="Collapse plain hops into compact property paths"
+                title={t("queryPanel.pathsHint")}
               >
-                Paths
+                {t("queryPanel.paths")}
               </QuerySwitch>
               <QuerySwitch
                 on={state.distinct}
                 onToggle={() => setState({ ...state, distinct: !state.distinct })}
-                title="Remove duplicate rows"
+                title={t("queryPanel.distinctHint")}
               >
-                Distinct
+                {t("queryPanel.distinct")}
               </QuerySwitch>
               <QuerySwitch
                 on={state.aggregate === "count"}
@@ -777,19 +785,19 @@ export default function QueryPanel({
                 }
                 title={
                   state.steps.length > 1
-                    ? "Count the last step, grouped by the first"
-                    : "Count how many there are"
+                    ? t("queryPanel.countGroupedHint")
+                    : t("queryPanel.countHint")
                 }
               >
-                Count
+                {t("queryPanel.count")}
               </QuerySwitch>
             </div>
             {!auto && (
-              <button className="ghost" onClick={() => setFrozen(sparql)} title="Regenerate now">
-                ↻ Refresh
+              <button className="ghost" onClick={() => setFrozen(sparql)} title={t("queryPanel.refreshHint")}>
+                {t("queryPanel.refresh")}
               </button>
             )}
-            <label className="limit-field" title="Maximum rows to return">
+            <label className="limit-field" title={t("queryPanel.limitHint")}>
               LIMIT
               <input
                 type="number"
@@ -806,24 +814,28 @@ export default function QueryPanel({
               className="ghost"
               disabled={!sparql}
               onClick={() => {
-                void navigator.clipboard?.writeText(preview);
-                setCopied(true);
-                window.setTimeout(() => setCopied(false), 1500);
+                void Promise.resolve().then(() => {
+                  if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+                  return navigator.clipboard.writeText(preview);
+                }).then(() => {
+                  setCopyState("copied");
+                  window.setTimeout(() => setCopyState(null), 1500);
+                }).catch(() => setCopyState("failed"));
               }}
-              title="Copy the query to the clipboard"
+              title={t("queryPanel.copyHint")}
             >
-              {copied ? "✓ Copied" : "⧉ Copy"}
+              {t(copyState === "copied" ? "queryPanel.copied" : copyState === "failed" ? "queryPanel.copyFailed" : "queryPanel.copy")}
             </button>
             <button
               className="ghost"
               disabled={!sparql}
               onClick={save}
-              title={openQuery ? `Update “${openQuery.name}”` : "Save this query"}
+              title={openQuery ? t("queryPanel.updateHint", { name: openQuery.name }) : t("queryPanel.saveHint")}
             >
-              ⌸ {openQuery ? "Update" : "Save"}
+              ⌸ {t(openQuery ? "queryPanel.update" : "editParts.save")}
             </button>
             <button className="primary" disabled={!sparql || running} onClick={() => void execute()}>
-              {running ? "Running…" : "▶ Execute"}
+              {t(running ? "queryPanel.running" : "queryPanel.execute")}
             </button>
           </div>
         )}
@@ -832,7 +844,7 @@ export default function QueryPanel({
           <div className="save-row">
             <input
               autoFocus
-              placeholder="Query name"
+              placeholder={t("queryPanel.name")} aria-label={t("queryPanel.name")}
               value={saveName}
               aria-describedby={sameName ? "save-same-name" : undefined}
               onChange={(e) => setSaveName(e.target.value)}
@@ -842,16 +854,16 @@ export default function QueryPanel({
               }}
             />
             <button className="primary" onClick={() => void doSave(saveName)}>
-              Save
+              {t("editParts.save")}
             </button>
             <button className="ghost" onClick={() => setSavePrompt(false)}>
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         )}
         {sameName && (
           <p className="save-note" id="save-same-name">
-            You already have a query called “{sameName.name}”. Saving keeps both.
+            {t("queryPanel.duplicate", { name: sameName.name })}
           </p>
         )}
 
@@ -866,8 +878,8 @@ export default function QueryPanel({
             namespaces={schema?.namespaces ?? {}}
             running={running}
             error={error}
-            saveLabel={openQuery ? "Update" : "Save"}
-            saveTitle={openQuery ? `Update “${openQuery.name}”` : "Save this query"}
+            saveLabel={t(openQuery ? "queryPanel.update" : "editParts.save")}
+            saveTitle={openQuery ? t("queryPanel.updateHint", { name: openQuery.name }) : t("queryPanel.saveHint")}
             onFork={(text, baseline) => {
               // A chip menu open at the moment of the fork would edit a query
               // that is no longer the one on screen.
@@ -899,7 +911,7 @@ export default function QueryPanel({
           question 2). */}
       {inText ? (
         <fieldset className="builder-dimmed" disabled>
-          <legend className="builder-dimmed-label">Not in use while editing text</legend>
+          <legend className="builder-dimmed-label">{t("queryPanel.dimmed")}</legend>
           {builderParts}
         </fieldset>
       ) : (
@@ -907,8 +919,7 @@ export default function QueryPanel({
       )}
       {schema?.truncated && (
         <p className="query-hint">
-          This ontology is very large, so the schema was sampled — some rare relationships
-          may be missing.
+          {t("queryPanel.sampled")}
         </p>
       )}
 
@@ -919,7 +930,7 @@ export default function QueryPanel({
         <>
           {isPreview && (
             <p className="preview-badge">
-              Live preview — first {PREVIEW_ROWS} rows. Press Execute for the full result.
+              {t("queryPanel.preview", { count: PREVIEW_ROWS })}
             </p>
           )}
           <ResultsTable
@@ -936,7 +947,7 @@ export default function QueryPanel({
 
       {saved.length > 0 && (
         <section className="saved-queries">
-          <h3>Saved queries</h3>
+          <h3>{t("queryPanel.saved")}</h3>
           {saved.map((entry) => (
             <div
               className={openQuery?.id === entry.id ? "saved-row open" : "saved-row"}
@@ -945,18 +956,18 @@ export default function QueryPanel({
               <button
                 className="saved-name"
                 onClick={() => openSaved(entry)}
-                title={`Open “${entry.name}”`}
+                title={t("queryPanel.open", { name: entry.name })}
               >
                 {entry.name}
               </button>
               {/* A word, not a colour, so it reads the same to everyone. */}
-              {entry.mode === "text" && <span className="saved-mode">text</span>}
-              <span className="dim">{new Date(entry.updatedAt).toLocaleDateString()}</span>
+              {entry.mode === "text" && <span className="saved-mode">{t("queryPanel.textBadge")}</span>}
+              <span className="dim">{new Date(entry.updatedAt).toLocaleDateString(locale)}</span>
               <button
                 className="icon-btn"
-                title="Delete this saved query"
+                title={t("queryPanel.deleteHint")} aria-label={t("queryPanel.deleteHint")}
                 onClick={() => {
-                  if (!window.confirm(`Delete saved query “${entry.name}”?`)) return;
+                  if (!window.confirm(t("queryPanel.deleteConfirm", { name: entry.name }))) return;
                   void deleteSavedQuery(entry.id).then(() => {
                     if (openQuery?.id === entry.id) setOpenQuery(null);
                     refreshSaved();
@@ -981,16 +992,16 @@ export default function QueryPanel({
               aria-controls="embedded-query-list"
               onClick={toggleEmbedded}
             >
-              {embeddedOpen ? "▾" : "▸"} Queries in this file ({embeddedCount})
+              {embeddedOpen ? "▾" : "▸"} {t("queryPanel.embedded", { count: embeddedCount })}
             </button>
           </h3>
           {embeddedOpen && (
             <div id="embedded-query-list">
               {embeddedError && <p className="detail-error">{embeddedError}</p>}
-              {!embedded && !embeddedError && <p className="detail-note">Reading the file…</p>}
+              {!embedded && !embeddedError && <p className="detail-note">{t("queryPanel.reading")}</p>}
               {embedded?.truncated && (
                 <p className="detail-note">
-                  Showing {embedded.queries.length} of {embedded.total}.
+                  {t("queryPanel.embeddedLimit", { shown: embedded.queries.length, total: embedded.total })}
                 </p>
               )}
               {embedded?.queries.map((query, index) => (
@@ -998,14 +1009,14 @@ export default function QueryPanel({
                   <button
                     className="saved-name"
                     onClick={() => openEmbedded(query)}
-                    title={`Open “${query.label}” in the editor`}
+                    title={t("queryPanel.openEmbedded", { name: query.label })}
                   >
                     {query.label}
                   </button>
                   <span className="saved-mode">{query.form}</span>
                   {query.shaclVariables && (
-                    <span className="dim" title={SHACL_VARIABLES_NOTE}>
-                      uses $this or $value
+                    <span className="dim" title={t("queryPanel.shaclVariables")}>
+                      {t("queryPanel.shaclBadge")}
                     </span>
                   )}
                 </div>

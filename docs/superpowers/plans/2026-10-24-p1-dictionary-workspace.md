@@ -354,7 +354,7 @@ EntityPicker,EditSection,EditStructure,EditParts,CreateForm,NewEntityForm,Relati
 AnnotationAdder,ConceptRelations,SharedDomain,ReusePlan,DeleteDialog,LinkPanel,ExampleForm,
 QueryPanel,QueryStart,ResultsTable,ResultPanels,PathBar,ClassPropsMenu,PredicateMenu,NextSteps,
 SparqlEditor,SparqlPreview,NothingSelected}.tsx`、`canvas/`、`modeling/sentences.ts`、`modeling/entity.ts`（所属クラスの表示用結合）、
-`components/useSuggestions.ts`（作成候補の説明・件数）、`modeling/values.ts`（注釈の型・検証・説明文）、`modeling/examples.ts`（具体例の型説明・検証文）、`modeling/ruleSentences.ts`、`explain/explainSentences.ts`、`explain/glossary.ts`、`sparql/starters.ts`、対応テスト。
+`components/useSuggestions.ts`（作成候補の説明・件数）、`modeling/values.ts`（注釈の型・検証・説明文）、`modeling/examples.ts`（具体例の型説明・検証文）、`modeling/ruleSentences.ts`、`explain/explainSentences.ts`、`explain/glossary.ts`、`sparql/starters.ts`、`sparql/describe.ts`（クエリの生成説明）、対応テスト。
 種類の表示関数は `types.ts` を変更するが、色の定義を翻訳カタログへコピーしない。
 
 2026-10-24補足：全画面の所有文言を対象とする仕様に従い、一覧で漏れていた
