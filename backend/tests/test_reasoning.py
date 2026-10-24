@@ -12,7 +12,7 @@ SUMMARY
     canvas are given. Plus the timing budgets of Section 10.
 
 BASIC IDEA
-    Additive display facts retain exact legacy sentences and original RDF names
+    Additive display facts and definition parts retain exact legacy sentences and RDF names
     through actual reasoning routes.
 
     Every model is written in the test (rdf-fixture): a shop model in
@@ -52,6 +52,7 @@ from rdflib import Graph, URIRef
 from rdflib.namespace import OWL, RDF, RDFS
 
 from app import reasoning
+from app.messages import make_message
 from app.editing import editing_service
 from app.main import app
 from tests.budget import limit_ms
@@ -432,6 +433,10 @@ def test_each_family_gives_its_reason_one_step_with_its_premises(shop):
         answer = why(shop, facts[sentence])
         assert (answer["family"], answer["sentence"]) == (family, words), sentence
         assert answer["premises"], sentence
+        for description in [answer, *answer["premises"]]:
+            wire = description.get("uiMessage")
+            assert wire is not None, description
+            assert make_message(wire["code"], **wire["args"]) == wire
         families.add(family)
     assert families == set(reasoning.FAMILIES)
     # The transitive reason's three lines, as the spec draws them.
@@ -446,8 +451,12 @@ def test_each_family_gives_its_reason_one_step_with_its_premises(shop):
     assert why(shop, inferred[0])["family"] == "domainRange"
     definition = manager["premises"][-1]
     assert definition["o"] is None and definition["inferred"] is False
+    assert definition["uiMessage"]["code"] == "reasoning.definition"
+    assert {"text": "Employee"} in definition["uiMessage"]["args"]["expression"]
+    assert {"code": "words.reasoning.minimum_one", "args": {}} in definition["uiMessage"]["args"]["expression"]
     # A stated fact asked about says so; a fact not in the result is 404.
     assert why(shop, manager["premises"][1])["family"] == "stated"
+    assert why(shop, manager["premises"][1])["uiMessage"]["code"] == "reasoning.reason.stated"
     assert client.get(
         f"/api/projects/{shop}/reasoning/why", params={"s": EX + "acme", "p": str(RDF.type), "o": EX + "Robot"},
     ).status_code == 404

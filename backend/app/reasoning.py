@@ -15,7 +15,9 @@ SUMMARY
 BASIC IDEA
     Facts and contradictions keep their legacy sort sentences and identities.
     Additive display metadata captures raw RDF names, never inflected English;
-    fact metadata is projected only for the requested page or entity.
+    fact metadata is projected only for the requested page or entity. One-step
+    explanations capture their selected rule and flat source definition parts
+    only at the public Why boundary; bulk traversal keeps its legacy core.
 
     The engine boundary is one function, `reason(model_nt, data_nt, probes,
     ...) -> RawResult`, with one implementation: reasoning_worker.main in a
@@ -89,7 +91,7 @@ from rdflib.util import from_n3
 from . import reasoning_worker
 from .graph_builder import pick_label_in
 from .sentences import a, verb
-from .messages import literal_part, make_message, word_part
+from .messages import literal_part, make_message, word_part, MessageText
 
 # Fixed, never settings (5.10, as D-098's row limit is). A test lowers the
 # limit through the module attribute, which is all it reads.
@@ -478,7 +480,9 @@ class Outcome:
         if t not in self.closure:
             return None
         if t in self.stated:
-            return {"family": "stated", "sentence": f"{fact_sentence(t, self.names)} (stated).", "premises": []}
+            return {"family": "stated", "sentence": f"{fact_sentence(t, self.names)} (stated).", "premises": [],
+                    "uiMessage": make_message("reasoning.reason.stated", s=name_parts(t[0], self.names),
+                        p=name_parts(t[1], self.names), o=name_parts(t[2], self.names))}
         return Explainer(self.stated, self.closure, self.names).explain(t, ui_metadata=True)
 
     # --- what the tree and the canvas draw (5.7) ---
@@ -613,7 +617,8 @@ def premise(t: tuple, stated: Index, names: Callable, *, ui_metadata: bool = Tru
 def definition(cls, text: str, kind=OWL.equivalentClass) -> dict:
     """A premise that is a class's definition or rule, written with blank
     nodes: no triple of its own to link, so it is a sentence, always stated."""
-    return {"s": str(cls), "p": str(kind), "o": None, "sentence": text, "inferred": False}
+    return {"s": str(cls), "p": str(kind), "o": None, "sentence": str(text), "inferred": False,
+            **({"uiMessage": text.ui_message} if getattr(text, "ui_message", None) is not None else {})}
 
 
 # ---------------------------------------------------------------------------
@@ -639,7 +644,7 @@ class Explainer:
         # The core can traverse every conclusion; the public Why boundary
         # projects display facts for the one reason actually being read.
         best = None
-        for candidate in self._candidates(t):
+        for candidate in self._candidates(t, ui_metadata=ui_metadata):
             triples = candidate[1]
             if all(x in self.stated for x in triples):
                 best = candidate
@@ -647,15 +652,47 @@ class Explainer:
             if best is None:
                 best = candidate
         if best is None:
-            return {"family": None, "sentence": NO_REASON, "premises": []}
+            return {"family": None, "sentence": NO_REASON, "premises": [],
+                    **({"uiMessage": make_message("reasoning.reason.unsupported")} if ui_metadata else {})}
         family, triples, extra, text = best
         premises = [premise(x, self.stated, self.names, ui_metadata=ui_metadata) for x in triples] + extra
-        return {"family": family, "sentence": text, "premises": premises}
+        return {"family": family, "sentence": str(text), "premises": premises,
+                **({"uiMessage": text.ui_message} if getattr(text, "ui_message", None) is not None else {})}
+
+    def _said(self, text: str, code: str, facts: Callable, enabled: bool) -> str:
+        """The core keeps legacy strings; public reads capture source facts."""
+        return MessageText(text, code, **facts()) if enabled else text
+
+    def _parts(self, **terms) -> dict:
+        return {key: name_parts(term, self.names) for key, term in terms.items()}
+
+    def _expression_parts(self, node) -> list[dict]:
+        members = self.c.items(self.c.first(node, OWL.intersectionOf))
+        if not members:
+            return self._restriction_parts(node)
+        groups = [name_parts(term, self.names) for term in members if isinstance(term, URIRef)]
+        groups += [self._restriction_parts(term) for term in members if not isinstance(term, URIRef)]
+        return [part for index, group in enumerate(groups)
+                for part in ([word_part("words.reasoning.intersection")] if index else []) + group]
+
+    def _restriction_parts(self, node) -> list[dict]:
+        prop = self.c.first(node, OWL.onProperty)
+        if prop is None:
+            return [word_part("words.reasoning.stated_rule")]
+        head = name_parts(prop, self.names) + [word_part("words.reasoning.condition_separator")]
+        value = self.c.first(node, OWL.hasValue)
+        if value is not None:
+            return head + name_parts(value, self.names)
+        filler = self.c.first(node, OWL.someValuesFrom)
+        if filler is not None:
+            return head + [word_part("words.reasoning.minimum_one")] + (
+                [word_part("words.reasoning.any_value")] if filler == OWL.Thing else name_parts(filler, self.names))
+        return head + [word_part("words.reasoning.rule_value")]
 
     def _n(self, term) -> str:
         return self.names(term)
 
-    def _candidates(self, t: tuple):
+    def _candidates(self, t: tuple, *, ui_metadata: bool = False):
         s, p, o = t
         c, n = self.c, self._n
         form = _FACT_FORMS.get(p)
@@ -663,60 +700,116 @@ class Explainer:
             eq = OWL.equivalentClass if p == RDFS.subClassOf else OWL.equivalentProperty
             for x in ((s, eq, o), (o, eq, s)):
                 if x in c:
-                    yield "same", [x], [], f"{n(s)} and {n(o)} mean the same thing"
+                    yield "same", [x], [], self._said(
+                        (
+                            f"{n(s)} and {n(o)} mean the same thing"
+                        ),
+                        'reasoning.fact.equivalent',
+                        lambda: self._parts(s=s, o=o),
+                        ui_metadata,
+                    )
             for m in c.objects(s, p):
                 if isinstance(m, URIRef) and m not in (s, o) and (m, p, o) in c:
                     yield "kindChain", [(s, p, m), (m, p, o)], [], (
-                        f"{n(s)} is a kind of {n(m)}, and {n(m)} is a kind of {n(o)}"
+                        self._said(
+                            (
+                                f"{n(s)} is a kind of {n(m)}, and {n(m)} is a kind of {n(o)}"
+                            ),
+                            'reasoning.reason.kind_chain',
+                            lambda: self._parts(s=s, m=m, o=o),
+                            ui_metadata,
+                        )
                     )
             for m in c.objects(s, p):
                 if isinstance(m, URIRef) and m not in (s, o):
                     for x in ((m, eq, o), (o, eq, m)):
                         if x in c:
                             yield "same", [(s, p, m), x], [], (
-                                f"{n(s)} is a kind of {n(m)}, and {n(m)} and {n(o)} mean the same thing"
+                                self._said(
+                                    (
+                                        f"{n(s)} is a kind of {n(m)}, and {n(m)} and {n(o)} mean the same thing"
+                                    ),
+                                    'reasoning.reason.kind_equivalent',
+                                    lambda: self._parts(s=s, m=m, o=o),
+                                    ui_metadata,
+                                )
                             )
             if p == RDFS.subClassOf:
                 for d in c.objects(s, OWL.equivalentClass):
                     if isinstance(d, BNode) and o in c.items(c.first(d, OWL.intersectionOf)):
-                        yield "defining", [], [definition(s, self._defines(s, d))], (
-                            f"{self._defines(s, d)}, so every {n(s)} is {a(n(o))}"
+                        yield "defining", [], [definition(s, self._defines(s, d, ui_metadata=ui_metadata))], (
+                            self._said(
+                                (
+                                    f"{self._defines(s, d, ui_metadata=ui_metadata)}, so every {n(s)} is {a(n(o))}"
+                                ),
+                                'reasoning.reason.definition_kind',
+                                lambda: {**self._parts(s=s, o=o), 'expression': self._expression_parts(d)},
+                                ui_metadata,
+                            )
                         )
             return
         if form == "type":
-            yield from self._membership(s, o)
+            yield from self._membership(s, o, ui_metadata=ui_metadata)
             return
         if form == "same":
-            yield from self._same_thing(s, o)
+            yield from self._same_thing(s, o, ui_metadata=ui_metadata)
             return
         if form == "equivalent":
             sub = RDFS.subClassOf if p == OWL.equivalentClass else RDFS.subPropertyOf
             if (s, sub, o) in c and (o, sub, s) in c:
                 yield "same", [(s, sub, o), (o, sub, s)], [], (
-                    f"{n(s)} is a kind of {n(o)} and {n(o)} is a kind of {n(s)}, so they mean the same thing"
+                    self._said(
+                        (
+                            f"{n(s)} is a kind of {n(o)} and {n(o)} is a kind of {n(s)}, so they mean the same thing"
+                        ),
+                        'reasoning.reason.mutual_kind',
+                        lambda: self._parts(s=s, o=o),
+                        ui_metadata,
+                    )
                 )
             for m in c.objects(s, p):
                 if isinstance(m, URIRef) and m not in (s, o) and ((m, p, o) in c or (o, p, m) in c):
                     second = (m, p, o) if (m, p, o) in c else (o, p, m)
                     yield "same", [(s, p, m), second], [], (
-                        f"{n(s)} and {n(m)} mean the same thing, and so do {n(m)} and {n(o)}"
+                        self._said(
+                            (
+                                f"{n(s)} and {n(m)} mean the same thing, and so do {n(m)} and {n(o)}"
+                            ),
+                            'reasoning.reason.equivalent_chain',
+                            lambda: self._parts(s=s, m=m, o=o),
+                            ui_metadata,
+                        )
                     )
             return
-        yield from self._link(s, p, o)
+        yield from self._link(s, p, o, ui_metadata=ui_metadata)
 
-    def _membership(self, s, o):
+    def _membership(self, s, o, *, ui_metadata: bool = False):
         c, n = self.c, self._n
         for k in c.objects(s, RDF.type):
             if isinstance(k, URIRef) and k != o and (k, RDFS.subClassOf, o) in c:
                 yield "memberKind", [(s, RDF.type, k), (k, RDFS.subClassOf, o)], [], (
-                    f"{n(s)} is {a(n(k))}, and every {n(k)} is {a(n(o))}"
+                    self._said(
+                        (
+                            f"{n(s)} is {a(n(k))}, and every {n(k)} is {a(n(o))}"
+                        ),
+                        'reasoning.reason.member_kind',
+                        lambda: self._parts(s=s, k=k, o=o),
+                        ui_metadata,
+                    )
                 )
         for k in c.objects(s, RDF.type):
             if isinstance(k, URIRef) and k != o:
                 for x in ((k, OWL.equivalentClass, o), (o, OWL.equivalentClass, k)):
                     if x in c:
                         yield "same", [(s, RDF.type, k), x], [], (
-                            f"{n(s)} is {a(n(k))}, and {n(k)} and {n(o)} mean the same thing"
+                            self._said(
+                                (
+                                    f"{n(s)} is {a(n(k))}, and {n(k)} and {n(o)} mean the same thing"
+                                ),
+                                'reasoning.reason.member_equivalent',
+                                lambda: self._parts(s=s, k=k, o=o),
+                                ui_metadata,
+                            )
                         )
         # Each domain statement is its own premise (rdfs2): the properties
         # whose domain is this class, found by subject, so only axioms.py
@@ -724,14 +817,28 @@ class Explainer:
         for prop in sorted(c.subjects(RDFS.domain, o), key=str):
             for y in c.objects(s, prop):
                 yield "domainRange", [(s, prop, y), (prop, RDFS.domain, o)], [], (
-                    f"{n(s)} {verb(n(prop))} {n(y)}, and whoever {verb(n(prop))} something is {a(n(o))}"
+                    self._said(
+                        (
+                            f"{n(s)} {verb(n(prop))} {n(y)}, and whoever {verb(n(prop))} something is {a(n(o))}"
+                        ),
+                        'reasoning.reason.domain',
+                        lambda: self._parts(s=s, p=prop, y=y, o=o),
+                        ui_metadata,
+                    )
                 )
                 break
         for prop, x in c.pairs(RDFS.range):
             if x == o:
                 for y in c.subjects(prop, s):
                     yield "domainRange", [(y, prop, s), (prop, RDFS.range, o)], [], (
-                        f"{n(y)} {verb(n(prop))} {n(s)}, and whatever something {verb(n(prop))} is {a(n(o))}"
+                        self._said(
+                            (
+                                f"{n(y)} {verb(n(prop))} {n(s)}, and whatever something {verb(n(prop))} is {a(n(o))}"
+                            ),
+                            'reasoning.reason.range',
+                            lambda: self._parts(s=s, p=prop, y=y, o=o),
+                            ui_metadata,
+                        )
                     )
                     break
         # A defining restriction: o is exactly something the restriction
@@ -742,8 +849,15 @@ class Explainer:
                 if met is not None:
                     triples, _ = met
                     words = " and ".join(fact_sentence(x, self.names) for x in triples)
-                    yield "defining", triples, [definition(o, self._defines(o, d))], (
-                        f"{words}, and {self._defines(o, d)}"
+                    yield "defining", triples, [definition(o, self._defines(o, d, ui_metadata=ui_metadata))], (
+                        self._said(
+                            (
+                                f"{words}, and {self._defines(o, d, ui_metadata=ui_metadata)}"
+                            ),
+                            'reasoning.reason.definition_member',
+                            lambda: {**self._parts(s=s, o=o), 'expression': self._expression_parts(d)},
+                            ui_metadata,
+                        )
                     )
         # Only: something links to s through a property every one of its
         # class's values must be an o.
@@ -762,14 +876,36 @@ class Explainer:
                         f"every {n(owner)}'s {n(prop)} can only be {_plural(n(o))}"
                         if owner is not None else f"its {n(prop)} can only be {_plural(n(o))}"
                     )
+                    rule = self._said(
+                        (
+                            rule
+                        ),
+                        'reasoning.definition.only_owned' if owner is not None else 'reasoning.definition.only',
+                        lambda: self._parts(p=prop, o=o, **{'name': owner} if owner is not None else {}),
+                        ui_metadata,
+                    )
                     triples = [(x, prop, s)] + ([(x, RDF.type, owner)] if owner is not None else [])
                     yield "only", triples, [definition(owner or o, rule, RDFS.subClassOf)], (
-                        f"{n(x)} {verb(n(prop))} {n(s)}, and {rule}"
+                        self._said(
+                            (
+                                f"{n(x)} {verb(n(prop))} {n(s)}, and {rule}"
+                            ),
+                            'reasoning.reason.only_owned' if owner is not None else 'reasoning.reason.only',
+                            lambda: self._parts(x=x, p=prop, s=s, o=o, **{'k': owner} if owner is not None else {}),
+                            ui_metadata,
+                        )
                     )
         for m in c.objects(s, OWL.sameAs):
             if m != s and (m, RDF.type, o) in c:
                 yield "same", [(s, OWL.sameAs, m), (m, RDF.type, o)], [], (
-                    f"{n(s)} and {n(m)} are the same thing, and {n(m)} is {a(n(o))}"
+                    self._said(
+                        (
+                            f"{n(s)} and {n(m)} are the same thing, and {n(m)} is {a(n(o))}"
+                        ),
+                        'reasoning.reason.same_member',
+                        lambda: self._parts(s=s, m=m, o=o),
+                        ui_metadata,
+                    )
                 )
 
     def _meets(self, s, d) -> Optional[tuple]:
@@ -804,9 +940,16 @@ class Explainer:
                     return [(s, prop, y), (y, RDF.type, filler)], None
         return None
 
-    def _defines(self, cls, d) -> str:
+    def _defines(self, cls, d, *, ui_metadata: bool = False) -> str:
         """*a Manager is exactly a Person that manages at least one Employee*."""
-        return f"{a(self._n(cls))} is exactly {self._expression(d)}"
+        return self._said(
+            (
+                f"{a(self._n(cls))} is exactly {self._expression(d)}"
+            ),
+            'reasoning.definition',
+            lambda: {'name': name_parts(cls, self.names), 'expression': self._expression_parts(d)},
+            ui_metadata,
+        )
 
     def _expression(self, d) -> str:
         c, n = self.c, self._n
@@ -831,19 +974,33 @@ class Explainer:
             return f"{verb(n(prop))} at least one {n(filler)}" if filler != OWL.Thing else f"{verb(n(prop))} something"
         return f"{verb(n(prop))} as a rule says"
 
-    def _same_thing(self, s, o):
+    def _same_thing(self, s, o, *, ui_metadata: bool = False):
         c, n = self.c, self._n
         for prop in c.subjects(RDF.type, OWL.FunctionalProperty):
             for x in c.subjects(prop, s):
                 if (x, prop, o) in c:
                     yield "sameThing", [(x, prop, s), (x, prop, o), (prop, RDF.type, OWL.FunctionalProperty)], [], (
-                        f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and {n(prop)} is at most one, so they are the same"
+                        self._said(
+                            (
+                                f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and {n(prop)} is at most one, so they are the same"
+                            ),
+                            'reasoning.reason.functional',
+                            lambda: self._parts(x=x, p=prop, s=s, o=o),
+                            ui_metadata,
+                        )
                     )
         for prop in c.subjects(RDF.type, OWL.InverseFunctionalProperty):
             for y in c.objects(s, prop):
                 if (o, prop, y) in c:
                     yield "sameThing", [(s, prop, y), (o, prop, y), (prop, RDF.type, OWL.InverseFunctionalProperty)], [], (
-                        f"{n(s)} and {n(o)} both {verb(n(prop))} {n(y)}, and {n(prop)} identifies its start, so they are the same"
+                        self._said(
+                            (
+                                f"{n(s)} and {n(o)} both {verb(n(prop))} {n(y)}, and {n(prop)} identifies its start, so they are the same"
+                            ),
+                            'reasoning.reason.inverse_functional',
+                            lambda: self._parts(s=s, o=o, p=prop, y=y),
+                            ui_metadata,
+                        )
                     )
         for kind in (OWL.maxCardinality, OWL.maxQualifiedCardinality):
             for r, value in c.pairs(kind):
@@ -852,43 +1009,99 @@ class Explainer:
                 prop = c.first(r, OWL.onProperty)
                 for x in c.subjects(RDF.type, r):
                     if prop is not None and (x, prop, s) in c and (x, prop, o) in c:
-                        yield "sameThing", [(x, prop, s), (x, prop, o)], [definition(r, f"{n(x)} {verb(n(prop))} at most one thing", RDFS.subClassOf)], (
-                            f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and has at most one, so they are the same"
+                        yield "sameThing", [(x, prop, s), (x, prop, o)], [definition(r, self._said(
+                            (
+                                f"{n(x)} {verb(n(prop))} at most one thing"
+                            ),
+                            'reasoning.definition.maximum_one',
+                            lambda: self._parts(x=x, p=prop),
+                            ui_metadata,
+                        ), RDFS.subClassOf)], (
+                            self._said(
+                                (
+                                    f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and has at most one, so they are the same"
+                                ),
+                                'reasoning.reason.maximum_one',
+                                lambda: self._parts(x=x, p=prop, s=s, o=o),
+                                ui_metadata,
+                            )
                         )
         for m in c.objects(s, OWL.sameAs):
             if m not in (s, o) and ((m, OWL.sameAs, o) in c):
                 yield "same", [(s, OWL.sameAs, m), (m, OWL.sameAs, o)], [], (
-                    f"{n(s)} and {n(m)} are the same thing, and so are {n(m)} and {n(o)}"
+                    self._said(
+                        (
+                            f"{n(s)} and {n(m)} are the same thing, and so are {n(m)} and {n(o)}"
+                        ),
+                        'reasoning.reason.same_chain',
+                        lambda: self._parts(s=s, m=m, o=o),
+                        ui_metadata,
+                    )
                 )
 
-    def _link(self, s, p, o):
+    def _link(self, s, p, o, *, ui_metadata: bool = False):
         c, n = self.c, self._n
         for q in c.objects(p, OWL.inverseOf) | c.subjects(OWL.inverseOf, p):
             if (o, q, s) in c:
                 rule = (p, OWL.inverseOf, q) if (p, OWL.inverseOf, q) in c else (q, OWL.inverseOf, p)
                 yield "inverse", [(o, q, s), rule], [], (
-                    f"{n(o)} {verb(n(q))} {n(s)}, and {n(p)} is {n(q)} the other way round"
+                    self._said(
+                        (
+                            f"{n(o)} {verb(n(q))} {n(s)}, and {n(p)} is {n(q)} the other way round"
+                        ),
+                        'reasoning.reason.inverse_link',
+                        lambda: self._parts(s=s, p=p, o=o, q=q),
+                        ui_metadata,
+                    )
                 )
         if (p, RDF.type, OWL.SymmetricProperty) in c and (o, p, s) in c:
             yield "symmetric", [(o, p, s), (p, RDF.type, OWL.SymmetricProperty)], [], (
-                f"{n(o)} {verb(n(p))} {n(s)}, and {n(p)} works both ways"
+                self._said(
+                    (
+                        f"{n(o)} {verb(n(p))} {n(s)}, and {n(p)} works both ways"
+                    ),
+                    'reasoning.reason.symmetric_link',
+                    lambda: self._parts(s=s, p=p, o=o),
+                    ui_metadata,
+                )
             )
         if (p, RDF.type, OWL.TransitiveProperty) in c:
             for m in c.objects(s, p):
                 if m not in (s, o) and (m, p, o) in c:
                     yield "transitive", [(s, p, m), (m, p, o), (p, RDF.type, OWL.TransitiveProperty)], [], (
-                        f"{n(s)} {verb(n(p))} {n(m)}, {n(m)} {verb(n(p))} {n(o)}, and {n(p)} chains"
+                        self._said(
+                            (
+                                f"{n(s)} {verb(n(p))} {n(m)}, {n(m)} {verb(n(p))} {n(o)}, and {n(p)} chains"
+                            ),
+                            'reasoning.reason.transitive_link',
+                            lambda: self._parts(s=s, p=p, m=m, o=o),
+                            ui_metadata,
+                        )
                     )
         for q in c.subjects(RDFS.subPropertyOf, p):
             if q != p and (s, q, o) in c:
                 yield "subProperty", [(s, q, o), (q, RDFS.subPropertyOf, p)], [], (
-                    f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} is a kind of {n(p)}"
+                    self._said(
+                        (
+                            f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} is a kind of {n(p)}"
+                        ),
+                        'reasoning.reason.subproperty_link',
+                        lambda: self._parts(s=s, p=p, q=q, o=o),
+                        ui_metadata,
+                    )
                 )
         for q in c.objects(p, OWL.equivalentProperty) | c.subjects(OWL.equivalentProperty, p):
             if q != p and (s, q, o) in c:
                 rule = (p, OWL.equivalentProperty, q) if (p, OWL.equivalentProperty, q) in c else (q, OWL.equivalentProperty, p)
                 yield "same", [(s, q, o), rule], [], (
-                    f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} and {n(p)} mean the same thing"
+                    self._said(
+                        (
+                            f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} and {n(p)} mean the same thing"
+                        ),
+                        'reasoning.reason.equivalent_property_link',
+                        lambda: self._parts(s=s, p=p, q=q, o=o),
+                        ui_metadata,
+                    )
                 )
         # *Every Gold customer has status gold*: a has-value rule on one of
         # s's classes.
@@ -897,18 +1110,47 @@ class Explainer:
                 for k in c.objects(s, RDF.type):
                     if isinstance(k, URIRef) and (k, RDFS.subClassOf, r) in c:
                         rule = f"every {n(k)} {verb(n(p))} {n(o)}"
+                        rule = self._said(
+                            (
+                                rule
+                            ),
+                            'reasoning.definition.value',
+                            lambda: self._parts(name=k, p=p, o=o),
+                            ui_metadata,
+                        )
                         yield "defining", [(s, RDF.type, k)], [definition(k, rule, RDFS.subClassOf)], (
-                            f"{n(s)} is {a(n(k))}, and {rule}"
+                            self._said(
+                                (
+                                    f"{n(s)} is {a(n(k))}, and {rule}"
+                                ),
+                                'reasoning.reason.has_value',
+                                lambda: self._parts(s=s, k=k, p=p, o=o),
+                                ui_metadata,
+                            )
                         )
         for m in c.objects(s, OWL.sameAs):
             if m != s and (m, p, o) in c:
                 yield "same", [(s, OWL.sameAs, m), (m, p, o)], [], (
-                    f"{n(s)} and {n(m)} are the same thing, and {n(m)} {verb(n(p))} {n(o)}"
+                    self._said(
+                        (
+                            f"{n(s)} and {n(m)} are the same thing, and {n(m)} {verb(n(p))} {n(o)}"
+                        ),
+                        'reasoning.reason.same_subject_link',
+                        lambda: self._parts(s=s, m=m, p=p, o=o),
+                        ui_metadata,
+                    )
                 )
         for m in c.objects(o, OWL.sameAs):
             if m != o and (s, p, m) in c:
                 yield "same", [(o, OWL.sameAs, m), (s, p, m)], [], (
-                    f"{n(o)} and {n(m)} are the same thing, and {n(s)} {verb(n(p))} {n(m)}"
+                    self._said(
+                        (
+                            f"{n(o)} and {n(m)} are the same thing, and {n(s)} {verb(n(p))} {n(m)}"
+                        ),
+                        'reasoning.reason.same_object_link',
+                        lambda: self._parts(s=s, o=o, m=m, p=p),
+                        ui_metadata,
+                    )
                 )
 
 

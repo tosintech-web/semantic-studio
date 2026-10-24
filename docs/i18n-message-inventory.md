@@ -3112,3 +3112,44 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | QueryPanel / ResultsTable | SPARQL / LIMIT / ms | クエリ構文・単位を維持 |
 | UiLanguageSelect | English | 切替先の言語を、その言語名で示す |
 | ErrorBoundary | 日英併記の最小エラー・再読み込み | 翻訳機構そのものが失敗した場合の安全な案内を維持 |
+
+### 一段階の推論根拠・定義の表示情報
+
+| `reasoning.reason.kind_chain` | s, m, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.kind_equivalent` | s, m, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.mutual_kind` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.equivalent_chain` | s, m, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.member_kind` | s, k, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.member_equivalent` | s, k, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.domain` | s, p, y, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.range` | s, p, y, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.same_member` | s, m, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.functional` | x, p, s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.inverse_functional` | s, o, p, y | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.same_chain` | s, m, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.inverse_link` | s, p, o, q | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.symmetric_link` | s, p, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.transitive_link` | s, p, m, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.subproperty_link` | s, p, q, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.equivalent_property_link` | s, p, q, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.same_subject_link` | s, m, p, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.same_object_link` | s, o, m, p | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.definition_kind` | s, o, expression | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.definition_member` | s, o, expression | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.only_owned` | x, p, s, o, k | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.only` | x, p, s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.maximum_one` | x, p, s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.has_value` | s, k, p, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.stated` | s, p, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.reason.unsupported` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.definition` | name, expression | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.definition.only_owned` | name, p, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.definition.only` | p, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.definition.maximum_one` | x, p | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `reasoning.definition.value` | name, p, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `words.reasoning.intersection` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `words.reasoning.condition_separator` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `words.reasoning.minimum_one` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `words.reasoning.any_value` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `words.reasoning.stated_rule` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+| `words.reasoning.rule_value` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |

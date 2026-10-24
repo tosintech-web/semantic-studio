@@ -12,7 +12,8 @@ SUMMARY
     plain reason.
 
 BASIC IDEA
-    Display metadata translates retained results and accessible labels without
+    Definitions, stated and unsupported reasons use source facts; display metadata
+    translates retained results and accessible labels without
     changing selection IRIs, open details, focus or the original fetched data.
 
     Failed reads preserve original details across locale changes, and a pending
@@ -236,4 +237,48 @@ it("translates a loaded premise and its nested Why label while retaining the fet
   expect(screen.getByRole("button", { name: "Why? 対象 is an instance of 分類." })).toBe(nested);
   expect(screen.getByText("対象 is an instance of 分類.")).toBeTruthy(); expect(getWhy).toHaveBeenCalledTimes(1);
   localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("renders a source-typed class definition in a retained reason without interpreting names as English", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const original = "Original class definition <img>{expression}";
+  const definition = { s: X + "Manager", p: "http://www.w3.org/2002/07/owl#equivalentClass", o: null, inferred: false,
+    sentence: original, uiMessage: { code: "reasoning.definition", args: { name: [{ text: "管理者 <b>{name}" }], expression: [
+      { text: "人" }, { code: "words.reasoning.intersection", args: {} }, { text: "管理対象" },
+      { code: "words.reasoning.condition_separator", args: {} }, { code: "words.reasoning.minimum_one", args: {} }, { text: "従業員" },
+    ] } } };
+  getWhy.mockResolvedValue({ family: "defining", sentence: "Original combined explanation", premises: [definition] });
+  const select = vi.fn();
+  const { container } = render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" onSelect={select} /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  const line = screen.getByRole("button", { name: "「管理者 <b>{name}」は、条件「人かつ管理対象：1つ以上の従業員」に一致する個体として定義されています。" });
+  const details = screen.getByText(original).closest("details")!; details.open = true;
+  const summary = within(details).getByText("技術的な詳細"); summary.focus();
+  expect(screen.getAllByRole("button", { name: /^根拠：/ })).toHaveLength(1);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "管理者 <b>{name} is defined as exactly the entities matching 人 and 管理対象: at least one 従業員." })).toBe(line);
+  expect(details.open).toBe(true); expect(document.activeElement).toBe(summary);
+  fireEvent.click(line); expect(select).toHaveBeenCalledWith(definition.s);
+  expect(getWhy).toHaveBeenCalledTimes(1); expect(container.querySelector("img, b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each(["stated", "unsupported", "future"])("renders a retained %s reason with original details in both UI languages", async (kind) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const original = "Original reason <img>{s}";
+  const uiMessage = kind === "stated" ? { code: "reasoning.reason.stated", args: { s: [{ text: "対象" }], p: [{ text: "値" }], o: [{ text: "something <b>{o}" }] } }
+    : { code: kind === "unsupported" ? "reasoning.reason.unsupported" : "future.reason", args: {} };
+  getWhy.mockResolvedValue({ family: kind === "stated" ? "stated" : null, sentence: original, premises: [], uiMessage });
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  expect(screen.getByText(kind === "stated" ? "「対象」の「値」は「something <b>{o}」と、モデルに明記されています。"
+    : kind === "unsupported" ? "OWL 2 RLによる推論結果です。この事実について、Semantic Studioでは一段階の根拠を説明できません。"
+    : "この記述については、推論の元の詳細を確認してください。")).toBeTruthy();
+  const details = screen.getByText(original).closest("details")!; details.open = true;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(kind === "stated" ? "対象 has something <b>{o} as its 値 value, explicitly stated in the model."
+    : kind === "unsupported" ? "Concluded by OWL 2 RL; Semantic Studio has no one-step explanation for this fact."
+    : "Check the original reasoning details for this statement.")).toBeTruthy();
+  expect(screen.getByText(original).closest("details")).toBe(details); expect(details.open).toBe(true);
+  expect(getWhy).toHaveBeenCalledTimes(1); localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

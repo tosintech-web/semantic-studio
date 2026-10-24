@@ -897,6 +897,28 @@ export const SERVER_CONTRACTS = {
   "reasoning.characteristic.transitive": {
     "s": "parts"
   },
+  "reasoning.definition": {
+    "expression": "parts",
+    "name": "parts"
+  },
+  "reasoning.definition.maximum_one": {
+    "p": "parts",
+    "x": "parts"
+  },
+  "reasoning.definition.only": {
+    "o": "parts",
+    "p": "parts"
+  },
+  "reasoning.definition.only_owned": {
+    "name": "parts",
+    "o": "parts",
+    "p": "parts"
+  },
+  "reasoning.definition.value": {
+    "name": "parts",
+    "o": "parts",
+    "p": "parts"
+  },
   "reasoning.fact.different": {
     "o": "parts",
     "s": "parts"
@@ -974,6 +996,151 @@ export const SERVER_CONTRACTS = {
   "reasoning.problem.never.unknown": {
     "name": "parts"
   },
+  "reasoning.reason.definition_kind": {
+    "expression": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.definition_member": {
+    "expression": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.domain": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts",
+    "y": "parts"
+  },
+  "reasoning.reason.equivalent_chain": {
+    "m": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.equivalent_property_link": {
+    "o": "parts",
+    "p": "parts",
+    "q": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.functional": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts",
+    "x": "parts"
+  },
+  "reasoning.reason.has_value": {
+    "k": "parts",
+    "o": "parts",
+    "p": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.inverse_functional": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts",
+    "y": "parts"
+  },
+  "reasoning.reason.inverse_link": {
+    "o": "parts",
+    "p": "parts",
+    "q": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.kind_chain": {
+    "m": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.kind_equivalent": {
+    "m": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.maximum_one": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts",
+    "x": "parts"
+  },
+  "reasoning.reason.member_equivalent": {
+    "k": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.member_kind": {
+    "k": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.mutual_kind": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.only": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts",
+    "x": "parts"
+  },
+  "reasoning.reason.only_owned": {
+    "k": "parts",
+    "o": "parts",
+    "p": "parts",
+    "s": "parts",
+    "x": "parts"
+  },
+  "reasoning.reason.range": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts",
+    "y": "parts"
+  },
+  "reasoning.reason.same_chain": {
+    "m": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.same_member": {
+    "m": "parts",
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.same_object_link": {
+    "m": "parts",
+    "o": "parts",
+    "p": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.same_subject_link": {
+    "m": "parts",
+    "o": "parts",
+    "p": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.stated": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.subproperty_link": {
+    "o": "parts",
+    "p": "parts",
+    "q": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.symmetric_link": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.transitive_link": {
+    "m": "parts",
+    "o": "parts",
+    "p": "parts",
+    "s": "parts"
+  },
+  "reasoning.reason.unsupported": {},
   "reasoning.result.unknown": {},
   "reasoning.stopped": {},
   "reasoning.timeout": {
@@ -1539,6 +1706,12 @@ export const SERVER_CONTRACTS = {
   "words.path.nameLabel": {},
   "words.path.or": {},
   "words.path.preferredName": {},
+  "words.reasoning.any_value": {},
+  "words.reasoning.condition_separator": {},
+  "words.reasoning.intersection": {},
+  "words.reasoning.minimum_one": {},
+  "words.reasoning.rule_value": {},
+  "words.reasoning.stated_rule": {},
   "words.reasoning.unnamed": {},
   "words.severity.violation": {},
   "words.severity.warning": {},
@@ -1847,6 +2020,11 @@ export interface ServerMessageArgs {
   "reasoning.characteristic.irreflexive": { "s": string };
   "reasoning.characteristic.symmetric": { "s": string };
   "reasoning.characteristic.transitive": { "s": string };
+  "reasoning.definition": { "expression": string; "name": string };
+  "reasoning.definition.maximum_one": { "p": string; "x": string };
+  "reasoning.definition.only": { "o": string; "p": string };
+  "reasoning.definition.only_owned": { "name": string; "o": string; "p": string };
+  "reasoning.definition.value": { "name": string; "o": string; "p": string };
   "reasoning.fact.different": { "o": string; "s": string };
   "reasoning.fact.disjoint": { "o": string; "s": string };
   "reasoning.fact.domain": { "o": string; "s": string };
@@ -1867,6 +2045,33 @@ export interface ServerMessageArgs {
   "reasoning.problem.never.parent": { "first": string; "name": string; "second": string };
   "reasoning.problem.never.self": { "name": string };
   "reasoning.problem.never.unknown": { "name": string };
+  "reasoning.reason.definition_kind": { "expression": string; "o": string; "s": string };
+  "reasoning.reason.definition_member": { "expression": string; "o": string; "s": string };
+  "reasoning.reason.domain": { "o": string; "p": string; "s": string; "y": string };
+  "reasoning.reason.equivalent_chain": { "m": string; "o": string; "s": string };
+  "reasoning.reason.equivalent_property_link": { "o": string; "p": string; "q": string; "s": string };
+  "reasoning.reason.functional": { "o": string; "p": string; "s": string; "x": string };
+  "reasoning.reason.has_value": { "k": string; "o": string; "p": string; "s": string };
+  "reasoning.reason.inverse_functional": { "o": string; "p": string; "s": string; "y": string };
+  "reasoning.reason.inverse_link": { "o": string; "p": string; "q": string; "s": string };
+  "reasoning.reason.kind_chain": { "m": string; "o": string; "s": string };
+  "reasoning.reason.kind_equivalent": { "m": string; "o": string; "s": string };
+  "reasoning.reason.maximum_one": { "o": string; "p": string; "s": string; "x": string };
+  "reasoning.reason.member_equivalent": { "k": string; "o": string; "s": string };
+  "reasoning.reason.member_kind": { "k": string; "o": string; "s": string };
+  "reasoning.reason.mutual_kind": { "o": string; "s": string };
+  "reasoning.reason.only": { "o": string; "p": string; "s": string; "x": string };
+  "reasoning.reason.only_owned": { "k": string; "o": string; "p": string; "s": string; "x": string };
+  "reasoning.reason.range": { "o": string; "p": string; "s": string; "y": string };
+  "reasoning.reason.same_chain": { "m": string; "o": string; "s": string };
+  "reasoning.reason.same_member": { "m": string; "o": string; "s": string };
+  "reasoning.reason.same_object_link": { "m": string; "o": string; "p": string; "s": string };
+  "reasoning.reason.same_subject_link": { "m": string; "o": string; "p": string; "s": string };
+  "reasoning.reason.stated": { "o": string; "p": string; "s": string };
+  "reasoning.reason.subproperty_link": { "o": string; "p": string; "q": string; "s": string };
+  "reasoning.reason.symmetric_link": { "o": string; "p": string; "s": string };
+  "reasoning.reason.transitive_link": { "m": string; "o": string; "p": string; "s": string };
+  "reasoning.reason.unsupported": undefined;
   "reasoning.result.unknown": undefined;
   "reasoning.stopped": undefined;
   "reasoning.timeout": { "seconds": number };
@@ -2101,6 +2306,12 @@ export interface ServerMessageArgs {
   "words.path.nameLabel": undefined;
   "words.path.or": undefined;
   "words.path.preferredName": undefined;
+  "words.reasoning.any_value": undefined;
+  "words.reasoning.condition_separator": undefined;
+  "words.reasoning.intersection": undefined;
+  "words.reasoning.minimum_one": undefined;
+  "words.reasoning.rule_value": undefined;
+  "words.reasoning.stated_rule": undefined;
   "words.reasoning.unnamed": undefined;
   "words.severity.violation": undefined;
   "words.severity.warning": undefined;

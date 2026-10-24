@@ -2583,7 +2583,48 @@ took 247.892 ms before and 244.385 ms after, within the unchanged 300 ms limit
 (Python 3.14.4, factor 1). The regression test separately proves that public Why
 still returns each premise's metadata while the core bulk walk generates none.
 
-This migration covers fact and problem descriptions and fact premises. Whole
-one-step explanation frames and class-expression definition premises are
-tracked separately in the remaining P1 work; this is not an assertion that all
-reasoning wording has been translated.
+The initial migration covered fact/problem descriptions and fact premises.
+The following entry records the separate one-step explanation migration; P1's
+remaining language-routing and integration audits are tracked by the plan.
+
+### One-step reasoning descriptions and definitions (P1)
+
+Every existing candidate's legacy expression is preserved inside a lazy string
+carrier. Only `explain(ui_metadata=True)`, called by public Why, captures the
+selected explanation's source names and definition facts. All 25 candidate
+producers retain their ordering and premise selection. Stated facts and the
+unsupported-family ending have their own descriptors. Definitions on blank
+nodes retain their existing subject and null object, not an invented IRI.
+
+An expression uses validated flat noun parts: named classes, an AND separator
+and property/value conditions. Some-values rules say “at least one” followed by
+the raw filler name; has-value rules keep the actual value; a rule the existing
+reader cannot describe retains its original generic stated-rule meaning. These
+are source RDF facts and zero-argument words, not nested message templates or
+captured English clauses. Japanese rendering never passes names through the
+legacy English article, plural or verb rules. The legacy English remains in
+original details.
+
+Minimal witnesses cover 27 candidate cases (including both at-most-one
+predicates and the owner/no-owner only-values variants), both stated/unsupported
+endings and five definition-expression variants. A differential against
+9fe5888 found all legacy fields identical across 29 public reason records after
+removing only the added metadata. With the unchanged median-of-five
+6,000-conclusion budget on Python 3.14.4, a paired measurement was 270.838 ms
+before and 271.772 ms after, within the existing 300 ms limit at factor 1.
+
+The separate two-full-snapshots *engine* budget also missed its unchanged
+8-second limit during one full run (9,679.538 ms). Its run-time functions and
+summary projections are structurally identical to 9fe5888; the new explanation
+code is used by Why. A sequential normal-seed diagnostic measured
+7,811.078/8,231.099 ms before/after, with substantial variation inside the
+unchanged worker. To control order and seed while diagnosing it, five
+interleaved pairs with child hash seed 0 measured 7,557.366/7,480.970 ms. That
+controlled experiment is not a substitute for the normal full suite: the normal
+verification keeps its original thresholds, random-seed behavior and all tests.
+
+The subsequent full backend suite under normal conditions passed 2,331 tests
+(1 skipped, 2 network tests deselected) in 321.05 seconds, including both
+reasoning budgets. No seed, budget factor, limit, assertion or inference
+algorithm was changed to obtain that result. The diagnostic run remains
+separate from this verification.

@@ -126,10 +126,13 @@ def test_explanation_core_keeps_display_projection_at_the_public_why_boundary(mo
         calls.append(code)
         return original(code, **args)
     monkeypatch.setattr(r, 'make_message', capture)
+    monkeypatch.setattr('app.messages.make_message', capture)
     core = r.Explainer(outcome.stated, outcome.closure, outcome.names).explain(triple)
     assert calls == [], 'bulk core traversal must not project display metadata'
+    assert 'uiMessage' not in core
     public = outcome.why(str(S), str(RDF.type), str(C))
-    assert len(calls) == 2 and len(public['premises']) == 2
+    assert len(calls) == 3 and len(public['premises']) == 2
+    assert public['uiMessage']['code'] == 'reasoning.reason.member_kind'
     for plain, described in zip(core['premises'], public['premises']):
         assert {key: value for key, value in described.items() if key != 'uiMessage'} == plain
         assert described['uiMessage']['code'] in ('reasoning.fact.type', 'reasoning.fact.kind')
