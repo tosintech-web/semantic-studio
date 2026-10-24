@@ -2972,3 +2972,71 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `snapshots.refresh.columns_missing` | columns | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
 | `snapshots.refresh.subject_iri` | iri | `backend/app/snapshots.py` | プロジェクト・データ機能の拒否 | 12 | 元の形式・制限を保持し、事実から日英表示 |
 | `tabular.entry_compression_limit` | name, ratio, limit | `backend/app/tabular.py` | 既存Excelの展開率制限 | 12 | エントリ名と倍率を原文と別に収集 |
+
+## SHACL検証結果の説明（Task 12）
+
+| key | 引数 | 生成元 | 用途 | Task | 状態 |
+| --- | --- | --- | --- | --- | --- |
+| `validation.violation.min_count.attribute` | focus, path, have, limit | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.min_count.relationship` | focus, path, have, limit | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.max_count.attribute` | focus, path, have, limit | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.max_count.relationship` | focus, path, have, limit | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.datatype` | focus, path, value, datatype | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.class` | focus, path, value, qualifier | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.min_length` | focus, path, value, limit | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.max_length` | focus, path, value, limit | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.pattern` | focus, path, value | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.min_inclusive` | focus, path, value, bound | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.max_inclusive` | focus, path, value, bound | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.in` | focus, path, value, allowed | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.language.project.tagged` | focus, path, value, language, allowed | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.language.project.untagged` | focus, path, value, allowed | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.language.allowed.tagged` | focus, path, value, language, allowed | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.language.allowed.untagged` | focus, path, value, allowed | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.unique_language` | focus, path | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.unique_language.one` | focus, path, language, count | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.unique_language.many` | focus, path, languages, count | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.qualified_language` | focus, path, language, limit | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.qualified.min.class` | focus, path, have, limit, qualifier | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.qualified.min.datatype` | focus, path, have, limit, qualifier | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.qualified.max.class` | focus, path, have, limit, qualifier | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.qualified.max.datatype` | focus, path, have, limit, qualifier | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.has_value` | focus, path, wanted | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.violation.other` | focus, path, rule | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.term` | term | `frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `validation.unknown` | — | `frontend/src/components/ResultPanels.tsx`<br>`frontend/src/sparql/generate.ts`<br>`backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.validation.unnamed_node` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.validation.missing_value` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.validation.required_class` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.validation.no_allowed_values` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.validation.no_allowed_languages` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.validation.this_shape` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.validation.unnamed_shape` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.ar` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.ca` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.cs` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.da` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.de` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.el` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.en` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.es` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.fi` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.fr` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.he` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.hi` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.hu` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.it` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.ja` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.ko` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.la` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.nb` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.nl` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.no` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.pl` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.pt` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.ro` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.ru` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.sv` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.tr` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.uk` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+| `words.language.zh` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |

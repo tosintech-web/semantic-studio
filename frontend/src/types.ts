@@ -1258,15 +1258,20 @@ export interface ValidationProblem {
   // The individual's IRI, the link's target; null for a blank node.
   focus: string | null;
   focusLabel: string;
+  focusLabelUiMessage?: WireMessage | null;
   group: string;
+  groupUiMessage?: WireMessage | null;
   sentence: string;
+  uiMessage?: WireMessage | null;
   value: string | null;
+  valueUiMessage?: WireMessage | null;
   severity: "violation" | "warning" | "info";
 }
 
 export interface ValidationPanel {
   id: string;
   name: string;
+  nameUiMessage?: WireMessage | null;
   state: PanelState;
   target: { iri: string; label: string; one: string; many: string } | null;
   focusCount: number;

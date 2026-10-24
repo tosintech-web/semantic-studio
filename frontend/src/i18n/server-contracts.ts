@@ -1104,6 +1104,214 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "validation.shapes_refused": {},
+  "validation.term": {
+    "term": "parts"
+  },
+  "validation.unknown": {},
+  "validation.violation.class": {
+    "focus": "parts",
+    "path": "parts",
+    "qualifier": "parts",
+    "value": "parts"
+  },
+  "validation.violation.datatype": {
+    "datatype": [
+      "string",
+      "null"
+    ],
+    "focus": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.has_value": {
+    "focus": "parts",
+    "path": "parts",
+    "wanted": "parts"
+  },
+  "validation.violation.in": {
+    "allowed": "parts",
+    "focus": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.language.allowed.tagged": {
+    "allowed": "parts",
+    "focus": "parts",
+    "language": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.language.allowed.untagged": {
+    "allowed": "parts",
+    "focus": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.language.project.tagged": {
+    "allowed": "parts",
+    "focus": "parts",
+    "language": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.language.project.untagged": {
+    "allowed": "parts",
+    "focus": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.max_count.attribute": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts"
+  },
+  "validation.violation.max_count.relationship": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts"
+  },
+  "validation.violation.max_inclusive": {
+    "bound": "parts",
+    "focus": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.max_length": {
+    "focus": "parts",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.min_count.attribute": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts"
+  },
+  "validation.violation.min_count.relationship": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts"
+  },
+  "validation.violation.min_inclusive": {
+    "bound": "parts",
+    "focus": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.min_length": {
+    "focus": "parts",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.other": {
+    "focus": "parts",
+    "path": "parts",
+    "rule": "parts"
+  },
+  "validation.violation.pattern": {
+    "focus": "parts",
+    "path": "parts",
+    "value": "parts"
+  },
+  "validation.violation.qualified.max.class": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts",
+    "qualifier": "parts"
+  },
+  "validation.violation.qualified.max.datatype": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts",
+    "qualifier": "parts"
+  },
+  "validation.violation.qualified.min.class": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts",
+    "qualifier": "parts"
+  },
+  "validation.violation.qualified.min.datatype": {
+    "focus": "parts",
+    "have": "number",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts",
+    "qualifier": "parts"
+  },
+  "validation.violation.qualified_language": {
+    "focus": "parts",
+    "language": "parts",
+    "limit": [
+      "number",
+      "string",
+      "null"
+    ],
+    "path": "parts"
+  },
+  "validation.violation.unique_language": {
+    "focus": "parts",
+    "path": "parts"
+  },
+  "validation.violation.unique_language.many": {
+    "count": "number",
+    "focus": "parts",
+    "languages": "parts",
+    "path": "parts"
+  },
+  "validation.violation.unique_language.one": {
+    "count": "number",
+    "focus": "parts",
+    "language": "parts",
+    "path": "parts"
+  },
   "words.characteristic.asymmetric": {},
   "words.characteristic.functional": {},
   "words.characteristic.functionalAttribute": {},
@@ -1156,6 +1364,34 @@ export const SERVER_CONTRACTS = {
   "words.kind.example": {},
   "words.kind.objectProperty": {},
   "words.kind.property": {},
+  "words.language.ar": {},
+  "words.language.ca": {},
+  "words.language.cs": {},
+  "words.language.da": {},
+  "words.language.de": {},
+  "words.language.el": {},
+  "words.language.en": {},
+  "words.language.es": {},
+  "words.language.fi": {},
+  "words.language.fr": {},
+  "words.language.he": {},
+  "words.language.hi": {},
+  "words.language.hu": {},
+  "words.language.it": {},
+  "words.language.ja": {},
+  "words.language.ko": {},
+  "words.language.la": {},
+  "words.language.nb": {},
+  "words.language.nl": {},
+  "words.language.no": {},
+  "words.language.pl": {},
+  "words.language.pt": {},
+  "words.language.ro": {},
+  "words.language.ru": {},
+  "words.language.sv": {},
+  "words.language.tr": {},
+  "words.language.uk": {},
+  "words.language.zh": {},
   "words.list.and": {},
   "words.list.or": {},
   "words.mapping.broadMatch": {},
@@ -1170,7 +1406,14 @@ export const SERVER_CONTRACTS = {
   "words.path.or": {},
   "words.path.preferredName": {},
   "words.severity.violation": {},
-  "words.severity.warning": {}
+  "words.severity.warning": {},
+  "words.validation.missing_value": {},
+  "words.validation.no_allowed_languages": {},
+  "words.validation.no_allowed_values": {},
+  "words.validation.required_class": {},
+  "words.validation.this_shape": {},
+  "words.validation.unnamed_node": {},
+  "words.validation.unnamed_shape": {}
 } as const;
 export interface ServerMessageArgs {
   "command.added_annotation": { "name": string; "property": string };
@@ -1558,6 +1801,34 @@ export interface ServerMessageArgs {
   "tabular.xml_declaration": { "name": string };
   "validation.min_count": { "count": number; "name": string };
   "validation.shapes_refused": undefined;
+  "validation.term": { "term": string };
+  "validation.unknown": undefined;
+  "validation.violation.class": { "focus": string; "path": string; "qualifier": string; "value": string };
+  "validation.violation.datatype": { "datatype": string | null; "focus": string; "path": string; "value": string };
+  "validation.violation.has_value": { "focus": string; "path": string; "wanted": string };
+  "validation.violation.in": { "allowed": string; "focus": string; "path": string; "value": string };
+  "validation.violation.language.allowed.tagged": { "allowed": string; "focus": string; "language": string; "path": string; "value": string };
+  "validation.violation.language.allowed.untagged": { "allowed": string; "focus": string; "path": string; "value": string };
+  "validation.violation.language.project.tagged": { "allowed": string; "focus": string; "language": string; "path": string; "value": string };
+  "validation.violation.language.project.untagged": { "allowed": string; "focus": string; "path": string; "value": string };
+  "validation.violation.max_count.attribute": { "focus": string; "have": number; "limit": number | string | null; "path": string };
+  "validation.violation.max_count.relationship": { "focus": string; "have": number; "limit": number | string | null; "path": string };
+  "validation.violation.max_inclusive": { "bound": string; "focus": string; "path": string; "value": string };
+  "validation.violation.max_length": { "focus": string; "limit": number | string | null; "path": string; "value": string };
+  "validation.violation.min_count.attribute": { "focus": string; "have": number; "limit": number | string | null; "path": string };
+  "validation.violation.min_count.relationship": { "focus": string; "have": number; "limit": number | string | null; "path": string };
+  "validation.violation.min_inclusive": { "bound": string; "focus": string; "path": string; "value": string };
+  "validation.violation.min_length": { "focus": string; "limit": number | string | null; "path": string; "value": string };
+  "validation.violation.other": { "focus": string; "path": string; "rule": string };
+  "validation.violation.pattern": { "focus": string; "path": string; "value": string };
+  "validation.violation.qualified.max.class": { "focus": string; "have": number; "limit": number | string | null; "path": string; "qualifier": string };
+  "validation.violation.qualified.max.datatype": { "focus": string; "have": number; "limit": number | string | null; "path": string; "qualifier": string };
+  "validation.violation.qualified.min.class": { "focus": string; "have": number; "limit": number | string | null; "path": string; "qualifier": string };
+  "validation.violation.qualified.min.datatype": { "focus": string; "have": number; "limit": number | string | null; "path": string; "qualifier": string };
+  "validation.violation.qualified_language": { "focus": string; "language": string; "limit": number | string | null; "path": string };
+  "validation.violation.unique_language": { "focus": string; "path": string };
+  "validation.violation.unique_language.many": { "count": number; "focus": string; "languages": string; "path": string };
+  "validation.violation.unique_language.one": { "count": number; "focus": string; "language": string; "path": string };
   "words.characteristic.asymmetric": undefined;
   "words.characteristic.functional": undefined;
   "words.characteristic.functionalAttribute": undefined;
@@ -1610,6 +1881,34 @@ export interface ServerMessageArgs {
   "words.kind.example": undefined;
   "words.kind.objectProperty": undefined;
   "words.kind.property": undefined;
+  "words.language.ar": undefined;
+  "words.language.ca": undefined;
+  "words.language.cs": undefined;
+  "words.language.da": undefined;
+  "words.language.de": undefined;
+  "words.language.el": undefined;
+  "words.language.en": undefined;
+  "words.language.es": undefined;
+  "words.language.fi": undefined;
+  "words.language.fr": undefined;
+  "words.language.he": undefined;
+  "words.language.hi": undefined;
+  "words.language.hu": undefined;
+  "words.language.it": undefined;
+  "words.language.ja": undefined;
+  "words.language.ko": undefined;
+  "words.language.la": undefined;
+  "words.language.nb": undefined;
+  "words.language.nl": undefined;
+  "words.language.no": undefined;
+  "words.language.pl": undefined;
+  "words.language.pt": undefined;
+  "words.language.ro": undefined;
+  "words.language.ru": undefined;
+  "words.language.sv": undefined;
+  "words.language.tr": undefined;
+  "words.language.uk": undefined;
+  "words.language.zh": undefined;
   "words.list.and": undefined;
   "words.list.or": undefined;
   "words.mapping.broadMatch": undefined;
@@ -1625,6 +1924,13 @@ export interface ServerMessageArgs {
   "words.path.preferredName": undefined;
   "words.severity.violation": undefined;
   "words.severity.warning": undefined;
+  "words.validation.missing_value": undefined;
+  "words.validation.no_allowed_languages": undefined;
+  "words.validation.no_allowed_values": undefined;
+  "words.validation.required_class": undefined;
+  "words.validation.this_shape": undefined;
+  "words.validation.unnamed_node": undefined;
+  "words.validation.unnamed_shape": undefined;
 }
 export type UiPart = { text: string } | { code: string; args: Record<string, never> };
 export interface WireMessage { code: string; args: Record<string, string | number | boolean | null | UiPart[]> }

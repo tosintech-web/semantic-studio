@@ -11,6 +11,9 @@ SUMMARY
     state and a sentence per problem in the learner's own names.
 
 BASIC IDEA
+    Generated violation sentences carry flat display facts. Authored sh:message
+    stays literal, and only the existing capped problem output is enriched.
+
     Owned refusals add validated display facts at their source. Legacy text,
     exception types and input-processing rules remain unchanged.
 
@@ -73,7 +76,7 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
-from .messages import make_message, MessageText
+from .messages import literal_part, make_message, word_part, MessageText
 import contextvars
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -95,6 +98,7 @@ from .shapes_form import (
     listed_shapes,
     path_kind,
     path_label,
+    path_parts,
     path_of,
     shape_id,
 )
@@ -313,6 +317,21 @@ def focus_nodes(data: Graph, shapes: Graph, node) -> set:
     return found
 
 
+def _limit_arg(value):
+    """Represent RDF integers exactly across JSON/JavaScript; never cap RDF data."""
+    if value is None:
+        return None
+    return value if isinstance(value, int) and abs(value) <= 2**53 - 1 else str(value)
+
+
+def _said(text: str, code: str, facts, extra=None) -> str:
+    # Sorting needs every legacy sentence, while only the existing capped output
+    # needs display facts. Do not evaluate metadata-only graph reads for the rest.
+    if facts is None:
+        return text
+    return MessageText(text, "validation.violation." + code, **facts, **(extra() if extra else {}))
+
+
 class Sentences:
     """The sentences of 5.7, built from the data's names."""
 
@@ -348,14 +367,17 @@ class Sentences:
             return f"every {self.name(target)}"
         return "the rule"
 
-    def path_words(self, result: dict) -> tuple[str, str]:
-        """The path's label and its kind (attribute, relationship ...)."""
+    def _path_key(self, result: dict):
         path = result["path"]
         key = (path,) if isinstance(path, URIRef) else None
         if key is None and result["source"] is not None:
-            # A complex path in the report is the report's own copy of its
-            # blank nodes; the source shape holds the one the form wrote.
+            # The report's blank nodes are copies; the form owns the actual path.
             key = path_of(self.shapes, self.shapes.value(result["source"], SH.path))
+        return key
+
+    def path_words(self, result: dict) -> tuple[str, str]:
+        """The path's label and its kind (attribute, relationship ...)."""
+        key = self._path_key(result)
         if key is None:
             return "value", "other"
         if tuple(key) == DEFINITION_PATH:
@@ -367,7 +389,7 @@ class Sentences:
             return len(set(self.data.objects(focus, path)))
         return 0
 
-    def sentence(self, result: dict, owner) -> str:
+    def sentence(self, result: dict, owner, *, ui_metadata: bool = True) -> str:
         source = result["source"]
         own = self.shapes.value(source, SH.message) if source is not None else None
         if own is None and owner is not None:
@@ -375,6 +397,7 @@ class Sentences:
         if own is not None:
             return str(own)
         focus = result["focus"]
+        facts = self._facts(result) if ui_metadata else None
         who = self.name(focus)
         label, kind = self.path_words(result)
         every = self.every(owner)
@@ -386,69 +409,254 @@ class Sentences:
             have = self._have(focus, result)
             if relationship:
                 if have == 0:
-                    return f"{who} is not linked by {label}; {every} must be, at least {limit} times." if limit != 1 \
-                        else f"{who} is not linked by {label}; {every} must be."
-                return f"{who} is linked by {label} {have} times; {every} must be at least {limit} times."
+                    return _said(
+                        f'{who} is not linked by {label}; {every} must be, at least {limit} times.' if limit != 1 else f'{who} is not linked by {label}; {every} must be.',
+                        'min_count.relationship',
+                        facts,
+                        lambda: dict(
+                            have=have,
+                            limit=_limit_arg(limit),
+                        ),
+                    )
+                return _said(
+                    f'{who} is linked by {label} {have} times; {every} must be at least {limit} times.',
+                    'min_count.relationship',
+                    facts,
+                    lambda: dict(
+                        have=have,
+                        limit=_limit_arg(limit),
+                    ),
+                )
             if have == 0:
-                return f"{who} has no {label}; {every} must have at least {limit}."
-            return f"{who} has {have} {label if have == 1 else plural(label)}; {every} must have at least {limit}."
+                return _said(
+                    f'{who} has no {label}; {every} must have at least {limit}.',
+                    'min_count.attribute',
+                    facts,
+                    lambda: dict(
+                        have=have,
+                        limit=_limit_arg(limit),
+                    ),
+                )
+            return _said(
+                f'{who} has {have} {(label if have == 1 else plural(label))}; {every} must have at least {limit}.',
+                'min_count.attribute',
+                facts,
+                lambda: dict(
+                    have=have,
+                    limit=_limit_arg(limit),
+                ),
+            )
         if component == SH.MaxCountConstraintComponent:
             limit = self._number(source, SH.maxCount)
             have = self._have(focus, result)
             if relationship:
-                return f"{who} is linked by {label} {have} times; {every} may be at most {limit} {'time' if limit == 1 else 'times'}."
-            return f"{who} has {have} {plural(label)}; {every} may have at most {limit}."
+                return _said(
+                    f"{who} is linked by {label} {have} times; {every} may be at most {limit} {('time' if limit == 1 else 'times')}.",
+                    'max_count.relationship',
+                    facts,
+                    lambda: dict(
+                        have=have,
+                        limit=_limit_arg(limit),
+                    ),
+                )
+            return _said(
+                f'{who} has {have} {plural(label)}; {every} may have at most {limit}.',
+                'max_count.attribute',
+                facts,
+                lambda: dict(
+                    have=have,
+                    limit=_limit_arg(limit),
+                ),
+            )
         if component == SH.DatatypeConstraintComponent:
             wanted = self.shapes.value(source, SH.datatype)
             word = DATATYPE_WORDS.get(wanted) or f"of the type {datatype_json(wanted)}"
-            return f"{possessive(who)} {label} {value} is not {word}."
+            return _said(
+                f'{possessive(who)} {label} {value} is not {word}.',
+                'datatype',
+                facts,
+                lambda: dict(
+                    value=self._value_parts(result['value']),
+                    datatype=datatype_json(wanted),
+                ),
+            )
         if component == SH.ClassConstraintComponent:
             cls = self.shapes.value(source, SH["class"])
             cls_name = self.name(cls) if cls is not None else "the class the rule names"
-            return f"{who} {verb(label)} {value}, which is not {article(cls_name)} {cls_name}."
+            return _said(
+                f'{who} {verb(label)} {value}, which is not {article(cls_name)} {cls_name}.',
+                'class',
+                facts,
+                lambda: dict(
+                    value=self._value_parts(result['value']),
+                    qualifier=self._class_parts(cls),
+                ),
+            )
         if component in (SH.MinLengthConstraintComponent, SH.MaxLengthConstraintComponent):
             shorter = component == SH.MinLengthConstraintComponent
             limit = self._number(source, SH.minLength if shorter else SH.maxLength)
-            return (f"{possessive(who)} {label} {value} is {'shorter' if shorter else 'longer'} "
-                    f"than {limit} {'character' if limit == 1 else 'characters'}.")
+            return _said(
+                f"{possessive(who)} {label} {value} is {('shorter' if shorter else 'longer')} than {limit} {('character' if limit == 1 else 'characters')}.",
+                'min_length' if shorter else 'max_length',
+                facts,
+                lambda: dict(
+                    value=self._value_parts(result['value']),
+                    limit=_limit_arg(limit),
+                ),
+            )
         if component == SH.PatternConstraintComponent:
-            return f"{possessive(who)} {label} {value} does not match the pattern of the rule."
+            return _said(
+                f'{possessive(who)} {label} {value} does not match the pattern of the rule.',
+                'pattern',
+                facts,
+                lambda: dict(
+                    value=self._value_parts(result['value']),
+                ),
+            )
         if component in (SH.MinInclusiveConstraintComponent, SH.MaxInclusiveConstraintComponent):
             low = component == SH.MinInclusiveConstraintComponent
             bound = self.shapes.value(source, SH.minInclusive if low else SH.maxInclusive)
-            return (f"{possessive(who)} {label} {value} is {'below the minimum' if low else 'above the maximum'} "
-                    f"of {bound}.")
+            return _said(
+                f"{possessive(who)} {label} {value} is {('below the minimum' if low else 'above the maximum')} of {bound}.",
+                'min_inclusive' if low else 'max_inclusive',
+                facts,
+                lambda: dict(
+                    value=self._value_parts(result['value']),
+                    bound=self._value_parts(bound),
+                ),
+            )
         if component == SH.InConstraintComponent:
             members = _list(self.shapes, self.shapes.value(source, SH["in"])) or []
             allowed = ", ".join(str(m) if isinstance(m, Literal) else self.name(m) for m in members)
-            return f"{possessive(who)} {label} {value} is not one of: {allowed}."
+            return _said(
+                f'{possessive(who)} {label} {value} is not one of: {allowed}.',
+                'in',
+                facts,
+                lambda: dict(
+                    value=self._value_parts(result['value']),
+                    allowed=self._parts_list((self._value_parts(item) for item in members)),
+                ),
+            )
         if component == SH.LanguageInConstraintComponent:
             term = result["value"]
             lang = term.language if isinstance(term, Literal) and term.language else None
             tags = [str(t) for t in (_list(self.shapes, self.shapes.value(source, SH.languageIn)) or [])]
             where = f"in {language_name(lang)}" if lang else "without a language"
             if sorted(t.lower() for t in tags) == sorted(t.lower() for t in self.languages):
-                return f"{possessive(who)} {label} {value} is {where}, which is not one of the project's languages."
+                return _said(
+                    f"{possessive(who)} {label} {value} is {where}, which is not one of the project's languages.",
+                    'language.project.tagged' if lang else 'language.project.untagged',
+                    facts,
+                    lambda: dict(
+                        value=self._value_parts(result['value']),
+                        allowed=self._language_list(tags),
+                        **{'language': self._language_parts(lang)} if lang else {},
+                    ),
+                )
             allowed = ", ".join(language_name(t) for t in tags)
-            return f"{possessive(who)} {label} {value} is {where}, which is not one of: {allowed}."
+            return _said(
+                f'{possessive(who)} {label} {value} is {where}, which is not one of: {allowed}.',
+                'language.allowed.tagged' if lang else 'language.allowed.untagged',
+                facts,
+                lambda: dict(
+                    value=self._value_parts(result['value']),
+                    allowed=self._language_list(tags),
+                    **{'language': self._language_parts(lang)} if lang else {},
+                ),
+            )
         if component == SH.UniqueLangConstraintComponent:
-            return self._unique_lang(focus, result["path"], who, label)
+            return self._unique_lang(focus, result["path"], who, label, ui_facts=facts, ui_metadata=ui_metadata)
         if component == SH.QualifiedMinCountConstraintComponent:
             lang = self._qualified_language(source)
             if lang is not None:
-                return f"{who} has no {label} in {language_name(lang)}; {every} must have one."
+                return _said(
+                    f'{who} has no {label} in {language_name(lang)}; {every} must have one.',
+                    'qualified_language',
+                    facts,
+                    lambda: dict(
+                        language=self._language_parts(lang),
+                        limit=_limit_arg(self._number(source, SH.qualifiedMinCount)),
+                    ),
+                )
         if component in (SH.QualifiedMinCountConstraintComponent, SH.QualifiedMaxCountConstraintComponent):
             # What Check it in data too writes for a restriction (axioms 5.8):
             # a count of values that are of a class, or of a type.
-            said = self._qualified_count(component, source, focus, result["path"], who, label, every, relationship)
+            said = self._qualified_count(component, source, focus, result["path"], who, label, every, relationship, ui_facts=facts, ui_metadata=ui_metadata)
             if said is not None:
                 return said
         if component == SH.HasValueConstraintComponent:
             wanted = self.shapes.value(source, SH.hasValue)
-            return f"{who} does not have {label} {self.value(wanted)}; {every} must."
+            return _said(
+                f'{who} does not have {label} {self.value(wanted)}; {every} must.',
+                'has_value',
+                facts,
+                lambda: dict(
+                    wanted=self._value_parts(wanted),
+                ),
+            )
         message = result["message"]
         rule = label if label != "value" else self._shape_name(owner)
-        return f"{rule}: {message}" if message is not None else f"{rule}: this value breaks the rule."
+        return _said(
+            f'{rule}: {message}' if message is not None else f'{rule}: this value breaks the rule.',
+            'other',
+            facts,
+            lambda: dict(
+                rule=self._group_parts(result, owner),
+            ),
+        )
+
+    def _name_parts(self, node) -> list[dict]:
+        if isinstance(node, URIRef):
+            return [literal_part(self.name(node))]
+        if isinstance(node, Literal):
+            return [literal_part(self.value(node))]
+        return [word_part("words.validation.unnamed_node")]
+
+    def _value_parts(self, node) -> list[dict]:
+        return [word_part("words.validation.missing_value")] if node is None else self._name_parts(node)
+
+    def _class_parts(self, node) -> list[dict]:
+        return self._name_parts(node) if isinstance(node, URIRef) else [word_part("words.validation.required_class")]
+
+    def _path_parts(self, result: dict) -> list[dict]:
+        key = self._path_key(result)
+        return path_parts(self.data, key, self.languages) if key is not None else [word_part("words.field.value")]
+
+    def _facts(self, result: dict) -> dict:
+        return {"focus": self._name_parts(result["focus"]), "path": self._path_parts(result)}
+
+    def _helper_facts(self, focus, path, label, facts, enabled):
+        if not enabled:
+            return None
+        if facts is not None:
+            return facts
+        return {"focus": self._name_parts(focus), "path": path_parts(self.data, (path,), self.languages)
+                if isinstance(path, URIRef) else [literal_part(label)]}
+
+    def _language_parts(self, tag: str) -> list[dict]:
+        base = tag.lower().split("-")[0]
+        if base in LANGUAGE_NAMES:
+            return [word_part("words.language." + base), literal_part(" (" + tag + ")")]
+        return [literal_part(tag)]
+
+    def _parts_list(self, groups, *, separator="words.list.or", empty="words.validation.no_allowed_values") -> list[dict]:
+        parts = []
+        for index, group in enumerate(groups):
+            if index:
+                parts.append(word_part(separator))
+            parts.extend(group)
+        return parts or [word_part(empty)]
+
+    def _language_list(self, tags, *, separator="words.list.or") -> list[dict]:
+        return self._parts_list((self._language_parts(tag) for tag in tags), separator=separator,
+                                empty="words.validation.no_allowed_languages")
+
+    def _group_parts(self, result: dict, owner) -> list[dict]:
+        label, _ = self.path_words(result) if result["path"] is not None else ("", "")
+        if label and label != "value":
+            return self._path_parts(result)
+        name = self.shapes.value(owner, RDFS.label) if owner is not None else None
+        return [literal_part(str(name))] if name is not None else [word_part("words.validation.this_shape")]
 
     def _number(self, source, predicate):
         value = self.shapes.value(source, predicate)
@@ -466,7 +674,10 @@ class Sentences:
             return sum(len(set(self.data.objects(focus, p))) for p in DEFINITION_PATH)
         return 0
 
-    def _unique_lang(self, focus, path, who: str, label: str) -> str:
+    def _unique_lang(
+        self, focus, path, who: str, label: str, *, ui_facts=None, ui_metadata=True,
+    ) -> str:
+        facts = self._helper_facts(focus, path, label, ui_facts, ui_metadata)
         counts: dict = {}
         if isinstance(path, URIRef):
             for value in self.data.objects(focus, path):
@@ -475,19 +686,36 @@ class Sentences:
                     counts[tag] = counts.get(tag, 0) + 1
         repeated = [(tag, n) for tag, n in sorted(counts.items()) if n > 1]
         if not repeated:
-            return f"{who} has more than one {label} in one language; one per language is allowed."
+            return _said(
+                f'{who} has more than one {label} in one language; one per language is allowed.',
+                'unique_language',
+                facts,
+            )
         parts = [f"{n} {plural(label)} in {language_name(tag)}" for tag, n in repeated]
-        return f"{who} has {' and '.join(parts)}; one per language is allowed."
+        return _said(
+            f"{who} has {' and '.join(parts)}; one per language is allowed.",
+            'unique_language.one' if len(repeated) == 1 else 'unique_language.many',
+            facts,
+            lambda: (
+                dict(language=self._language_parts(repeated[0][0]), count=repeated[0][1])
+                if len(repeated) == 1
+                else dict(languages=self._language_list([tag for tag, n in repeated], separator='words.list.and'), count=sum((n for tag, n in repeated)))
+            ),
+        )
 
     def _qualified_language(self, source) -> Optional[str]:
         inner = self.shapes.value(source, SH.qualifiedValueShape) if source is not None else None
         tags = _list(self.shapes, self.shapes.value(inner, SH.languageIn)) if inner is not None else None
         return str(tags[0]) if tags and len(tags) == 1 else None
 
-    def _qualified_count(self, component, source, focus, path, who, label, every, relationship) -> Optional[str]:
+    def _qualified_count(
+        self, component, source, focus, path, who, label, every, relationship,
+        *, ui_facts=None, ui_metadata=True,
+    ) -> Optional[str]:
         """*order 7 is not linked by has line to an Order line; every Order
         must be.* A qualified shape saying only sh:class or sh:datatype; any
         other is left to the generic sentence."""
+        facts = self._helper_facts(focus, path, label, ui_facts, ui_metadata)
         inner = self.shapes.value(source, SH.qualifiedValueShape) if source is not None else None
         if inner is None:
             return None
@@ -515,23 +743,60 @@ class Sentences:
         times = "time" if limit == 1 else "times"
         if relationship and low and have == 0:
             tail = "must be." if limit == 1 else f"must be, at least {limit} {times}."
-            return f"{who} is not linked by {label} to {one}; {every} {tail}"
+            return _said(
+                f'{who} is not linked by {label} to {one}; {every} {tail}',
+                'qualified.' + ('min' if low else 'max') + ('.class' if cls is not None else '.datatype'),
+                facts,
+                lambda: dict(
+                    have=have,
+                    limit=_limit_arg(limit),
+                    qualifier=self._class_parts(cls) if cls is not None else [literal_part(datatype_json(datatype))],
+                ),
+            )
         if relationship:
             bound = "at least" if low else "at most"
-            return f"{who} is linked by {label} to {have} {many if have != 1 else one}; {every} must be {bound} {limit} {times}."
+            return _said(
+                f'{who} is linked by {label} to {have} {(many if have != 1 else one)}; {every} must be {bound} {limit} {times}.',
+                'qualified.' + ('min' if low else 'max') + ('.class' if cls is not None else '.datatype'),
+                facts,
+                lambda: dict(
+                    have=have,
+                    limit=_limit_arg(limit),
+                    qualifier=self._class_parts(cls) if cls is not None else [literal_part(datatype_json(datatype))],
+                ),
+            )
         words = f"{label if have == 1 else plural(label)} that {'is' if have == 1 else 'are'} {one if have == 1 else many}"
         if low:
-            return f"{who} has {have or 'no'} {words}; {every} must have at least {limit}."
-        return f"{who} has {have} {words}; {every} may have at most {limit}."
+            return _said(
+                f"{who} has {have or 'no'} {words}; {every} must have at least {limit}.",
+                'qualified.' + ('min' if low else 'max') + ('.class' if cls is not None else '.datatype'),
+                facts,
+                lambda: dict(
+                    have=have,
+                    limit=_limit_arg(limit),
+                    qualifier=self._class_parts(cls) if cls is not None else [literal_part(datatype_json(datatype))],
+                ),
+            )
+        return _said(
+            f'{who} has {have} {words}; {every} may have at most {limit}.',
+            'qualified.' + ('min' if low else 'max') + ('.class' if cls is not None else '.datatype'),
+            facts,
+            lambda: dict(
+                have=have,
+                limit=_limit_arg(limit),
+                qualifier=self._class_parts(cls) if cls is not None else [literal_part(datatype_json(datatype))],
+            ),
+        )
 
     def _shape_name(self, owner) -> str:
         label = self.shapes.value(owner, RDFS.label) if owner is not None else None
         return str(label) if label is not None else "This shape"
 
-    def group(self, result: dict, owner) -> str:
+    def group(self, result: dict, owner, *, ui_metadata: bool = True) -> str:
         """What a problem is grouped under in its panel: the rule's path."""
         label, _ = self.path_words(result) if result["path"] is not None else ("", "")
-        return label if label and label != "value" else self._shape_name(owner)
+        text = label if label and label != "value" else self._shape_name(owner)
+        return MessageText(text, "validation.term", term=self._group_parts(result, owner)) if ui_metadata else text
 
 
 def _target(shapes: Graph, node, sentences: Sentences) -> Optional[dict]:
@@ -604,6 +869,8 @@ def panels(
             # (csv-data-import 5.6), so the panel can say so.
             "data": [],
         }
+        if label is None and (not isinstance(node, URIRef) or str(node).startswith(_ALIAS)):
+            panel["nameUiMessage"] = make_message("words.validation.unnamed_shape")
         if node in errors:
             panel["state"] = "error"
             panel["error"] = str(errors[node])
@@ -634,14 +901,26 @@ def panels(
             problems.append({
                 "focus": str(r["focus"]) if isinstance(r["focus"], URIRef) else None,
                 "focusLabel": sentences.name(r["focus"]),
-                "group": sentences.group(r, node),
-                "sentence": sentences.sentence(r, node),
+                "group": sentences.group(r, node, ui_metadata=False),
+                "sentence": sentences.sentence(r, node, ui_metadata=False),
+                "_source": r,
                 "value": sentences.value(r["value"]),
                 "severity": _severity(r["severity"]),
             })
         problems.sort(key=lambda p: (p["group"].casefold(), p["focusLabel"].casefold(), p["sentence"]))
         panel["problemsTotal"] = len(problems)
         panel["problems"] = problems[:PANEL_CAP]
+        for problem in panel["problems"]:
+            report = problem.pop("_source")
+            said = sentences.sentence(report, node)
+            if getattr(said, "ui_message", None) is not None:
+                problem["uiMessage"] = said.ui_message
+            group = sentences.group(report, node)
+            problem["groupUiMessage"] = group.ui_message
+            if not isinstance(report["focus"], URIRef):
+                problem["focusLabelUiMessage"] = make_message("validation.term", term=sentences._name_parts(report["focus"]))
+            if report["value"] is not None and not isinstance(report["value"], (URIRef, Literal)):
+                problem["valueUiMessage"] = make_message("validation.term", term=sentences._value_parts(report["value"]))
         out.append(panel)
     out.sort(key=lambda p: (STATE_ORDER[p["state"]], p["name"].casefold(), p["id"]))
     return out

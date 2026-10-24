@@ -13,6 +13,9 @@ SUMMARY
     checks the rule editor makes before Add is allowed.
 
 BASIC IDEA
+    Result names use validated display metadata when available; original names
+    remain the compatibility fallback and identity never depends on translation.
+
     Whole catalog templates provide rule descriptions, choices, editor checks
     and result-panel headers in the UI locale. English morphology stays in
     English branches; other locales preserve original labels and values.
@@ -47,6 +50,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { englishTranslator, translate } from "../i18n/format";
 import type { Translator, UiLocale } from "../i18n/types";
 import type { PanelState, ShapeForm, ShapeRule, ValidationPanel, ValidationResult } from "../types";
@@ -288,7 +292,7 @@ export function panelHeader(panel: ValidationPanel, locale: UiLocale = "en"): st
   // English inflections from the server are presentation for English only.
   const one = (locale === "en" ? panel.target?.one : panel.target?.label) ?? t("shapePanel.match.one");
   const many = (locale === "en" ? panel.target?.many : panel.target?.label) ?? t("shapePanel.match.many");
-  const name = panel.name;
+  const name = validWireMessage(panel.nameUiMessage) ? renderServerMessage(panel.nameUiMessage, panel.name, t) : panel.name;
   switch (panel.state) {
     case "fails":
       return t(panel.failingCount === 1 ? "shapePanel.fail.one" : "shapePanel.fail.many", {

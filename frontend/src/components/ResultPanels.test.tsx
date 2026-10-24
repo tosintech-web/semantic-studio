@@ -50,6 +50,7 @@ vi.mock("../api", async (importOriginal) => ({
 import { projectStore } from "../state/projectStore";
 import type { ValidationPanel, ValidationResult } from "../types";
 import ResultPanels, { ValidateButton } from "./ResultPanels";
+import type { WireMessage } from "../i18n/server-contracts";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
 
@@ -389,5 +390,109 @@ it("translates a shape-engine refusal while preserving its original details and 
   expect(header.getAttribute("aria-expanded")).toBe("true");
   expect(validateProject).toHaveBeenCalledTimes(1);
   expect(container.querySelector("img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each([true, false])("renders generated violations (known metadata: %s) while keeping authored RDF text and selection intact", async known => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc("model", 2), doc("shapes", 5)], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  const original = "Original generated <img>{focus}";
+  const authored = "利用者の説明 <b>{focus} every Person";
+  const generated = { focus: null, focusLabel: "a node without a name", group: "name", sentence: original, value: null, severity: "violation" as const,
+    focusLabelUiMessage: { code: "words.validation.unnamed_node", args: {} },
+    groupUiMessage: { code: "validation.term", args: { term: [{ code: "words.path.name", args: {} }] } },
+    uiMessage: { code: known ? "validation.violation.min_count.attribute" : "future.violation", args: {
+      focus: [{ code: "words.validation.unnamed_node", args: {} }], path: [{ code: "words.path.name", args: {} }], have: 0, limit: 2,
+    } },
+  };
+  const user = { focus: "http://x#alice", focusLabel: "Alice <b>{label}", group: "name {user}", sentence: authored, value: "<i>{value}", severity: "warning" as const };
+  validateProject.mockResolvedValue({ ...RESULT, shapes: [panel({ name: "Unnamed shape", nameUiMessage: { code: "words.validation.unnamed_shape", args: {} },
+    problems: [generated, user], problemsTotal: 2 })] });
+  const select = vi.fn();
+  const { container } = render(<I18nProvider><UiLanguageSelect /><ValidateButton onError={vi.fn()} /><ResultPanels onSelect={select} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "検証" })));
+  const header = screen.getByRole("button", { name: /名前のない検証ルール/ });
+  fireEvent.click(header);
+  expect(screen.getByRole("heading", { level: 5, name: "名前" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 5, name: "name {user}" })).toBeTruthy();
+  expect(screen.getByText("名前のないノード", { selector: ".result-who" })).toBeTruthy();
+  expect(screen.getByText(known ? "「名前のないノード」の名前は0件です。このルールでは2件以上が必要です。" : "この値は検証ルールに適合していません。詳細を確認してください。", { selector: ".result-sentence" })).toBeTruthy();
+  expect(screen.getByText(authored, { selector: ".result-sentence" })).toBeTruthy();
+  const pre = screen.getByText(original, { selector: "pre" });
+  const details = pre.closest("details")!; details.open = true;
+  const summary = details.querySelector("summary")!; summary.focus();
+  const stored = projectStore.getSnapshot().validation;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(known ? "The minimum number of values for name on unnamed node is 2; the current count is 0." : "This value did not satisfy the rule. Check the original details.", { selector: ".result-sentence" })).toBeTruthy();
+  expect(screen.getByText(original, { selector: "pre" })).toBe(pre);
+  expect(details.open).toBe(true); expect(document.activeElement).toBe(summary);
+  expect(screen.getByText(authored, { selector: ".result-sentence" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Alice <b>{label}" }));
+  expect(select).toHaveBeenCalledWith("http://x#alice");
+  expect(projectStore.getSnapshot().validation).toBe(stored);
+  expect(validateProject).toHaveBeenCalledTimes(1);
+  expect(container.querySelector("img, b, i")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+const violationCases: { name: string; wire: WireMessage; value: string; ja: string; en: string }[] = [
+  { name: "datatype", value: '"bad"', wire: { code: "validation.violation.datatype", args: {
+    focus: [{ text: "子 <b>{focus}" }], path: [{ code: "words.path.name", args: {} }], value: [{ text: '"bad"' }], datatype: "xsd:integer",
+  } }, ja: '「子 <b>{focus}」の名前の値"bad"は、型xsd:integerとして使用できません。', en: '"bad" is not a valid xsd:integer value for name on 子 <b>{focus}.' },
+  { name: "language", value: '"bad"@de', wire: { code: "validation.violation.language.project.tagged", args: {
+    focus: [{ text: "子 <b>{focus}" }], path: [{ code: "words.path.name", args: {} }], value: [{ text: '"bad"@de' }],
+    language: [{ code: "words.language.de", args: {} }, { text: " (de)" }],
+    allowed: [{ code: "words.language.ja", args: {} }, { text: " (ja)" }, { code: "words.list.or", args: {} }, { code: "words.language.en", args: {} }, { text: " (en)" }],
+  } }, ja: '「子 <b>{focus}」の名前の値"bad"@deには言語ドイツ語 (de)が指定されています。プロジェクトで使用できる言語日本語 (ja)または英語 (en)には含まれていません。', en: 'The name value "bad"@de on 子 <b>{focus} is tagged German (de), which is not among the project languages Japanese (ja) or English (en).' },
+  { name: "range", value: "1", wire: { code: "validation.violation.min_inclusive", args: {
+    focus: [{ text: "子 <b>{focus}" }], path: [{ code: "words.path.name", args: {} }], value: [{ text: "1" }], bound: [{ text: "10" }],
+  } }, ja: "「子 <b>{focus}」の名前の値1は、最小値10より小さい値です。", en: "The name value 1 on 子 <b>{focus} is below the minimum 10." },
+];
+
+it.each(violationCases)("renders $name violation facts in both UI languages without changing the RDF value", async item => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc("model", 2), doc("shapes", 5)], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  const original = `Legacy ${item.name} explanation <img>{value}`;
+  validateProject.mockResolvedValue({ ...RESULT, shapes: [panel({ focusCount: 1, failingCount: 1, problemCount: 1,
+    problems: [{ focus: "http://x#bob", focusLabel: "子 <b>{focus}", group: "name", sentence: original, uiMessage: item.wire, value: item.value, severity: "violation" }], problemsTotal: 1 })] });
+  const { container } = render(<I18nProvider><UiLanguageSelect /><ValidateButton onError={vi.fn()} /><ResultPanels onSelect={vi.fn()} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "検証" })));
+  fireEvent.click(screen.getByRole("button", { name: /Person rules/ }));
+  expect(screen.getByText(item.ja, { selector: ".result-sentence" })).toBeTruthy();
+  const pre = screen.getByText(original, { selector: "pre" });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(item.en, { selector: ".result-sentence" })).toBeTruthy();
+  expect(screen.getByText(original, { selector: "pre" })).toBe(pre);
+  expect(container.querySelector(".result-value")?.textContent).toContain(item.value);
+  expect(validateProject).toHaveBeenCalledTimes(1);
+  expect(container.querySelector("b, img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("translates a blank-value placeholder while keeping an identically worded RDF literal unchanged", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc("model", 2), doc("shapes", 5)], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  const generated = { focus: "http://x#bob", focusLabel: "Bob", group: "works for", sentence: "Legacy class failure", value: "a node without a name", severity: "violation" as const,
+    valueUiMessage: { code: "words.validation.unnamed_node", args: {} },
+    uiMessage: { code: "validation.violation.class", args: { focus: [{ text: "Bob" }], path: [{ text: "works for" }],
+      value: [{ code: "words.validation.unnamed_node", args: {} }], qualifier: [{ text: "Organization" }] } },
+  };
+  const authored = { focus: "http://x#alice", focusLabel: "Alice", group: "works for", sentence: "Authored", value: '"a node without a name"', severity: "warning" as const };
+  validateProject.mockResolvedValue({ ...RESULT, shapes: [panel({ problems: [generated, authored], problemsTotal: 2 })] });
+  render(<I18nProvider><UiLanguageSelect /><ValidateButton onError={vi.fn()} /><ResultPanels onSelect={vi.fn()} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "検証" })));
+  fireEvent.click(screen.getByRole("button", { name: /Person rules/ }));
+  expect(screen.getByText("値：名前のないノード", { selector: ".result-value" })).toBeTruthy();
+  expect(screen.getByText('値："a node without a name"', { selector: ".result-value" })).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("Value: unnamed node", { selector: ".result-value" })).toBeTruthy();
+  expect(screen.getByText('Value: "a node without a name"', { selector: ".result-value" })).toBeTruthy();
+  expect(validateProject).toHaveBeenCalledTimes(1);
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

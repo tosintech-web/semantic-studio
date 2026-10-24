@@ -12,8 +12,9 @@ SUMMARY
     budgets of Section 10.
 
 BASIC IDEA
-    Broken-shape errors retain the engine text and add separate display facts,
-    verified through the actual validation route.
+    Generated count, type, range and language violations add separate display
+    facts through the actual API; legacy sentences and authored messages stay
+    unchanged. Broken-shape errors retain the engine text and display facts.
 
     Through the HTTP API, as the frontend drives it. Shapes are made by the
     shape commands where the form can make them and written in Turtle where
@@ -167,6 +168,8 @@ def test_s1_a_required_name_reports_who_has_none_and_links_to_them(pid):
     assert [b["sentence"] for b in bob] == ["Bob has no name; every Person must have at least 1."]
     # The link: the focus IRI the interface selects, and the name it shows.
     assert bob[0]["focusLabel"] == "Bob"
+    assert bob[0]["uiMessage"] == {"code": "validation.violation.min_count.attribute", "args": {
+        "focus": [{"text": "Bob"}], "path": [{"text": "name"}], "have": 0, "limit": 1}}
     # Five people (an Employee included), three with no name: Bob, Dave and Erin has one.
     assert p["focusCount"] == 5
     assert p["failingCount"] == 2
@@ -187,6 +190,9 @@ def test_s3_a_value_of_the_wrong_type_names_the_value_and_the_type(pid):
     assert p["state"] == "fails"
     assert sentences(p) == ['Erin\'s birth date "yesterday" is not a date.']
     assert p["problems"][0]["value"] == '"yesterday"'
+    assert p["problems"][0]["uiMessage"] == {"code": "validation.violation.datatype", "args": {
+        "focus": [{"text": "Erin"}], "path": [{"text": "birth date"}],
+        "value": [{"text": '"yesterday"'}], "datatype": "xsd:date"}}
 
 
 def test_s4_points_to_fails_for_a_person_and_passes_for_a_subclass_instance(pid):
@@ -228,6 +234,9 @@ def test_s7_number_and_date_ranges_name_the_limit(pid):
     p = panel(validate(pid), sid)
     assert "Erin's age 212 is above the maximum of 150." in sentences(p)
     assert "Alice's birth date \"1990-04-01\" is below the minimum of 2000-01-01." in sentences(p)
+    age = next(problem for problem in p["problems"] if problem["focus"] == EX + "erin" and problem["group"] == "age")
+    assert age["uiMessage"]["code"] == "validation.violation.max_inclusive"
+    assert age["uiMessage"]["args"]["bound"] == [{"text": "150"}]
 
 
 def test_s8_allowed_values_list_what_is_allowed(pid):
@@ -255,6 +264,10 @@ def test_s9_languages_outside_the_project_and_two_names_in_one(pid):
         'Frank has 2 names (label) in English; one per language is allowed.',
         'Frank\'s name (label) "Franz"@de is in German, which is not one of the project\'s languages.',
     ]
+
+    language = next(problem for problem in p["problems"] if problem["uiMessage"]["code"] == "validation.violation.language.project.tagged")
+    assert language["uiMessage"]["args"]["language"] == [{"code": "words.language.de", "args": {}}, {"text": " (de)"}]
+    assert language["groupUiMessage"] == {"code": "validation.term", "args": {"term": [{"code": "words.path.nameLabel", "args": {}}]}}
 
 
 # --- S10 to S12: model checks, taxonomies and nothing to check -------------------------
@@ -310,7 +323,9 @@ def test_a_passing_shape_says_how_many_it_checked(pid):
 def test_the_shapes_own_message_replaces_the_sentence(pid):
     sid = shape(pid, EX + "Person", {"path": [EX + "name"], "maxCount": 1})
     cmd(pid, "SetShapeMessage", shape=sid, value="One name per person, please.")
-    assert sentences(panel(validate(pid), sid)) == ["One name per person, please."]
+    checked = panel(validate(pid), sid)
+    assert sentences(checked) == ["One name per person, please."]
+    assert all("uiMessage" not in problem for problem in checked["problems"])
 
 
 def test_panels_sort_failing_first(pid):

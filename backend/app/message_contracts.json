@@ -1159,6 +1159,249 @@
       "name": "string",
       "ratio": "number",
       "limit": "number"
-    }
+    },
+    "validation.violation.min_count.attribute": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.min_count.relationship": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.max_count.attribute": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.max_count.relationship": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.datatype": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "datatype": [
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.class": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "qualifier": "parts"
+    },
+    "validation.violation.min_length": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.max_length": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.pattern": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts"
+    },
+    "validation.violation.min_inclusive": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "bound": "parts"
+    },
+    "validation.violation.max_inclusive": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "bound": "parts"
+    },
+    "validation.violation.in": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "allowed": "parts"
+    },
+    "validation.violation.language.project.tagged": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "language": "parts",
+      "allowed": "parts"
+    },
+    "validation.violation.language.project.untagged": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "allowed": "parts"
+    },
+    "validation.violation.language.allowed.tagged": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "language": "parts",
+      "allowed": "parts"
+    },
+    "validation.violation.language.allowed.untagged": {
+      "focus": "parts",
+      "path": "parts",
+      "value": "parts",
+      "allowed": "parts"
+    },
+    "validation.violation.unique_language": {
+      "focus": "parts",
+      "path": "parts"
+    },
+    "validation.violation.unique_language.one": {
+      "focus": "parts",
+      "path": "parts",
+      "language": "parts",
+      "count": "number"
+    },
+    "validation.violation.unique_language.many": {
+      "focus": "parts",
+      "path": "parts",
+      "languages": "parts",
+      "count": "number"
+    },
+    "validation.violation.qualified_language": {
+      "focus": "parts",
+      "path": "parts",
+      "language": "parts",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ]
+    },
+    "validation.violation.qualified.min.class": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ],
+      "qualifier": "parts"
+    },
+    "validation.violation.qualified.min.datatype": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ],
+      "qualifier": "parts"
+    },
+    "validation.violation.qualified.max.class": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ],
+      "qualifier": "parts"
+    },
+    "validation.violation.qualified.max.datatype": {
+      "focus": "parts",
+      "path": "parts",
+      "have": "number",
+      "limit": [
+        "number",
+        "string",
+        "null"
+      ],
+      "qualifier": "parts"
+    },
+    "validation.violation.has_value": {
+      "focus": "parts",
+      "path": "parts",
+      "wanted": "parts"
+    },
+    "validation.violation.other": {
+      "focus": "parts",
+      "path": "parts",
+      "rule": "parts"
+    },
+    "validation.term": {
+      "term": "parts"
+    },
+    "validation.unknown": {},
+    "words.validation.unnamed_node": {},
+    "words.validation.missing_value": {},
+    "words.validation.required_class": {},
+    "words.validation.no_allowed_values": {},
+    "words.validation.no_allowed_languages": {},
+    "words.validation.this_shape": {},
+    "words.validation.unnamed_shape": {},
+    "words.language.ar": {},
+    "words.language.ca": {},
+    "words.language.cs": {},
+    "words.language.da": {},
+    "words.language.de": {},
+    "words.language.el": {},
+    "words.language.en": {},
+    "words.language.es": {},
+    "words.language.fi": {},
+    "words.language.fr": {},
+    "words.language.he": {},
+    "words.language.hi": {},
+    "words.language.hu": {},
+    "words.language.it": {},
+    "words.language.ja": {},
+    "words.language.ko": {},
+    "words.language.la": {},
+    "words.language.nb": {},
+    "words.language.nl": {},
+    "words.language.no": {},
+    "words.language.pl": {},
+    "words.language.pt": {},
+    "words.language.ro": {},
+    "words.language.ru": {},
+    "words.language.sv": {},
+    "words.language.tr": {},
+    "words.language.uk": {},
+    "words.language.zh": {}
   }
 }

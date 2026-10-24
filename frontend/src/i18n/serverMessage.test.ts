@@ -273,3 +273,23 @@ it.each([
   expect(renderServerMessage(wire, "Unchanged original detail", translator("en"))).toBe(english);
   expect(renderServerMessage(wire, "Unchanged original detail", translator("ja"))).toBe(japanese);
 });
+
+it("keeps an exact RDF constraint integer beyond JavaScript's safe numeric range", () => {
+  const limit = "9223372036854775809";
+  const wire = { code: "validation.violation.min_count.attribute", args: {
+    focus: [{ text: "対象 <b>{focus}" }], path: [{ code: "words.path.name", args: {} }], have: 0, limit,
+  } };
+  expect(validWireMessage(wire)).toBe(true);
+  expect(renderServerMessage(wire, "", translator("ja"))).toBe(`「対象 <b>{focus}」の名前は0件です。このルールでは${limit}件以上が必要です。`);
+  expect(renderServerMessage(wire, "", translator("en"))).toContain(`is ${limit};`);
+  expect(wire.args.limit).toBe(limit);
+});
+
+it("preserves unknown and regional language tags as raw facts beside translated language names", () => {
+  const wire = { code: "validation.violation.language.allowed.tagged", args: {
+    focus: [{ text: "対象" }], path: [{ code: "words.path.name", args: {} }], value: [{ text: '"値"@zz-Private' }],
+    language: [{ text: "zz-Private" }], allowed: [{ code: "words.language.en", args: {} }, { text: " (en-US)" }],
+  } };
+  expect(renderServerMessage(wire, "", translator("ja"))).toBe('「対象」の名前の値"値"@zz-Privateには言語zz-Privateが指定されています。このルールで使用できる言語英語 (en-US)には含まれていません。');
+  expect(renderServerMessage(wire, "", translator("en"))).toContain("English (en-US)");
+});

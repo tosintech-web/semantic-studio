@@ -16,8 +16,9 @@ BASIC IDEA
     language and retain escaped engine text in original-details disclosures.
 
     Owned controls, headers and count guidance follow the current UI locale;
-    result identity, open panels and navigation facts remain unchanged. Raw
-    violation/group/source text is supplied by its separately migrated producer.
+    result identity, open panels and navigation facts remain unchanged. Generated
+    violations, group and focus labels use producer facts; authored RDF text and
+    legacy-only results stay literal, and original diagnostics remain available.
 
     Shown in the Shapes view and under the Turtle editor of shapes.ttl,
     reading one result from the project store, so both places show the same
@@ -57,7 +58,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { renderServerMessage } from "../i18n/serverMessage";
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useMemo, useState } from "react";
 import {
@@ -261,7 +262,7 @@ function PanelBody({ panel, onSelect }: { panel: ValidationPanel; onSelect: (iri
         <p className="result-error-text">
           {t("results.shapeError", { error: renderServerMessage(panel.errorUiMessage, panel.error ?? "", t) })}
         </p>
-        <details><summary>{t("common.details")}</summary><pre>{panel.error}</pre></details>
+        <details className="technical-details"><summary>{t("common.details")}</summary><pre>{panel.error}</pre></details>
       </>
     );
   }
@@ -284,21 +285,28 @@ function PanelBody({ panel, onSelect }: { panel: ValidationPanel; onSelect: (iri
     <>
       {groups.map(([group, problems]) => (
         <section key={group} className="result-group">
-          <h5>{group}</h5>
+          <h5>{validWireMessage(problems[0]?.groupUiMessage) ? renderServerMessage(problems[0].groupUiMessage, group, t) : group}</h5>
           <ul>
-            {problems.map((p, i) => (
-              <li key={`${p.focus}-${i}`} className={`result-problem severity-${p.severity}`}>
+            {problems.map((p, i) => {
+              const focusLabel = validWireMessage(p.focusLabelUiMessage) ? renderServerMessage(p.focusLabelUiMessage, p.focusLabel, t) : p.focusLabel;
+              // Missing metadata can be authored RDF or an older server. Keep it
+              // literal; a new unknown violation gets context plus original details.
+              const described = p.uiMessage != null;
+              const sentence = !described ? p.sentence : validWireMessage(p.uiMessage)
+                ? renderServerMessage(p.uiMessage, p.sentence, t) : t("validation.unknown");
+              return <li key={`${p.focus}-${i}`} className={`result-problem severity-${p.severity}`}>
                 {p.focus ? (
                   <button type="button" className="link-btn result-who" onClick={() => onSelect(p.focus!)}>
-                    {p.focusLabel}
+                    {focusLabel}
                   </button>
                 ) : (
-                  <span className="result-who">{p.focusLabel}</span>
+                  <span className="result-who">{focusLabel}</span>
                 )}
-                <span className="result-sentence">{p.sentence}</span>
-                {p.value !== null && <span className="result-value">{t("results.value", { value: p.value })}</span>}
-              </li>
-            ))}
+                <span className="result-sentence">{sentence}</span>
+                {p.value !== null && <span className="result-value">{t("results.value", { value: validWireMessage(p.valueUiMessage) ? renderServerMessage(p.valueUiMessage, p.value, t) : p.value })}</span>}
+                {described && <details className="technical-details"><summary>{t("common.details")}</summary><pre>{p.sentence}</pre></details>}
+              </li>;
+            })}
           </ul>
         </section>
       ))}
