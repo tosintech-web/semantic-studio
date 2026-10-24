@@ -15,6 +15,9 @@ SUMMARY
     own imports switch.
 
 BASIC IDEA
+    Display metadata translates retained results and accessible labels without
+    changing selection IRIs, open details, focus or the original fetched data.
+
     Rejected reads preserve their original details and display facts through UI
     language changes without refetching or replacing retained content.
 
@@ -648,6 +651,34 @@ it("keeps a rejected result page's facts for current-language rendering and pres
   expect(screen.getByRole("button", { name: "Alice is a Person" })).toBe(factButton);
   expect(getReasoningPage).toHaveBeenCalledTimes(count);
   expect(reasonProject).toHaveBeenCalledTimes(1);
+  expect(container.querySelector(".reasoning img, .reasoning b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each([true, false])("renders result facts, problems and causes from metadata without changing retained identities (known=%s)", async (known) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID); onSelect = vi.fn();
+  const described = { ...fact("alice", "Person", "Original fact <img>{s}"), uiMessage: { code: "reasoning.fact.type", args: { s: [{ text: "対象 <b>{s}" }], o: [{ text: "分類" }] } } };
+  const returned = result({ groups: [group("memberships", [described])], problems: [{ kind: "irreflexive", subject: X + "alice", sentence: "Original conflict <img>",
+    uiMessage: known ? { code: "reasoning.problem.irreflexive", args: { subject: [{ text: "対象 <b>{s}" }], property: [{ text: "関連" }] } } : { code: "future.conflict", args: {} },
+    causes: [{ ...described, inferred: false }] }] });
+  reasonProject.mockResolvedValueOnce(returned);
+  const { container } = render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  await press("推論");
+  const sentence = "「対象 <b>{s}」は「分類」の個体です。";
+  const buttons = screen.getAllByRole("button", { name: sentence }); expect(buttons.length).toBe(2);
+  const conflict = screen.getByRole("button", { name: known ? "「対象 <b>{s}」は「関連」で自分自身と結ばれていますが、この関係では自己への結び付けが禁止されています。" : "この記述については、推論の元の詳細を確認してください。" });
+  const detail = screen.getByText("Original conflict <img>").closest("details")!; expect(detail).toBeTruthy(); detail.open = true;
+  const summary = within(detail).getByText("技術的な詳細"); summary.focus();
+  const notice = projectStore.getSnapshot().announcement;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getAllByRole("button", { name: "対象 <b>{s} is an instance of 分類." })).toEqual(buttons);
+  expect(screen.getByRole("button", { name: known ? "対象 <b>{s} is linked to itself by 関連, which forbids self-links." : "Check the original reasoning details for this statement." })).toBe(conflict);
+  expect(detail.open).toBe(true); expect(document.activeElement).toBe(summary);
+  fireEvent.click(buttons[0]); expect(onSelect).toHaveBeenCalledWith(X + "alice");
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(reasonProject).toHaveBeenCalledTimes(1); expect(getReasoningPage).not.toHaveBeenCalled();
   expect(container.querySelector(".reasoning img, .reasoning b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

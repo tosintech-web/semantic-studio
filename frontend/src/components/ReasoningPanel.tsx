@@ -14,6 +14,9 @@ SUMMARY
     saying what the reasoner does and does not do.
 
 BASIC IDEA
+    Result descriptions use additive source facts in the current UI language,
+    with original sentences in native disclosures outside selection buttons.
+
     Page-request failures keep the cause for current-language rendering and
     escaped original details; already shown facts remain in place.
 
@@ -75,6 +78,8 @@ import {
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { ProjectKind, ReasoningFact, ReasoningGroup, ReasoningProblem, ReasoningResult } from "../types";
 import WhyDisclosure from "./WhyDisclosure";
+import ReasoningDetails from "./ReasoningDetails";
+import { reasoningText } from "../reasoning/resultText";
 
 interface Props {
   projectId: string;
@@ -355,11 +360,12 @@ function Problem({
     <li className="reasoning-problem">
       {problem.subject ? (
         <button type="button" className="term-link" onClick={() => onSelect(problem.subject!)}>
-          {problem.sentence}
+          {reasoningText(problem, t)}
         </button>
       ) : (
-        <span>{problem.sentence}</span>
+        <span>{reasoningText(problem, t)}</span>
       )}
+      <ReasoningDetails description={problem} />
       {problem.reasoner && (
         <>
           {" "}
@@ -373,9 +379,10 @@ function Problem({
             {t("reasonUI.why")}
           </button>
           {why && (
-            <p id={whyId} className="detail-note why-reason">
-              {problem.reasoner}
-            </p>
+            <div id={whyId} className="detail-note why-reason">
+              <p>{t("reasoning.problem.engine")}</p>
+              <details className="technical-details"><summary>{t("common.details")}</summary><pre>{problem.reasoner}</pre></details>
+            </div>
           )}
         </>
       )}
@@ -384,16 +391,17 @@ function Problem({
           {problem.causes.map((cause, i) => (
             <li key={`${cause.s}|${cause.p}|${cause.o}|${i}`}>
               <button type="button" className="term-link" onClick={() => onSelect(cause.s)}>
-                {cause.sentence}
+                {reasoningText(cause, t)}
               </button>{" "}
               <span className="why-mark">{premiseMark(cause.inferred, locale)}</span>
+              <ReasoningDetails description={cause} />
               {cause.inferred && cause.o !== null && (
                 <>
                   {" "}
                   <WhyDisclosure
                     projectId={projectId}
                     fact={{ s: cause.s, p: cause.p, o: cause.o }}
-                    label={cause.sentence}
+                    label={reasoningText(cause, t)}
                     onSelect={onSelect}
                   />
                 </>
@@ -458,9 +466,10 @@ function FactList({
         {items.map((fact) => (
           <li key={`${fact.s}|${fact.p}|${fact.o}`} className="reasoning-fact">
             <button type="button" className="term-link" onClick={() => onSelect(fact.s)}>
-              {fact.sentence}
+              {reasoningText(fact, t)}
             </button>{" "}
-            <WhyDisclosure projectId={projectId} fact={fact} label={fact.sentence} onSelect={onSelect} />
+            <WhyDisclosure projectId={projectId} fact={fact} label={reasoningText(fact, t)} onSelect={onSelect} />
+            <ReasoningDetails description={fact} />
           </li>
         ))}
       </ul>

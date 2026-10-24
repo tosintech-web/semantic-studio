@@ -12,6 +12,9 @@ SUMMARY
     plain reason.
 
 BASIC IDEA
+    Display metadata translates retained results and accessible labels without
+    changing selection IRIs, open details, focus or the original fetched data.
+
     Failed reads preserve original details across locale changes, and a pending
     response cannot migrate to another project's disclosure.
 
@@ -218,4 +221,19 @@ it.each([
   await open(screen.getByRole("button", { name: "Why? fact" }));
   expect(getWhy).toHaveBeenLastCalledWith(next.projectId, next.fact);
   expect(screen.getByText("Alice works for Acme")).toBeTruthy();
+});
+
+
+it("translates a loaded premise and its nested Why label while retaining the fetched reason", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const premise = { ...MANAGER.premises[0], uiMessage: { code: "reasoning.fact.type", args: { s: [{ text: "対象" }], o: [{ text: "分類" }] } } };
+  getWhy.mockResolvedValue({ ...MANAGER, premises: [premise] });
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  const nested = screen.getByRole("button", { name: "根拠：「対象」は「分類」の個体です。" });
+  expect(screen.getByText(premise.sentence).closest("details")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Why? 対象 is an instance of 分類." })).toBe(nested);
+  expect(screen.getByText("対象 is an instance of 分類.")).toBeTruthy(); expect(getWhy).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

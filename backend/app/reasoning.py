@@ -13,6 +13,10 @@ SUMMARY
     memory, keyed on what it was computed from, and never written anywhere.
 
 BASIC IDEA
+    Facts and contradictions keep their legacy sort sentences and identities.
+    Additive display metadata captures raw RDF names, never inflected English;
+    fact metadata is projected only for the requested page or entity.
+
     The engine boundary is one function, `reason(model_nt, data_nt, probes,
     ...) -> RawResult`, with one implementation: reasoning_worker.main in a
     multiprocessing process started with "spawn" on every platform, so Linux
@@ -85,7 +89,7 @@ from rdflib.util import from_n3
 from . import reasoning_worker
 from .graph_builder import pick_label_in
 from .sentences import a, verb
-from .messages import make_message
+from .messages import literal_part, make_message, word_part
 
 # Fixed, never settings (5.10, as D-098's row limit is). A test lowers the
 # limit through the module attribute, which is all it reads.
@@ -443,7 +447,7 @@ class Outcome:
             "kind": kind,
             "total": len(listed),
             "offset": offset,
-            "items": [_public(f) for f in listed[offset:offset + PAGE]],
+            "items": [_public(f, self.names) for f in listed[offset:offset + PAGE]],
         }
 
     def page(self, kind: str, offset: int, current: Optional[Key] = None) -> dict:
@@ -455,7 +459,7 @@ class Outcome:
         """The facts that start or end at one entity, for the detail panel."""
         node = URIRef(iri)
         facts = [
-            _public(f) for kind in (*GROUPS, IMPORTED) for f in self.facts.get(kind, [])
+            _public(f, self.names) for kind in (*GROUPS, IMPORTED) for f in self.facts.get(kind, [])
             if f["t"][0] == node or f["t"][2] == node
         ]
         return {
@@ -475,7 +479,7 @@ class Outcome:
             return None
         if t in self.stated:
             return {"family": "stated", "sentence": f"{fact_sentence(t, self.names)} (stated).", "premises": []}
-        return Explainer(self.stated, self.closure, self.names).explain(t)
+        return Explainer(self.stated, self.closure, self.names).explain(t, ui_metadata=True)
 
     # --- what the tree and the canvas draw (5.7) ---
 
@@ -501,8 +505,11 @@ def _term(text: str):
     return URIRef(text)
 
 
-def _public(fact: dict) -> dict:
-    return {k: v for k, v in fact.items() if k != "t"}
+def _public(fact: dict, names: Optional[Callable] = None) -> dict:
+    # Thousands of facts are sorted and retained; capture display facts only
+    # when a reader actually asks for these rows, not for every hidden page.
+    return {**{k: v for k, v in fact.items() if k != "t"},
+            **({"uiMessage": fact_message(fact["t"], names)} if names is not None else {})}
 
 
 def _wire(term) -> str:
@@ -570,15 +577,37 @@ _CHARACTERISTIC = {
     OWL.AsymmetricProperty: "is never both ways",
 }
 
+_CHARACTERISTIC_CODES = {
+    OWL.TransitiveProperty: "transitive", OWL.SymmetricProperty: "symmetric",
+    OWL.FunctionalProperty: "functional", OWL.InverseFunctionalProperty: "inverse_functional",
+    OWL.IrreflexiveProperty: "irreflexive", OWL.AsymmetricProperty: "asymmetric",
+}
 
-def premise(t: tuple, stated: Index, names: Callable) -> dict:
+
+def name_parts(term, names: Callable) -> list[dict]:
+    """An anonymous node is owned wording; a literal with that text is data."""
+    return ([word_part("words.reasoning.unnamed")] if isinstance(term, BNode)
+            else [literal_part(names(term))])
+
+
+def fact_message(t: tuple, names: Callable, *, characteristic: bool = False) -> dict:
+    s, p, o = t
+    if characteristic and p == RDF.type and o in _CHARACTERISTIC_CODES:
+        return make_message("reasoning.characteristic." + _CHARACTERISTIC_CODES[o], s=name_parts(s, names))
+    form = _FACT_FORMS.get(p, "link")
+    return make_message("reasoning.fact." + form, s=name_parts(s, names), o=name_parts(o, names),
+                        **({"p": name_parts(p, names)} if form == "link" else {}))
+
+
+def premise(t: tuple, stated: Index, names: Callable, *, ui_metadata: bool = True) -> dict:
     """One line of a reason: the fact, its sentence, and stated or inferred."""
     s, p, o = t
     if p == RDF.type and o in _CHARACTERISTIC:
         text = f"{names(s)} {_CHARACTERISTIC[o]}"
     else:
         text = fact_sentence(t, names)
-    return {**triple_json(t, names), "sentence": text, "inferred": t not in stated}
+    return {**triple_json(t, names), "sentence": text, "inferred": t not in stated,
+            **({"uiMessage": fact_message(t, names, characteristic=True)} if ui_metadata else {})}
 
 
 def definition(cls, text: str, kind=OWL.equivalentClass) -> dict:
@@ -606,7 +635,9 @@ class Explainer:
 
     # Each candidate is (family, premise triples, extra premises, joining
     # words); the first whose premises were all stated wins, else the first.
-    def explain(self, t: tuple) -> dict:
+    def explain(self, t: tuple, *, ui_metadata: bool = False) -> dict:
+        # The core can traverse every conclusion; the public Why boundary
+        # projects display facts for the one reason actually being read.
         best = None
         for candidate in self._candidates(t):
             triples = candidate[1]
@@ -618,7 +649,7 @@ class Explainer:
         if best is None:
             return {"family": None, "sentence": NO_REASON, "premises": []}
         family, triples, extra, text = best
-        premises = [premise(x, self.stated, self.names) for x in triples] + extra
+        premises = [premise(x, self.stated, self.names, ui_metadata=ui_metadata) for x in triples] + extra
         return {"family": family, "sentence": text, "premises": premises}
 
     def _n(self, term) -> str:
@@ -1037,6 +1068,8 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("disjoint", x, frozenset((c1, c2))),
             "kind": "disjointMember",
+            "uiMessage": make_message("reasoning.problem.disjoint_member", subject=name_parts(x, names),
+                                      first=name_parts(c1, names), second=name_parts(c2, names)),
             "sentence": (
                 f"{names(x)} cannot be both {a(names(c1))} and {a(names(c2))}: "
                 f"no {names(c1)} is {a(names(c2))}."
@@ -1050,6 +1083,7 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("irreflexive", x, p),
             "kind": "irreflexive",
+            "uiMessage": make_message("reasoning.problem.irreflexive", subject=name_parts(x, names), property=name_parts(p, names)),
             "sentence": f"{names(x)} is linked to itself by {names(p)}, which is never to itself.",
             "subject": str(x),
             "causes": [_cause((x, p, x), stated, names), _cause((p, RDF.type, OWL.IrreflexiveProperty), stated, names)],
@@ -1061,6 +1095,8 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("asymmetric", p, frozenset((x, y))),
             "kind": "asymmetric",
+            "uiMessage": make_message("reasoning.problem.asymmetric", first=name_parts(first, names),
+                                      second=name_parts(second, names), property=name_parts(p, names)),
             "sentence": (
                 f"{names(first)} {verb(names(p))} {names(second)} and {names(second)} {verb(names(p))} "
                 f"{names(first)}, but {names(p)} is never both ways."
@@ -1087,6 +1123,7 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("different", frozenset((x, y))),
             "kind": "differentSame",
+            "uiMessage": make_message("reasoning.problem.different_same", first=name_parts(first, names), second=name_parts(second, names)),
             "sentence": (
                 f"{names(first)} and {names(second)} are stated to be different things, "
                 "but the reasoner concludes they are the same thing."
@@ -1110,6 +1147,7 @@ def _reasoner_words(message: str, names: Callable, replace: Optional[Callable] =
     return {
         "id": ("other", message),
         "kind": "other",
+        "uiMessage": make_message("reasoning.problem.engine"),
         "sentence": f"{_IRI.sub(name, message)} (the reasoner's words)",
         "subject": None,
         "causes": [],
@@ -1137,14 +1175,18 @@ def _never_members(cls, message: str, stated: Index, names: Callable, probes: li
         if all(path is not None for path in paths) and rule in stated:
             causes = [_cause(t, stated, names) for path in paths for t in path] + [_cause(rule, stated, names)]
             kinds = [f"a kind of {names(c)}" for c in (c1, c2) if c != cls]
+            mode = "self" if rule[0] == cls == rule[2] else "parent" if cls in (rule[0], rule[2]) else "both"
             return {
                 "kind": "neverMembers",
+                "uiMessage": make_message("reasoning.problem.never." + mode, name=name_parts(cls, names),
+                    **({"first": name_parts(rule[0], names), "second": name_parts(rule[2], names)} if mode != "self" else {})),
                 "sentence": f"{base}: it is {' and '.join(kinds)}, and no {names(rule[0])} is {a(names(rule[2]))}.",
                 "subject": str(cls),
                 "causes": causes,
                 "reasoner": words,
             }
-    return {"kind": "neverMembers", "sentence": f"{base}.", "subject": str(cls), "causes": [], "reasoner": words}
+    return {"kind": "neverMembers", "sentence": f"{base}.", "subject": str(cls), "causes": [], "reasoner": words,
+            "uiMessage": make_message("reasoning.problem.never.unknown", name=name_parts(cls, names))}
 
 
 def _kind_path(stated: Index, start, goal) -> Optional[list]:

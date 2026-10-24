@@ -10,7 +10,7 @@ SUMMARY
     maps used to render the graph.
 
 BASIC IDEA
-    Warning and fix descriptors are additive; original text and command facts stay intact.
+    Warning, reasoning and fix descriptors are additive; original text and RDF facts stay intact.
     One source of truth for the data shapes crossing the API boundary keeps the
     frontend honest about what the backend sends. The palette/label section
     lives here too because colours are keyed by the same node/edge "kind"
@@ -1507,6 +1507,7 @@ export interface ReasoningFact {
   pLabel: string;
   oLabel: string;
   sentence: string;
+  uiMessage?: WireMessage | null;
 }
 
 /** One line of a reason: a fact used, or a class's rule (no `o`, no link). */
@@ -1518,6 +1519,7 @@ export interface ReasoningPremise {
   pLabel?: string;
   oLabel?: string;
   sentence: string;
+  uiMessage?: WireMessage | null;
   inferred: boolean;
 }
 
@@ -1540,6 +1542,7 @@ export type ReasoningProblemKind =
 export interface ReasoningProblem {
   kind: ReasoningProblemKind;
   sentence: string;
+  uiMessage?: WireMessage | null;
   // The entity the sentence is about, a link; null for the reasoner's words.
   subject: string | null;
   // The stated facts that cause it, each a link to its subject.
@@ -1584,5 +1587,6 @@ export interface ReasoningAbout {
 export interface WhyReason {
   family: string | null;
   sentence: string;
+  uiMessage?: WireMessage | null;
   premises: ReasoningPremise[];
 }

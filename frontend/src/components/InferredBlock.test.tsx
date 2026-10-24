@@ -5,6 +5,9 @@ FILE: frontend/src/components/InferredBlock.test.tsx
 SUMMARY
     Inferred-detail failures retain source errors across UI language changes.
 BASIC IDEA
+    Display metadata translates retained results and accessible labels without
+    changing selection IRIs, open details, focus or the original fetched data.
+
     Reject the real read boundary and switch locale and project identity; neither
     rerenders nor late responses may replace current facts with a former error.
 INPUTS / INPUT SOURCES
@@ -48,4 +51,18 @@ it("ignores a previous project's rejected about request", async () => {
   await act(async () => { reject(new Error("old about failure")); });
   expect(screen.queryByText("old about failure")).toBeNull();
   expect(screen.getByText("対象 can never have members.")).toBeTruthy();
+});
+
+
+it("translates retained about facts and selects the opposite original IRI", async () => {
+  const fact = { s: props.iri, p: "https://example.org/p", o: "https://example.org/b", sLabel: "対象", pLabel: "関係", oLabel: "相手", sentence: "Original about <img>",
+    uiMessage: { code: "reasoning.fact.link", args: { s: [{ text: "対象" }], p: [{ text: "関係" }], o: [{ text: "相手" }] } } };
+  getReasoningAbout.mockResolvedValue({ iri: props.iri, facts: [fact], neverMembers: false, stale: false });
+  const select = vi.fn();
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><InferredBlock {...props} onSelect={select} /></I18nProvider>); });
+  const link = screen.getByRole("button", { name: "「対象」は「関係」で「相手」と結ばれています。" });
+  expect(screen.getByText(fact.sentence).closest("details")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "対象 is linked to 相手 by 関係." })).toBe(link);
+  fireEvent.click(link); expect(select).toHaveBeenCalledWith(fact.o); expect(getReasoningAbout).toHaveBeenCalledTimes(1);
 });

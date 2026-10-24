@@ -11,6 +11,9 @@ SUMMARY
     walks back to what they wrote one step at a time.
 
 BASIC IDEA
+    Premises and reasons render additive source facts in the current language,
+    retaining original text and RDF targets independently of display labels.
+
     Retain original failure objects and render their metadata in the current UI
     locale, with escaped details. State belongs to one project and fact; a new
     target mounts a new disclosure and late responses to the old one are ignored.
@@ -42,6 +45,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { getWhy } from "../api";
 import { premiseMark } from "../reasoning/reasonSentences";
 import type { ReasoningPremise, WhyReason } from "../types";
+import ReasoningDetails from "./ReasoningDetails";
+import { reasoningText } from "../reasoning/resultText";
 
 interface Props {
   projectId: string;
@@ -117,7 +122,7 @@ function Reason({
 }) {
   const { t } = useI18n();
   if (reason.family === "stated" || reason.premises.length === 0) {
-    return <p className="detail-note why-plain">{reason.sentence}</p>;
+    return <><p className="detail-note why-plain">{reasoningText(reason, t)}</p><ReasoningDetails description={reason} /></>;
   }
   return (
     <>
@@ -140,25 +145,26 @@ function Premise({
   premise: ReasoningPremise;
   onSelect?: (iri: string) => void;
 }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const mark = premiseMark(premise.inferred, locale);
   return (
     <li className={`why-premise${premise.inferred ? " inferred" : ""}`}>
       {onSelect ? (
         <button type="button" className="term-link" onClick={() => onSelect(premise.s)}>
-          {premise.sentence}
+          {reasoningText(premise, t)}
         </button>
       ) : (
-        <span>{premise.sentence}</span>
+        <span>{reasoningText(premise, t)}</span>
       )}{" "}
       <span className="why-mark">{mark}</span>
+      <ReasoningDetails description={premise} />
       {premise.inferred && premise.o !== null && (
         <>
           {" "}
           <WhyDisclosure
             projectId={projectId}
             fact={{ s: premise.s, p: premise.p, o: premise.o }}
-            label={premise.sentence}
+            label={reasoningText(premise, t)}
             onSelect={onSelect}
           />
         </>

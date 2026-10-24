@@ -879,7 +879,102 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "projects.viewport": {},
+  "reasoning.characteristic.asymmetric": {
+    "s": "parts"
+  },
+  "reasoning.characteristic.functional": {
+    "s": "parts"
+  },
+  "reasoning.characteristic.inverse_functional": {
+    "s": "parts"
+  },
+  "reasoning.characteristic.irreflexive": {
+    "s": "parts"
+  },
+  "reasoning.characteristic.symmetric": {
+    "s": "parts"
+  },
+  "reasoning.characteristic.transitive": {
+    "s": "parts"
+  },
+  "reasoning.fact.different": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.disjoint": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.domain": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.equivalent": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.inverse": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.kind": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.link": {
+    "o": "parts",
+    "p": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.range": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.same": {
+    "o": "parts",
+    "s": "parts"
+  },
+  "reasoning.fact.type": {
+    "o": "parts",
+    "s": "parts"
+  },
   "reasoning.failed": {},
+  "reasoning.problem.asymmetric": {
+    "first": "parts",
+    "property": "parts",
+    "second": "parts"
+  },
+  "reasoning.problem.different_same": {
+    "first": "parts",
+    "second": "parts"
+  },
+  "reasoning.problem.disjoint_member": {
+    "first": "parts",
+    "second": "parts",
+    "subject": "parts"
+  },
+  "reasoning.problem.engine": {},
+  "reasoning.problem.irreflexive": {
+    "property": "parts",
+    "subject": "parts"
+  },
+  "reasoning.problem.never.both": {
+    "first": "parts",
+    "name": "parts",
+    "second": "parts"
+  },
+  "reasoning.problem.never.parent": {
+    "first": "parts",
+    "name": "parts",
+    "second": "parts"
+  },
+  "reasoning.problem.never.self": {
+    "name": "parts"
+  },
+  "reasoning.problem.never.unknown": {
+    "name": "parts"
+  },
+  "reasoning.result.unknown": {},
   "reasoning.stopped": {},
   "reasoning.timeout": {
     "seconds": "number"
@@ -1444,6 +1539,7 @@ export const SERVER_CONTRACTS = {
   "words.path.nameLabel": {},
   "words.path.or": {},
   "words.path.preferredName": {},
+  "words.reasoning.unnamed": {},
   "words.severity.violation": {},
   "words.severity.warning": {},
   "words.validation.missing_value": {},
@@ -1745,7 +1841,33 @@ export interface ServerMessageArgs {
   "projects.shown": undefined;
   "projects.template": { "name": string };
   "projects.viewport": undefined;
+  "reasoning.characteristic.asymmetric": { "s": string };
+  "reasoning.characteristic.functional": { "s": string };
+  "reasoning.characteristic.inverse_functional": { "s": string };
+  "reasoning.characteristic.irreflexive": { "s": string };
+  "reasoning.characteristic.symmetric": { "s": string };
+  "reasoning.characteristic.transitive": { "s": string };
+  "reasoning.fact.different": { "o": string; "s": string };
+  "reasoning.fact.disjoint": { "o": string; "s": string };
+  "reasoning.fact.domain": { "o": string; "s": string };
+  "reasoning.fact.equivalent": { "o": string; "s": string };
+  "reasoning.fact.inverse": { "o": string; "s": string };
+  "reasoning.fact.kind": { "o": string; "s": string };
+  "reasoning.fact.link": { "o": string; "p": string; "s": string };
+  "reasoning.fact.range": { "o": string; "s": string };
+  "reasoning.fact.same": { "o": string; "s": string };
+  "reasoning.fact.type": { "o": string; "s": string };
   "reasoning.failed": undefined;
+  "reasoning.problem.asymmetric": { "first": string; "property": string; "second": string };
+  "reasoning.problem.different_same": { "first": string; "second": string };
+  "reasoning.problem.disjoint_member": { "first": string; "second": string; "subject": string };
+  "reasoning.problem.engine": undefined;
+  "reasoning.problem.irreflexive": { "property": string; "subject": string };
+  "reasoning.problem.never.both": { "first": string; "name": string; "second": string };
+  "reasoning.problem.never.parent": { "first": string; "name": string; "second": string };
+  "reasoning.problem.never.self": { "name": string };
+  "reasoning.problem.never.unknown": { "name": string };
+  "reasoning.result.unknown": undefined;
   "reasoning.stopped": undefined;
   "reasoning.timeout": { "seconds": number };
   "reasoning.too_large": { "count": number; "limit": number };
@@ -1979,6 +2101,7 @@ export interface ServerMessageArgs {
   "words.path.nameLabel": undefined;
   "words.path.or": undefined;
   "words.path.preferredName": undefined;
+  "words.reasoning.unnamed": undefined;
   "words.severity.violation": undefined;
   "words.severity.warning": undefined;
   "words.validation.missing_value": undefined;

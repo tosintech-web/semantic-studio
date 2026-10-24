@@ -12,6 +12,9 @@ SUMMARY
     canvas are given. Plus the timing budgets of Section 10.
 
 BASIC IDEA
+    Additive display facts retain exact legacy sentences and original RDF names
+    through actual reasoning routes.
+
     Every model is written in the test (rdf-fixture): a shop model in
     Turtle, applied to a Small project through the Turtle route as a
     learner would, so the run goes through the real route, the real
@@ -169,6 +172,10 @@ def test_the_shop_models_facts_exactly_in_their_groups(shop):
     for item in items(result):
         assert item["s"].startswith(EX) and item["o"].startswith(EX), item
         assert item["s"] != item["o"]
+        wire = item["uiMessage"]
+        assert wire["code"].startswith("reasoning.fact.")
+        assert wire["args"]["s"] == [{"text": item["sLabel"]}]
+        assert wire["args"]["o"] == [{"text": item["oLabel"]}]
 
 
 def test_facts_about_imported_terms_alone_are_counted_apart():
@@ -258,6 +265,10 @@ def test_a_thing_in_disjoint_classes_and_a_class_that_can_never_have_members(sho
         "carl cannot be both a Person and an Organization: no Person is an Organization.",
     ]
     robot, carl = result["problems"]
+    assert robot["uiMessage"]["code"] == "reasoning.problem.never.both"
+    assert carl["uiMessage"]["code"] == "reasoning.problem.disjoint_member"
+    for problem in (robot, carl):
+        assert all(cause["uiMessage"]["code"].startswith("reasoning.fact.") for cause in problem["causes"])
     assert robot["kind"] == "neverMembers" and robot["subject"] == EX + "Robot"
     # Its causes: the stated path to each of the pair, and the disjointness,
     # each a fact whose subject is a link.
@@ -321,6 +332,9 @@ def test_never_to_itself_never_both_ways_and_different_things_made_the_same_each
     """)
     result = reason(shop)
     problems = {p["kind"]: p for p in result["problems"]}
+    for kind, code in (("irreflexive", "irreflexive"), ("asymmetric", "asymmetric"), ("differentSame", "different_same")):
+        assert problems[kind]["uiMessage"]["code"] == "reasoning.problem." + code
+        assert all(cause.get("uiMessage") for cause in problems[kind]["causes"])
     assert problems["irreflexive"]["sentence"] == "Alice is linked to itself by knows, which is never to itself."
     # OWL-RL reports the pair once per direction; it is shown once.
     assert sum(1 for p in result["problems"] if p["kind"] == "asymmetric") == 1

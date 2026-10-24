@@ -11,6 +11,9 @@ SUMMARY
     behind Show inferred, and never editable.
 
 BASIC IDEA
+    Fact descriptions render source metadata without changing the original
+    selection target or re-fetching when the UI language changes.
+
     Failures retain their original object and request identity. UI language
     changes translate the explanation without another read; old errors and late
     responses cannot replace a new target's facts.
@@ -38,6 +41,8 @@ import { useEffect, useState } from "react";
 import { getReasoningAbout } from "../api";
 import type { ReasoningAbout } from "../types";
 import WhyDisclosure from "./WhyDisclosure";
+import ReasoningDetails from "./ReasoningDetails";
+import { reasoningText } from "../reasoning/resultText";
 
 interface Props {
   projectId: string;
@@ -97,10 +102,11 @@ export default function InferredBlock({ projectId, iri, imports, resultKey, revi
             return (
               <li key={`${fact.s}|${fact.p}|${fact.o}`}>
                 <button type="button" className="term-link" onClick={() => onSelect(other)}>
-                  {fact.sentence}
+                  {reasoningText(fact, t)}
                 </button>{" "}
                 <span className="why-mark">{t("reasonWords.inferred")}</span>{" "}
-                <WhyDisclosure projectId={projectId} fact={fact} label={fact.sentence} onSelect={onSelect} />
+                <WhyDisclosure projectId={projectId} fact={fact} label={reasoningText(fact, t)} onSelect={onSelect} />
+                <ReasoningDetails description={fact} />
               </li>
             );
           })}

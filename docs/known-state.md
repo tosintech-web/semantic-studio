@@ -2561,3 +2561,29 @@ a native technical-details disclosure. Inferred-detail errors also carry the
 request identity, so a new target cannot briefly show a previous error before
 its effect clears it. Locale changes do not repeat the request, close details,
 or replace the focused summary.
+
+### Reasoning display facts at read boundaries (P1)
+
+Facts, contradiction families and their causes expose additive `uiMessage`
+metadata. Raw RDF names remain literal parts; unnamed blank nodes use an owned
+word token. An authored literal or label that says the same English words stays
+authored. The original sentence, sort keys, RDF term strings, groups and true
+counts remain intact. UI locale changes render retained metadata, without a new
+reasoning run or a change to selection. Unknown engine diagnostics remain in
+escaped original details under an owned explanation.
+
+Fact metadata is projected for the requested page/about rows. The internal
+explainer retains its legacy traversal by default; `Outcome.why` explicitly
+requests display metadata for the one reason being read. Causes created for
+public problems also capture it. An initial eager implementation generated
+12,000 premise descriptors during the 6,000-conclusion budget: with the same
+fixture and median of five, the previous code took 257.562 ms and the eager
+version 351.302 ms. After projection moved to the read boundary, a paired run
+took 247.892 ms before and 244.385 ms after, within the unchanged 300 ms limit
+(Python 3.14.4, factor 1). The regression test separately proves that public Why
+still returns each premise's metadata while the core bulk walk generates none.
+
+This migration covers fact and problem descriptions and fact premises. Whole
+one-step explanation frames and class-expression definition premises are
+tracked separately in the remaining P1 work; this is not an assertion that all
+reasoning wording has been translated.

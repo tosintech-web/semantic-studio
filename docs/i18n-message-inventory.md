@@ -47,7 +47,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/ExploreStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 操作・所有文言を移行、rule/data生成元は別途移行 |
 | `frontend/src/components/HierarchyView.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（データラベル・runner拒否の生成元はTask 12） |
 | `frontend/src/components/HierarchyActions.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（データラベル・runner拒否の生成元はTask 12） |
-| `frontend/src/components/EntityPicker.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/EntityPicker.tsx` | 探索・編集・クエリ・説明文 | 11 | 検索・IME・操作文言を移行済み（取得エラー原文の開示は全体監査中） |
 | `frontend/src/components/EditSection.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner・通知の生成元はTask 12） |
 | `frontend/src/components/EditStructure.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（通知・拒否の生成元はTask 12） |
 | `frontend/src/components/EditParts.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner・通知の生成元はTask 12） |
@@ -115,6 +115,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 
 | `frontend/src/reasoning/reasonSentences.ts` | 推論の状態・件数・案内 | 11/12 | 共通関数を移行、状態判定と件数集計は保持 |
 | `frontend/src/components/ReasoningPanel.tsx` | 推論の操作・結果の枠 | 11/12 | 画面所有文言・終了メタデータを接続（事実・原因・APIエラーの生成元はTask 12） |
+| `frontend/src/components/ReasoningDetails.tsx` | 翻訳表示に添える原文の開示 | 12 | 既知の表示情報を現在のUI言語で表示、旧サーバーは原文表示 |
+| `frontend/src/reasoning/resultText.ts` | 推論結果の構造化情報・未知情報の表示 | 12 | 既知の表示情報を現在のUI言語で表示、旧サーバーは原文表示 |
 | `frontend/src/components/WhyDisclosure.tsx` | 根拠の開閉・表示の枠 | 11/12 | 画面所有文言を移行、開閉と取得済み結果を保持（サーバーの根拠文はTask 12） |
 | `frontend/src/components/InferredBlock.tsx` | 詳細の推論結果の枠 | 11/12 | 見出しと個体を持てないことの説明を移行（事実文・APIエラーの生成元はTask 12） |
 
@@ -532,7 +534,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/InferredBlock.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/InferredBlock.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningDetails.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -3064,3 +3066,49 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `shape.readonly.precision` | predicate, value | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
 | `shape.readonly.unknown` | — | `frontend/src/components/ShapeForm.tsx`<br>`backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
 | `shapeWords.problem.precision` | limit | `frontend/src/modeling/shapeSentences.ts` | 数値の精度保護 | 12 | 入力原文を保持し、Turtleへ案内 |
+
+### 推論の事実・矛盾・原因の表示情報
+
+| `reasoning.fact.type` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.kind` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.equivalent` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.same` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.different` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.disjoint` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.inverse` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.domain` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.range` | s, o | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.fact.link` | s, o, p | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.characteristic.transitive` | s | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.characteristic.symmetric` | s | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.characteristic.functional` | s | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.characteristic.inverse_functional` | s | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.characteristic.irreflexive` | s | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.characteristic.asymmetric` | s | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.disjoint_member` | subject, first, second | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.irreflexive` | subject, property | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.asymmetric` | first, second, property | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.different_same` | first, second | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.engine` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.never.self` | name | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.never.parent` | name, first, second | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.never.both` | name, first, second | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.problem.never.unknown` | name | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+| `reasoning.result.unknown` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/reasoning/resultText.ts` | 推論結果・原文詳細 | 12 | 未知の表示情報への案内 |
+| `words.reasoning.unnamed` | — | `backend/app/reasoning.py` | 推論結果・原文詳細 | 12 | source facts接続 |
+
+### JSX直接文言の確認範囲（2026-10-25）
+
+TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-label/placeholder/alt
+の直接リテラルから英字を含む21箇所を確認した。残る直接文言は次の通り。
+これだけで式・変数・サーバー由来の文言まで移行済みとは扱わない。
+
+| 対象 | 保持する文言の種類 | 理由 |
+| --- | --- | --- |
+| ClassNode / AttributeForm / ConceptRelations / NewEntityForm | xsd / owl / skos の接頭辞・語彙名 | RDFの識別子を維持 |
+| ConceptRelations / NewEntityForm | dbpedia / example.org の例示IRI | IRIの値を維持 |
+| HomeScreen / Logo | Semantic Studio / SEMANTIC / STUDIO | 製品名とマークを維持 |
+| LoadDialog / ProjectHeader / TurtleEditor | Turtle等の形式名、fr言語タグ | 技術名・言語タグを維持 |
+| QueryPanel / ResultsTable | SPARQL / LIMIT / ms | クエリ構文・単位を維持 |
+| UiLanguageSelect | English | 切替先の言語を、その言語名で示す |
+| ErrorBoundary | 日英併記の最小エラー・再読み込み | 翻訳機構そのものが失敗した場合の安全な案内を維持 |
