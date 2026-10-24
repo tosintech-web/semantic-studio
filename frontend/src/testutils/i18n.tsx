@@ -15,12 +15,13 @@ EXPECTED OUTPUT
 import type { ReactNode } from "react";
 import { render } from "@testing-library/react";
 import type { RenderOptions } from "@testing-library/react";
-import { I18nContext } from "../i18n/I18nProvider";
+import { I18nContext, type I18nValue } from "../i18n/I18nProvider";
 import { translate } from "../i18n/format";
 import type { Translator } from "../i18n/types";
 const t = ((code, args) => translate("en", code, args)) as Translator;
+const englishContext: I18nValue = { locale: "en", setLocale() {}, t };
 function English({ children }: { children: ReactNode }) {
-  return <I18nContext.Provider value={{ locale: "en", setLocale() {}, t }}>{children}</I18nContext.Provider>;
+  return <I18nContext.Provider value={englishContext}>{children}</I18nContext.Provider>;
 }
 export function renderEn(ui: ReactNode, options?: Omit<RenderOptions, "wrapper">) {
   return render(ui, { ...options, wrapper: English });

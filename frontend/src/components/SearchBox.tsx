@@ -119,7 +119,7 @@ export default function SearchBox({ ontologyId, theme, onPick, drawnIds = null, 
             {r.match && <span className="result-match">{t(`match.${r.match.reason}`, { value: r.match.value })}</span>}
             {drawnIds !== null && !drawnIds.has(r.id) && <span className="result-undrawn" title={t("search.undrawnTitle")}>{t("search.undrawn")}</span>}
             {r.importedFrom && <span className="result-imported">{t("search.from", { name: r.importedFrom })}</span>}
-            <span className="result-kind">{kindLabel(r.kind)}</span>
+            <span className="result-kind">{kindLabel(r.kind, t)}</span>
           </li>)}
         </ul>
         {more && <p className="search-more">{t("search.narrow", { count: SHOWN_RESULTS })}

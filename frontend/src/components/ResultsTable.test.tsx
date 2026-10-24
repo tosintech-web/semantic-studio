@@ -37,8 +37,13 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { translate } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import ResultsTable, { describeServices } from "./ResultsTable";
 import type { ServiceCall, SparqlResults, SparqlTerm } from "../types";
 
@@ -668,5 +673,37 @@ describe("ResultsTable SERVICE endpoints (external-access AC-32)", () => {
   it("is shown even when no rows came back", () => {
     renderTable({ ...resultsWith(0), vars: ["s"], services: [call({ rows: 0 })] });
     expect(screen.getByText("Includes results from query.wikidata.org.")).toBeTruthy();
+  });
+});
+
+describe("result UI language", () => {
+  it("keeps the result page and capped export pending while changing UI language", () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    const results = resultsWith(31, true);
+    render(<I18nProvider><UiLanguageSelect /><ResultsTable results={results} onPickIri={vi.fn()} onViewInSource={vi.fn()} onClear={vi.fn()} /></I18nProvider>);
+    expect(screen.getByText("31件まで表示")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "次のページ" }));
+    expect(screen.getByRole("status").textContent).toBe("3ページ中2ページ目、31件中16〜30件を表示");
+    expect(screen.getByRole("button", { name: "E0015のソースを表示" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "CSV出力" }));
+    expect(screen.getByRole("dialog", { name: "上限で打ち切られた結果を出力しますか？" }).textContent).toContain("先頭31件");
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("dialog", { name: "Export capped results?" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Page 2 of 3, showing rows 16 to 30 of 31");
+    expect(triggerDownload).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Export anyway" }));
+    expect(triggerDownload).toHaveBeenCalledTimes(1);
+  });
+
+  it("translates SERVICE summary and row limits with host names and raw failure detail intact", () => {
+    const ja = ((key, args) => translate("ja", key, args)) as Translator;
+    expect(describeServices([
+      { endpoint: "https://example.org/sparql", host: "example.org", rows: 1500, truncated: true, ms: 5, error: null },
+      { endpoint: "https://failed.example.org/sparql", host: "failed.example.org", rows: 0, truncated: false, ms: 5, error: "<raw failure>" },
+    ], ja)).toEqual([
+      "example.orgからの結果を含みます。",
+      "example.orgからの応答は1,500行で打ち切られました。",
+      "SERVICE SILENTによりfailed.example.orgの結果を省略して続行しました：<raw failure>",
+    ]);
   });
 });

@@ -17,7 +17,7 @@ BASIC IDEA
     (The query-builder-specific state model lives in sparql/types.ts.)
 
 INPUTS / INPUT SOURCES
-    - None at runtime; these are type declarations and colour constants.
+    - API data shapes, the central theme palette and an optional UI translator.
 
 EXPECTED OUTPUT
     - Types imported across the app; PALETTES / kindColor / nodeColor /
@@ -27,6 +27,8 @@ EXPECTED OUTPUT
 */
 
 export type { WireMessage } from "./i18n/server-contracts";
+import type { Translator } from "./i18n/types";
+import { kindLabelMessage } from "./i18n/kindLabel";
 import type { EntityMatchWire } from "./entities/types";
 import type { QueryState } from "./sparql/types";
 import {
@@ -865,9 +867,10 @@ export const KIND_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-/** A kind in words; an unknown or inherited kind is "Other" (X-6). */
-export function kindLabel(kind: string): string {
-  return own(KIND_LABELS, kind) ?? KIND_LABELS.other;
+/** A kind in the current UI language; legacy callers default to English.
+ * Unknown or inherited keys remain Other (X-6), independently of the palette. */
+export function kindLabel(kind: string, t?: Translator): string {
+  return t ? kindLabelMessage(kind, t) : own(KIND_LABELS, kind) ?? KIND_LABELS.other;
 }
 
 /* --- owl:imports (external-access Stage 2) --------------------------------- */

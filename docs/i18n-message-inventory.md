@@ -38,6 +38,59 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/sparql/resultNodes.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
 | `frontend/src/i18n/kindLabel.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
 
+## Task 11の対象パス
+
+| source path | 用途 | Task | 状態 |
+| --- | --- | --- | --- |
+| `frontend/src/components/DetailPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ExplainBlock.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ExploreStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/HierarchyView.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/HierarchyActions.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/EntityPicker.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/EditSection.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/EditStructure.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/EditParts.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/CreateForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/NewEntityForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/RelationshipForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/AttributeForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/AnnotationAdder.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ConceptRelations.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/SharedDomain.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ReusePlan.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/DeleteDialog.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/LinkPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ExampleForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/QueryPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/QueryStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ResultsTable.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行済み |
+| `frontend/src/components/ResultPanels.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/PathBar.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ClassPropsMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/PredicateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/NextSteps.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/SparqlEditor.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/SparqlPreview.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/NothingSelected.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/types.ts` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
+| `frontend/src/components/SearchBox.tsx` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
+| `frontend/src/modeling/sentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/modeling/ruleSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/explain/explainSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/explain/glossary.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/sparql/starters.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/useCanvasData.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/relate.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/layered.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/kindColours.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/curves.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/RelateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/ModelCanvas.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/ConceptNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/ClassNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/CanvasAids.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+
 ## 登録済みメッセージ
 
 一覧は現在のカタログと使用箇所から生成した作業記録。動的キーの接頭辞も使用箇所として記載する。
@@ -592,7 +645,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/EntityPicker.tsx` <br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -636,6 +689,36 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `entities.page_too_large` | total, suggested_limit | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
 | `entities.view_changed` | — | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
 | `request.invalid` | — | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
+| `results.title` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.page` | page, pages | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.capHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.cap` | count | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.noExport` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.csvHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.jsonHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.csv` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.json` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.frameHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.frame` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.clearHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.clear` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.noRows` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.sort` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.source` | name | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.pages` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.first` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.prev` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.next` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.last` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.alreadyFirst` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.alreadyLast` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.range` | end, page, pages, start, total | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.exportTitle` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.exportBody` | count | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.exportAnyway` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.services` | hosts | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.serviceCap` | count, host | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.serviceSkipped` | error, host | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
 
 ## 対象外・生成元待ち
 
@@ -658,3 +741,5 @@ Task 10の補足：`ConfirmDialog`自身は表示文を持たず、呼び出し�
 `ProjectHeader`の操作履歴、参照解決の制限・失敗理由、データスナップショットのラベルなど、生成元で文章化される値はTask 12でコード・引数へ移行する。
 `SourceView`、`TurtleEditor`のRDF本文、利用者が指定した名前・IRI、外部解析器の原文は保持する。ファイル名やバックアップ先は翻訳文に値として挿入する。
 `coverage.test.ts`はTypeScriptの構文木から使用箇所を読む。任意の未翻訳文言の不在や、画面上の収まり・読み上げの品質まで保証するものではない。
+
+`types.ts`の`KIND_LABELS`は従来の呼び出し元向けの英語互換表。UIの種類名は現在の翻訳関数を渡し、色は引き続き`theme/kinds.ts`の定義を使う。

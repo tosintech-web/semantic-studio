@@ -14,8 +14,8 @@
 
 基準：MainのPR #1マージ `dbb3576`。作成日：2026-10-24。
 本書はマージ済み仕様のP1を実装へ分解した計画。独立レビューの重要指摘は修正・再確認済み。
-2026-10-24：ユーザーの実装承認を受け、Task 1〜9の基盤・検索・一覧・構造化メッセージを実装済み。
-Task 10〜12の既存画面全体の翻訳、Task 13の
+2026-10-24：ユーザーの実装承認を受け、Task 1〜10の基盤・検索・一覧・構造化メッセージと共通画面の翻訳を実装済み。
+Task 11〜12の探索・編集・クエリ・検証等の翻訳、Task 13の
 性能・実ブラウザ・公開前確認、および実装全体の独立レビューは未完了。
 部分的な日本語表示をP1全体の完成とは扱わない。
 問い合わせ先はユーザー指定により、このリポジトリのIssuesとする。改変部分の新しい
@@ -335,17 +335,17 @@ ImportsPanel,SourceView,TurtleEditor,GraphNotice,Legend}.tsx`、`loadWords.ts`�
 `statusWords.ts`、`removalPrompt.ts`、`projects/form.ts`、対応テスト、日英カタログ。
 追加 `docs/i18n-message-inventory.md`、`frontend/src/i18n/coverage.test.ts`。
 
-- [ ] 画面文字列・title/aria/placeholder・純粋関数・サーバー例外の発生箇所を棚卸しし、
+- [x] 画面文字列・title/aria/placeholder・純粋関数・サーバー例外の発生箇所を棚卸しし、
   inventoryにsource path、用途、code、args、Task番号、状態を記録する。
   ナビ6語、閲覧/編集の区別、保存状態の意味を既存スナップショット任せでなく明示的にテストする。
-- [ ] `UiLanguageSelect` をホームでも表示し、各列挙コンポーネントをカタログへ移行する。
+- [x] `UiLanguageSelect` をホームでも表示し、各列挙コンポーネントをカタログへ移行する。
   既存の英語表示テストはen Providerを明示し、アプリの初期値を英語へ戻して通さない。
-- [ ] 数値/日時/ライブ通知も移行し、ファイル形式名・RDF言語タグ・利用者の名前は原表記を保つ。
-- [ ] AboutのMIT・原作者・第三者通知はTask 1の内容を利用し、翻訳で法的原文を置き換えない。
+- [x] 数値/日時/ライブ通知も移行し、ファイル形式名・RDF言語タグ・利用者の名前は原表記を保つ。
+- [x] AboutのMIT・原作者・第三者通知はTask 1の内容を利用し、翻訳で法的原文を置き換えない。
   ソース参照先を元作者と改変版で区別する。未知の提供者名を補わない。
-- [ ] inventoryを検証するcoverageテストを追加し、対象source pathの漏れ、存在しないキー、
+- [x] inventoryを検証するcoverageテストを追加し、対象source pathの漏れ、存在しないキー、
   ja/enのキー・引数不一致を失敗させる。RDF/SPARQL/外部原文は理由付きで対象外と記録する。
-- [ ] frontendの上記既存テストと `npm run test -- src/i18n/coverage.test.ts src/components/HomeScreen.test.tsx src/components/LoadDialog.test.tsx src/components/ProjectHeader.test.tsx src/components/AboutPanel.test.tsx` を実行し、PASS後コミットする。
+- [x] frontendの上記既存テストと `npm run test -- src/i18n/coverage.test.ts src/components/HomeScreen.test.tsx src/components/LoadDialog.test.tsx src/components/ProjectHeader.test.tsx src/components/AboutPanel.test.tsx` を実行し、PASS後コミットする。
 
 ## Task 11 — 探索・編集・クエリとフロント説明文の翻訳
 

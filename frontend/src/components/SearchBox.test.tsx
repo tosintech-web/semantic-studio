@@ -37,6 +37,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SearchBox from "./SearchBox";
@@ -436,4 +438,21 @@ it("passes the current query to the all-results door without changing a query st
   await act(async () => { vi.advanceTimersByTime(300); });
   fireEvent.click(screen.getByRole("button", { name: "See all in Entities" }));
   expect(all).toHaveBeenCalledWith("犬"); expect(pick).not.toHaveBeenCalled();
+});
+
+it("translates result kinds on UI language changes while preserving the entity label and search result", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  searchNodes.mockResolvedValue([{ ...DRAWN, label: "<b>犬</b>" }]);
+  const onPick = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><SearchBox ontologyId="o1" theme="dark" onPick={onPick} /></I18nProvider>);
+  fireEvent.change(screen.getByRole("combobox", { name: "辞書の項目を検索…" }), { target: { value: "犬" } });
+  await act(async () => { vi.advanceTimersByTime(300); });
+  expect(screen.getByText("クラス")).toBeTruthy();
+  expect(screen.getByText("<b>犬</b>")).toBeTruthy();
+  expect(document.querySelector(".result-label b")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("Class")).toBeTruthy();
+  expect(screen.getByText("<b>犬</b>")).toBeTruthy();
+  expect(searchNodes).toHaveBeenCalledTimes(1);
+  expect(onPick).not.toHaveBeenCalled();
 });

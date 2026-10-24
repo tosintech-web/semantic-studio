@@ -51,6 +51,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator, formatNumber } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { triggerDownload } from "../download";
 import { resultsFilename, toCsv, toJson } from "../sparql/exportResults";
@@ -108,23 +111,24 @@ function sortValue(term: SparqlTerm | null): string | number {
  * which failed and were skipped under SERVICE SILENT. Hosts rather than full
  * endpoint addresses, because the host is what the user approved.
  */
-export function describeServices(services: ServiceCall[]): string[] {
+export function describeServices(services: ServiceCall[], t: Translator = englishTranslator): string[] {
   const answered = [...new Set(services.filter((s) => !s.error).map((s) => s.host))];
   const lines: string[] = [];
-  if (answered.length > 0) lines.push(`Includes results from ${answered.join(", ")}.`);
+  if (answered.length > 0) lines.push(t("results.services", { hosts: answered.join(", ") }));
   for (const s of services) {
     if (s.truncated) {
-      lines.push(`The answer from ${s.host} was capped at ${s.rows.toLocaleString()} rows.`);
+      lines.push(t("results.serviceCap", { host: s.host, count: s.rows }));
     }
-    if (s.error) lines.push(`SERVICE SILENT went on without ${s.host}: ${s.error}`);
+    if (s.error) lines.push(t("results.serviceSkipped", { host: s.host, error: s.error }));
   }
   return lines;
 }
 
 function ServiceNotes({ services }: { services: ServiceCall[] }) {
+  const { t } = useI18n();
   return (
     <div className="results-services">
-      {describeServices(services).map((line, i) => (
+      {describeServices(services, t).map((line, i) => (
         <p key={i}>{line}</p>
       ))}
     </div>
@@ -140,6 +144,7 @@ function ResultsTable({
   onFrame,
   graphNote = null,
 }: Props) {
+  const { t, locale } = useI18n();
   const [sort, setSort] = useState<{ column: number; asc: boolean } | null>(null);
   const [page, setPage] = useState(0);
   // The format awaiting the truncation confirmation, or null when no dialog is
@@ -305,17 +310,17 @@ function ResultsTable({
     <div className="results">
       <div className="results-header">
         <span>
-          RESULTS <span className="count">{results.rowCount.toLocaleString()}</span>
+          {t("results.title")} <span className="count">{formatNumber(locale, results.rowCount)}</span>
         </span>
-        <span className="dim">{results.durationMs.toLocaleString()} ms</span>
+        <span className="dim">{formatNumber(locale, results.durationMs)} ms</span>
         {paged && (
           <span className="results-page">
-            page {current + 1} of {pageCount}
+            {t("results.page", { page: current + 1, pages: pageCount })}
           </span>
         )}
         {results.truncated && (
-          <span className="results-truncated" title="The server caps result rows">
-            capped at {results.rowCount.toLocaleString()} rows
+          <span className="results-truncated" title={t("results.capHint")}>
+            {t("results.cap", { count: results.rowCount })}
           </span>
         )}
         <div className="spacer" />
@@ -328,19 +333,19 @@ function ResultsTable({
           ref={csvBtnRef}
           className="ghost results-export"
           aria-disabled={noRows}
-          title={noRows ? "No results to export" : "Download all rows as CSV"}
+          title={noRows ? t("results.noExport") : t("results.csvHint")}
           onClick={() => requestExport("csv")}
         >
-          Export CSV
+          {t("results.csv")}
         </button>
         <button
           ref={jsonBtnRef}
           className="ghost results-export"
           aria-disabled={noRows}
-          title={noRows ? "No results to export" : "Download all rows as JSON (W3C SPARQL shape)"}
+          title={noRows ? t("results.noExport") : t("results.jsonHint")}
           onClick={() => requestExport("json")}
         >
-          Export JSON
+          {t("results.json")}
         </button>
         {/* "Clear results", not "Clear": the path bar already has a control
             called Clear path, and two controls sharing a word while doing
@@ -352,17 +357,17 @@ function ResultsTable({
           <button
             className="ghost results-frame"
             onClick={onFrame}
-            title="Move the graph's view to the results"
+            title={t("results.frameHint")}
           >
-            Frame on graph
+            {t("results.frame")}
           </button>
         )}
         <button
           className="ghost results-clear"
           onClick={onClear}
-          title="Empty the results area. The query is not changed"
+          title={t("results.clearHint")}
         >
-          Clear results
+          {t("results.clear")}
         </button>
       </div>
       {graphNote && <p className="results-graph-note">{graphNote}</p>}
@@ -371,7 +376,7 @@ function ResultsTable({
       )}
       {results.rowCount === 0 ? (
         <p className="detail-note">
-          No rows matched. Try removing a filter, or making a hop OPTIONAL.
+          {t("results.noRows")}
         </p>
       ) : (
         <>
@@ -391,7 +396,7 @@ function ResultsTable({
                         // A sort whose top the user cannot see is not a sort.
                         setPage(0);
                       }}
-                      title="Sort by this column"
+                      title={t("results.sort")}
                     >
                       {name}
                       {sort?.column === index && <span className="sort-arrow">{sort.asc ? "▲" : "▼"}</span>}
@@ -426,8 +431,8 @@ function ResultsTable({
                                 a decorative glyph — see architecture.md v0.16. */}
                             <button
                               className="result-source"
-                              aria-label={`View ${chipLabel(term)} in source`}
-                              title={`View ${chipLabel(term)} in source`}
+                              aria-label={t("results.source", { name: chipLabel(term) })}
+                              title={t("results.source", { name: chipLabel(term) })}
                               onClick={() => onViewInSource(term.value, term.prefixed)}
                             >
                               <span aria-hidden="true">◧</span>
@@ -447,13 +452,13 @@ function ResultsTable({
             </table>
           </div>
           {paged && (
-            <nav className="results-pager" aria-label="Result pages">
+            <nav className="results-pager" aria-label={t("results.pages")}>
               <button
                 className="pager-btn"
-                aria-label="First page"
+                aria-label={t("results.first")}
                 aria-disabled={current === 0}
                 disabled={current === 0}
-                title={current === 0 ? "Already on the first page" : "First page"}
+                title={current === 0 ? t("results.alreadyFirst") : t("results.first")}
                 onClick={() => goTo(0, "first")}
               >
                 <span aria-hidden="true">|◀</span>
@@ -461,10 +466,10 @@ function ResultsTable({
               <button
                 ref={prevRef}
                 className="pager-btn"
-                aria-label="Previous page"
+                aria-label={t("results.prev")}
                 aria-disabled={current === 0}
                 disabled={current === 0}
-                title={current === 0 ? "Already on the first page" : "Previous page"}
+                title={current === 0 ? t("results.alreadyFirst") : t("results.prev")}
                 onClick={() => goTo(current - 1, "prev")}
               >
                 <span aria-hidden="true">◀</span>
@@ -473,26 +478,25 @@ function ResultsTable({
                   page, not created on the first change — a live region added at
                   the moment its content appears is not reliably announced. */}
               <span className="results-page-status" role="status" aria-live="polite">
-                Page {current + 1} of {pageCount}, showing rows {firstRow.toLocaleString()} to{" "}
-                {lastRow.toLocaleString()} of {rows.length.toLocaleString()}
+                {t("results.range", { page: current + 1, pages: pageCount, start: firstRow, end: lastRow, total: rows.length })}
               </span>
               <button
                 ref={nextRef}
                 className="pager-btn"
-                aria-label="Next page"
+                aria-label={t("results.next")}
                 aria-disabled={current === pageCount - 1}
                 disabled={current === pageCount - 1}
-                title={current === pageCount - 1 ? "Already on the last page" : "Next page"}
+                title={current === pageCount - 1 ? t("results.alreadyLast") : t("results.next")}
                 onClick={() => goTo(current + 1, "next")}
               >
                 <span aria-hidden="true">▶</span>
               </button>
               <button
                 className="pager-btn"
-                aria-label="Last page"
+                aria-label={t("results.last")}
                 aria-disabled={current === pageCount - 1}
                 disabled={current === pageCount - 1}
-                title={current === pageCount - 1 ? "Already on the last page" : "Last page"}
+                title={current === pageCount - 1 ? t("results.alreadyLast") : t("results.last")}
                 onClick={() => goTo(pageCount - 1, "last")}
               >
                 <span aria-hidden="true">▶|</span>
@@ -517,19 +521,17 @@ function ResultsTable({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h2 id="export-confirm-title">Export capped results?</h2>
+              <h2 id="export-confirm-title">{t("results.exportTitle")}</h2>
             </div>
             <p>
-              These results were capped at {results.rowCount.toLocaleString()} rows,
-              so the file will contain the first {results.rowCount.toLocaleString()}.
-              Export anyway?
+              {t("results.exportBody", { count: results.rowCount })}
             </p>
             <div className="modal-actions">
               <button className="ghost" onClick={cancelConfirm}>
-                Cancel
+                {t("common.cancel")}
               </button>
               <button ref={confirmBtnRef} className="primary" onClick={confirmExport}>
-                Export anyway
+                {t("results.exportAnyway")}
               </button>
             </div>
           </div>
