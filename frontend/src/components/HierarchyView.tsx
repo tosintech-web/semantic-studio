@@ -29,6 +29,11 @@ SUMMARY
     _resetOutline).
 
 BASIC IDEA
+    Section and empty-state identities are stable message codes; labels and
+    raw row ends are formatted at render time. UI language does not key a
+    hierarchy request; translating row ends does not key flattening. Filters, expansion,
+    row paths, menus and rename drafts stay in their existing state owners.
+
     A tree is the natural shape for a hierarchy and the cheap one. The whole
     forest is fetched unbudgeted — it is a fraction of the graph — and the rows
     are VIRTUALIZED: only the rows in and near the viewport are in the DOM, so a
@@ -112,6 +117,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator, formatNumber } from "../i18n/format";
+import type { Translator } from "../i18n/types";
+import { renderServerError } from "../i18n/serverMessage";
 import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import {
   useCallback,
@@ -121,7 +130,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ApiError, fetchHierarchy } from "../api";
+import { fetchHierarchy } from "../api";
 import type { CanvasSet, DataSource, Hierarchy, HierarchyForest, HierarchyNode, HierarchyOrigin } from "../types";
 import { dataLabel } from "../modeling/dataSentences";
 import { kindLabel } from "../types";
@@ -280,7 +289,7 @@ interface Row {
   /** A class row's typing (edit-page-rework 5.8), for its dot. */
   classType?: string;
   /** A relationship's or attribute's ends, read as text (relationships 5.5). */
-  ends?: string;
+  ends?: HierarchyNode["ends"];
   origin: HierarchyOrigin;
   /** The import that defines this entity, with imports on; else undefined. */
   importedFrom?: string;
@@ -336,7 +345,7 @@ function flatten(
       prefixed: node.prefixed,
       kind: node.kind,
       classType: node.classType,
-      ends: node.ends ? rowEnds(node.ends, node.kind === "datatypeProperty") : undefined,
+      ends: node.ends,
       origin,
       importedFrom: node.importedFrom,
       fromData: node.fromData,
@@ -387,7 +396,7 @@ type SectionId = "classes" | "concepts" | "relationships" | "attributes" | "anno
 
 interface OutlineSection {
   id: SectionId;
-  title: string;
+  title: `hierarchy.section.${SectionId | "objectProperties" | "datatypeProperties"}`;
   forest: HierarchyForest;
   /** What its + makes, in a project; null for none. */
   add: CreatingKind | "examples" | null;
@@ -413,13 +422,13 @@ const CREATED_IN: Record<CreatingKind, SectionId> = {
 };
 
 /** Each + by its accessible name (Section 6). */
-const ADD_LABELS: Record<CreatingKind | "examples", string> = {
-  class: "New class",
-  concept: "New concept",
-  objectProperty: "New relationship",
-  datatypeProperty: "New attribute",
-  example: "New example",
-  examples: "New example or import",
+const ADD_LABELS: Record<CreatingKind | "examples", "create.class" | "create.concept" | "create.relationship" | "create.attribute" | "create.example" | "hierarchy.addExamples"> = {
+  class: "create.class",
+  concept: "create.concept",
+  objectProperty: "create.relationship",
+  datatypeProperty: "create.attribute",
+  example: "create.example",
+  examples: "hierarchy.addExamples",
 };
 
 /** The outline's sections, in order (5.3). In a project: the kind's own
@@ -438,30 +447,30 @@ function sectionsOf(
     forest !== undefined && Object.keys(forest.nodes).length > 0;
   if (editing === null) {
     const library: (OutlineSection | null)[] = [
-      has(data.classes) ? { id: "classes", title: "Classes", forest: data.classes, add: null } : null,
-      has(data.objectProperties) ? { id: "relationships", title: "Object properties", forest: data.objectProperties, add: null } : null,
-      has(data.datatypeProperties) ? { id: "attributes", title: "Datatype properties", forest: data.datatypeProperties, add: null } : null,
-      has(data.annotationProperties) ? { id: "annotations", title: "Annotation properties", forest: data.annotationProperties, add: null } : null,
-      has(data.concepts) ? { id: "concepts", title: "Concepts", forest: data.concepts, add: null } : null,
+      has(data.classes) ? { id: "classes", title: "hierarchy.section.classes", forest: data.classes, add: null } : null,
+      has(data.objectProperties) ? { id: "relationships", title: "hierarchy.section.objectProperties", forest: data.objectProperties, add: null } : null,
+      has(data.datatypeProperties) ? { id: "attributes", title: "hierarchy.section.datatypeProperties", forest: data.datatypeProperties, add: null } : null,
+      has(data.annotationProperties) ? { id: "annotations", title: "hierarchy.section.annotations", forest: data.annotationProperties, add: null } : null,
+      has(data.concepts) ? { id: "concepts", title: "hierarchy.section.concepts", forest: data.concepts, add: null } : null,
     ];
     return library.filter((x): x is OutlineSection => x !== null);
   }
   const kind = editing.kind ?? null;
   const taxonomy = kind === "taxonomy";
   // A project from before kinds keeps both New buttons, as it always did.
-  const classes: OutlineSection = { id: "classes", title: "Classes", forest: data.classes, add: kind === "taxonomy" ? null : "class" };
-  const concepts: OutlineSection = { id: "concepts", title: "Concepts", forest: data.concepts, add: kind === "ontology" ? null : "concept" };
+  const classes: OutlineSection = { id: "classes", title: "hierarchy.section.classes", forest: data.classes, add: kind === "taxonomy" ? null : "class" };
+  const concepts: OutlineSection = { id: "concepts", title: "hierarchy.section.concepts", forest: data.concepts, add: kind === "ontology" ? null : "concept" };
   const relationships: OutlineSection = {
-    id: "relationships", title: "Relationships", forest: data.objectProperties ?? EMPTY_FOREST, add: taxonomy ? null : "objectProperty",
+    id: "relationships", title: "hierarchy.section.relationships", forest: data.objectProperties ?? EMPTY_FOREST, add: taxonomy ? null : "objectProperty",
   };
   const attributes: OutlineSection = {
-    id: "attributes", title: "Attributes", forest: data.datatypeProperties ?? EMPTY_FOREST, add: taxonomy ? null : "datatypeProperty",
+    id: "attributes", title: "hierarchy.section.attributes", forest: data.datatypeProperties ?? EMPTY_FOREST, add: taxonomy ? null : "datatypeProperty",
   };
   const examples: OutlineSection = {
-    id: "examples", title: "Examples", forest: data.examples ?? EMPTY_FOREST, add: taxonomy || !keepExamples ? null : "examples",
+    id: "examples", title: "hierarchy.section.examples", forest: data.examples ?? EMPTY_FOREST, add: taxonomy || !keepExamples ? null : "examples",
   };
   const annotations: OutlineSection = {
-    id: "annotations", title: "Annotation properties", forest: data.annotationProperties ?? EMPTY_FOREST, add: null,
+    id: "annotations", title: "hierarchy.section.annotations", forest: data.annotationProperties ?? EMPTY_FOREST, add: null,
   };
   const out: OutlineSection[] = taxonomy
     ? [concepts, ...[relationships, attributes].filter((x) => has(x.forest))]
@@ -504,14 +513,14 @@ function countOf(forest: HierarchyForest, kind: string, query: string, ownOnly =
 const EMPTY_FOREST: HierarchyForest = { nodes: {}, children: {}, roots: [] };
 
 /** The tree with each snapshot row's id replaced by its snapshot's label. */
-function withDataLabels(data: Hierarchy | null, sources: DataSource[] | undefined): Hierarchy | null {
+function withDataLabels(data: Hierarchy | null, sources: DataSource[] | undefined, t: Translator = englishTranslator): Hierarchy | null {
   if (!data || !sources?.length) return data;
   const labels = new Map(sources.map((source) => [source.id, dataLabel(source)]));
   const relabel = (forest: HierarchyForest | undefined): HierarchyForest | undefined => {
     if (!forest || !Object.values(forest.nodes).some((n) => n.fromData)) return forest;
     const nodes: Record<string, HierarchyNode> = {};
     for (const [id, node] of Object.entries(forest.nodes)) {
-      nodes[id] = node.fromData ? { ...node, fromData: labels.get(node.fromData) ?? "from imported data" } : node;
+      nodes[id] = node.fromData ? { ...node, fromData: labels.get(node.fromData) ?? t("hierarchy.fromData") } : node;
     }
     return { ...forest, nodes };
   };
@@ -568,15 +577,16 @@ export default function HierarchyView({
   canvasShown = false,
   onCounts,
 }: Props) {
+  const { t } = useI18n();
   const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [fetched, setData] = useState<Hierarchy | null>(null);
   // Snapshot rows named by their snapshot's label (csv-data-import 5.6).
   const data = useMemo(
-    () => withDataLabels(inferred ? fetched : withoutInferred(fetched), dataSources),
-    [fetched, dataSources, inferred],
+    () => withDataLabels(inferred ? fetched : withoutInferred(fetched), dataSources, t),
+    [fetched, dataSources, inferred, t],
   );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown | null>(null);
   const [filter, setFilter] = useState("");
   // One expansion set for both forests; IRIs are unique, so no collision.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -598,7 +608,7 @@ export default function HierarchyView({
       .then((h) => !cancelled && setData(h))
       .catch((e: unknown) => {
         if (cancelled) return;
-        setError(e instanceof ApiError ? e.message : String(e));
+        setError(e);
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -619,7 +629,7 @@ export default function HierarchyView({
     let cancelled = false;
     fetchHierarchy(ontologyId, imports, inferred, language ?? dictionaryLanguage)
       .then((h) => !cancelled && setData(h))
-      .catch((e: unknown) => !cancelled && setError(e instanceof ApiError ? e.message : String(e)));
+      .catch((e: unknown) => !cancelled && setError(e));
     return () => {
       cancelled = true;
     };
@@ -666,8 +676,8 @@ export default function HierarchyView({
     if (!data || !kind) return null;
     const forest = kind === "ontology" ? data.concepts : data.classes;
     const other = kind === "ontology" ? "concept" : "class";
-    return otherKindNote(kind, Object.values(forest.nodes).filter((n) => n.kind === other && !n.importedFrom).length);
-  }, [data, kind]);
+    return otherKindNote(kind, Object.values(forest.nodes).filter((n) => n.kind === other && !n.importedFrom).length, t);
+  }, [data, kind, t]);
   /** A row of the other kind: shown, never changed here (D-089). */
   const fixedRow = useCallback((row: Row) => otherKindReason(kind, row.kind) !== null, [kind]);
 
@@ -838,15 +848,15 @@ export default function HierarchyView({
     >
       <div className="hierarchy-toolbar">
         <h2 id={HEADING_ID} tabIndex={-1}>
-          Outline
+          {t("hierarchy.outline")}
         </h2>
         <input
           type="search"
           className="hierarchy-filter"
-          placeholder="Filter by name…"
+          placeholder={t("hierarchy.filter")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          aria-label="Filter the outline by name"
+          aria-label={t("hierarchy.filterLabel")}
         />
         {/* One button, its name the action it takes: it stays put and keeps
             focus as the name changes. */}
@@ -856,12 +866,12 @@ export default function HierarchyView({
           aria-disabled={!data}
           onClick={() => data && (anyExpanded ? collapseAll() : expandAll())}
         >
-          {anyExpanded ? "Collapse all" : "Expand all"}
+          {t(anyExpanded ? "hierarchy.collapse" : "hierarchy.expand")}
         </button>
       </div>
       {editing && (
         <p className="detail-note edit-status" role="status">
-          {busy ? "Saving change…" : ""}
+          {busy ? t("annotation.saving") : ""}
         </p>
       )}
       {otherNote && <p className="detail-note hierarchy-other-kind">{otherNote}</p>}
@@ -871,17 +881,18 @@ export default function HierarchyView({
         </p>
       )}
 
-      {loading && <p className="hint hierarchy-status">Loading the outline…</p>}
-      {error && (
-        <div className="error-bar" onClick={() => setError(null)} title="Click to dismiss">
-          {error}
+      {loading && <p className="hint hierarchy-status">{t("hierarchy.loading")}</p>}
+      {error !== null && (
+        <div className="error-bar">
+          <p role="alert">{renderServerError(error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details>
+          <button type="button" className="ghost" onClick={() => setError(null)}>{t("app.dismissError")}</button>
         </div>
       )}
 
       {data && sections.length === 0 && (
         <p className="hint hierarchy-status">
-          This ontology declares no <code>subClassOf</code>, <code>broader</code> or{" "}
-          <code>subPropertyOf</code> structure to show as a tree.
+          {t("hierarchy.emptyTree")}
         </p>
       )}
 
@@ -896,7 +907,7 @@ export default function HierarchyView({
                 (creating.kind === "concept" && section.id === "concepts"))
                 ? {
                     parent: creating.parent?.iri ?? null,
-                    label: creating.name.trim() || (creating.kind === "class" ? "New class" : "New concept"),
+                    label: creating.name.trim() || t(creating.kind === "class" ? "create.class" : "create.concept"),
                   }
                 : null;
             return (
@@ -935,6 +946,7 @@ export default function HierarchyView({
             canvas ? { limited: canvas.limited, shown: canvas.shown.includes(menu.row.id) } : null,
             // An inferred row is a conclusion: none of its own actions (5.7).
             menu.fixed || menu.row.origin === "inferred",
+            t,
           )}
           anchor={menu.anchor}
           onChoose={(action) => choose(menu.row, action)}
@@ -943,11 +955,11 @@ export default function HierarchyView({
       )}
       {examplesMenu && (
         <RowMenu<"example" | "import">
-          label="Examples"
-          name="New example or import"
+          label={t("hierarchy.section.examples")}
+          name={t("hierarchy.addExamples")}
           items={[
-            { action: "example", label: "New example" },
-            { action: "import", label: "Import data from CSV or Excel…" },
+            { action: "example", label: t("create.example") },
+            { action: "import", label: t("hierarchy.import") },
           ]}
           anchor={examplesMenu.anchor}
           onChoose={(action) => {
@@ -1011,13 +1023,13 @@ interface ForestProps {
 }
 
 /** The empty sentence of a section (Section 6). */
-const EMPTY_WORDS: Record<SectionId, string> = {
-  classes: "No classes yet. Drag Class onto the canvas, or press +.",
-  concepts: "No concepts yet. Drag Concept onto the canvas, or press +.",
-  relationships: "No relationships yet. Draw a line between two classes, or press +.",
-  attributes: "No attributes yet. Press +.",
-  annotations: "No annotation properties.",
-  examples: "No examples or imported data yet.",
+const EMPTY_WORDS: Record<SectionId, `hierarchy.empty.${SectionId}`> = {
+  classes: "hierarchy.empty.classes",
+  concepts: "hierarchy.empty.concepts",
+  relationships: "hierarchy.empty.relationships",
+  attributes: "hierarchy.empty.attributes",
+  annotations: "hierarchy.empty.annotations",
+  examples: "hierarchy.empty.examples",
 };
 
 /** The draft row's id: no IRI looks like it. */
@@ -1047,9 +1059,11 @@ function Forest({
   onRevealed,
   pending = null,
 }: ForestProps) {
-  const { forest, title } = section;
+  const { locale, t } = useI18n();
+  const { forest } = section;
+  const title = t(section.title);
   const actionsOf = (row: Row) =>
-    rowActions(row.kind, Boolean(row.importedFrom || row.fromData), null, (fixedRow?.(row) ?? false) || row.origin === "inferred");
+    rowActions(row.kind, Boolean(row.importedFrom || row.fromData), null, (fixedRow?.(row) ?? false) || row.origin === "inferred", t);
   const appears = useMemo(() => appearanceCounts(forest), [forest]);
   const keep = useMemo(() => keepForFilter(forest, filter), [forest, filter]);
   const treeRows = useMemo(
@@ -1269,22 +1283,22 @@ function Forest({
             onClick={onFold}
             // The count in the name, *Classes, 3* (Section 6); with a filter,
             // the matches.
-            aria-label={`${title}, ${count.toLocaleString()}${filtering ? " shown" : ""}`}
+            aria-label={t(filtering ? "hierarchy.filteredCount" : "hierarchy.sectionCount", { title, count })}
           >
             <span className="hierarchy-chevron" aria-hidden="true">
               {open ? "▾" : "▸"}
             </span>
             <span className="hierarchy-section-title">{title}</span>
-            <span className="hierarchy-section-count">{count.toLocaleString()}</span>
-            {filtering && <span className="hierarchy-match-count"> shown</span>}
+            <span className="hierarchy-section-count">{formatNumber(locale, count)}</span>
+            {filtering && <span className="hierarchy-match-count">{t("hierarchy.shown")}</span>}
           </button>
         </h3>
         {onAdd && (
           <button
             type="button"
             className="hierarchy-add"
-            aria-label={ADD_LABELS[section.add!]}
-            title={ADD_LABELS[section.add!]}
+            aria-label={t(ADD_LABELS[section.add!])}
+            title={t(ADD_LABELS[section.add!])}
             aria-haspopup={section.add === "examples" ? "menu" : undefined}
             onClick={(e) => onAdd(e.currentTarget)}
           >
@@ -1296,7 +1310,7 @@ function Forest({
         <div className="hierarchy-section-body" id={bodyId}>
           {empty ? (
             <p className="hint hierarchy-status">
-              {filtering ? "No matches in this section." : EMPTY_WORDS[section.id]}
+              {t(filtering ? "hierarchy.noMatches" : EMPTY_WORDS[section.id])}
             </p>
           ) : (
             <div
@@ -1369,11 +1383,12 @@ function RenameField({
   busy: boolean;
   onDone: (value: string | null) => void;
 }) {
+  const { t } = useI18n();
   const [value, setValue] = useState(initial);
   return (
     <input
       className="hierarchy-rename"
-      aria-label={`New name for ${label}`}
+      aria-label={t("hierarchy.renameField", { label })}
       autoFocus
       value={value}
       readOnly={busy}
@@ -1407,6 +1422,7 @@ function TreeRow({
   menu,
   rename,
 }: TreeRowProps) {
+  const { locale, t } = useI18n();
   const level = row.depth + 1; // aria-level is 1-based
   const cappedDepth = Math.min(row.depth, MAX_VISUAL_DEPTH);
   const inferred = row.origin === "inferred";
@@ -1435,7 +1451,7 @@ function TreeRow({
     >
       <span className="hierarchy-indent" style={{ width: cappedDepth * INDENT }} aria-hidden="true" />
       {row.depth > MAX_VISUAL_DEPTH && (
-        <span className="hierarchy-depth" aria-label={`depth ${level}`}>
+        <span className="hierarchy-depth" aria-label={t("hierarchy.depth", { level })}>
           {level}
         </span>
       )}
@@ -1463,13 +1479,13 @@ function TreeRow({
       ) : (
         <span className="hierarchy-label">{row.label}</span>
       )}
-      {row.pending && <span className="visually-hidden">, being created</span>}
-      {row.ends && !rename && <span className="hierarchy-ends">({row.ends})</span>}
-      <span className="hierarchy-kind">{kindLabel(row.kind)}</span>
+      {row.pending && <span className="visually-hidden">{t("hierarchy.creating")}</span>}
+      {row.ends && !rename && <span className="hierarchy-ends">({rowEnds(row.ends, row.kind === "datatypeProperty", t)})</span>}
+      <span className="hierarchy-kind">{kindLabel(row.kind, t)}</span>
       {row.importedFrom && (
         // Text, not a tint: imported and read-only has to survive being read
         // aloud (AC-21, AC-35).
-        <span className="hierarchy-imported">from {row.importedFrom}</span>
+        <span className="hierarchy-imported">{t("hierarchy.from", { source: row.importedFrom })}</span>
       )}
       {row.fromData && (
         // Snapshot data is never mistaken for the model (Section 7): its
@@ -1480,26 +1496,26 @@ function TreeRow({
         // The derived channel (D-046): a badge, a non-colour cue (the dashed
         // row border in CSS) and this aria mention. Dormant while every edge is
         // asserted; a synthetic inferred edge lights it up with no code change.
-        <span className="hierarchy-inferred" aria-label="inferred, derived">
-          inferred
+        <span className="hierarchy-inferred" aria-label={t("hierarchy.inferredLabel")}>
+          {t("hierarchy.inferred")}
         </span>
       )}
       {row.cyclic && (
-        <span className="hierarchy-flag" title="This entity is its own ancestor (a cycle in the data).">
-          cycle
+        <span className="hierarchy-flag" title={t("hierarchy.cycleTitle")}>
+          {t("hierarchy.cycle")}
         </span>
       )}
       {row.appearsElsewhere && (
-        <span className="hierarchy-flag" aria-label="also appears elsewhere in the tree">
-          also elsewhere
+        <span className="hierarchy-flag" aria-label={t("hierarchy.elsewhereLabel")}>
+          {t("hierarchy.elsewhere")}
         </span>
       )}
       {!row.expanded && row.expandable && (
         <span
           className="hierarchy-count"
-          aria-label={`${row.childCount} ${row.childCount === 1 ? "child" : "children"}`}
+          aria-label={t(row.childCount === 1 ? "hierarchy.children.one" : "hierarchy.children.many", { count: row.childCount })}
         >
-          {row.childCount.toLocaleString()}
+          {formatNumber(locale, row.childCount)}
         </span>
       )}
       {menu && !rename && (
@@ -1514,7 +1530,7 @@ function TreeRow({
           tabIndex={-1}
           aria-hidden="true"
           aria-haspopup="menu"
-          aria-label={`More actions for ${row.label}`}
+          aria-label={t("hierarchy.actions", { label: row.label })}
           onClick={(e) => {
             e.stopPropagation();
             menu(row, e.currentTarget);

@@ -11,6 +11,10 @@ SUMMARY
     example* and *Import data from CSV or Excel…*.
 
 BASIC IDEA
+    Action IDs stay stable; optional current translation affects labels only.
+    Initial focus runs once per menu mount, independent of a new caller close
+    callback, so UI language changes keep the focused menu item.
+
     A menu by the WAI-ARIA menu-button pattern. It opens from the row's "⋯"
     button or, on the focused row, from the Context Menu key or Shift+F10 --
     the row is a treeitem and its button is out of the tab order, so the
@@ -43,6 +47,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import { useEffect, useRef } from "react";
 
 export type RowAction = "addChild" | "rename" | "delete" | "show" | "hide";
@@ -58,23 +65,24 @@ export function rowActions(
   imported: boolean,
   canvas: { limited: boolean; shown: boolean } | null = null,
   otherKind = false,
+  t: Translator = englishTranslator,
 ): MenuItem[] {
   const drawable = kind === "class" || kind === "concept";
   const onCanvas: MenuItem[] =
     canvas?.limited && drawable
-      ? [canvas.shown ? { action: "hide", label: "Hide from canvas" } : { action: "show", label: "Show on canvas" }]
+      ? [canvas.shown ? { action: "hide", label: t("editSection.hide") } : { action: "show", label: t("editSection.show") }]
       : [];
-  return [...(otherKind ? [] : ownActions(kind, imported)), ...onCanvas];
+  return [...(otherKind ? [] : ownActions(kind, imported, t)), ...onCanvas];
 }
 
-function ownActions(kind: string, imported: boolean): MenuItem[] {
-  if (imported) return kind === "class" ? [{ action: "addChild", label: "Add subclass" }] : [];
+function ownActions(kind: string, imported: boolean, t: Translator): MenuItem[] {
+  if (imported) return kind === "class" ? [{ action: "addChild", label: t("editStructure.addSubclass") }] : [];
   const rest: MenuItem[] = [
-    { action: "rename", label: "Rename" },
-    { action: "delete", label: "Delete…" },
+    { action: "rename", label: t("hierarchy.rename") },
+    { action: "delete", label: t("hierarchy.delete") },
   ];
-  if (kind === "class") return [{ action: "addChild", label: "Add subclass" }, ...rest];
-  if (kind === "concept") return [{ action: "addChild", label: "Add narrower concept" }, ...rest];
+  if (kind === "class") return [{ action: "addChild", label: t("editStructure.addSubclass") }, ...rest];
+  if (kind === "concept") return [{ action: "addChild", label: t("editStructure.addNarrower") }, ...rest];
   return rest;
 }
 
@@ -89,9 +97,12 @@ interface Props<A extends string> {
 }
 
 export function RowMenu<A extends string = RowAction>({ label, items, anchor, onChoose, onClose, name }: Props<A>) {
+  const { t } = useI18n();
   const ref = useRef<HTMLUListElement>(null);
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+  }, []);
+  useEffect(() => {
     // A press anywhere else closes it, as a menu does.
     const outside = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) onClose();
@@ -112,7 +123,7 @@ export function RowMenu<A extends string = RowAction>({ label, items, anchor, on
     <ul
       ref={ref}
       role="menu"
-      aria-label={name ?? `More actions for ${label}`}
+      aria-label={name ?? t("hierarchy.actions", { label })}
       className="row-menu"
       style={{ top: anchor.top, left: anchor.left }}
       onKeyDown={(e) => {

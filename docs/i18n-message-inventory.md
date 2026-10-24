@@ -45,8 +45,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/DetailPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 操作・所有文言を移行、rule/data生成元は別途移行 |
 | `frontend/src/components/ExplainBlock.tsx` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/components/ExploreStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 操作・所有文言を移行、rule/data生成元は別途移行 |
-| `frontend/src/components/HierarchyView.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/HierarchyActions.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/HierarchyView.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（データラベル・runner拒否の生成元はTask 12） |
+| `frontend/src/components/HierarchyActions.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（データラベル・runner拒否の生成元はTask 12） |
 | `frontend/src/components/EntityPicker.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/EditSection.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner・通知の生成元はTask 12） |
 | `frontend/src/components/EditStructure.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（通知・拒否の生成元はTask 12） |
@@ -341,7 +341,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `projectHeader.language` | language | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `projectHeader.missing` | missing, total, language | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `projectHeader.removeLanguage` | language | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `app.dismissError` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.dismissError` | — | `frontend/src/App.tsx`<br>`frontend/src/components/HierarchyView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `app.dismissNotice` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.dialog.title` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.dialog.sendingFile` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -500,7 +500,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1304,7 +1304,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `annotation.valuesAre` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.valueType` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.value` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
-| `annotation.saving` | — | `frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/NewEntityForm.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.saving` | — | `frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/NewEntityForm.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.create` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.add` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `values.description.string` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
@@ -1328,8 +1328,8 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editSection.external` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.subclass` | name | `frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EditStructure.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.addSubclass` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
-| `editSection.hide` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
-| `editSection.show` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.hide` | — | `frontend/src/components/EditSection.tsx`<br>`frontend/src/components/HierarchyActions.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.show` | — | `frontend/src/components/EditSection.tsx`<br>`frontend/src/components/HierarchyActions.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.partial` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.names` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
 | `editSection.requiredLanguage` | language | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
@@ -1372,7 +1372,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editStructure.addParent` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.subclasses` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.noSubclasses` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
-| `editStructure.addSubclass` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addSubclass` | — | `frontend/src/components/EditStructure.tsx`<br>`frontend/src/components/HierarchyActions.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.attributes` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.noAttributes` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.newAttribute` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
@@ -1395,7 +1395,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editStructure.narrower` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.noNarrower` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.newNarrower` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
-| `editStructure.addNarrower` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addNarrower` | — | `frontend/src/components/EditStructure.tsx`<br>`frontend/src/components/HierarchyActions.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 | `editStructure.scheme` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
 
 | `newEntity.name` | language | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
@@ -1405,13 +1405,13 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `newEntity.identifier` | — | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
 | `newEntity.create` | — | `frontend/src/components/NewEntityForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
 | `newEntity.expressionDomain` | — | `frontend/src/components/useSuggestions.ts` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
-| `create.class` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.class` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/HierarchyView.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
 | `create.classParent` | parent | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
-| `create.concept` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.concept` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/HierarchyView.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
 | `create.conceptParent` | parent | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
-| `create.relationship` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
-| `create.attribute` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
-| `create.example` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.relationship` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/HierarchyView.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.attribute` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/HierarchyView.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
+| `create.example` | — | `frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/HierarchyView.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
 | `create.choice` | label, value | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
 | `create.choose` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
 | `create.missingExample` | — | `frontend/src/components/CreateForm.tsx` | 項目の新規作成 | 11 | 画面所有文言を移行済み |
@@ -1502,3 +1502,47 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `exampleValue.type.text` | — | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
 | `exampleValue.choose` | target | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
 | `exampleValue.give` | label | `frontend/src/modeling/examples.ts` | 関係・具体例の編集 | 11 | 画面所有文言を移行済み |
+
+| `hierarchy.actions` | label | `frontend/src/components/HierarchyActions.tsx`<br>`frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.rename` | — | `frontend/src/components/HierarchyActions.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.delete` | — | `frontend/src/components/HierarchyActions.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.addExamples` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.import` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.outline` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.filter` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.filterLabel` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.expand` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.collapse` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.loading` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.emptyTree` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.sectionCount` | count, title | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.filteredCount` | count, title | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.shown` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.noMatches` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.renameField` | label | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.depth` | level | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.creating` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.from` | source | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.fromData` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.inferredLabel` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.inferred` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.cycleTitle` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.cycle` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.elsewhereLabel` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.elsewhere` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.children.one` | count | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.children.many` | count | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.classes` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.concepts` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.relationships` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.attributes` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.annotations` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.examples` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.objectProperties` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.section.datatypeProperties` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.empty.classes` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.empty.concepts` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.empty.relationships` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.empty.attributes` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.empty.annotations` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |
+| `hierarchy.empty.examples` | — | `frontend/src/components/HierarchyView.tsx` | 階層ツリーと行操作 | 11 | 画面所有文言を移行済み |

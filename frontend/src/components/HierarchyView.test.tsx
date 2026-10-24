@@ -39,6 +39,8 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HierarchyView, { _resetOutline } from "./HierarchyView";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
 import type { Hierarchy, HierarchyForest } from "../types";
 // The stylesheet as text: jsdom has no layout, so the CF-9 height rule is
@@ -1303,4 +1305,79 @@ describe("the side panel's counts (edit-page-rework 5.4)", () => {
     // The outline still lists them: the header counts what it shows.
     expect(screen.getByRole("button", { name: named("Classes") }).getAttribute("aria-label")).toBe("Classes, 3");
   });
+});
+
+
+it("keeps outline expansion, filter and row focus across UI locale changes without refetching", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  fetchHierarchy.mockResolvedValue(mixed());
+  const select = vi.fn();
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="localized-tree" selected={EX + "Beta"} onSelect={select} /></I18nProvider>);
+  try {
+    await screen.findByRole("button", { name: "クラス、2件" });
+    const alpha = itemByLabel("Alpha")!;
+    alpha.focus();
+    fireEvent.keyDown(alpha, { key: "ArrowRight" });
+    const beta = itemByLabel("Beta")!;
+    expect(beta).toBeTruthy();
+    const filter = screen.getByRole("searchbox", { name: "ツリーを名前で絞り込み" });
+    fireEvent.change(filter, { target: { value: "Bet" } });
+    beta.focus();
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("searchbox", { name: "Filter the outline by name" })).toBe(filter);
+    expect((filter as HTMLInputElement).value).toBe("Bet");
+    expect(document.activeElement).toBe(beta);
+    expect(beta.getAttribute("aria-selected")).toBe("true");
+    fireEvent.change(filter, { target: { value: "" } });
+    expect(itemByLabel("Beta")).toBe(beta);
+    expect(alpha.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(beta);
+    expect(select).toHaveBeenCalledWith(EX + "Beta");
+    expect(fetchHierarchy).toHaveBeenCalledTimes(1);
+  } finally { view.unmount(); }
+});
+it("keeps raw outline errors and exposes a localized keyboard-reachable dismiss action", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  fetchHierarchy.mockRejectedValue(new Error("<b>Unavailable</b>"));
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="error-tree" selected={null} onSelect={vi.fn()} /></I18nProvider>);
+  try {
+    expect((await screen.findByRole("alert")).textContent).toContain("操作を完了できませんでした。");
+    expect(screen.getByText("<b>Unavailable</b>")).toBeTruthy();
+    expect(document.querySelector("b")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    const dismiss = screen.getByRole("button", { name: "Dismiss error" });
+    dismiss.focus();
+    expect(document.activeElement).toBe(dismiss);
+    fireEvent.click(dismiss);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(fetchHierarchy).toHaveBeenCalledTimes(1);
+  } finally { view.unmount(); }
+});
+
+it("keeps a row rename draft and its primary RDF language across a UI switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  projectStore._reset();
+  const pid = "prj-0123456789ab";
+  const state = { doc: "model" as const, ontologyId: `${pid}-model`, revision: 2, dirty: true, canUndo: true, undoLabel: "x", canRedo: false, redoLabel: null, triples: 10 };
+  openProject.mockResolvedValue({ project: { id: pid, name: "Synthetic", createdAt: "", updatedAt: "", baseIri: EX, prefix: "ex", primaryLanguage: "en", languages: [], documents: [{ file: "model.ttl", role: "model" }], counts: {} }, documents: [state], recovery: { available: false, draftTime: null } });
+  await projectStore.open(pid);
+  runCommand.mockReset();
+  runCommand.mockResolvedValue({ revision: 3, label: "Renamed", state });
+  fetchHierarchy.mockResolvedValue(mixed());
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="localized-edit" selected={null} onSelect={vi.fn()} editing={{ primaryLanguage: "en" }} /></I18nProvider>);
+  try {
+    await screen.findByRole("button", { name: "クラス、2件" });
+    const alpha = itemByLabel("Alpha")!;
+    alpha.focus();
+    fireEvent.keyDown(alpha, { key: "F10", shiftKey: true });
+    fireEvent.click(screen.getByRole("menuitem", { name: "名前を変更" }));
+    const input = screen.getByRole("textbox", { name: "Alphaの新しい名前" });
+    fireEvent.change(input, { target: { value: "<b>新しい名前</b>" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("textbox", { name: "New name for Alpha" })).toBe(input);
+    expect((input as HTMLInputElement).value).toBe("<b>新しい名前</b>");
+    await act(async () => fireEvent.keyDown(input, { key: "Enter" }));
+    expect(runCommand).toHaveBeenCalledWith(pid, "model", "SetLabel", { iri: EX + "Alpha", value: "<b>新しい名前</b>", lang: "en" });
+    expect(fetchHierarchy).toHaveBeenCalledTimes(1);
+  } finally { view.unmount(); projectStore._reset(); }
 });
