@@ -8,6 +8,9 @@ SUMMARY
     command runner, a titled block, and a value edited in place.
 
 BASIC IDEA
+    Shared controls use the active translator. Copy results retain typed facts,
+    so delayed and existing notices follow UI language without changing text.
+
     useRunner is the form's one path to the server: it runs a command through
     projectStore.command and keeps, per field, the server's sentence when it
     refuses, so the sentence appears under the field that caused it. One busy
@@ -44,6 +47,8 @@ EXPECTED OUTPUT
 */
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useI18n } from "../i18n/I18nProvider";
+import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
 import { projectStore } from "../state/projectStore";
 import type { ChangeResult, ProjectDocName } from "../types";
 
@@ -128,15 +133,19 @@ export function useReturnFocus<T extends HTMLElement = HTMLButtonElement>() {
  *  gave no sign it had done anything (5.8 item 11). The region is rendered
  *  while empty, because one added with its text is not reliably read. */
 export function useCopy() {
-  const [said, setSaid] = useState("");
+  const { t } = useI18n();
+  const [said, setSaid] = useState<UiMessage | null>(null);
   const copy = useCallback((text: string) => {
-    void Promise.resolve(navigator.clipboard?.writeText(text))
-      .then(() => setSaid(`Copied ${text}.`))
-      .catch(() => setSaid("It could not be copied."));
+    void Promise.resolve().then(() => {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      return navigator.clipboard.writeText(text);
+    })
+      .then(() => setSaid(makeUiMessage("editParts.copied", { text })))
+      .catch(() => setSaid(makeUiMessage("editParts.copyFailed")));
   }, []);
   const region = (
     <span className="visually-hidden" role="status">
-      {said}
+      {said ? renderUiMessage(said, t) : ""}
     </span>
   );
   return [copy, region] as const;
@@ -160,7 +169,8 @@ interface InlineTextProps {
 /** A value with an Edit button; editing shows a field, Save and Cancel.
  *  Enter saves (Ctrl+Enter in a text area), Escape cancels, and focus goes
  *  back to Edit either way. */
-export function InlineText({ label, value, missing = "none", multiline, busy, error, onSave }: InlineTextProps) {
+export function InlineText({ label, value, missing, multiline, busy, error, onSave }: InlineTextProps) {
+  const { t } = useI18n();
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
   const editRef = useRef<HTMLButtonElement>(null);
@@ -187,15 +197,15 @@ export function InlineText({ label, value, missing = "none", multiline, busy, er
   if (draft === null) {
     return (
       <div className="edit-value">
-        <span className={value === null ? "detail-name-missing" : undefined}>{value ?? missing}</span>
+        <span className={value === null ? "detail-name-missing" : undefined}>{value ?? missing ?? t("editParts.none")}</span>
         <button
           ref={editRef}
           type="button"
           className="ghost edit-btn"
-          aria-label={`${value === null ? "Add" : "Edit"} ${label}`}
+          aria-label={t(value === null ? "editParts.addLabel" : "editParts.editLabel", { label })}
           onClick={() => setDraft(value ?? "")}
         >
-          {value === null ? "Add" : "Edit"}
+          {t(value === null ? "editParts.add" : "editParts.edit")}
         </button>
       </div>
     );
@@ -216,10 +226,10 @@ export function InlineText({ label, value, missing = "none", multiline, busy, er
       {multiline ? <textarea rows={3} {...common} /> : <input {...common} />}
       <div className="edit-actions">
         <button type="button" className="primary" aria-disabled={busy} onClick={() => void save()}>
-          {busy ? "Saving change…" : "Save"}
+          {t(busy ? "annotation.saving" : "editParts.save")}
         </button>
         <button type="button" className="ghost" onClick={close}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       {error && (

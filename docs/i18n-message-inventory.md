@@ -48,9 +48,9 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/HierarchyView.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/HierarchyActions.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/EntityPicker.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/EditSection.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/EditStructure.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/EditParts.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/EditSection.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner・通知の生成元はTask 12） |
+| `frontend/src/components/EditStructure.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（通知・拒否の生成元はTask 12） |
+| `frontend/src/components/EditParts.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（runner・通知の生成元はTask 12） |
 | `frontend/src/components/CreateForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/NewEntityForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/RelationshipForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（警告・通知の生成元はTask 12） |
@@ -652,7 +652,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -675,7 +675,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `nav.home` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.view` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.explore` | — | `frontend/src/App.tsx`<br>`frontend/src/components/ExploreStart.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `nav.edit` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `nav.edit` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.query` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.shapes` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.entities` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityList.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1300,7 +1300,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `annotation.valuesAre` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.valueType` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.value` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
-| `annotation.saving` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+| `annotation.saving` | — | `frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.create` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `annotation.add` | — | `frontend/src/components/AnnotationAdder.tsx` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `values.description.string` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
@@ -1310,3 +1310,86 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `values.description.date` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `values.description.dateTime` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
 | `values.description.anyURI` | — | `frontend/src/modeling/values.ts`<br>`frontend/src/sparql/generate.ts` | 注釈の入力・値の説明 | 11 | 表示文・入力検証文を移行済み |
+
+| `editParts.copied` | text | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.copyFailed` | — | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.none` | — | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.addLabel` | label | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.editLabel` | label | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.add` | — | `frontend/src/components/EditParts.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.edit` | — | `frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editParts.save` | — | `frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.imported` | source | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.fromData` | source | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.external` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.subclass` | name | `frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EditStructure.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.addSubclass` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.hide` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.show` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.partial` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.names` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.requiredLanguage` | language | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.nameLanguage` | language | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.missing` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.definition` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.definitionLabel` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.annotations` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.noAnnotations` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.addAnnotation` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.examples` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.noExamples` | name | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.newExample` | name | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.submitExample` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.addExample` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.identifier` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.copy` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.changeIdentifier` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.renameNote` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.newIdentifier` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.submitIdentifier` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.delete` | name | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.copyValue` | value | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.editValue` | words | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.removeValue` | words | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.remove` | — | `frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EditStructure.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+| `editSection.turtleOnly` | — | `frontend/src/components/EditSection.tsx` | 共通編集操作・項目編集 | 11 | 画面所有文言を移行済み |
+
+| `editStructure.both` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.sharedWith` | classes | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.shared` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.separator` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.sharedHeading` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.through` | parent | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.structure` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.parent` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noParent` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.removeParent` | name, parent | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.newParent` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addParent` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.subclasses` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noSubclasses` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addSubclass` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.attributes` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noAttributes` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.newAttribute` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addAttribute` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.relationships` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noRelationships` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.newRelationship` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addRelationship` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.chooseTarget` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.targetClass` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.pointsTo` | target | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noTarget` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.change` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.chooseClass` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.broader` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noBroader` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.removeBroader` | broader, name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.newBroader` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addBroader` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.narrower` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.noNarrower` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.newNarrower` | name | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.addNarrower` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |
+| `editStructure.scheme` | — | `frontend/src/components/EditStructure.tsx` | 構造・共有・継承の編集 | 11 | 画面所有文言を移行済み |

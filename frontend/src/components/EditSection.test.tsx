@@ -33,6 +33,8 @@ import { P } from "../modeling/entity";
 import { projectStore } from "../state/projectStore";
 import type { NodeDetails, TermRef } from "../types";
 import EditSection from "./EditSection";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, previewDelete, searchNodes, getAnnotationProperties } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -729,24 +731,33 @@ describe("Stage 2 follow-ups (visual-modeling 5.8)", () => {
   });
 
   it("item 11: Copy says Copied; a web link value is a link, any other link value has Copy", async () => {
-    const d = invoice();
-    d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("https://example.org/spec") });
-    d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("urn:isbn:0451450523") });
-    await renderForm(d);
-    const web = screen.getByRole("link", { name: "https://example.org/spec" });
-    expect(web.getAttribute("href")).toBe("https://example.org/spec");
-    expect(screen.queryByRole("link", { name: "urn:isbn:0451450523" })).toBeNull();
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Copy urn:isbn:0451450523" }));
-    });
-    const regions = [...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent);
-    expect(regions).toContain("Copied urn:isbn:0451450523.");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-    });
-    expect([...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent)).toContain(
-      `Copied ${EX}Invoice.`,
-    );
+    const clipboardBefore = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      const d = invoice();
+      d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("https://example.org/spec") });
+      d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("urn:isbn:0451450523") });
+      await renderForm(d);
+      const web = screen.getByRole("link", { name: "https://example.org/spec" });
+      expect(web.getAttribute("href")).toBe("https://example.org/spec");
+      expect(screen.queryByRole("link", { name: "urn:isbn:0451450523" })).toBeNull();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy urn:isbn:0451450523" }));
+      });
+      const regions = [...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent);
+      expect(regions).toContain("Copied urn:isbn:0451450523.");
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+      });
+      expect([...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent)).toContain(
+        `Copied ${EX}Invoice.`,
+      );
+      expect(writeText.mock.calls).toEqual([["urn:isbn:0451450523"], [EX + "Invoice"]]);
+    } finally {
+      if (clipboardBefore) Object.defineProperty(navigator, "clipboard", clipboardBefore);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
   });
 
   it("past 300 boxes the form offers Show on canvas and Hide from canvas (5.6)", async () => {
@@ -1239,4 +1250,25 @@ describe("concept relations (AC-9)", () => {
       { concept: EX + "Apple", kind: "exactMatch", target: "http://dbpedia.org/resource/Apple" },
     ]);
   });
+});
+
+
+it("keeps an entity-name draft and RDF language when the edit UI changes language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={["fr"]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  fireEvent.click(screen.getByRole("button", { name: "enの名前を編集" }));
+  const input = screen.getByRole("textbox", { name: "enの名前" });
+  fireEvent.change(input, { target: { value: "<b>請求書</b>" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "name in en" })).toBe(input);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Invoice", value: "<b>請求書</b>", lang: "en" });
+});
+it("localizes read-only guidance while preserving the source name", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const data = { ...invoice(), importedFrom: "<b>External</b>" };
+  await act(async () => render(<I18nProvider><EditSection ontologyId={OID} details={data} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  expect(screen.getByRole("region", { name: "編集" })).toBeTruthy();
+  expect(screen.getByText("<b>External</b>からの項目のため、読み取り専用です。")).toBeTruthy();
+  expect(document.querySelector("b")).toBeNull();
 });

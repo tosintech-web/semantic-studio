@@ -10,6 +10,10 @@ SUMMARY
     Delete. Each change is one E-6 command, so one labelled undo step.
 
 BASIC IDEA
+    UI copy uses the current translator while names, definitions, annotation
+    values and language tags remain original. Locale changes keep existing
+    drafts and controls mounted; errors are owned by the command runner.
+
     The panel has already fetched the entity's statements; modeling/entity.ts
     reads the form's blocks out of them, and the panel refetches them on each
     new revision, so the form always shows what the server holds. Nothing is
@@ -66,6 +70,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useMemo, useState } from "react";
 import { linkTarget } from "../links";
 import { entityModel, structureOf, type Annotation } from "../modeling/entity";
@@ -109,6 +114,7 @@ export default function EditSection({
   onDeleted,
   canvas = null,
 }: Props) {
+  const { t } = useI18n();
   const model = useMemo(
     () => entityModel(details, primaryLanguage, languages),
     [details, primaryLanguage, languages],
@@ -133,10 +139,10 @@ export default function EditSection({
   const name = details.label;
 
   // The project's other kind: shown, changed in Turtle (D-089).
-  const otherKind = otherKindReason(projectKind, model.kind);
+  const otherKind = otherKindReason(projectKind, model.kind, t);
   if (otherKind && model.defined && !details.importedFrom) {
     return (
-      <section className="edit-section read-only" aria-label="Edit">
+      <section className="edit-section read-only" aria-label={t("nav.edit")}>
         <p className="detail-note">{otherKind}</p>
       </section>
     );
@@ -147,18 +153,18 @@ export default function EditSection({
   // its file and refreshed, never edited here.
   if (details.importedFrom || details.fromData || !model.defined) {
     return (
-      <section className="edit-section read-only" aria-label="Edit">
+      <section className="edit-section read-only" aria-label={t("nav.edit")}>
         <p className="detail-note">
           {details.importedFrom
-            ? `From ${details.importedFrom}, read-only.`
+            ? t("editSection.imported", { source: details.importedFrom })
             : details.fromData
-              ? `Imported data, read-only: change ${details.fromData.source} and refresh it from the project's Data.`
-              : "Defined outside this document, read-only."}
+              ? t("editSection.fromData", { source: details.fromData.source })
+              : t("editSection.external")}
         </p>
         {model.kind === "class" &&
           (subclassOfImport ? (
             <NewEntityForm
-              title={`New subclass of ${name}`}
+              title={t("editSection.subclass", { name })}
               primaryLanguage={primaryLanguage}
               busy={busy}
               error={errors.importSub}
@@ -173,7 +179,7 @@ export default function EditSection({
             />
           ) : (
             <button ref={importRef} type="button" className="ghost" onClick={() => setSubclassOfImport(true)}>
-              Add a subclass in this project
+              {t("editSection.addSubclass")}
             </button>
           ))}
       </section>
@@ -223,21 +229,21 @@ export default function EditSection({
   const annotations = model.annotations.filter((a) => !fieldProperties.has(a.property.iri));
   const examples = model.kind === "class" ? examplesOf(details) : [];
   return (
-    <section className="edit-section" aria-label="Edit" aria-busy={busy}>
-      <h3>Edit</h3>
+    <section className="edit-section" aria-label={t("nav.edit")} aria-busy={busy}>
+      <h3>{t("nav.edit")}</h3>
       <p className="detail-note edit-status" role="status">
-        {busy ? "Saving change…" : ""}
+        {busy ? t("annotation.saving") : ""}
       </p>
       {canvas?.limited && (model.kind === "class" || model.kind === "concept") && (
         // 5.6: past 300 boxes the canvas draws what the user chooses.
         <div className="edit-actions">
           {canvas.shown.includes(iri) ? (
             <button type="button" className="ghost" onClick={() => void canvas.hide(iri)}>
-              Hide from canvas
+              {t("editSection.hide")}
             </button>
           ) : (
             <button type="button" className="ghost" onClick={() => void canvas.show(iri)}>
-              Show on canvas
+              {t("editSection.show")}
             </button>
           )}
         </div>
@@ -245,8 +251,7 @@ export default function EditSection({
       {model.partial && (
         // The house rule: a truncated view says it is truncated (found in review).
         <p className="detail-note">
-          This entity has more statements than the panel loads, so the lists below may be
-          incomplete. The Turtle editor (View) shows them all.
+          {t("editSection.partial")}
         </p>
       )}
 
@@ -257,19 +262,18 @@ export default function EditSection({
         <PropertyHead model={model} name={name} iri={iri} warnings={details.warnings ?? []} />
       )}
 
-      <Block title="Names">
+      <Block title={t("editSection.names")}>
         <dl className="detail-names">
           {model.names.map((n, i) => (
             <div key={n.lang}>
               <dt>
-                {n.lang}
-                {i === 0 ? " (required)" : ""}
+                {i === 0 ? t("editSection.requiredLanguage", { language: n.lang }) : n.lang}
               </dt>
               <dd>
                 <InlineText
-                  label={`name in ${n.lang}`}
+                  label={t("editSection.nameLanguage", { language: n.lang })}
                   value={n.value}
-                  missing="missing"
+                  missing={t("editSection.missing")}
                   busy={busy}
                   error={errors[`name:${n.lang}`]}
                   onSave={(v) => saveName(n.lang, v, n, i === 0)}
@@ -280,9 +284,9 @@ export default function EditSection({
         </dl>
       </Block>
 
-      <Block title="Definition">
+      <Block title={t("editSection.definition")}>
         <InlineText
-          label="definition"
+          label={t("editSection.definitionLabel")}
           value={model.definition ? model.definition.value.value : null}
           multiline
           busy={busy}
@@ -291,8 +295,8 @@ export default function EditSection({
         />
       </Block>
 
-      <Block title="Annotations">
-        {annotations.length === 0 && <p className="detail-note">No other annotations.</p>}
+      <Block title={t("editSection.annotations")}>
+        {annotations.length === 0 && <p className="detail-note">{t("editSection.noAnnotations")}</p>}
         <ul className="edit-list">
           {annotations.map((a) => (
             <AnnotationRow
@@ -318,7 +322,7 @@ export default function EditSection({
           />
         ) : (
           <button ref={addRef} type="button" className="ghost" onClick={() => setAdding(true)}>
-            Add annotation
+            {t("editSection.addAnnotation")}
           </button>
         )}
       </Block>
@@ -350,9 +354,9 @@ export default function EditSection({
 
       {model.kind === "class" && (
         // 5.8: examples of the class, so a shape has something to check.
-        <Block title="Examples">
+        <Block title={t("editSection.examples")}>
           {examples.length === 0 ? (
-            <p className="detail-note">No examples yet. Add one, and a shape on {name} has something to check.</p>
+            <p className="detail-note">{t("editSection.noExamples", { name })}</p>
           ) : (
             <ul className="edit-list">
               {examples.map((e) => (
@@ -366,11 +370,11 @@ export default function EditSection({
           )}
           {addingExample ? (
             <NewEntityForm
-              title={`New example of ${name}`}
+              title={t("editSection.newExample", { name })}
               primaryLanguage={primaryLanguage}
               busy={busy}
               error={errors.example}
-              submitLabel="Add example"
+              submitLabel={t("editSection.submitExample")}
               onCancel={() => {
                 setAddingExample(false);
                 returnToExample();
@@ -385,23 +389,23 @@ export default function EditSection({
             />
           ) : (
             <button ref={exampleRef} type="button" className="ghost" onClick={() => setAddingExample(true)}>
-              Add an example
+              {t("editSection.addExample")}
             </button>
           )}
         </Block>
       )}
 
-      <Block title="Identifier">
+      <Block title={t("editSection.identifier")}>
         <div className="edit-value">
           <code className="edit-iri">{iri}</code>
           <button type="button" className="ghost" onClick={() => copy(iri)}>
-            Copy
+            {t("editSection.copy")}
           </button>
           {copied}
         </div>
         {renaming === null ? (
           <button ref={renameRef} type="button" className="ghost" onClick={() => setRenaming(iri)}>
-            Change identifier…
+            {t("editSection.changeIdentifier")}
           </button>
         ) : (
           <form
@@ -424,9 +428,9 @@ export default function EditSection({
               }
             }}
           >
-            <p>Other files that use the old identifier will not follow the change.</p>
+            <p>{t("editSection.renameNote")}</p>
             <label className="edit-field-label" htmlFor="edit-new-iri">
-              New identifier
+              {t("editSection.newIdentifier")}
             </label>
             <input
               id="edit-new-iri"
@@ -439,7 +443,7 @@ export default function EditSection({
             {errors.identifier && <p className="edit-error">{errors.identifier}</p>}
             <div className="edit-actions">
               <button type="submit" className="primary" aria-disabled={busy || !renaming.trim()}>
-                Change identifier
+                {t("editSection.submitIdentifier")}
               </button>
               <button
                 type="button"
@@ -449,7 +453,7 @@ export default function EditSection({
                   returnToRename();
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </form>
@@ -458,7 +462,7 @@ export default function EditSection({
 
       <div className="edit-delete">
         <button type="button" className="ghost danger" onClick={() => setDeleting(true)}>
-          Delete {name}…
+          {t("editSection.delete", { name })}
         </button>
       </div>
       {deleting && (
@@ -493,6 +497,7 @@ function AnnotationRow({
   runner: Runner;
   copy: (text: string) => void;
 }) {
+  const { t } = useI18n();
   const { busy, errors, run } = runner;
   const field = annotationKey(annotation);
   const [editRef, returnToEdit] = useReturnFocus();
@@ -505,7 +510,7 @@ function AnnotationRow({
   const href = linkTarget(annotation.value.kind === "link" ? annotation.value.value : null);
   const type = typeOfValue(annotation.value);
   const [draft, setDraft] = useState<{ value: string; lang: string } | null>(null);
-  const problem = draft && draft.value !== "" ? valueProblem(type, draft.value, draft.lang) : null;
+  const problem = draft && draft.value !== "" ? valueProblem(type, draft.value, draft.lang, t) : null;
   const words = `${annotation.property.prefixed}: ${annotation.value.value}`;
 
   if (draft === null) {
@@ -519,15 +524,15 @@ function AnnotationRow({
         ) : (
           <span className="edit-annotation-value">{annotation.value.value}</span>
         )}{" "}
-        <span className="edit-annotation-kind">({describeValue(annotation.value)})</span>
+        <span className="edit-annotation-kind">({describeValue(annotation.value, t)})</span>
         {annotation.value.kind === "link" && !href && (
           <button
             type="button"
             className="ghost edit-btn"
-            aria-label={`Copy ${annotation.value.value}`}
+            aria-label={t("editSection.copyValue", { value: annotation.value.value })}
             onClick={() => copy(annotation.value.value)}
           >
-            Copy
+            {t("editSection.copy")}
           </button>
         )}
         {annotation.editable ? (
@@ -536,33 +541,33 @@ function AnnotationRow({
               ref={editRef}
               type="button"
               className="ghost edit-btn"
-              aria-label={`Edit ${words}`}
+              aria-label={t("editSection.editValue", { words })}
               onClick={() => setDraft({ value: annotation.value.value, lang: annotation.value.lang ?? languages[0] })}
             >
-              Edit
+              {t("editParts.edit")}
             </button>
             <button
               type="button"
               className="ghost edit-btn"
-              aria-label={`Remove ${words}`}
+              aria-label={t("editSection.removeValue", { words })}
               aria-disabled={busy}
               onClick={() => !busy && void run(field, "RemoveAnnotation", { iri, property: annotation.property.iri, value: annotation.value })}
             >
-              Remove
+              {t("editSection.remove")}
             </button>
           </>
         ) : (
-          <span className="detail-note"> Edit this one in Turtle (View).</span>
+          <span className="detail-note">{t("editSection.turtleOnly")}</span>
         )}
         {errors[field] && <p className="edit-error">{errors[field]}</p>}
       </li>
     );
   }
-  const blocked = busy || valueProblem(type, draft.value, draft.lang) !== null;
+  const blocked = busy || valueProblem(type, draft.value, draft.lang, t) !== null;
   return (
     <li className="edit-annotation editing">
       <form
-        aria-label={`Edit ${annotation.property.prefixed}`}
+        aria-label={t("editSection.editValue", { words: annotation.property.prefixed })}
         onSubmit={async (e) => {
           e.preventDefault();
           if (blocked) return;
@@ -597,10 +602,10 @@ function AnnotationRow({
         {(problem || errors[field]) && <p className="edit-error">{errors[field] || problem}</p>}
         <div className="edit-actions">
           <button type="submit" className="primary" aria-disabled={blocked}>
-            Save
+            {t("editParts.save")}
           </button>
           <button type="button" className="ghost" onClick={close}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>
