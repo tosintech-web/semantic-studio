@@ -36,7 +36,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SourceView from "./SourceView";
@@ -394,4 +395,39 @@ describe("SourceView, a part of a large ontology", () => {
     expect(hint.textContent).toContain("This file is too large to show in full");
     expect(hint.textContent).not.toContain("statements");
   });
+});
+it("translates source controls while leaving the RDF text and identifiers unchanged", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><SourceView ontologyId="one" /></I18nProvider>); await settle();
+  expect(screen.getByRole("heading", { name: "ソース" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "元のファイル" })).toBeTruthy();
+  expect(screen.getByRole("searchbox", { name: "ファイル内を検索…" })).toBeTruthy();
+  expect(document.querySelector(".source-scroll")?.textContent).toContain("http://example.org/");
+});
+it("does not claim the source was copied after the clipboard rejects it", async () => {
+  const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn().mockRejectedValue(new Error("Clipboard refused")) } });
+  try {
+    render(<SourceView ontologyId="one" />); await settle();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Copy/ })); });
+    expect(screen.queryByText("✓ Copied")).toBeNull();
+    expect(screen.getByText("Clipboard refused")).toBeTruthy();
+  } finally { if (previous) Object.defineProperty(navigator, "clipboard", previous); else Reflect.deleteProperty(navigator, "clipboard"); }
+});
+it("uses reduced motion for find-in-file navigation as well as target navigation", async () => {
+  vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
+  try {
+    render(<SourceView ontologyId="one" />); await settle();
+    fireEvent.change(document.querySelector('input[type="search"]')!, { target: { value: "Bond" } });
+    fireEvent.keyDown(document.querySelector('input[type="search"]')!, { key: "Enter" });
+    await settle();
+    expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({ block: "center", behavior: "auto" });
+  } finally { vi.unstubAllGlobals(); }
+});
+it("emits a language-independent missing-target notice without changing the legacy callback", async () => {
+  const wire = vi.fn(); const legacy = vi.fn();
+  render(<SourceView ontologyId="one" target={{ iri: "http://example.org/absent" }} onTargetResolved={legacy} onTargetMessage={wire} />);
+  await settle();
+  expect(wire).toHaveBeenCalledWith({ code: "source.missing", args: {} });
+  expect(legacy).toHaveBeenCalledWith("That entity does not appear in the source text shown here — try the other of Original and Formatted Turtle.");
 });

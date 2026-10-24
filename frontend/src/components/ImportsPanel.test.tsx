@@ -28,6 +28,8 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ImportRow, ImportsListing } from "../types";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import ImportsPanel, { statusText, summaryText } from "./ImportsPanel";
 
 const { listImports, resolveImports, refreshImports, cancelImports, mapImport, chooseImportFiles } =
@@ -410,5 +412,38 @@ describe("ImportsPanel words (AC-35)", () => {
     expect(summaryText(PARTLY_FAILED)).toBe(
       "This ontology imports 2 others. 1 document loaded, 1 not loaded.",
     );
+  });
+});
+
+
+describe("imports UI language", () => {
+  it("localizes controls and re-renders an existing resolution notice without changing IRIs", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    resolveImports.mockResolvedValue(listing([
+      row(REMOTE, { status: "resolved", source: "library", sourceName: "辞書A" }),
+    ]));
+    await act(async () => {
+      render(<I18nProvider><UiLanguageSelect /><ImportsPanel ontologyId="ont-1" library={[]} includeImports={false} onIncludeImportsChange={vi.fn()} /></I18nProvider>);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "参照オントロジー" }));
+    expect(screen.getByText(REMOTE)).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "参照を解決" })); });
+    expect(screen.getByRole("status").textContent).toBe("参照を解決しました。1件の文書を読み込みました。");
+    expect(screen.getByRole("switch", { name: "参照先を含める" })).toBeTruthy();
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("status").textContent).toBe("Imports resolved: 1 document loaded.");
+    expect(screen.getByText(REMOTE)).toBeTruthy();
+  });
+
+  it("reports missing clipboard access in the current language", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    listImports.mockResolvedValue(PARTLY_FAILED);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+    await act(async () => {
+      render(<I18nProvider><ImportsPanel ontologyId="ont-1" library={[]} includeImports={false} onIncludeImportsChange={vi.fn()} /></I18nProvider>);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "参照オントロジー" }));
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "リンクをコピー" })); });
+    expect(screen.getByRole("status").textContent).toBe("リンクをコピーできませんでした。");
   });
 });

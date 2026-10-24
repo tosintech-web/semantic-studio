@@ -4008,3 +4008,55 @@ it("translates a retained server error and dismisses it with a keyboard-accessib
   expect(screen.queryByRole("alert")).toBeNull();
   expect(document.activeElement).toBe(screen.getByRole("tab", { name: "Explore" }));
 });
+it("keeps a source-target notice translatable after the outcome arrives", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "FIBOで検索クエリを作成" })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "fake source control" })); });
+  expect(document.querySelector(".notice-region")?.textContent).toContain("表示中のソースに見つかりません");
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(document.querySelector(".notice-region")?.textContent).toContain("does not appear in the source text");
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss notice" }));
+  expect(document.querySelector(".notice-region")?.textContent).toBe("");
+});
+it("announces the name of the RDF file that finished loading", async () => {
+  uploadOntology.mockResolvedValue({ ...SUMMARY, id: "loaded", name: "犬.ttl" });
+  await renderApp(); await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open a file" })); });
+  await act(async () => { fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [new File(["x"], "犬.ttl")] } }); });
+  expect(document.querySelector(".notice-region")?.textContent).toBe('Loaded “犬.ttl”.');
+  expect((screen.getByLabelText("ONTOLOGY") as HTMLSelectElement).value).toBe("loaded");
+});
+
+it("localizes workspace controls, their hints and ontology selection independently of names", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  expect(screen.getByRole("tablist", { name: "ワークスペース" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "読み込み" }).title).toContain("ファイル");
+  expect(screen.getByRole("button", { name: "このアプリについて" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "ネットワーク" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "配色を切り替え" })).toBeTruthy();
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "FIBOを探索" })); });
+  expect((screen.getByRole("combobox", { name: "オントロジー" }) as HTMLSelectElement).value).toBe(SUMMARY.id);
+  expect(screen.getByRole("button", { name: "このオントロジーを閉じる" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "項目一覧へ移動" })).toBeTruthy();
+});
+it("translates recovery questions and actions again while the same draft stays pending", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listProjects.mockResolvedValue([PROJECT]);
+  openProject.mockResolvedValue(opened({}, { available: true, draftTime: "2026-09-28T10:15:00+00:00" }));
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Invoicesを開く" })); });
+  expect(screen.getByRole("dialog", { name: "未保存の変更を復元しますか？" }).textContent).toContain("操作履歴は復元されません");
+  expect(screen.getByRole("button", { name: "復元" })).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("dialog", { name: "Recover unsaved changes?" })).toBeTruthy();
+  expect(recoverProject).not.toHaveBeenCalled();
+});
+
+it("uses the list's own search after entering Entities, keeping reference-only selections on its safe path", async () => {
+  await renderAppOpened();
+  expect(screen.getByRole("button", { name: "fake search hit" })).toBeTruthy();
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
+  expect(screen.queryByRole("button", { name: "fake search hit" })).toBeNull();
+  expect(screen.getByRole("searchbox", { name: "Search dictionary" })).toBeTruthy();
+});

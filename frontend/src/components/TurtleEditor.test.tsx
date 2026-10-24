@@ -28,6 +28,7 @@ EXPECTED OUTPUT
 
 // @vitest-environment jsdom
 
+import { I18nProvider } from "../i18n/I18nProvider";
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -237,4 +238,11 @@ describe("TurtleEditor, found in code review", () => {
     await renderEditor();
     expect(document.activeElement).not.toBe(editor());
   });
+});
+it("translates editor controls while preserving the complete Turtle source", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><TurtleEditor projectId="prj-0123456789ab" doc="model" revision={0} /></I18nProvider>); });
+  expect((screen.getByRole("textbox", { name: "model.ttlのTurtleソース" }) as HTMLTextAreaElement).value).toBe(TEXT);
+  expect(screen.getByRole("button", { name: "変更を破棄" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "適用 Ctrl+Enter" })).toBeTruthy();
 });

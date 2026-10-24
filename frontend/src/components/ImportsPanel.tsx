@@ -49,6 +49,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
+import { renderServerError } from "../i18n/serverMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   cancelImports,
@@ -77,54 +82,56 @@ const RDF_EXTENSIONS = /\.(ttl|turtle|owl|rdf|rdfs|xml|jsonld|json|nt|n3|trig|nq
 // negligible next to a download, quick enough that the count visibly moves.
 const PROGRESS_POLL_MS = 500;
 
-function day(iso: string | null): string {
+function day(iso: string | null, locale?: UiLocale): string {
   if (!iso) return "";
   const date = new Date(iso);
   return Number.isNaN(date.getTime())
     ? iso
-    : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+    : date.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** The status of one row, in words. Colour adds nothing this does not say. */
-export function statusText(row: ImportRow): string {
+export function statusText(row: ImportRow, t: Translator = englishTranslator, locale?: UiLocale): string {
   switch (row.status) {
     case "builtin":
-      return "built in";
+      return t("imports.builtin");
     case "resolved":
       switch (row.source) {
         case "bundled":
-          return "bundled";
+          return t("imports.bundled");
         case "library":
-          return `from your library (${row.sourceName})`;
+          return t("imports.library", { name: String(row.sourceName) });
         case "mapped":
-          return `mapped to ${row.sourceName}`;
+          return t("imports.mapped", { name: String(row.sourceName) });
         case "file":
-          return `chosen file ${row.sourceName}`;
+          return t("imports.file", { name: String(row.sourceName) });
         case "network":
-          return `downloaded ${day(row.fetchedAt)}`;
+          return t("imports.downloaded", { date: day(row.fetchedAt, locale) });
         default:
-          return "loaded";
+          return t("imports.loaded");
       }
     case "blocked":
-      return "blocked";
+      return t("imports.blocked");
     case "failed":
-      return "failed";
+      return t("imports.failed");
     default:
-      return "not loaded";
+      return t("imports.pending");
   }
 }
 
 /** The one-sentence summary the collapsed bar shows. */
-export function summaryText(listing: ImportsListing): string {
+export function summaryText(listing: ImportsListing, t: Translator = englishTranslator): string {
   const direct = listing.imports.filter((r) => r.importedBy === null);
   const pending = listing.imports.filter((r) =>
     ["unresolved", "failed", "blocked"].includes(r.status),
   ).length;
   const resolved = listing.imports.filter((r) => r.status === "resolved").length;
-  const count = `This ontology imports ${direct.length} ${direct.length === 1 ? "other" : "others"}.`;
+  const count = t(direct.length === 1 ? "imports.directOne" : "imports.directMany", { count: direct.length });
   if (resolved === 0) return count;
-  const loaded = `${resolved} ${resolved === 1 ? "document" : "documents"} loaded`;
-  return pending === 0 ? `${count} ${loaded}.` : `${count} ${loaded}, ${pending} not loaded.`;
+  const loaded = pending === 0
+    ? t(resolved === 1 ? "imports.loadedOne" : "imports.loadedMany", { count: resolved })
+    : t(resolved === 1 ? "imports.loadedPendingOne" : "imports.loadedPendingMany", { count: resolved, pending });
+  return `${count} ${loaded}`;
 }
 
 export default function ImportsPanel({
@@ -134,12 +141,15 @@ export default function ImportsPanel({
   onIncludeImportsChange,
   onChanged,
 }: Props) {
+  const { t, locale } = useI18n();
+  const translatorRef = useRef(t);
+  translatorRef.current = t;
   const [listing, setListing] = useState<ImportsListing | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState<"resolve" | "refresh" | "files" | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<UiMessage[]>([]);
+  const [error, setError] = useState<unknown>(null);
   const headingRef = useRef<HTMLButtonElement>(null);
   const filesRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement | null>(null);
@@ -153,11 +163,11 @@ export default function ImportsPanel({
   useEffect(() => {
     let live = true;
     setListing(null);
-    setMessage("");
+    setMessages([]);
     setError(null);
     listImports(ontologyId)
       .then((l) => live && setListing(l))
-      .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setError(e));
     return () => {
       live = false;
     };
@@ -177,9 +187,9 @@ export default function ImportsPanel({
     return () => window.clearInterval(timer);
   }, [busy, ontologyId]);
 
-  const settle = useCallback((next: ImportsListing, said: string) => {
+  const settle = useCallback((next: ImportsListing, said: UiMessage[]) => {
     setListing(next);
-    setMessage(said);
+    setMessages(said);
     onChangedRef.current?.(next);
     // The control pressed may be gone now (Resolve, once nothing is left to
     // resolve). Wherever focus fell, the heading is where it is picked up.
@@ -192,7 +202,7 @@ export default function ImportsPanel({
 
   const fail = useCallback(
     async (e: unknown) => {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
       // A declined approval or a failure still leaves the server's record of
       // what did resolve, which is worth showing.
       try {
@@ -211,11 +221,11 @@ export default function ImportsPanel({
       if (busy) return;
       setBusy(kind);
       setError(null);
-      setMessage("");
+      setMessages([]);
       try {
         const next = kind === "resolve" ? await resolveImports(ontologyId) : await refreshImports(ontologyId);
         const resolved = next.imports.filter((r) => r.status === "resolved").length;
-        settle(next, `Imports resolved: ${resolved} ${resolved === 1 ? "document" : "documents"} loaded.`);
+        settle(next, [makeUiMessage(resolved === 1 ? "imports.resolvedOne" : "imports.resolvedMany", { count: resolved })]);
       } catch (e) {
         await fail(e);
       } finally {
@@ -225,21 +235,17 @@ export default function ImportsPanel({
     [busy, ontologyId, settle, fail],
   );
 
-  const reportFiles = (result: ImportFilesResult): string => {
-    const parts: string[] = [];
+  const reportFiles = (result: ImportFilesResult): UiMessage[] => {
+    const parts: UiMessage[] = [];
     if (result.matched.length > 0) {
-      parts.push(
-        `Used ${result.matched.map((m) => m.file).join(", ")} for ${result.matched.length} ${
-          result.matched.length === 1 ? "import" : "imports"
-        }.`,
-      );
+      parts.push(makeUiMessage(result.matched.length === 1 ? "imports.usedOne" : "imports.usedMany", {
+        files: result.matched.map(m => m.file).join(", "), count: result.matched.length,
+      }));
     }
-    if (result.unmatched.length > 0) {
-      parts.push(`Not needed by this ontology, so not kept: ${result.unmatched.join(", ")}.`);
-    }
-    for (const bad of result.invalid) parts.push(`${bad.file} could not be read as RDF.`);
-    if (parts.length === 0) parts.push("None of the chosen files matched an import.");
-    return parts.join(" ");
+    if (result.unmatched.length > 0) parts.push(makeUiMessage("imports.notNeeded", { files: result.unmatched.join(", ") }));
+    for (const bad of result.invalid) parts.push(makeUiMessage("imports.invalidFile", { file: bad.file }));
+    if (parts.length === 0) parts.push(makeUiMessage("imports.noMatch"));
+    return parts;
   };
 
   const sendFiles = useCallback(
@@ -253,9 +259,10 @@ export default function ImportsPanel({
         // only when the user says so. Asked once per file; the browser still
         // holds the file, so confirming re-sends it with the confirmation.
         for (const m of result.mismatch) {
-          const declared = m.declares ?? "no ontology IRI";
+          const currentT = translatorRef.current;
+          const declared = m.declares ?? currentT("imports.noIri");
           const yes = window.confirm(
-            `This file declares ${declared}, not ${m.forIri}. Use it for ${m.forIri} anyway?`,
+            currentT("imports.mismatch", { declared, iri: m.forIri }),
           );
           const file = files.find((f) => f.name === m.file);
           if (yes && file) {
@@ -299,8 +306,8 @@ export default function ImportsPanel({
       setError(null);
       try {
         const next = await mapImport(ontologyId, iri, targetId);
-        const name = library.find((o) => o.id === targetId)?.name ?? "that ontology";
-        settle(next, `Using ${name} for ${iri}.`);
+        const name = library.find((o) => o.id === targetId)?.name;
+        settle(next, [name === undefined ? makeUiMessage("imports.usingUnnamed", { iri }) : makeUiMessage("imports.using", { name, iri })]);
       } catch (e) {
         await fail(e);
       }
@@ -313,7 +320,7 @@ export default function ImportsPanel({
   }, [ontologyId]);
 
   if (listing === null) {
-    return error ? <p className="imports-error">{error}</p> : null;
+    return error ? <div className="imports-error">{renderServerError(error, t)}<details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details></div> : null;
   }
   if (listing.imports.length === 0) return null;
 
@@ -334,9 +341,9 @@ export default function ImportsPanel({
           aria-controls="imports-body"
           onClick={() => setExpanded((v) => !v)}
         >
-          <span aria-hidden="true">{expanded ? "▾" : "▸"}</span> Imports
+          <span aria-hidden="true">{expanded ? "▾" : "▸"}</span> {t("imports.title")}
         </button>
-        <span className="imports-summary">{summaryText(listing)}</span>
+        <span className="imports-summary">{summaryText(listing, t)}</span>
       </h2>
 
       {/* Rendered even when idle, so the first announcement is not lost to a
@@ -344,39 +351,39 @@ export default function ImportsPanel({
       <p className="imports-live" role="status" aria-live="polite">
         {resolving
           ? progress
-            ? `Resolving ${Math.min(progress.done + 1, progress.total)} of ${progress.total}…`
-            : "Resolving imports…"
-          : message}
+            ? t("imports.progress", { done: Math.min(progress.done + 1, progress.total), total: progress.total })
+            : t("imports.resolving")
+          : messages.map(message => renderUiMessage(message, t)).join(" ")}
       </p>
 
       <div id="imports-body" hidden={!expanded}>
         {listing.offline && (
-          <p className="imports-note">Working offline. Only bundled and library imports can resolve.</p>
+          <p className="imports-note">{t("imports.offline")}</p>
         )}
         {listing.limit && <p className="imports-note">{listing.limit}</p>}
-        {error && <p className="imports-error">{error}</p>}
+        {!!error && <div className="imports-error">{renderServerError(error, t)}<details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details></div>}
 
         <div className="imports-actions">
           {pending.length > 0 && (
-            <button onClick={() => void resolve("resolve")}>Resolve imports</button>
+            <button onClick={() => void resolve("resolve")}>{t("imports.resolve")}</button>
           )}
           {resolving && (
             <button className="ghost" onClick={cancel}>
-              Cancel
+              {t("common.cancel")}
             </button>
           )}
           {anyDownloaded && !resolving && (
             <button className="ghost" onClick={() => void resolve("refresh")}>
-              Refresh downloads
+              {t("imports.refresh")}
             </button>
           )}
           {pending.length > 0 && (
-            <span className="imports-choose" role="group" aria-label="Choose files or a folder">
+            <span className="imports-choose" role="group" aria-label={t("imports.chooseGroup")}>
               <button className="ghost" onClick={() => filesRef.current?.click()}>
-                Choose files…
+                {t("imports.chooseFiles")}
               </button>
               <button className="ghost" onClick={() => folderRef.current?.click()}>
-                Choose a folder…
+                {t("imports.chooseFolder")}
               </button>
             </span>
           )}
@@ -391,15 +398,15 @@ export default function ImportsPanel({
               <span className="network-switch-track" aria-hidden="true">
                 <span className="network-switch-thumb" />
               </span>
-              Include imports
+              {t("imports.include")}
             </button>
           )}
         </div>
         {anyResolved && (
           <p className="imports-note">
             {includeImports
-              ? "Showing this ontology together with its imports. Imported entities are read-only."
-              : "Showing this ontology on its own."}
+              ? t("imports.showTogether")
+              : t("imports.showOwn")}
           </p>
         )}
 
@@ -419,39 +426,42 @@ export default function ImportsPanel({
                 <span className="imports-iri" style={{ paddingLeft: `${(row.depth - 1) * 14}px` }}>
                   {row.iri}
                 </span>
-                <span className="imports-status">{statusText(row)}</span>
+                <span className="imports-status">{statusText(row, t, locale)}</span>
                 {row.error && <span className="imports-reason">{row.error}</span>}
                 {failed && (
                   <span className="imports-row-actions">
                     <button className="ghost" onClick={() => void resolve("resolve")}>
-                      Retry
+                      {t("imports.retry")}
                     </button>
                     {href && (
                       <a href={href} target="_blank" rel="noopener noreferrer">
-                        Open the link in my browser
+                        {t("imports.openLink")}
                       </a>
                     )}
                     <button
                       className="ghost"
-                      onClick={() =>
-                        void navigator.clipboard
-                          ?.writeText(row.iri)
-                          .then(() => setMessage(`Copied ${row.iri}.`))
-                          .catch(() => setMessage("The link could not be copied."))
-                      }
+                      onClick={async () => {
+                        try {
+                          if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+                          await navigator.clipboard.writeText(row.iri);
+                          setMessages([makeUiMessage("imports.copied", { iri: row.iri })]);
+                        } catch {
+                          setMessages([makeUiMessage("imports.copyFailed")]);
+                        }
+                      }}
                     >
-                      Copy the link
+                      {t("imports.copy")}
                     </button>
                     <button className="ghost" onClick={() => chooseForRow(row.iri)}>
-                      Choose a file…
+                      {t("imports.chooseFile")}
                     </button>
                     {library.length > 0 && (
                       <select
-                        aria-label={`Use an ontology from your library for ${row.iri}`}
+                        aria-label={t("imports.useLibraryLabel", { iri: row.iri })}
                         value=""
                         onChange={(e) => void useLibrary(row.iri, e.target.value)}
                       >
-                        <option value="">Use one from your library…</option>
+                        <option value="">{t("imports.useLibrary")}</option>
                         {library.map((o) => (
                           <option key={o.id} value={o.id}>
                             {o.name}

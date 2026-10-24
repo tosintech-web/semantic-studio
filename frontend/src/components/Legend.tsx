@@ -55,10 +55,12 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { kindLabelMessage, edgeLabelMessage } from "../i18n/kindLabel";
+import { formatNumber } from "../i18n/format";
 import { Fragment, useState } from "react";
 import type { Theme } from "../types";
-import { PALETTES, edgeColor, kindColor, kindLabel } from "../types";
-import { own } from "../theme/kinds";
+import { PALETTES, edgeColor, kindColor } from "../types";
 
 interface Props {
   theme: Theme;
@@ -73,24 +75,7 @@ interface Props {
   resultsRing?: boolean;
 }
 
-const EDGE_LABELS: Record<string, string> = {
-  subClassOf: "subclass of",
-  subPropertyOf: "subproperty of",
-  domain: "domain",
-  range: "range",
-  instanceOf: "instance of",
-  assertion: "property assertion",
-  broader: "broader",
-  related: "related",
-  inScheme: "in scheme",
-  member: "member",
-  equivalentClass: "equivalent class",
-  equivalentProperty: "equivalent property",
-  disjointWith: "disjoint with",
-  inverseOf: "inverse of",
-  sameAs: "same as",
-  seeAlso: "see also",
-};
+
 
 /** The relation rows in the order given, except that *rule* stands right
  *  after *disjoint with* (explore-rules 5.2): the two share the rule colour,
@@ -140,6 +125,7 @@ export default function Legend({
   inQuery = false,
   resultsRing = false,
 }: Props) {
+  const { t, locale } = useI18n();
   const [collapsed, setCollapsedState] = useState(() => inQuery || startsFolded());
   const setCollapsed = (folded: boolean) => {
     setCollapsedState(folded);
@@ -167,15 +153,13 @@ export default function Legend({
           onClick={() => setCollapsed(false)}
           aria-expanded={false}
           aria-controls={PANEL_ID}
-          aria-label="Legend and filters"
-          title="Show legend and filters"
+          aria-label={t("legend.title")}
+          title={t("legend.closedTitle")}
         >
           <span className="legend-toggle-icon" aria-hidden="true">
             ▸
           </span>
-          <span className="legend-toggle-text" aria-hidden="true">
-            LEGEND &amp; FILTERS
-          </span>
+          <span className="legend-toggle-text" aria-hidden="true">{t("legend.closedText")}</span>
         </button>
       </div>
     );
@@ -188,10 +172,10 @@ export default function Legend({
         onClick={() => setCollapsed(true)}
         aria-expanded={true}
         aria-controls={PANEL_ID}
-        aria-label="Legend and filters"
-        title="Collapse"
+        aria-label={t("legend.title")}
+        title={t("legend.collapse")}
       >
-        <strong>Legend &amp; filters</strong>
+        <strong>{t("legend.openText")}</strong>
         <span aria-hidden="true">◂</span>
       </button>
       <div id={PANEL_ID}>
@@ -205,10 +189,10 @@ export default function Legend({
               aria-hidden="true"
               style={{ borderColor: palette.selectedRing }}
             />
-            <span className="legend-label">Ring: in the results</span>
+            <span className="legend-label">{t("legend.ring")}</span>
           </div>
         )}
-        <div className="legend-section">Nodes — click to show/hide</div>
+        <div className="legend-section">{t("legend.nodes")}</div>
         {kinds.map(([kind, count]) => (
           // The name is stated rather than left to be computed from contents.
           // next-steps-dropdown measured a consumer reading a `title` instead
@@ -223,25 +207,25 @@ export default function Legend({
               className={hiddenKinds.has(kind) ? "legend-row off" : "legend-row"}
               onClick={() => onToggleKind(kind)}
               aria-pressed={hiddenKinds.has(kind)}
-              aria-label={`${kindLabel(kind)}, ${count}`}
-              title="Toggle visibility"
+              aria-label={t("legend.kindCount", { kind: kindLabelMessage(kind, t), count })}
+              title={t("legend.toggle")}
             >
               <span className="dot" style={{ background: kindColor(kind, theme) }} />
-              <span className="legend-label">{kindLabel(kind)}</span>
-              <span className="legend-count">{count}</span>
+              <span className="legend-label">{kindLabelMessage(kind, t)}</span>
+              <span className="legend-count">{formatNumber(locale, count)}</span>
             </button>
             {kind === "class" && rdfsClassCount > 0 && (
               <div className="legend-row static legend-sub">
                 <span className="dot" style={{ background: kindColor("class", theme, "rdfs") }} />
-                <span className="legend-label">RDFS class</span>
-                <span className="legend-count">{rdfsClassCount}</span>
+                <span className="legend-label">{t("legend.rdfs")}</span>
+                <span className="legend-count">{formatNumber(locale, rdfsClassCount)}</span>
               </div>
             )}
           </Fragment>
         ))}
         {edgeKinds.length > 0 && (
           <>
-            <div className="legend-section">Relations</div>
+            <div className="legend-section">{t("legend.relations")}</div>
             {/* A list, not a set of controls. These rows filter nothing and
                 never have; making them buttons to match the ones above would
                 put a dozen dead stops in the tab order. */}
@@ -252,7 +236,7 @@ export default function Legend({
                     className="line"
                     style={{ background: edgeColor(palette, kind) }}
                   />
-                  <span className="legend-label">{own(EDGE_LABELS, kind) ?? kind}</span>
+                  <span className="legend-label">{edgeLabelMessage(kind, t)}</span>
                 </li>
               ))}
             </ul>

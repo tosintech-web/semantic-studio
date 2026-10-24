@@ -40,6 +40,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { makeUiMessage, renderUiMessage, type UiMessage } from "./i18n/uiMessage";
 import type { Translator } from "./i18n/types";
 import { englishTranslator } from "./i18n/format";
 
@@ -64,7 +65,12 @@ export function removalPrompt(name: string, savedQueries: number | null, names: 
   return t(`remove.count.${suffix}`, { name, count: savedQueries });
 }
 
-export function removalConfirmation(name: string, deletedQueries: number, t: Translator = englishTranslator): string | null {
+export function removalConfirmationNotice(name: string, deletedQueries: number): UiMessage | null {
   if (deletedQueries <= 0) return null;
-  return t(`remove.done.${deletedQueries === 1 ? "one" : "many"}`, { name, count: deletedQueries });
+  return makeUiMessage(`remove.done.${deletedQueries === 1 ? "one" : "many"}`, { name, count: deletedQueries });
+}
+
+export function removalConfirmation(name: string, deletedQueries: number, t: Translator = englishTranslator): string | null {
+  const notice = removalConfirmationNotice(name, deletedQueries);
+  return notice ? renderUiMessage(notice, t) : null;
 }

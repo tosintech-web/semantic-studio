@@ -29,6 +29,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
+import { englishTranslator } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import type { SparqlResults } from "../types";
 
 /** What one /nodes request may carry: the server's own bounds
@@ -113,11 +116,14 @@ export function frameTarget(points: Iterable<{ x: number; y: number }>): CameraT
 }
 
 /** What the live region says once per explicit run, or null for none. */
-export function shownOnGraph(count: number): string | null {
+export function shownOnGraphNotice(count: number): UiMessage | null {
   if (count <= 0) return null;
-  return count === 1
-    ? "1 result shown on the graph."
-    : `${count.toLocaleString()} results shown on the graph.`;
+  return makeUiMessage(`query.shownOnGraph.${count === 1 ? "one" : "many"}`, { count });
+}
+
+export function shownOnGraph(count: number, t: Translator = englishTranslator): string | null {
+  const notice = shownOnGraphNotice(count);
+  return notice ? renderUiMessage(notice, t) : null;
 }
 
 /** The results header's sentence when more were hidden than were drawn

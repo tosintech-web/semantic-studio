@@ -205,7 +205,7 @@ export default function ProjectCard({
                       first opened; until then there is nothing to change. */}
                   {project.kind && (
                     <button onClick={act(onChangeKind)}>
-                      {project.kind === "ontology" ? "Change to taxonomy…" : "Change to ontology…"}
+                      {project.kind === "ontology" ? t("home.toTaxonomy") : t("home.toOntology")}
                     </button>
                   )}
                   <button onClick={act(onDuplicate)}>{t("home.duplicate")}</button>
@@ -239,7 +239,7 @@ export default function ProjectCard({
             aria-label={t("home.openName", { name: project.name })}
             onClick={() => !disabled && onOpen(project.id)}
           >
-            {busy ? "Working…" : t("home.open")}
+            {busy ? t("home.working") : t("home.open")}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # UIメッセージ棚卸し（P1）
 
-状態：Task 10の移行中。対象パスの登録は翻訳完了を意味しない。Task 11/12の対象と生成元は、各移行時に追加する。
+状態：Task 10の画面所有文言を移行し、coverage検査を追加。対象パスの登録だけでは翻訳完了を意味しない。Task 11/12の対象と生成元は、各移行時に追加する。
 
 UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL本文・第三者からの原文・法的通知原文は翻訳しない。
 内部メッセージは`MessageArgs`、サーバーの引数は`backend/app/message_contracts.json`を定義元とする。
@@ -10,30 +10,33 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 
 | source path | 用途 | Task | 状態 |
 | --- | --- | --- | --- |
-| `frontend/src/App.tsx` | 共通画面・操作・通知 | 10 | 一部移行・残り作業あり |
-| `frontend/src/components/HomeScreen.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/OntologyCard.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/ProjectsSection.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/NewProjectDialog.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/ProjectHeader.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/LoadDialog.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/CatalogueList.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/ConfirmDialog.tsx` | 共通画面・操作・通知 | 10 | 未移行 |
-| `frontend/src/components/AboutPanel.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/NetworkPanel.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/NetworkApprovalDialog.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/components/ImportsPanel.tsx` | 共通画面・操作・通知 | 10 | 未移行 |
-| `frontend/src/components/SourceView.tsx` | 共通画面・操作・通知 | 10 | 未移行 |
-| `frontend/src/components/TurtleEditor.tsx` | 共通画面・操作・通知 | 10 | 未移行 |
-| `frontend/src/components/GraphNotice.tsx` | 共通画面・操作・通知 | 10 | 未移行 |
-| `frontend/src/components/Legend.tsx` | 共通画面・操作・通知 | 10 | 未移行 |
-| `frontend/src/loadWords.ts` | 共通画面・操作・通知 | 10 | 一部移行・残り作業あり |
-| `frontend/src/networkWords.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/statusWords.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/removalPrompt.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/projects/form.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/catalogue.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
-| `frontend/src/explore/suggestions.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（最終coverage未確認） |
+| `frontend/src/App.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/HomeScreen.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/OntologyCard.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/ProjectsSection.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/NewProjectDialog.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/ProjectHeader.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/LoadDialog.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/CatalogueList.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/ConfirmDialog.tsx` | 共通画面・操作・通知 | 10 | 表示文を持たず呼び出し元が翻訳（ConfirmDialog） |
+| `frontend/src/components/AboutPanel.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/NetworkPanel.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/NetworkApprovalDialog.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/ImportsPanel.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/SourceView.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/TurtleEditor.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/GraphNotice.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/components/Legend.tsx` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/loadWords.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/networkWords.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/statusWords.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/removalPrompt.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/projects/form.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/catalogue.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/explore/suggestions.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/sourceTarget.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/sparql/resultNodes.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
+| `frontend/src/i18n/kindLabel.ts` | 共通画面・操作・通知 | 10 | 画面所有の文言を移行済み（静的coverage検査済み、実ブラウザ確認はTask 13） |
 
 ## 登録済みメッセージ
 
@@ -42,6 +45,207 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 
 | code | args | source path | 用途 | Task | 状態 |
 | --- | --- | --- | --- | --- | --- |
+| `app.workspace` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.load` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.homeHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.loadHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.pickFirst` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.viewHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.exploreHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.editHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.treeHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.queryHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.shapesHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.aboutHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.about` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.networkHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.network` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.lightHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.darkHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.theme` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.ontology` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.activeOntology` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.closeHint` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.closeOntology` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.noneOpen` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.libraryReadOnly` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.shapesReadOnly` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.libraryCopy` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.saveProject` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.canvas` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.canvasLoading` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.canvasFailed` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.retry` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.reasoning` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.details` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.selectPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.skipList` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.buildingGraph` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.nodes` | count | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.edges` | count | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.countPartial` | drawn, total | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.count` | count | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.example` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.recoveryTitle` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.discardThem` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.recover` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.recoveryBody` | date | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.commentsTitle` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.dontSave` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.saveBackup` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.commentsBody` | backup | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.changeToTaxonomy` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.changeToOntology` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.change` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.toTaxonomyBody` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.toOntologyBody` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.applyTitle` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.stay` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.discard` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.apply` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.applyBody` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.saveTitle` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.save` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.thisProject` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.saveBody` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.deleteQuestion` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.title` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.builtin` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.bundled` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.library` | name | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.mapped` | name | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.file` | name | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.downloaded` | date | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.loaded` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.blocked` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.failed` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.pending` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.directOne` | count | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.directMany` | count | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.loadedOne` | count | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.loadedMany` | count | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.loadedPendingOne` | count, pending | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.loadedPendingMany` | count, pending | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.resolvedOne` | count | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.resolvedMany` | count | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.usedOne` | count, files | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.usedMany` | count, files | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.notNeeded` | files | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.invalidFile` | file | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.noMatch` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.noIri` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.mismatch` | declared, iri | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.usingUnnamed` | iri | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.using` | iri, name | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.progress` | done, total | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.resolving` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.offline` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.resolve` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.refresh` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.chooseGroup` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.chooseFiles` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.chooseFolder` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.include` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.showTogether` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.showOwn` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.retry` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.openLink` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.copied` | iri | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.copyFailed` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.copy` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.chooseFile` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.useLibraryLabel` | iri | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `imports.useLibrary` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.notGraphNode` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.expansion.none` | drawn, total | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.expansion.one.complete` | added, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `app.expansion.one.partial` | added, budget, neighbors, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `app.expansion.many.complete` | added, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `app.expansion.many.partial` | added, budget, neighbors, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `query.shownOnGraph.one` | count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `query.shownOnGraph.many` | count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `app.kindOntology` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.kindTaxonomy` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.projectCopied` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `app.projectDeleted` | name, location | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.empty` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.emptyHelp` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.title` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.original` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.originalHelp` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.formatted` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.formattedHelp` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.find` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.none` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.previous` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.next` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.copyTitle` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.copied` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.copy` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.reading` | — | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.missingPast` | — | `frontend/src/sourceTarget.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.missing` | — | `frontend/src/sourceTarget.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.matches` | index, total | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.meta` | format, lines, kilobytes | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.partialStatements` | shown, total | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.partialLines` | lines, shown, total | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `source.more` | count | `frontend/src/components/SourceView.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.applying` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.invalid` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.edited` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.clean` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.discardHelp` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.noDiscard` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.applyHelp` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.noApply` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.discard` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.apply` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.applyFirst` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.parser` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.results` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.name` | file | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.parseLocation` | line, column | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `editor.help` | — | `frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.all` | total | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.maximum` | drawn, total | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.partial` | drawn, total | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.cleared.one` | count | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.cleared.many` | count | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.less` | — | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.more` | — | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.lessHelp` | — | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.allHelp` | — | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.moreHelp` | — | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.floor` | floor | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `graph.maximumHelp` | drawn | `frontend/src/components/GraphNotice.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.title` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.closedTitle` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.closedText` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.openText` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.collapse` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.ring` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.nodes` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.toggle` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.rdfs` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.relations` | — | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `legend.kindCount` | kind, count | `frontend/src/components/Legend.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.subClassOf` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.subPropertyOf` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.domain` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.range` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.instanceOf` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.assertion` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.broader` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.related` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.inScheme` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.member` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.equivalentClass` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.equivalentProperty` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.disjointWith` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.inverseOf` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.sameAs` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.seeAlso` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `edge.rule` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `projectHeader.project` | — | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `projectHeader.document` | — | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `projectHeader.documentHelp` | — | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -74,7 +278,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `projectHeader.missing` | missing, total, language | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `projectHeader.removeLanguage` | language | `frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `app.dismissError` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `app.dismissNotice` | — | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `app.dismissNotice` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.dialog.title` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.dialog.sendingFile` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.dialog.readingFile` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -137,11 +341,11 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `home.remove` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.example` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.readOnly` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `home.working` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `home.working` | — | `frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.rename` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.saveName` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `home.toTaxonomy` | — | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
-| `home.toOntology` | — | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `home.toTaxonomy` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `home.toOntology` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.duplicate` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.export` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.delete` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -232,7 +436,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -314,10 +518,10 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `remove.zero` | name | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `remove.count.one` | name, count | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `remove.named.one` | name, count, names | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.done.one` | name, count | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.done.one` | name, count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
 | `remove.count.many` | name, count | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `remove.named.many` | name, count, names | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.done.many` | name, count | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.done.many` | name, count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
 | `load.sending` | name, sent, total, unit | `frontend/src/loadWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.downloading.one` | elapsed | `frontend/src/loadWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.still.one` | elapsed | `frontend/src/loadWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -388,9 +592,9 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `search.prompt` | — | `frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `search.queryPrompt` | — | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.loading` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.one` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -419,12 +623,12 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.language` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.apply` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.invalidLanguage` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.error` | — | `frontend/src/i18n/serverMessage.ts`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.error` | — | `frontend/src/i18n/serverMessage.ts`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `common.notSet` | — | `frontend/src/i18n/format.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.title` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.description` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.reload` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `load.success` | name | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `load.success` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `parse.syntax` | format, line | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `model.invalid_value` | value, datatype | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `validation.min_count` | name, count | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
@@ -445,7 +649,12 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 
 ## 残りの確認
 
-- Task 10の未移行文字列・通知と各パスのcoverageテスト。
+- Task 10の最終検証と、Task 11/12の生成元から届く文言の接続。coverage.test.tsは対象パス・キー・型の引数・実際のリテラル使用箇所を検査する。
 - Task 11の探索・編集・Query・canvasとリンク付き説明文。
 - Task 12の検証・推論・既存データ機能、サーバーの全発生箇所。
 - Task 13の実ブラウザ・AX・キーボード・日英切替の確認。
+
+Task 10の補足：`ConfirmDialog`自身は表示文を持たず、呼び出し元が翻訳した見出し・本文・操作名を受け取る。
+`ProjectHeader`の操作履歴、参照解決の制限・失敗理由、データスナップショットのラベルなど、生成元で文章化される値はTask 12でコード・引数へ移行する。
+`SourceView`、`TurtleEditor`のRDF本文、利用者が指定した名前・IRI、外部解析器の原文は保持する。ファイル名やバックアップ先は翻訳文に値として挿入する。
+`coverage.test.ts`はTypeScriptの構文木から使用箇所を読む。任意の未翻訳文言の不在や、画面上の収まり・読み上げの品質まで保証するものではない。

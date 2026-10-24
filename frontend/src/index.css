@@ -1156,7 +1156,6 @@ select:focus {
   color: var(--error-text);
   padding: 8px 14px;
   border-bottom: 1px solid var(--error-border);
-  cursor: pointer;
   white-space: pre-wrap;
 }
 
@@ -1182,7 +1181,7 @@ select:focus {
   padding: 8px 14px;
   border-bottom: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  cursor: pointer;
+  padding-right: 46px;
 }
 
 /* The partial-graph notice. Informational, so it deliberately does not borrow
@@ -6653,3 +6652,8 @@ kbd {
 .entity-list-pages { margin-top: 1rem; }
 .entity-open, .reference-iri, .result-match { overflow-wrap: anywhere; }
 .result-match { display: block; }
+
+/* The status region stays mounted; its separate real close button does not
+   become part of the text announced by the live region. */
+.notice-container { position: relative; flex: none; }
+.notice-close { position: absolute; top: 4px; right: 8px; }
