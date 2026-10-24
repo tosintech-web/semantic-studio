@@ -26,7 +26,7 @@ INPUTS / INPUT SOURCES (props)
     - badge: the Edit page's Reasoning count, or null, when `tabs` is not
       given.
     - label, className: the region's name and class; *Side panel* and
-      `side-panel` by default.
+      `side-panel` by default; the default region name follows the UI locale.
     - wide: the canvas is hidden, so the panel fills the centre (5.10).
     - children: the chosen tab's content.
 
@@ -35,6 +35,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { formatNumber } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
 import { useId, useRef, type ReactNode } from "react";
 
 export type SideTab = "details" | "reasoning";
@@ -58,13 +61,13 @@ interface Props<T extends string> {
 }
 
 /** The Edit page's two tabs, Reasoning's count as *3* and *3 new*. */
-function editTabs(badge: number | null): TabSpec<SideTab>[] {
+function editTabs(badge: number | null, t: Translator, locale: UiLocale): TabSpec<SideTab>[] {
   return [
-    { id: "details", name: "Details" },
+    { id: "details", name: t("sideTabs.details") },
     {
       id: "reasoning",
-      name: "Reasoning",
-      badge: badge ? { shown: badge.toLocaleString("en-US"), spoken: `${badge} new` } : null,
+      name: t("sideTabs.reasoning"),
+      badge: badge ? { shown: formatNumber(locale, badge), spoken: t("sideTabs.badgeNew", { count: badge }) } : null,
     },
   ];
 }
@@ -74,13 +77,15 @@ export default function SideTabs<T extends string = SideTab>({
   onTab,
   tabs,
   badge = null,
-  label = "Side panel",
+  label,
   className = "side-panel",
   children,
   wide = false,
 }: Props<T>) {
+  const { t, locale } = useI18n();
+  const panelLabel = label ?? t("sideTabs.label");
   const id = useId();
-  const list = tabs ?? (editTabs(badge) as unknown as TabSpec<T>[]);
+  const list = tabs ?? (editTabs(badge, t, locale) as unknown as TabSpec<T>[]);
   const refs = useRef<Partial<Record<string, HTMLButtonElement | null>>>({});
 
   const move = (to: T) => {
@@ -103,8 +108,8 @@ export default function SideTabs<T extends string = SideTab>({
   };
 
   return (
-    <aside className={wide ? `${className} wide` : className} aria-label={label}>
-      <div className="side-tabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+    <aside className={wide ? `${className} wide` : className} aria-label={panelLabel}>
+      <div className="side-tabs" role="tablist" aria-label={panelLabel} onKeyDown={onKeyDown}>
         {list.map(({ id: name, name: text, badge: note }) => (
           <button
             key={name}
@@ -119,7 +124,7 @@ export default function SideTabs<T extends string = SideTab>({
             tabIndex={tab === name ? 0 : -1}
             className={tab === name ? "side-tab active" : "side-tab"}
             onClick={() => onTab(name)}
-            aria-label={note ? `${text}, ${note.spoken}` : undefined}
+            aria-label={note ? t("sideTabs.badgeLabel", { name: text, spoken: note.spoken }) : undefined}
           >
             {text}
             {note ? (

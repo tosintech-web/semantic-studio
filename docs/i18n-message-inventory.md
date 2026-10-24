@@ -91,8 +91,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/canvas/ConceptNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/ClassNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/CanvasAids.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/GraphView.tsx` | 探索グラフの共通操作・ズーム・出力案内 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/SideTabs.tsx` | 編集・推論の共通タブ表示 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/GraphView.tsx` | 探索グラフの共通操作・ズーム・出力案内 | 11 | 操作を移行、ルールラベル生成元は別途移行 |
+| `frontend/src/components/SideTabs.tsx` | 編集・推論の共通タブ表示 | 11 | 既定表示を移行、カスタム表示の生成元は別途移行 |
 
 ## 登録済みメッセージ
 
@@ -1030,6 +1030,30 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `detail.statementsLimit` | shown, total | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `detail.statementsRulesLimit` | rules, shown, total | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `detail.referencesLimit` | shown, total | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `graphUi.stopHint` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.layoutHint` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.stop` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.layout` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.imageHint` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.image` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.linkHelp` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.none` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.noneYet` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.loadHelp` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.description` | drawn, total | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.descriptionImported` | drawn, total | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.zoomGroup` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.zoomIn` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.zoomOut` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.zoomMin` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.zoomMax` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.fit` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `graphUi.fitHint` | — | `frontend/src/components/GraphView.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `sideTabs.details` | — | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `sideTabs.reasoning` | — | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `sideTabs.label` | — | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `sideTabs.badgeNew` | count | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `sideTabs.badgeLabel` | name, spoken | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
 
 ## 対象外・生成元待ち
 
@@ -1068,3 +1092,5 @@ OWL特性・SKOS対応関係の選択肢は`characteristicChoices(t)`／`mapping
 使用箇所はTypeScript構文木の文字列・リテラル接頭辞を持つテンプレートから検査する。動的キーはテンプレートの静的部分が一致する候補を記載し、すべての分岐の実行済み証明とは区別する。接頭辞を持たない任意の文字列式を、すべてのメッセージの使用とは扱わない。
 
 DetailPanelのルール本文（ruleSentences）とデータ出典ラベル（dataSentences）は、生成元の移行で接続する。探索の順位付けはグラフが変わった時だけ再計算し、UI言語の変更では文言の要約のみ更新する。
+
+GraphViewのルール由来ラベルはruleSentencesの移行で接続する。SideTabsの呼び出し元が渡すカスタム名・バッジは、その生成元で翻訳を組み立てる。既定の編集タブと数値バッジのみをここで生成し、IDや選択状態は翻訳しない。

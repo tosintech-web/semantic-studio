@@ -83,6 +83,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Graph from "graphology";                       // in-memory graph data structure
@@ -549,6 +550,7 @@ export default function GraphView({
   frameTick = 0,
   leftRail,
 }: Props) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
@@ -1365,12 +1367,12 @@ export default function GraphView({
               onClick={() => (layoutRunning ? stopLayout() : startLayout(15000))}
               title={
                 layoutRunning
-                  ? "Stop the layout simulation"
-                  : "Re-run the layout to untangle the graph"
+                  ? t("graphUi.stopHint")
+                  : t("graphUi.layoutHint")
               }
             >
               <span aria-hidden="true">{layoutRunning ? "⏸" : "▶"}</span>
-              {layoutRunning ? "Stop layout" : "Re-run layout"}
+              {layoutRunning ? t("graphUi.stop") : t("graphUi.layout")}
             </button>
             <button
               className="small ghost"
@@ -1382,21 +1384,21 @@ export default function GraphView({
                   backgroundColor: paletteRef.current.background,
                 });
               }}
-              title="Save the current graph view as a PNG image"
+              title={t("graphUi.imageHint")}
             >
               <span aria-hidden="true">⬇</span>
-              Save as image
+              {t("graphUi.image")}
             </button>
             {/* Link names are drawn only for the node in focus (D-110), so a
                 newcomer is told where they went. Text, not a tooltip. */}
             {edgeLabelsOn && (
               <span className="graph-toolbar-note">
-                Link names show when you point at or select a node.
+                {t("graphUi.linkHelp")}
               </span>
             )}
           </>
         ) : (
-          <span className="graph-toolbar-hint">No ontology loaded</span>
+          <span className="graph-toolbar-hint">{t("graphUi.none")}</span>
         )}
       </div>
       <div className="graph-body">
@@ -1417,18 +1419,15 @@ export default function GraphView({
             role={data ? "img" : undefined}
             aria-label={
               data
-                ? `Ontology graph, ${drawnCount.toLocaleString()} of ` +
-                  `${data.stats.nodeTotal.toLocaleString()} entities drawn. ` +
-                  (hasImported ? "Entities from imports are drawn smaller. " : "") +
-                  `Use the entity list to browse.`
+                ? t(hasImported ? "graphUi.descriptionImported" : "graphUi.description", { drawn: drawnCount, total: data.stats.nodeTotal })
                 : undefined
             }
           />
           {!data && (
             <div className="graph-empty">
-              <p>No ontology loaded yet.</p>
+              <p>{t("graphUi.noneYet")}</p>
               <p className="hint">
-                Use “Load” to upload a file or fetch one from a URL / GitHub.
+                {t("graphUi.loadHelp")}
               </p>
             </div>
           )}
@@ -1442,7 +1441,7 @@ export default function GraphView({
               punctuation — so the glyphs carry aria-hidden and the labels do the
               naming. The group names itself so the three read as a set. */}
           {data && (
-            <div className="graph-zoom" role="group" aria-label="Zoom controls">
+            <div className="graph-zoom" role="group" aria-label={t("graphUi.zoomGroup")}>
               <button
                 ref={zoomInRef}
                 className="zoom-btn"
@@ -1453,8 +1452,8 @@ export default function GraphView({
                     .animatedZoom({ duration: moveDuration(ZOOM_DURATION_MS) });
                 }}
                 disabled={zoomEdge === "min"}
-                aria-label="Zoom in"
-                title={zoomEdge === "min" ? "The view is fully zoomed in." : "Zoom in"}
+                aria-label={t("graphUi.zoomIn")}
+                title={zoomEdge === "min" ? t("graphUi.zoomMin") : t("graphUi.zoomIn")}
               >
                 <span aria-hidden="true">＋</span>
               </button>
@@ -1468,8 +1467,8 @@ export default function GraphView({
                     .animatedUnzoom({ duration: moveDuration(ZOOM_DURATION_MS) });
                 }}
                 disabled={zoomEdge === "max"}
-                aria-label="Zoom out"
-                title={zoomEdge === "max" ? "The view is fully zoomed out." : "Zoom out"}
+                aria-label={t("graphUi.zoomOut")}
+                title={zoomEdge === "max" ? t("graphUi.zoomMax") : t("graphUi.zoomOut")}
               >
                 <span aria-hidden="true">－</span>
               </button>
@@ -1480,8 +1479,8 @@ export default function GraphView({
                     ?.getCamera()
                     .animatedReset({ duration: moveDuration(FIT_DURATION_MS) })
                 }
-                aria-label="Fit the whole graph"
-                title="Zoom out to fit the whole graph"
+                aria-label={t("graphUi.fit")}
+                title={t("graphUi.fitHint")}
               >
                 <span aria-hidden="true">⤢</span>
               </button>
