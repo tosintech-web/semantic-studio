@@ -2409,3 +2409,25 @@ EXPECTED OUTPUT
   current notice and list alone. The already-issued server action is unchanged.
   The wizard still retains its selected File, inspection and options across UI
   changes; its refresh explanation carries metadata beside the legacy string.
+
+- **P1 literal import headers** (2026-10-25). A CSV or workbook header is
+  source text, including `__proto__`, `constructor` and `toString`.
+  `initialColumns` previously inherited choices from an empty suggestions
+  object; assigning `__proto__` to an ordinary result object could drop that
+  column. The wizard's first-value map could then return Object.prototype
+  instead of the cell string and React refused to render it.
+
+  Choice-result and first-value records now have no prototype. Incoming
+  previous/suggestion maps are checked for own keys. The choice serialization,
+  one-name rule, type inference and RDF/API identifiers are unchanged.
+  Pure regressions cover all three names, including genuine own suggestions
+  and JSON round trips. A wizard regression imports an actual synthetic CSV
+  with the `__proto__` header and checks its raw first cell, selected property
+  and complete payload. Restoring just the old first-value map reproduces
+  React's invalid-child failure; the safe map passes that same test.
+
+  The four wizard steps now use whole UI templates and locale-aware choice
+  labels. Stored File/options, mapping identities, drafts and pending reads
+  survive locale changes; errors retain original objects and structured
+  refresh mismatches retain their actual missing-column array. Import notices
+  carry source/count facts, keeping the legacy English text via ProjectNotice.

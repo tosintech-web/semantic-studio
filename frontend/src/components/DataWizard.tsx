@@ -54,7 +54,10 @@ BASIC IDEA
     identifier it was read for, and used only while they are still the
     chosen ones: a class changed on step 2 waits for its own reading rather
     than offering the old class's columns. A reading that fails says so
-    with Try again, and Next waits (PR #53 review).
+    with Try again, and Next waits (PR #53 review). UI locale changes only
+    whole display templates and offered labels; File, mapping identities,
+    drafts and in-flight reads remain. Errors retain their original objects,
+    and a structural refresh mismatch keeps the actual missing-column list.
 
 INPUTS / INPUT SOURCES (props)
     - projectId, modelOntologyId, taxonomy: the open project.
@@ -76,6 +79,7 @@ import type { DataSourceRef } from "../api";
 import {
   NEW_ATTRIBUTE,
   NEW_TYPES,
+  newTypes,
   choiceValue,
   initialColumns,
   parseChoice,
@@ -88,6 +92,7 @@ import {
   headerRowOption,
   idProblems,
   previewSentences,
+  rowLimitSentence,
   sampleWords,
   sheetOption,
   unmatchedLines,
@@ -108,7 +113,10 @@ import type {
 import ImportReport from "./ImportReport";
 
 import { useI18n } from "../i18n/I18nProvider";
-import { renderUiMessage, type UiMessageFor } from "../i18n/uiMessage";
+import { makeUiMessage, renderUiMessage, type UiMessageFor } from "../i18n/uiMessage";
+
+import { renderServerError } from "../i18n/serverMessage";
+import type { Translator } from "../i18n/types";
 
 const CONCEPT = "http://www.w3.org/2004/02/skos/core#Concept";
 
@@ -149,12 +157,17 @@ interface Props {
 
 type Step = 1 | 2 | 3 | 4 | "report";
 
-const STEP_TITLES: Record<1 | 2 | 3 | 4, string> = {
-  1: "the file",
-  2: "what a row is",
-  3: "the columns",
-  4: "preview and import",
-};
+const STEP_TITLES = {
+  1: "dataWizard.step.file", 2: "dataWizard.step.row",
+  3: "dataWizard.step.columns", 4: "dataWizard.step.preview",
+} as const;
+
+type WizardProblem = { kind: "external"; error: unknown } | { kind: "missingColumns"; columns: string[] };
+const external = (error: unknown): WizardProblem => ({ kind: "external", error });
+function problemText(problem: WizardProblem, t: Translator): string {
+  return problem.kind === "external" ? renderServerError(problem.error, t)
+    : t("dataWizard.missingColumns", { columns: problem.columns.join(t("dataWords.separator")) });
+}
 
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -181,7 +194,7 @@ export default function DataWizard({
   const [inspection, setInspection] = useState<DataInspection | null>(
     start.kind === "refresh" ? start.inspection : null,
   );
-  const [fileProblem, setFileProblem] = useState<{ text: string; tooLarge: boolean } | null>(null);
+  const [fileProblem, setFileProblem] = useState<{ error: unknown; tooLarge: boolean } | null>(null);
   // A workbook's sheets and first rows, kept when a re-read fails.
   const [workbook, setWorkbook] = useState<WorkbookInspection | null>(
     start.kind === "refresh" ? (start.inspection?.workbook ?? start.workbook ?? null) : null,
@@ -196,13 +209,13 @@ export default function DataWizard({
   const [previous, setPrevious] = useState<Record<string, ColumnChoice> | null>(earlier?.columns ?? null);
   // The class reading, with the class and identifier it was read for.
   const [classReading, setClassReading] = useState<{ key: string; preview: DataPreview } | null>(null);
-  const [basisFailed, setBasisFailed] = useState<string | null>(null);
+  const [basisFailed, setBasisFailed] = useState<{ error: unknown } | null>(null);
   const [retry, setRetry] = useState(0);
   const [columns, setColumns] = useState<Record<string, ColumnChoice> | null>(null);
   const [suggested, setSuggested] = useState<string[]>([]);
   const [preview, setPreview] = useState<DataPreview | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<WizardProblem | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<SnapshotSummary | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -229,7 +242,7 @@ export default function DataWizard({
           setPrevious(found.choices.columns);
         }
       })
-      .catch((e: unknown) => live && setError(message(e)));
+      .catch((e: unknown) => live && setError(external(e)));
     return () => {
       live = false;
     };
@@ -282,7 +295,7 @@ export default function DataWizard({
           ? { ...current, sheet: nextOptions.sheet, headerRow: nextOptions.headerRow ?? 1, top: unreadRows() }
           : current),
       );
-      setFileProblem({ text: message(e), tooLarge: e instanceof ApiError && e.status === 413 });
+      setFileProblem({ error: e, tooLarge: e instanceof ApiError && e.status === 413 });
     } finally {
       // An earlier read finishing leaves the wizard reading the latest.
       if (latest()) setReading(false);
@@ -322,7 +335,7 @@ export default function DataWizard({
     setBasisFailed(null);
     previewData(projectId, source, options, { classIri, idColumn: effectiveId, columns: {} })
       .then((found) => live && setClassReading({ key, preview: found }))
-      .catch((e: unknown) => live && setBasisFailed(message(e)));
+      .catch((e: unknown) => live && setBasisFailed({ error: e }));
     return () => {
       live = false;
     };
@@ -355,7 +368,7 @@ export default function DataWizard({
       .catch((e: unknown) => {
         if (!live) return;
         setPreviewFailed(true);
-        setError(message(e));
+        setError(external(e));
       });
     return () => {
       live = false;
@@ -378,7 +391,7 @@ export default function DataWizard({
           columnsReady: choices !== null,
           reading,
           sheetChosen: !(workbook && (options.sheet ?? workbook.sheet) === ""),
-        })
+        }, locale)
       : null;
   const retryShown = (step === 2 || step === 3) && basisFailed !== null && !basis;
 
@@ -410,20 +423,23 @@ export default function DataWizard({
             ? { ...options, sheet: options.sheet ?? workbook.sheet, headerRow: options.headerRow ?? workbook.headerRow }
             : options;
         const result = await refreshData(projectId, start.snapshot.id, file!, sent, choices);
-        if (result.status !== "imported") throw new Error(`The file still lacks ${result.missing.join(", ")}.`);
+        if (result.status !== "imported") {
+          setError({ kind: "missingColumns", columns: result.missing });
+          return;
+        }
         made = result.snapshot;
       } else {
         made = (await updateData(projectId, start.snapshot.id, { choices })).snapshot;
       }
       setDone(made);
       setStep("report");
-      const verb = start.kind === "remap" ? "Mapped again" : "Imported";
       const count = made.report.individuals;
-      await projectStore.dataChanged(
-        `${verb} ${made.source}: ${count.toLocaleString("en-US")} ${count === 1 ? "thing" : "things"} made.`, projectId,
-      );
+      const code = start.kind === "remap"
+        ? count === 1 ? "projectNotice.dataRemapped.one" : "projectNotice.dataRemapped.many"
+        : count === 1 ? "projectNotice.dataImported.one" : "projectNotice.dataImported.many";
+      await projectStore.dataChanged(makeUiMessage(code, { source: made.source, count }), projectId);
     } catch (e: unknown) {
-      setError(message(e));
+      setError(external(e));
     } finally {
       setBusy(false);
     }
@@ -440,9 +456,9 @@ export default function DataWizard({
   const title =
     step === "report"
       ? start.kind === "remap"
-        ? "Mapped again"
-        : "Imported"
-      : `Step ${step} of 4: ${STEP_TITLES[step]}`;
+        ? t("dataWizard.remapped")
+        : t("dataWizard.imported")
+      : t("dataWizard.step", { step, title: t(STEP_TITLES[step]) });
 
   return (
     <section className="data-wizard" aria-labelledby={headingId}>
@@ -451,8 +467,7 @@ export default function DataWizard({
       </h3>
       {start.kind !== "new" && step !== "report" && (
         <p className="detail-note">
-          {start.kind === "remap" ? "Changing the mapping of " : "Refreshing "}
-          {dataLabel(start.snapshot, locale)}
+          {t(start.kind === "remap" ? "dataWizard.changing" : "dataWizard.refreshing", { label: dataLabel(start.snapshot, locale) })}
         </p>
       )}
 
@@ -494,7 +509,7 @@ export default function DataWizard({
             setRowNumber(on);
             setColumns(null);
           }}
-          onError={setError}
+          onError={(error) => setError(external(error))}
         />
       )}
       {step === 3 && (
@@ -521,10 +536,10 @@ export default function DataWizard({
               const key = basisKey;
               void previewData(projectId, source, options, { classIri, idColumn: effectiveId, columns: {} })
                 .then((found) => setClassReading({ key, preview: found }))
-                .catch((e: unknown) => setError(message(e)));
+                .catch((e: unknown) => setError(external(e)));
             }
           }}
-          onError={setError}
+          onError={(error) => setError(external(error))}
         />
       )}
       {step === 4 && <PreviewStep preview={preview} inspection={inspection} busy={busy} />}
@@ -534,9 +549,9 @@ export default function DataWizard({
 
       {retryShown && (
         <p className="detail-error" role="alert">
-          {basisFailed}{" "}
+          {renderServerError(basisFailed!.error, t)}{" "}
           <button type="button" onClick={() => setRetry((n) => n + 1)}>
-            Try again
+            {t("dataSnapshot.retry")}
           </button>
         </p>
       )}
@@ -549,37 +564,37 @@ export default function DataWizard({
               setRetry((n) => n + 1);
             }}
           >
-            Try again
+            {t("dataSnapshot.retry")}
           </button>
         </p>
       )}
-      {error && (
-        <p className="detail-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <>
+        <p className="detail-error" role="alert">{problemText(error, t)}</p>
+        {error.kind === "external" && <details><summary>{t("common.details")}</summary><pre>{message(error.error)}</pre></details>}
+      </>}
+      {retryShown && <details><summary>{t("common.details")}</summary><pre>{message(basisFailed!.error)}</pre></details>}
 
       {confirmCancel ? (
-        <div className="wizard-actions" role="group" aria-label="Leave the wizard?">
-          <span>Leave without importing? The mapping chosen so far is lost.</span>
+        <div className="wizard-actions" role="group" aria-label={t("dataWizard.leaveQuestion")}>
+          <span>{t("dataWizard.leaveBody")}</span>
           <button type="button" onClick={onClose}>
-            Leave
+            {t("dataWizard.leave")}
           </button>
           <button type="button" className="primary" onClick={() => setConfirmCancel(false)}>
-            Keep going
+            {t("dataWizard.keepGoing")}
           </button>
         </div>
       ) : step === "report" ? (
         <div className="wizard-actions">
           <button type="button" onClick={onClose}>
-            Done
+            {t("dataWizard.done")}
           </button>
         </div>
       ) : (
         <div className="wizard-actions">
           {step !== firstStep && (
             <button type="button" onClick={goBack}>
-              Back
+              {t("dataWizard.back")}
             </button>
           )}
           {step === 4 ? (
@@ -589,7 +604,7 @@ export default function DataWizard({
               aria-disabled={busy || !preview}
               onClick={() => void doImport()}
             >
-              {busy ? "Importing…" : start.kind === "new" ? "Import" : "Import again"}
+              {t(busy ? "dataWizard.importing" : start.kind === "new" ? "dataWizard.import" : "dataWizard.importAgain")}
             </button>
           ) : (
             <button
@@ -599,11 +614,11 @@ export default function DataWizard({
               aria-describedby={blocked ? reasonId : undefined}
               onClick={goNext}
             >
-              Next
+              {t("dataWizard.next")}
             </button>
           )}
           <button type="button" onClick={cancel}>
-            Cancel
+            {t("common.cancel")}
           </button>
           {blocked && step !== 4 && (
             <span id={reasonId} className="detail-note">
@@ -614,7 +629,7 @@ export default function DataWizard({
       )}
       {busy && (
         <p className="detail-note" role="status">
-          Importing {(inspection?.kept ?? 0).toLocaleString("en-US")} rows…
+          {t("dataWizard.importingRows", { count: inspection?.kept ?? 0 })}
         </p>
       )}
     </section>
@@ -623,16 +638,12 @@ export default function DataWizard({
 
 /* --- Step 1: the file ------------------------------------------------------------ */
 
-const SEPARATOR_NAMES: [Separator, string][] = [
-  [",", "Comma"],
-  [";", "Semicolon"],
-  ["\t", "Tab"],
-];
-const ENCODING_NAMES: [DataEncoding, string][] = [
-  ["utf-8", "UTF-8"],
-  ["utf-8-sig", "UTF-8 with BOM"],
-  ["windows-1252", "Windows-1252"],
-];
+const SEPARATOR_NAMES = [
+  [",", "dataWizard.separator.comma"], [";", "dataWizard.separator.semicolon"], ["\t", "dataWizard.separator.tab"],
+] as const;
+const ENCODING_NAMES = [
+  ["utf-8", "dataWizard.encoding.utf8"], ["utf-8-sig", "dataWizard.encoding.bom"], ["windows-1252", "dataWizard.encoding.windows"],
+] as const;
 
 // What the file chooser offers: CSV text, and Excel workbooks (5.8).
 export const DATA_FILE_ACCEPT =
@@ -653,10 +664,11 @@ function FileStep({
   workbook: WorkbookInspection | null;
   options: DataOptions;
   reading: boolean;
-  problem: { text: string; tooLarge: boolean } | null;
+  problem: { error: unknown; tooLarge: boolean } | null;
   onFile: (file: File) => void;
   onOptions: (changes: DataOptions) => void;
 }) {
+  const { locale, t } = useI18n();
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const sheetId = useId();
@@ -684,23 +696,21 @@ function FileStep({
       >
         <input ref={input} type="file" accept={DATA_FILE_ACCEPT} hidden onChange={pick} />
         <button type="button" onClick={() => input.current?.click()}>
-          {file ? "Choose another file" : "Choose a file"}
+          {t(file ? "dataSnapshot.chooseFile" : "dataWizard.chooseFile")}
         </button>
         <p className="hint">
-          {file ? `${file.name}.` : "Or drop a CSV or Excel (.xlsx) file here."} At most 2,000 rows (per sheet in a
-          workbook), 100 columns and 5 MB.
+          {file ? t("dataWizard.fileHint", { file: file.name }) : t("dataWizard.dropHint")}
         </p>
       </div>
       {reading && (
         <p className="detail-note" role="status">
-          Reading…
+          {t("dataWizard.reading")}
         </p>
       )}
       {problem && (
-        <p className="detail-error" role="alert">
-          {problem.tooLarge ? "Too large. " : "Not readable. "}
-          {problem.text}
-        </p>
+        <><p className="detail-error" role="alert">{t("dataWizard.fileProblem", {
+          kind: t(problem.tooLarge ? "dataWizard.tooLarge" : "dataWizard.unreadable"), reason: renderServerError(problem.error, t),
+        })}</p><details><summary>{t("common.details")}</summary><pre>{message(problem.error)}</pre></details></>
       )}
       {/* The pickers stay mounted while the file is read again: one that
           unmounted on its own change dropped keyboard focus to the page
@@ -708,7 +718,7 @@ function FileStep({
       {workbook && (
         <div className="wizard-detections" aria-busy={reading}>
           <p className="wizard-field">
-            <label htmlFor={sheetId}>Sheet </label>
+            <label htmlFor={sheetId}>{t("dataWizard.sheet")}</label>
             <select
               id={sheetId}
               value={options.sheet ?? workbook.sheet}
@@ -717,18 +727,18 @@ function FileStep({
             >
               {(options.sheet ?? workbook.sheet) === "" && (
                 <option value="" disabled>
-                  Choose a sheet
+                  {t("dataWizard.chooseSheet")}
                 </option>
               )}
               {workbook.sheets.map((sheet) => (
                 <option key={sheet.name} value={sheet.name}>
-                  {sheetOption(sheet)}
+                  {sheetOption(sheet, locale)}
                 </option>
               ))}
             </select>
           </p>
           <p className="wizard-field">
-            <label htmlFor={headerRowId}>Header row </label>
+            <label htmlFor={headerRowId}>{t("dataWizard.headerRow")}</label>
             <select
               id={headerRowId}
               value={options.headerRow ?? workbook.headerRow}
@@ -736,7 +746,7 @@ function FileStep({
             >
               {headerRows(workbook, options.headerRow ?? workbook.headerRow).map((row) => (
                 <option key={row.row} value={row.row}>
-                  {headerRowOption(row)}
+                  {headerRowOption(row, locale)}
                 </option>
               ))}
             </select>
@@ -750,27 +760,27 @@ function FileStep({
           {inspection.format !== "xlsx" && (
             <div className="wizard-detections" aria-busy={reading}>
               <label>
-                Separator{" "}
+                {t("dataWizard.separator")}{" "}
                 <select
                   value={options.separator ?? inspection.separator}
                   onChange={(e) => onOptions({ separator: e.target.value as Separator })}
                 >
                   {SEPARATOR_NAMES.map(([value, name]) => (
                     <option key={name} value={value}>
-                      {name}
+                      {t(name)}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                Encoding{" "}
+                {t("dataWizard.encoding")}{" "}
                 <select
                   value={options.encoding ?? inspection.encoding}
                   onChange={(e) => onOptions({ encoding: e.target.value as DataEncoding })}
                 >
                   {ENCODING_NAMES.map(([value, name]) => (
                     <option key={value} value={value}>
-                      {name}
+                      {t(name)}
                     </option>
                   ))}
                 </select>
@@ -781,7 +791,7 @@ function FileStep({
                   checked={options.header ?? inspection.header}
                   onChange={(e) => onOptions({ header: e.target.checked })}
                 />{" "}
-                First row is the header
+                {t("dataWizard.firstHeader")}
               </label>
             </div>
           )}
@@ -790,37 +800,35 @@ function FileStep({
               {inspection.renamed.map((r) => (
                 <li key={r.index}>
                   {r.from
-                    ? `Column ${r.index + 1} is a second "${r.from}": called "${r.to}".`
-                    : `Column ${r.index + 1} has no name: called "${r.to}".`}
+                    ? t("dataWizard.renamedDuplicate", { index: r.index + 1, from: r.from, to: r.to })
+                    : t("dataWizard.renamedEmpty", { index: r.index + 1, to: r.to })}
                 </li>
               ))}
             </ul>
           )}
           {inspection.sample && (
-            <div className="wizard-limit" role="group" aria-label="More rows than the tool takes">
-              <p>{inspection.limitSentence}</p>
+            <div className="wizard-limit" role="group" aria-label={t("dataSnapshot.limit")}>
+              <p>{rowLimitSentence(inspection, locale)}</p>
               {options.sample ? (
                 <p className="detail-note">
-                  Using the first {inspection.limit.toLocaleString("en-US")} rows. The data will be marked{" "}
-                  <em>{sampleWords({ rows: inspection.kept, total: inspection.total, sample: true })}</em> wherever
-                  it is shown.
+                  {t("dataWizard.sampleChosen", { limit: inspection.limit, sample: sampleWords({ rows: inspection.kept, total: inspection.total, sample: true }, locale)! })}
                 </p>
               ) : (
                 <p>
                   <button type="button" className="primary" onClick={() => onOptions({ sample: true })}>
-                    Use the first {inspection.limit.toLocaleString("en-US")} rows
+                    {t("dataSnapshot.useFirst", { count: inspection.limit })}
                   </button>{" "}
                   <button type="button" onClick={() => input.current?.click()}>
-                    Choose another file
+                    {t("dataSnapshot.chooseFile")}
                   </button>
                 </p>
               )}
             </div>
           )}
           <p className="detail-note">
-            {inspection.total.toLocaleString("en-US")} {inspection.total === 1 ? "row" : "rows"},{" "}
-            {inspection.columns.length} {inspection.columns.length === 1 ? "column" : "columns"}. The first{" "}
-            {Math.min(inspection.rows.length, 20)} are shown.
+            {t(`dataWizard.table.${inspection.total === 1 ? "one" : "many"}.${inspection.columns.length === 1 ? "one" : "many"}`, {
+              rows: inspection.total, columns: inspection.columns.length, shown: Math.min(inspection.rows.length, 20),
+            })}
           </p>
           <div className="wizard-table-wrap">
             <table className="wizard-table">
@@ -894,8 +902,9 @@ function RowStep({
   onClass: (iri: string) => void;
   onIdColumn: (column: string) => void;
   onRowNumber: (on: boolean) => void;
-  onError: (message: string) => void;
+  onError: (error: unknown) => void;
 }) {
+  const { locale, t } = useI18n();
   const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [classes, setClasses] = useState<{ iri: string; label: string }[]>([]);
   const [creating, setCreating] = useState(false);
@@ -917,7 +926,7 @@ function RowStep({
           .sort((a, b) => a.label.localeCompare(b.label));
         setClasses(found);
       })
-      .catch((e: unknown) => live && onError(message(e)));
+      .catch((e: unknown) => live && onError(e));
     return () => {
       live = false;
     };
@@ -933,12 +942,12 @@ function RowStep({
       setLoadToken((t) => t + 1);
       if (result.created) onClass(result.created);
     } catch (e: unknown) {
-      onError(message(e));
+      onError(e);
     }
   };
 
   const check = basis?.idCheck;
-  const problems = check && !rowNumber && check.column ? idProblems(check) : [];
+  const problems = check && !rowNumber && check.column ? idProblems(check, locale) : [];
   const example = basis?.rows?.find((r) => r.subject)?.subject;
 
   return (
@@ -947,9 +956,9 @@ function RowStep({
         {taxonomy ? (
           // Nothing to choose: the sentence describes the identifier's
           // picker below rather than labelling a text (PR #53 review).
-          <span id={classId}>Each row is a concept of the project's scheme.</span>
+          <span id={classId}>{t("dataWizard.taxonomy")}</span>
         ) : (
-          <label htmlFor={classId}>Each row is </label>
+          <label htmlFor={classId}>{t("dataWizard.rowClass")}</label>
         )}
         {taxonomy ? null : (
           <select
@@ -964,40 +973,39 @@ function RowStep({
             }}
           >
             <option value="" disabled>
-              Choose a class
+              {t("dataWizard.chooseClass")}
             </option>
             {classes.map((c) => (
               <option key={c.iri} value={c.iri}>
-                a {c.label}
+                {t("dataWizard.classOption", { label: c.label })}
               </option>
             ))}
-            <option value="new">A new class…</option>
+            <option value="new">{t("dataWizard.newClass")}</option>
           </select>
         )}
       </p>
       {creating && (
         <p className="wizard-inline">
-          <label htmlFor={newId}>Name of the new class</label>{" "}
+          <label htmlFor={newId}>{t("dataWizard.newClassName")}</label>{" "}
           <input id={newId} value={newName} onChange={(e) => setNewName(e.target.value)} />{" "}
           <button type="button" aria-disabled={!newName.trim()} onClick={() => void createClass()}>
-            Create class
+            {t("dataWizard.createClass")}
           </button>
         </p>
       )}
       {inspection && (
         <p className="wizard-field">
-          <label htmlFor={idId}>Each row is identified by column </label>
+          <label htmlFor={idId}>{t("dataWizard.idColumn")}</label>
           <select
             id={idId}
             aria-describedby={taxonomy ? classId : undefined}
             value={rowNumber ? "" : (idColumn ?? "")}
             onChange={(e) => (e.target.value ? onIdColumn(e.target.value) : onRowNumber(true))}
           >
-            <option value="">its row number</option>
+            <option value="">{t("dataWizard.rowNumber")}</option>
             {inspection.columns.map((c) => (
               <option key={c.name} value={c.name}>
-                {c.name}
-                {c.name === inspection.idSuggestion ? " (suggested)" : ""}
+                {c.name === inspection.idSuggestion ? t("dataWizard.idSuggested", { name: c.name }) : c.name}
               </option>
             ))}
           </select>
@@ -1010,19 +1018,19 @@ function RowStep({
           ))}
           <p>
             <button type="button" onClick={() => onRowNumber(true)}>
-              Use the row number instead
+              {t("dataWizard.useRowNumber")}
             </button>
           </p>
         </div>
       )}
       {check && check.ok && check.column && !rowNumber && (
         <p className="detail-note" role="status">
-          Every row has a different {check.column}.
+          {t("dataWizard.uniqueId", { column: check.column })}
         </p>
       )}
       {example && (
         <p className="detail-note">
-          Row 1 becomes <code>{example}</code>
+          {t("dataWizard.example")}<code>{example}</code>
         </p>
       )}
     </div>
@@ -1031,10 +1039,10 @@ function RowStep({
 
 /* --- Step 3: the columns -------------------------------------------------------------- */
 
-function fieldOptions(fields: DataField[]) {
+function fieldOptions(fields: DataField[], t: Translator) {
   return fields.map((f) => (
     <option key={`${f.kind} ${f.property}`} value={choiceValue({ as: f.kind, property: f.property })}>
-      {f.kind === "attribute" ? `attribute: ${f.label}` : `relationship: ${f.label} (by its id)`}
+      {t(f.kind === "attribute" ? "dataWizard.field.attribute" : "dataWizard.field.relationship", { label: f.label })}
     </option>
   ));
 }
@@ -1060,14 +1068,15 @@ function ColumnsStep({
   taxonomy: boolean;
   onChange: (column: string, choice: ColumnChoice) => void;
   onCreated: (column: string, property: string) => void;
-  onError: (message: string) => void;
+  onError: (error: unknown) => void;
 }) {
+  const { locale, t } = useI18n();
   const [adding, setAdding] = useState<string | null>(null);
   const baseId = useId();
   const [name, setName] = useState("");
   const [type, setType] = useState("text");
   const firstValues = useMemo(() => {
-    const out: Record<string, string> = {};
+    const out: Record<string, string> = Object.create(null);
     inspection?.columns.forEach((c, i) => {
       out[c.name] = inspection.rows.find((r) => r[i])?.[i] ?? "";
     });
@@ -1077,7 +1086,7 @@ function ColumnsStep({
   if (!inspection || !basis || !columns) {
     return (
       <p className="detail-note" role="status">
-        Reading what each column can become…
+        {t("dataChoices.blocked.fieldsReading")}
       </p>
     );
   }
@@ -1096,7 +1105,7 @@ function ColumnsStep({
       setAdding(null);
       if (result.created) onCreated(column, result.created);
     } catch (e: unknown) {
-      onError(message(e));
+      onError(e);
     }
   };
   return (
@@ -1104,7 +1113,7 @@ function ColumnsStep({
       {missing.length > 0 && (
         <ul className="wizard-problems" role="status">
           {missing.map((m) => (
-            <li key={m}>Column {m} is missing from the new file.</li>
+            <li key={m}>{t("dataWizard.columnMissing", { column: m })}</li>
           ))}
         </ul>
       )}
@@ -1112,9 +1121,9 @@ function ColumnsStep({
         <table className="wizard-table wizard-columns">
           <thead>
             <tr>
-              <th scope="col">Column</th>
-              <th scope="col">First value</th>
-              <th scope="col">Becomes</th>
+              <th scope="col">{t("dataWizard.column")}</th>
+              <th scope="col">{t("dataWizard.firstValue")}</th>
+              <th scope="col">{t("dataWizard.becomes")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1144,34 +1153,34 @@ function ColumnsStep({
                         }
                       }}
                     >
-                      <option value="ignore">Ignore</option>
-                      <option value="name">The name</option>
-                      {fieldOptions(fields)}
+                      <option value="ignore">{t("dataWizard.ignore")}</option>
+                      <option value="name">{t("dataWizard.theName")}</option>
+                      {fieldOptions(fields, t)}
                       {/* One the wizard made a moment ago, not yet in the fields. */}
                       {columns[column]?.property &&
                         !fields.some((f) => f.property === columns[column].property) && (
-                          <option value={choiceValue(columns[column])}>attribute: {column}</option>
+                          <option value={choiceValue(columns[column])}>{t("dataWizard.field.attribute", { label: column })}</option>
                         )}
-                      {!taxonomy && <option value={NEW_ATTRIBUTE}>A new attribute…</option>}
+                      {!taxonomy && <option value={NEW_ATTRIBUTE}>{t("dataWizard.newAttribute")}</option>}
                     </select>
-                    {suggested.includes(column) && <span className="wizard-suggested"> suggested</span>}
+                    {suggested.includes(column) && <span className="wizard-suggested">{t("dataWizard.suggested")}</span>}
                     {adding === column && (
                       <span className="wizard-inline">
                         <label>
-                          Name <input value={name} onChange={(e) => setName(e.target.value)} />
+                          {t("dataWizard.name")}<input value={name} onChange={(e) => setName(e.target.value)} />
                         </label>{" "}
                         <label>
-                          Type{" "}
+                          {t("dataWizard.type")}{" "}
                           <select value={type} onChange={(e) => setType(e.target.value)}>
-                            {NEW_TYPES.map((t) => (
-                              <option key={t.key} value={t.key}>
-                                {t.label}
+                            {newTypes(locale).map((entry) => (
+                              <option key={entry.key} value={entry.key}>
+                                {entry.label}
                               </option>
                             ))}
                           </select>
                         </label>{" "}
                         <button type="button" aria-disabled={!name.trim()} onClick={() => void create(column)}>
-                          Create attribute
+                          {t("dataWizard.createAttribute")}
                         </button>
                       </span>
                     )}
@@ -1197,45 +1206,43 @@ function PreviewStep({
   inspection: DataInspection | null;
   busy: boolean;
 }) {
+  const { locale, t } = useI18n();
   if (!preview?.rows || !preview.report) {
     return (
       <p className="detail-note" role="status">
-        Preparing the preview…
+        {t("dataWizard.preparingPreview")}
       </p>
     );
   }
   const report = preview.report;
-  const className = preview.className ?? "row";
+  const className = preview.className ?? t("dataWords.defaultClass");
   const sample = inspection?.sample
-    ? sampleWords({ rows: inspection.kept, total: inspection.total, sample: true })
+    ? sampleWords({ rows: inspection.kept, total: inspection.total, sample: true }, locale)
     : null;
   return (
     <div className="wizard-step" aria-busy={busy}>
       <p className="wizard-summary">
-        {report.rowsRead.toLocaleString("en-US")} {report.rowsRead === 1 ? "row" : "rows"} →{" "}
-        {report.statements.toLocaleString("en-US")} statements
-        {sample ? ` (${sample})` : ""}
+        {t(report.rowsRead === 1 ? "dataWizard.previewSummary.one" : "dataWizard.previewSummary.many", { rows: report.rowsRead, statements: report.statements, sample: sample ? t("dataWords.sampleParen", { sample }) : "" })}
       </p>
       <ol className="wizard-preview">
         {preview.rows.map((row) => (
-          <li key={row.row}>{previewSentences(row, className).join(" ")}</li>
+          <li key={row.row}>{previewSentences(row, className, locale).join(" ")}</li>
         ))}
       </ol>
       {report.keptAsText.length > 0 && (
         <p className="detail-note">
-          Values that do not fit their type are kept as text and listed in the report after the import.
+          {t("dataWizard.previewKept")}
         </p>
       )}
       {(report.unmatched ?? []).length > 0 && (
         <div className="detail-note">
           <ul className="wizard-notes">
-            {unmatchedLines(report).map((line) => (
+            {unmatchedLines(report, locale).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
           <p>
-            These links are still written. Import the rows they point to, before or after this file, and they
-            link; until then Validate reports them.
+            {t("dataWizard.previewLinks")}
           </p>
         </div>
       )}
