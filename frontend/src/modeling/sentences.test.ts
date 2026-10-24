@@ -87,7 +87,7 @@ describe("sentences", () => {
 
   it("names the seven types in words and leaves any other as written", () => {
     expect(
-      ["xsd:string", "xsd:integer", "xsd:decimal", "xsd:boolean", "xsd:date", "xsd:dateTime", "xsd:anyURI"].map(typeWord),
+      ["xsd:string", "xsd:integer", "xsd:decimal", "xsd:boolean", "xsd:date", "xsd:dateTime", "xsd:anyURI"].map(datatype => typeWord(datatype)),
     ).toEqual(["text", "whole number", "decimal number", "yes or no", "date", "date and time", "web address"]);
     expect(typeWord("xsd:gYear")).toBe("xsd:gYear");
   });
@@ -262,4 +262,32 @@ it("writes hierarchical and related links as Japanese whole sentences without En
   expect(S.linkSentence("broader", "犬", "動物", ja)).toBe("犬は動物より狭い概念です");
   expect(S.linkSentence("related", "犬", "人", ja)).toBe("犬は人に関連しています");
   expect(S.parentSentence("Employee", "Person")).toBe("Employee is a more specific kind of Person");
+});
+
+describe("model words in the current UI language", () => {
+  const ja = ((key, args) => translate("ja", key, args)) as Translator;
+  it("localizes known datatype words and missing ends while keeping unknown datatype identifiers", () => {
+    expect(S.typeWord("xsd:string", ja)).toBe("テキスト");
+    expect(S.typeWord("xsd:integer", ja)).toBe("整数");
+    expect(S.typeWord(null, ja)).toBe("型は未設定");
+    expect(S.typeWord("urn:example:型", ja)).toBe("urn:example:型");
+    expect(S.typeWord("constructor", ja)).toBe("constructor");
+    expect(S.asType("constructor")).toBe("constructor");
+    expect(S.rowEnds({ domain: null, range: null }, false, ja)).toBe("始点は未設定 → 終点は未設定");
+    expect(S.rowEnds({ domain: "犬", range: "xsd:date" }, true, ja)).toBe("犬、日付");
+  });
+  it("explains the other document kind's read-only boundary and keeps zero silent", () => {
+    expect(S.otherKindNote("ontology", 0, ja)).toBeNull();
+    expect(S.otherKindNote("ontology", 2, ja)).toBe("このオントロジーにはSKOS概念も2件含まれます。Turtleで編集するか、プロジェクトを分類辞書に変更してください。");
+    expect(S.otherKindReason("taxonomy", "objectProperty", ja)).toBe("関連は分類辞書では読み取り専用です。Turtleで編集するか、プロジェクトをオントロジーに変更してください。");
+  });
+  it("translates characteristic and mapping guidance while preserving OWL/SKOS identities", () => {
+    const characteristics = S.characteristicChoices(ja);
+    expect(characteristics[0].name).toBe("最大1件");
+    expect(characteristics.map(({ name: _name, ...identity }) => identity)).toEqual(S.CHARACTERISTICS.map(({ name: _name, ...identity }) => identity));
+    const mappings = S.mappingChoices(ja);
+    expect(mappings[0]).toEqual({ id: "exactMatch", name: "完全一致", means: "同じ概念を表し、この概念の代わりに使用できます。" });
+    expect(mappings.map(mapping => mapping.id)).toEqual(S.MAPPINGS.map(mapping => mapping.id));
+    expect(S.MAPPINGS[0].means).toBe("The same concept, and it can be used in place of this one.");
+  });
 });

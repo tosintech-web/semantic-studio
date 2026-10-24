@@ -58,7 +58,7 @@ EXPECTED OUTPUT
 */
 
 import { englishTranslator } from "../i18n/format";
-import type { Translator } from "../i18n/types";
+import type { MessageId, Translator } from "../i18n/types";
 
 // Letters whose names start with a vowel sound: "an F", "an H", "an X".
 const VOWEL_NAMED_LETTERS = "AEFHILMNORSX";
@@ -170,20 +170,20 @@ export function createdAnnouncement(name: string, from: string, to: string): str
 
 /** An attribute's datatype as a word, for *name (Person, text)*: the seven
  *  types of E-6, and the prefixed name for any other. */
-const TYPE_WORDS: Record<string, string> = {
-  "xsd:string": "text",
-  "rdf:langString": "text",
-  "xsd:integer": "whole number",
-  "xsd:decimal": "decimal number",
-  "xsd:boolean": "yes or no",
-  "xsd:date": "date",
-  "xsd:dateTime": "date and time",
-  "xsd:anyURI": "web address",
+const TYPE_CODES: Record<string, Extract<MessageId, `model.type.${string}`>> = {
+  "xsd:string": "model.type.text",
+  "rdf:langString": "model.type.text",
+  "xsd:integer": "model.type.integer",
+  "xsd:decimal": "model.type.decimal",
+  "xsd:boolean": "model.type.boolean",
+  "xsd:date": "model.type.date",
+  "xsd:dateTime": "model.type.dateTime",
+  "xsd:anyURI": "model.type.uri",
 };
 
-export function typeWord(datatype: string | null): string {
-  if (!datatype) return "no type yet";
-  return TYPE_WORDS[datatype] ?? datatype;
+export function typeWord(datatype: string | null, t: Translator = englishTranslator): string {
+  if (!datatype) return t("model.type.none");
+  return Object.prototype.hasOwnProperty.call(TYPE_CODES, datatype) ? t(TYPE_CODES[datatype]) : datatype;
 }
 
 /** A tree row's ends: *Person → Organization* for a relationship, *Person,
@@ -191,37 +191,37 @@ export function typeWord(datatype: string | null): string {
 export function rowEnds(
   ends: { domain: string | null; range: string | null },
   attribute: boolean,
+  t: Translator = englishTranslator,
 ): string {
-  const start = ends.domain ?? "no start yet";
-  if (attribute) return `${start}, ${typeWord(ends.range)}`;
-  return `${start} → ${ends.range ?? "no end yet"}`;
+  const start = ends.domain ?? t("model.noStart");
+  if (attribute) return t("model.rowAttribute", { start, type: typeWord(ends.range, t) });
+  return t("model.rowRelation", { start, end: ends.range ?? t("model.noEnd") });
 }
 
 /** The one line shown when a document holds the other kind's content
  *  (5.1): how much, and where it is changed. Null when there is none. */
-export function otherKindNote(kind: "ontology" | "taxonomy" | null, count: number): string | null {
+export function otherKindNote(kind: "ontology" | "taxonomy" | null, count: number, t: Translator = englishTranslator): string | null {
   if (!kind || count === 0) return null;
-  const them = count === 1 ? "it" : "them";
   return kind === "ontology"
-    ? `This ontology also contains ${count} SKOS ${count === 1 ? "concept" : "concepts"}. Edit ${them} in Turtle, or change the project to a taxonomy.`
-    : `This taxonomy also contains ${count} ${count === 1 ? "class" : "classes"}. Edit ${them} in Turtle, or change the project to an ontology.`;
+    ? t(count === 1 ? "model.otherConceptOne" : "model.otherConceptMany", { count })
+    : t(count === 1 ? "model.otherClassOne" : "model.otherClassMany", { count });
 }
 
 /** Why one entity of the other kind is not changed in the visual doors. */
-export function otherKindReason(kind: "ontology" | "taxonomy" | null, entityKind: string): string | null {
+export function otherKindReason(kind: "ontology" | "taxonomy" | null, entityKind: string, t: Translator = englishTranslator): string | null {
   if (kind === "ontology" && entityKind === "concept") {
-    return "A SKOS concept, read-only in an ontology. Edit it in Turtle, or change the project to a taxonomy.";
+    return t("model.readOnlyConcept");
   }
   if (kind === "taxonomy" && entityKind === "class") {
-    return "A class, read-only in a taxonomy. Edit it in Turtle, or change the project to an ontology.";
+    return t("model.readOnlyClass");
   }
   // Relationships and attributes belong to classes, so a taxonomy shows them
   // as it shows classes (5.10 item 2).
   if (kind === "taxonomy" && entityKind === "objectProperty") {
-    return "A relationship, read-only in a taxonomy. Edit it in Turtle, or change the project to an ontology.";
+    return t("model.readOnlyRelationship");
   }
   if (kind === "taxonomy" && entityKind === "datatypeProperty") {
-    return "An attribute, read-only in a taxonomy. Edit it in Turtle, or change the project to an ontology.";
+    return t("model.readOnlyAttribute");
   }
   return null;
 }
@@ -261,15 +261,21 @@ export type Characteristic =
 
 /** The seven, in the order the form offers them: four always, three under
  *  *More* (5.6). The OWL term is shown small beside each (Section 7). */
-export const CHARACTERISTICS: { id: Characteristic; name: string; owl: string; more: boolean }[] = [
-  { id: "functional", name: "At most one", owl: "owl:FunctionalProperty", more: false },
-  { id: "inverseFunctional", name: "Identifies its start", owl: "owl:InverseFunctionalProperty", more: false },
-  { id: "symmetric", name: "Works both ways", owl: "owl:SymmetricProperty", more: false },
-  { id: "transitive", name: "Chains", owl: "owl:TransitiveProperty", more: false },
-  { id: "asymmetric", name: "Never both ways", owl: "owl:AsymmetricProperty", more: true },
-  { id: "irreflexive", name: "Never to itself", owl: "owl:IrreflexiveProperty", more: true },
-  { id: "reflexive", name: "Always to itself", owl: "owl:ReflexiveProperty", more: true },
+const CHARACTERISTIC_IDENTITIES: { id: Characteristic; owl: string; more: boolean }[] = [
+  { id: "functional", owl: "owl:FunctionalProperty", more: false },
+  { id: "inverseFunctional", owl: "owl:InverseFunctionalProperty", more: false },
+  { id: "symmetric", owl: "owl:SymmetricProperty", more: false },
+  { id: "transitive", owl: "owl:TransitiveProperty", more: false },
+  { id: "asymmetric", owl: "owl:AsymmetricProperty", more: true },
+  { id: "irreflexive", owl: "owl:IrreflexiveProperty", more: true },
+  { id: "reflexive", owl: "owl:ReflexiveProperty", more: true },
 ];
+
+export function characteristicChoices(t: Translator = englishTranslator): { id: Characteristic; name: string; owl: string; more: boolean }[] {
+  return CHARACTERISTIC_IDENTITIES.map(entry => ({ ...entry, name: t(`characteristic.name.${entry.id}`) }));
+}
+// Compatibility for callers that have not yet adopted the current translator.
+export const CHARACTERISTICS = characteristicChoices();
 
 /** Each characteristic's example, written from the relationship's own
  *  names (5.6). An end not set yet reads as *something* or *thing*. */
@@ -319,7 +325,7 @@ export function oneStartOneEnd(name: string, from: string | null): string {
  *  *yes or no*, which take none; a type without a word is its name. */
 export function asType(datatype: string): string {
   const word = typeWord(datatype);
-  if (!(datatype in TYPE_WORDS) || word === "text" || word === "yes or no") return word;
+  if (!Object.prototype.hasOwnProperty.call(TYPE_CODES, datatype) || word === "text" || word === "yes or no") return word;
   return a(word);
 }
 
@@ -337,13 +343,12 @@ export function oneValueExample(domain: string | null, name: string): string {
 }
 
 /** The five mapping kinds (5.8), each explained in one sentence. */
-export const MAPPINGS: { id: string; name: string; means: string }[] = [
-  { id: "exactMatch", name: "Exact match", means: "The same concept, and it can be used in place of this one." },
-  { id: "closeMatch", name: "Close match", means: "Close enough to use in place of this one in some settings, not all." },
-  { id: "broadMatch", name: "Broader match", means: "A broader concept in the other vocabulary." },
-  { id: "narrowMatch", name: "Narrower match", means: "A narrower concept in the other vocabulary." },
-  { id: "relatedMatch", name: "Related match", means: "An associated concept in the other vocabulary, neither broader nor narrower." },
-];
+const MAPPING_IDS = ["exactMatch", "closeMatch", "broadMatch", "narrowMatch", "relatedMatch"] as const;
+export function mappingChoices(t: Translator = englishTranslator): { id: string; name: string; means: string }[] {
+  return MAPPING_IDS.map(id => ({ id, name: t(`mapping.${id}.name`), means: t(`mapping.${id}.meaning`) }));
+}
+// Glossary and legacy forms share the same meanings; do not copy definitions.
+export const MAPPINGS = mappingChoices();
 
 /** *Top concept of Fruits* (5.8). */
 export function topConceptSentence(scheme: string): string {

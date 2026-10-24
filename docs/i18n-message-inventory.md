@@ -72,7 +72,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/NextSteps.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の文言を移行済み |
 | `frontend/src/components/SparqlEditor.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の操作文言を移行済み、外部生成元は接続待ち |
 | `frontend/src/components/SparqlPreview.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の操作文言を移行済み、外部生成元は接続待ち |
-| `frontend/src/components/NothingSelected.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/NothingSelected.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の文言を移行済み |
 | `frontend/src/types.ts` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
 | `frontend/src/i18n/parts.ts` | リンク付き翻訳テンプレートの組み立て | 11 | 共通機構を実装、説明画面への接続待ち |
 | `frontend/src/components/SearchBox.tsx` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
@@ -780,6 +780,60 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `next.from.inverse` | anchor, predicate, step | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
 | `next.fromCount.forward` | anchor, count, predicate, step | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
 | `next.fromCount.inverse` | anchor, count, predicate, step | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `model.type.text` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.type.integer` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.type.decimal` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.type.boolean` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.type.date` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.type.dateTime` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.type.uri` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.type.none` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.noStart` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.noEnd` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.rowAttribute` | start, type | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.rowRelation` | end, start | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.otherConceptOne` | count | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.otherConceptMany` | count | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.otherClassOne` | count | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.otherClassMany` | count | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.readOnlyConcept` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.readOnlyClass` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.readOnlyRelationship` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `model.readOnlyAttribute` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `characteristic.name.functional` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `characteristic.name.inverseFunctional` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `characteristic.name.symmetric` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `characteristic.name.transitive` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `characteristic.name.asymmetric` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `characteristic.name.irreflexive` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `characteristic.name.reflexive` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.exactMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.exactMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.closeMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.closeMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.broadMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.broadMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.narrowMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.narrowMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.relatedMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.relatedMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `emptyModel.title` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `emptyModel.helpClass` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `emptyModel.helpConcept` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `emptyModel.model` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `emptyModel.counting` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `emptyModel.newClass` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `emptyModel.newConcept` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.class.one` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.class.many` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.concept.one` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.concept.many` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.relationship.one` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.relationship.many` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.attribute.one` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.attribute.many` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.example.one` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `modelCount.example.many` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
 
 ## 対象外・生成元待ち
 
@@ -810,3 +864,5 @@ Task 10の補足：`ConfirmDialog`自身は表示文を持たず、呼び出し�
 SPARQLエディターの`saveLabel`・`saveTitle`はQueryPanelが生成するため、その呼び出し元の移行で接続する。`TextQuery.note`・`runBlocked`・エラーの既知生成元も棚卸し対象であり、ユーザー／埋め込みクエリ著者の原文と区別して移行する。現時点でこれらを翻訳対象外として確定しない。
 
 開始候補の英語の複数形変換は英語表示時に限定する。日本語の案内には元の名称を渡し、言語を変えても生成するQueryStateとSPARQL本文は同一に保つ。`source → relationship → target`の矢印表記は、名前を並べた構造表示として原表記を維持する。
+
+OWL特性・SKOS対応関係の選択肢は`characteristicChoices(t)`／`mappingChoices(t)`で表示時の翻訳を受け取る。従来の定数は英語の互換投影であり、ID・OWL名・順序・moreフラグは変えない。対応関係の意味はこの共通定義からglossaryでも利用し、別の意味定義を複製しない。
