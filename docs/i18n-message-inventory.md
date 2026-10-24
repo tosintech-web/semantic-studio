@@ -1928,7 +1928,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `canvasUI.relationshipLink` | from, name, to | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
 | `canvasUI.ruleLink` | text | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
 | `canvasUI.rule` | — | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
-| `canvasUI.ruleFallback` | from, to | `frontend/src/canvas/ModelCanvas.tsx` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
+| `canvasUI.ruleFallback` | from, to | `frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/modeling/projectNotices.ts` | キャンバス本体・ボックス・関係メニュー | 11 | 画面所有文言を移行 |
 
 | `canvasUI.fixedInferred` | from, to | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
 | `canvasUI.fixedRelationship` | name | `frontend/src/canvas/ModelCanvas.tsx` | キャンバスの選択・読取専用・ドラッグ案内 | 11 | 識別子を保持し現在言語で導出 |
@@ -2627,3 +2627,6 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `editing.value.invalid_dateTime` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
 | `editing.value.invalid_gYear` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
 | `editing.value.invalid_uri` | value | `backend/app/editing.py` | 注釈値・値の型の拒否 | 12 | 英語原文と判定を保持、事実を現在のUI言語で表示 |
+
+| `projectNotice.relationshipCompleted` | from, name, to | `frontend/src/modeling/projectNotices.ts` | キャンバス・削除の通知 | 12 | 最小限の操作情報から現在のUI言語で表示 |
+| `projectNotice.undoAvailable` | operation | `frontend/src/modeling/projectNotices.ts` | キャンバス・削除の通知 | 12 | 最小限の操作情報から現在のUI言語で表示 |

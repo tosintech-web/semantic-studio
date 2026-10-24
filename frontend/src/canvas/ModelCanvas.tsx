@@ -15,6 +15,7 @@ SUMMARY
 
 BASIC IDEA
     Command refusals share current-language explanations and raw-text details.
+    Custom success notices retain only their selected labels and endpoint facts.
     What is drawn is the server's canvas view (canvas.py), fetched for each
     revision; where it is drawn is the layout file, kept by useCanvasData.
     React Flow holds the boxes while they are dragged and measured, and a
@@ -138,7 +139,8 @@ import DeleteDialog from "../components/DeleteDialog";
 import { alreadyDefined, getNodeDetails } from "../api";
 import { RunnerErrorDetails, useRunner } from "../components/EditParts";
 import { restrictionSentence, shortLabel } from "../modeling/ruleSentences";
-import { createdAnnouncement, linkSentence, memberDeleteQuestion, otherKindNote, removedAnnouncement } from "../modeling/sentences";
+import { linkSentence, memberDeleteQuestion, otherKindNote } from "../modeling/sentences";
+import { relationshipNotice, reuseNotice, ruleNotice } from "../modeling/projectNotices";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import { intoDraft } from "../components/CreateForm";
 import type { CanvasLink, CanvasNode, CanvasSet, CanvasView, ProjectDocName } from "../types";
@@ -487,7 +489,7 @@ function Canvas(props: ModelCanvasProps) {
         "relate",
         "CreateObjectProperty",
         { label: name, domain: from, range: to },
-        () => createdAnnouncement(name ?? "", fromName, toName),
+        () => relationshipNotice("created", name ?? "", fromName, toName),
       );
       ok = !!result;
       relationship = result?.created ?? null;
@@ -502,7 +504,7 @@ function Canvas(props: ModelCanvasProps) {
           ...(choice.setDomain ? { domain: from } : {}),
           ...(choice.setRange ? { range: to } : {}),
         },
-        () => `Completed relationship ${choice.name}, from ${fromName} to ${toName}.`,
+        () => relationshipNotice("completed", choice.name, fromName, toName),
       );
       ok = !!result;
       if (ok) relationship = choice.property;
@@ -571,8 +573,14 @@ function Canvas(props: ModelCanvasProps) {
     else if (edge.kind === "broader") await run("edge", "RemoveBroader", { concept: edge.source, broader: edge.target });
     else if (edge.kind === "related") await run("edge", "RemoveRelated", { concept: edge.source, related: edge.target });
     else if (edge.kind === "rule" && edge.key) {
-      const said = ruleWords(view!, edge);
-      await run("edge", "RemoveRestriction", { class: edge.source, restriction: edge.key }, (r) => `Removed: ${said}. ${r.label}.`);
+      const from = label(view!, edge.source);
+      const to = label(view!, edge.target);
+      const narrative = edge.rule ? { type: "restriction" as const, cls: from, parts: {
+        form: edge.rule.form, kind: edge.rule.kind, property: edge.rule.propertyLabel,
+        filler: edge.rule.fillerLabel, n: edge.rule.n, with: edge.rule.withLabel,
+      } } : null;
+      await run("edge", "RemoveRestriction", { class: edge.source, restriction: edge.key },
+        (r) => ruleNotice("removed", narrative, r, narrative ? undefined : { from, to }));
     }
     // One line of a shared relationship (attribute-reuse 5.3): the class
     // can be taken out, or the relationship deleted; the person says which.
@@ -1263,7 +1271,7 @@ function Canvas(props: ModelCanvasProps) {
             const asked = unsharing;
             if (id === "remove") {
               const done = await run("edge", "UnshareDomain", { property: asked.property, class: asked.member }, () =>
-                removedAnnouncement(asked.label, asked.memberLabel),
+                reuseNotice({ mode: "removed", name: asked.label, cls: asked.memberLabel }),
               );
               if (!done) return;
             }

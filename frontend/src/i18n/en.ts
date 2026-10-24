@@ -15,6 +15,8 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "projectNotice.relationshipCompleted": "Completed relationship {name}, from {from} to {to}.",
+  "projectNotice.undoAvailable": "{operation}. Undo is available.",
   "editing.value.kind_required": "A value needs a kind: text, typed or link.",
   "editing.value.text_required": "A value needs its text.",
   "editing.value.language_datatype": "A value cannot carry both a language and a datatype; RDF allows one or the other.",

@@ -13,6 +13,7 @@ SUMMARY
     ever loaded lazily.
 
 BASIC IDEA
+    Completed operation notices retain facts and render in either UI locale.
     React Flow is stubbed, as GraphView's tests stub Sigma: the stub renders
     each node through the canvas's own node components and keeps the props
     the canvas handed it, so a test can call onConnect or onNodesChange
@@ -35,6 +36,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "../components/UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+function noticeIn(locale: UiLocale): string {
+  return renderProjectAnnouncement(projectStore.getSnapshot().announcement, locale,
+    ((code, args) => translate(locale, code, args)) as Translator);
+}
+
 import type { CanvasLayout, CanvasView } from "../types";
 
 const { openProject, closeProject, runCommand, getCanvas, putLayout, previewDelete, getNodeDetails, reasonProject } = vi.hoisted(() => ({
@@ -518,6 +527,8 @@ describe("relating (AC-12)", () => {
     // One command, so one undo step (relationships R6).
     expect(runCommand).toHaveBeenCalledTimes(1);
     expect(lastCommand()).toEqual(["SetEnds", { property: EX + "mentions", range: EX + "Document" }]);
+    expect(noticeIn("ja")).toBe("Invoice (en)からDocumentへの関連「mentions」の未設定の端点を補いました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
     // The relationship it completed is selected, so its form opens.
     expect(onSelect).toHaveBeenLastCalledWith(EX + "mentions");
   });
@@ -1168,6 +1179,8 @@ describe("relationships Stage A: seeing and drawing relationships", () => {
     expect(projectStore.getSnapshot().announcement.text).toBe(
       "Created relationship copies, from Invoice (en) to Document.",
     );
+    expect(noticeIn("ja")).toBe("Invoice (en)からDocumentへの関連「copies」を作成しました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
 
   it("the relate menu is headed by its two ends and swaps them before anything is made (AC-4)", async () => {
@@ -1593,6 +1606,10 @@ describe("rule lines and boxes (axioms-and-reasoning 5.9, AC-11)", () => {
   });
 
   it("a click on a rule selects its class; Delete removes it by its key", async () => {
+    runCommand.mockResolvedValueOnce({ revision: 3, state: STATE,
+      label: "Removed a rule on has line from Invoice (en)",
+      uiMessage: { code: "command.removed_restriction", args: { property: "has line", name: "Invoice (en)" } },
+    });
     await renderCanvas(ruled());
     await act(async () => flow.props.onEdgeClick({}, rules()[0]));
     expect(onSelect).toHaveBeenCalledWith(EX + "Invoice");
@@ -1601,6 +1618,20 @@ describe("rule lines and boxes (axioms-and-reasoning 5.9, AC-11)", () => {
       fireEvent.keyDown(document.activeElement!, { key: "Delete" });
     });
     expect(lastCommand()).toEqual(["RemoveRestriction", { class: EX + "Invoice", restriction: someKey }]);
+    expect(noticeIn("ja")).toBe("ルールを削除しました：すべてのInvoice (en)は「has line」でDocumentに少なくとも1件結び付きます（クラス「Invoice (en)」からのhas lineに関する制約の削除）");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
+  });
+
+  it("retains endpoints for a legacy rule line without readable rule parts", async () => {
+    const view = ruled();
+    view.edges = view.edges.map(edge => edge.kind === "rule" ? { ...edge, rule: undefined } : edge);
+    await renderCanvas(view);
+    await act(async () => flow.props.onEdgeClick({}, rules()[0]));
+    await act(async () => fireEvent.keyDown(document.activeElement!, { key: "Delete" }));
+    expect(lastCommand()).toEqual(["RemoveRestriction", { class: EX + "Invoice", restriction: someKey }]);
+    expect(noticeIn("ja")).toBe("ルールを削除しました：Invoice (en)からDocumentへのルール（RemoveRestriction）");
+    expect(noticeIn("en")).toBe("Removed: A rule from Invoice (en) to Document. RemoveRestriction.");
+    expect(projectStore.getSnapshot().announcement.text).toBe(noticeIn("en"));
   });
 
   it("the relate menu's rule entry selects the class and opens its builder through the store", async () => {
@@ -1931,6 +1962,8 @@ describe("a shared domain (attribute-reuse 5.3)", () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Remove Invoice (en)" }));
     });
     expect(lastCommand()).toEqual(["UnshareDomain", { property: EX + "filedBy", class: EX + "Invoice" }]);
+    expect(noticeIn("ja")).toBe("Invoice (en)から「filed by」を外しました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
 });
 

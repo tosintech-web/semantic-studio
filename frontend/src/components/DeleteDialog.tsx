@@ -13,7 +13,8 @@ BASIC IDEA
     Whole UI templates describe the impact and choices in the active locale.
     The impact and selected strategy survive language changes without another
     dry run. Preview errors retain original error objects and labelled details;
-    command errors and undo announcements remain the runner's producers.
+    command errors use the shared runner. Undo availability retains operation
+    metadata and renders in the current language after the dialog closes.
 
     DeleteEntity has a dry run (authoring-foundations 5.5) that changes
     nothing and returns the impact: the statements removed, the children and
@@ -49,6 +50,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { undoAvailableNotice } from "../modeling/projectNotices";
 import { useI18n } from "../i18n/I18nProvider";
 import type { Translator } from "../i18n/types";
 import { useEffect, useState } from "react";
@@ -112,7 +114,7 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
       onDone(false);
       return;
     }
-    const result = await run("delete", "DeleteEntity", { iri, strategy }, (r) => `${r.label}. Undo is available.`);
+    const result = await run("delete", "DeleteEntity", { iri, strategy }, (r) => undoAvailableNotice(r));
     if (result) onDone(true);
   };
 

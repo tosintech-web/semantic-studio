@@ -15,6 +15,8 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "projectNotice.relationshipCompleted": "{from}から{to}への関連「{name}」の未設定の端点を補いました。",
+  "projectNotice.undoAvailable": "{operation}を行いました。元に戻せます。",
   "editing.value.kind_required": "値の種類を指定してください：テキスト、型付きの値、またはリンク。",
   "editing.value.text_required": "値のテキストを指定してください。",
   "editing.value.language_datatype": "値に言語とデータ型を同時に指定することはできません。RDFではいずれか一方を指定します。",

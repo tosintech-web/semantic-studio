@@ -14,6 +14,7 @@ SUMMARY
 BASIC IDEA
     UI locale changes the domain explanation and controls, preserving each
     original class reference and the server-selected sharing semantics.
+    Completed sharing notices retain names for later UI language changes.
 
     The domain is the server's one reading (`domainReading`), never the
     statements, which reach a union only through a blank node. Remove is
@@ -38,10 +39,11 @@ EXPECTED OUTPUT
 import { useI18n } from "../i18n/I18nProvider";
 import { useRef, useState } from "react";
 import type { EntityModel } from "../modeling/entity";
-import { domainListNote, removedAnnouncement, sharedAnnouncement } from "../modeling/sentences";
+import { domainListNote } from "../modeling/sentences";
 import { useProjectSelector } from "../state/projectStore";
 import type { ModelWarning } from "../types";
 import type { Runner } from "./EditParts";
+import { reuseNotice } from "../modeling/projectNotices";
 import EntityPicker from "./EntityPicker";
 import ReusePlan from "./ReusePlan";
 
@@ -87,7 +89,7 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
                   aria-disabled={busy}
                   onClick={async () => {
                     if (busy) return;
-                    if (await run("domainList", "UnshareDomain", { property: iri, class: c.iri }, () => removedAnnouncement(name, c.label))) {
+                    if (await run("domainList", "UnshareDomain", { property: iri, class: c.iri }, () => reuseNotice({ mode: "removed", name, cls: c.label }))) {
                       focusAdd();
                     }
                   }}
@@ -111,7 +113,7 @@ export default function SharedDomain({ ontologyId, iri, name, model, runner, onS
                 if (busy || !separate.fix) return;
                 // A shared parent needs its name: the plan asks for it.
                 if (separate.fix.needs === "parentName") setPlanning({ cls: null });
-                else void run("fix", separate.fix.command, separate.fix.args, () => sharedAnnouncement(name, classes.map((c) => c.label)));
+                else void run("fix", separate.fix.command, separate.fix.args, () => reuseNotice({ mode: "shared", name, classes: classes.map((c) => c.label) }));
               }}
             >
               {t("modelSentences.shareIt")}

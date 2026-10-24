@@ -13,6 +13,7 @@ SUMMARY
     on confirmation.
 
 BASIC IDEA
+    Completed operation notices retain facts and render in either UI locale.
     The component-test pattern: api.ts mocked, the project store opened on a
     mocked project, the form rendered straight from hand-built NodeDetails.
     "Sends the right command" is asserted on runCommand's arguments, which is
@@ -31,6 +32,14 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { P } from "../modeling/entity";
 import { projectStore } from "../state/projectStore";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+function noticeIn(locale: UiLocale): string {
+  return renderProjectAnnouncement(projectStore.getSnapshot().announcement, locale,
+    ((code, args) => translate(locale, code, args)) as Translator);
+}
+
 import type { NodeDetails, TermRef } from "../types";
 import EditSection from "./EditSection";
 import { I18nProvider } from "../i18n/I18nProvider";
@@ -486,7 +495,9 @@ describe("DeleteFlow (AC-6)", () => {
         { iri: EX + "CreditNote", label: "Credit Note" },
       ]),
     );
-    runCommand.mockResolvedValueOnce(changed("Deleted class Invoice"));
+    runCommand.mockResolvedValueOnce({ ...changed("Deleted class Invoice"),
+      uiMessage: { code: "command.deleted_entity", args: { name: "Invoice", kind: [{ code: "words.kind.class", args: {} }] } },
+    });
     await renderForm(invoice());
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Delete Invoice…" }));
@@ -507,6 +518,8 @@ describe("DeleteFlow (AC-6)", () => {
     expect(lastCommand()).toEqual(["DeleteEntity", { iri: EX + "Invoice", strategy: "orphan" }]);
     expect(onDeleted).toHaveBeenCalledWith(EX + "Invoice");
     expect(projectStore.getSnapshot().announcement.text).toBe("Deleted class Invoice. Undo is available.");
+    expect(noticeIn("ja")).toBe("クラス「Invoice」の削除を行いました。元に戻せます。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
 
   it("offers no strategy when there are no children, and Cancel sends nothing", async () => {
