@@ -47,9 +47,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useId, useMemo, useRef, useState } from "react";
 import { a } from "../modeling/sentences";
-import { OFFERED_TYPES, dateTimeBound, languageName, ruleProblem, ruleSentence } from "../modeling/shapeSentences";
+import { offeredTypes, dateTimeBound, languageName, ruleProblem, ruleSentence } from "../modeling/shapeSentences";
 import type { ShapeBound, ShapePath, ShapeRule, ShapeValue } from "../types";
 import EntityPicker from "./EntityPicker";
 
@@ -68,9 +69,9 @@ interface Props {
 type Count = "none" | "required" | "atMostOne" | "exactlyOne" | "atLeast" | "atMost" | "between";
 
 const PATTERN_EXAMPLES = [
-  { label: "Email", pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
-  { label: "Code (three capitals and digits)", pattern: "^[A-Z]{3}[0-9]+$" },
-  { label: "Year", pattern: "^[0-9]{4}$" },
+  { label: "shapeEditor.example.email" as const, pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+  { label: "shapeEditor.example.code" as const, pattern: "^[A-Z]{3}[0-9]+$" },
+  { label: "shapeEditor.example.year" as const, pattern: "^[0-9]{4}$" },
 ];
 
 function countOf(rule: ShapeRule | null): Count {
@@ -145,6 +146,7 @@ function parseList(text: string, kind: "text" | "number" | "link"): ShapeValue[]
 }
 
 export default function RuleEditor({ modelOntologyId, paths, initial, languages, busy, error, onSubmit, onCancel }: Props) {
+  const { t, locale } = useI18n();
   const id = useId();
   const [pathKey, setPathKey] = useState(initial ? key(initial.path) : "");
   const path = paths.find((p) => key(p.path) === pathKey);
@@ -242,7 +244,7 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
   }, [path, pathKey, initial, count, min, max, datatype, pointsTo, kind, minLength, maxLength, pattern, low, high, allowed,
       offersLanguages, onlyLangs, unique, required, initialAllowed]);
 
-  const problem = !path ? "Choose what the rule is about." : rule ? ruleProblem(rule) : null;
+  const problem = !path ? t("shapeEditor.missingPath") : rule ? ruleProblem(rule, locale) : null;
   const submit = () => {
     if (busy || problem || !rule) return;
     onSubmit(rule);
@@ -286,16 +288,15 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
         }
       }}
     >
-      <h5 id={`${id}-title`}>{initial ? "Change the rule" : "Add a rule"}</h5>
+      <h5 id={`${id}-title`}>{t(initial ? "shapeEditor.change" : "shapeEditor.add")}</h5>
       <label className="edit-field-label" htmlFor={`${id}-path`}>
-        What is the rule about?
+        {t("shapeEditor.path")}
       </label>
       <select id={`${id}-path`} value={pathKey} autoFocus onChange={(e) => choosePath(e.target.value)}>
-        <option value="">Choose…</option>
+        <option value="">{t("shapeEditor.choose")}</option>
         {paths.map((p) => (
           <option key={key(p.path)} value={key(p.path)}>
-            {p.label}
-            {p.kind === "relationship" ? " (relationship)" : p.kind === "attribute" ? " (attribute)" : ""}
+            {p.kind === "relationship" ? t("shapeEditor.path.relationship", { name: p.label }) : p.kind === "attribute" ? t("shapeEditor.path.attribute", { name: p.label }) : p.label}
           </option>
         ))}
       </select>
@@ -303,20 +304,20 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
       {path && (
         <>
           <fieldset className="rule-kind">
-            <legend>How many</legend>
-            <select aria-label="How many" value={count} onChange={(e) => setCount(e.target.value as Count)}>
-              <option value="none">Any number</option>
-              <option value="required">Required (at least one)</option>
-              <option value="atMostOne">At most one</option>
-              <option value="exactlyOne">Exactly one</option>
-              <option value="atLeast">At least…</option>
-              <option value="atMost">At most…</option>
-              <option value="between">Between…</option>
+            <legend>{t("shapeEditor.count")}</legend>
+            <select aria-label={t("shapeEditor.count")} value={count} onChange={(e) => setCount(e.target.value as Count)}>
+              <option value="none">{t("shapeEditor.count.none")}</option>
+              <option value="required">{t("shapeEditor.count.required")}</option>
+              <option value="atMostOne">{t("shapeEditor.count.atMostOne")}</option>
+              <option value="exactlyOne">{t("shapeEditor.count.exactlyOne")}</option>
+              <option value="atLeast">{t("shapeEditor.count.atLeast")}</option>
+              <option value="atMost">{t("shapeEditor.count.atMost")}</option>
+              <option value="between">{t("shapeEditor.count.between")}</option>
             </select>
             {(count === "atLeast" || count === "between") && (
               <span className="rule-range">
                 <label>
-                  {count === "between" ? "from" : "at least"}{" "}
+                  {t(count === "between" ? "shapeEditor.from" : "shapeEditor.min")}{" "}
                   <input type="number" min={0} value={min} onChange={(e) => setMin(e.target.value)} />
                 </label>
               </span>
@@ -324,7 +325,7 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
             {(count === "atMost" || count === "between") && (
               <span className="rule-range">
                 <label>
-                  {count === "between" ? "to" : "at most"}{" "}
+                  {t(count === "between" ? "shapeEditor.to" : "shapeEditor.max")}{" "}
                   <input type="number" min={0} value={max} onChange={(e) => setMax(e.target.value)} />
                 </label>
               </span>
@@ -333,10 +334,10 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
 
           {path.kind === "attribute" && (
             <fieldset className="rule-kind">
-              <legend>Type of value</legend>
-              <select aria-label="Type of value" value={datatype} onChange={(e) => setDatatype(e.target.value)}>
-                <option value="">Do not check</option>
-                {OFFERED_TYPES.map((t) => (
+              <legend>{t("shapeEditor.valueType")}</legend>
+              <select aria-label={t("shapeEditor.valueType")} value={datatype} onChange={(e) => setDatatype(e.target.value)}>
+                <option value="">{t("shapeEditor.dontCheck")}</option>
+                {offeredTypes(locale).map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
                   </option>
@@ -347,12 +348,12 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
 
           {path.kind === "relationship" && (
             <fieldset className="rule-kind">
-              <legend>Points to</legend>
+              <legend>{t("shapeEditor.pointsTo")}</legend>
               {pickingClass ? (
                 <EntityPicker
                   ontologyId={modelOntologyId}
                   kind="class"
-                  label="Each value must be of the class"
+                  label={t("shapeEditor.classPicker")}
                   onPick={(iri, label) => {
                     setPointsTo({ iri, label });
                     setPickingClass(false);
@@ -367,17 +368,17 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
                 <div className="edit-value">
                   <span>
                     {pointsTo
-                      ? `Each value must be ${a(pointsTo.label)}`
+                      ? t("shapeEditor.eachClass", { name: locale === "en" ? a(pointsTo.label) : pointsTo.label })
                       : path.range
-                        ? "Not checked"
-                        : "Not checked: this relationship has no end class, so choose one here if you want it checked."}
+                        ? t("shapeEditor.notChecked")
+                        : t("shapeEditor.noRange")}
                   </span>
                   <button ref={classButton} type="button" className="ghost edit-btn" onClick={() => setPickingClass(true)}>
-                    {pointsTo ? "Change class" : "Choose a class"}
+                    {t(pointsTo ? "shapeEditor.changeClass" : "shapeEditor.chooseClass")}
                   </button>
                   {pointsTo && (
                     <button type="button" className="ghost edit-btn" onClick={() => setPointsTo(null)}>
-                      Do not check
+                      {t("shapeEditor.dontCheck")}
                     </button>
                   )}
                 </div>
@@ -387,26 +388,26 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
 
           {kind === "text" && (
             <fieldset className="rule-kind">
-              <legend>Text length</legend>
+              <legend>{t("shapeEditor.length")}</legend>
               <span className="rule-range">
                 <label>
-                  at least <input type="number" min={0} value={minLength} onChange={(e) => setMinLength(e.target.value)} />
+                  {t("shapeEditor.minLength")} <input type="number" min={0} value={minLength} onChange={(e) => setMinLength(e.target.value)} />
                 </label>
                 <label>
-                  at most <input type="number" min={0} value={maxLength} onChange={(e) => setMaxLength(e.target.value)} />
+                  {t("shapeEditor.maxLength")} <input type="number" min={0} value={maxLength} onChange={(e) => setMaxLength(e.target.value)} />
                 </label>
-                characters
+                {t("shapeEditor.characters")}
               </span>
             </fieldset>
           )}
 
           {(kind === "number" || kind === "date") && (
             <fieldset className="rule-kind">
-              <legend>{kind === "date" ? (dateTime ? "Date and time range" : "Date range") : "Number range"}</legend>
+              <legend>{t(kind === "date" ? (dateTime ? "shapeEditor.dateTimeRange" : "shapeEditor.dateRange") : "shapeEditor.numberRange")}</legend>
               <span className="rule-range">
-                {([["at least", low, setLow], ["at most", high, setHigh]] as const).map(([word, value, set]) => (
+                {([["shapeEditor.minValue", low, setLow], ["shapeEditor.maxValue", high, setHigh]] as const).map(([word, value, set]) => (
                   <label key={word}>
-                    {word}{" "}
+                    {t(word)}{" "}
                     <input
                       {...boundField(value)}
                       inputMode={kind === "number" ? "decimal" : undefined}
@@ -421,42 +422,42 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
 
           {(kind === "text" || kind === "number" || path.kind === "relationship") && (
             <fieldset className="rule-kind">
-              <legend>Allowed values</legend>
+              <legend>{t("shapeEditor.allowed")}</legend>
               <input
                 type="text"
-                aria-label="Allowed values, separated by commas"
+                aria-label={t("shapeEditor.allowedInput")}
                 aria-describedby={`${id}-allowed-help`}
                 value={allowed}
                 onChange={(e) => setAllowed(e.target.value)}
               />
               <p id={`${id}-allowed-help`} className="detail-note">
                 {path.kind === "relationship"
-                  ? "Individuals, by prefixed name or IRI, separated by commas. Leave empty to allow any."
-                  : "Separate the values with commas. Leave empty to allow any."}
+                  ? t("shapeEditor.allowedLinks")
+                  : t("shapeEditor.allowedValues")}
               </p>
             </fieldset>
           )}
 
           {offersLanguages && (
             <fieldset className="rule-kind">
-              <legend>Languages</legend>
-              <p className="detail-note">Required in:</p>
+              <legend>{t("shapeEditor.languages")}</legend>
+              <p className="detail-note">{t("shapeEditor.requiredIn")}</p>
               {languages.map((tag) => (
                 <label key={`req-${tag}`} className="rule-check">
                   <input type="checkbox" checked={required.includes(tag)} onChange={() => toggle(required, setRequired, tag)} />
-                  {languageName(tag)} ({tag})
+                  {t("shapeEditor.language", { name: languageName(tag, locale), tag })}
                 </label>
               ))}
-              <p className="detail-note">Only in:</p>
+              <p className="detail-note">{t("shapeEditor.onlyIn")}</p>
               {languages.map((tag) => (
                 <label key={`only-${tag}`} className="rule-check">
                   <input type="checkbox" checked={onlyLangs.includes(tag)} onChange={() => toggle(onlyLangs, setOnlyLangs, tag)} />
-                  {languageName(tag)} ({tag})
+                  {t("shapeEditor.language", { name: languageName(tag, locale), tag })}
                 </label>
               ))}
               <label className="rule-check">
                 <input type="checkbox" checked={unique} onChange={(e) => setUnique(e.target.checked)} />
-                One per language
+                {t("shapeEditor.uniqueLang")}
               </label>
             </fieldset>
           )}
@@ -464,21 +465,21 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
           {kind === "text" && (
             <div className="rule-more">
               <button type="button" className="ghost" aria-expanded={more} onClick={() => setMore((m) => !m)}>
-                More
+                {t("shapeEditor.more")}
               </button>
               {more && (
                 <fieldset className="rule-kind">
-                  <legend>Text pattern</legend>
+                  <legend>{t("shapeEditor.pattern")}</legend>
                   <input
                     type="text"
-                    aria-label="Pattern, a regular expression"
+                    aria-label={t("shapeEditor.patternInput")}
                     value={pattern}
                     onChange={(e) => setPattern(e.target.value)}
                   />
                   <div className="rule-examples">
                     {PATTERN_EXAMPLES.map((ex) => (
-                      <button key={ex.label} type="button" className="ghost edit-btn" onClick={() => setPattern(ex.pattern)}>
-                        {ex.label}
+                      <button key={t(ex.label)} type="button" className="ghost edit-btn" onClick={() => setPattern(ex.pattern)}>
+                        {t(ex.label)}
                       </button>
                     ))}
                   </div>
@@ -489,7 +490,7 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
         </>
       )}
 
-      {rule && !problem && <p className="rule-preview">Reads: {ruleSentence(rule)}.</p>}
+      {rule && !problem && <p className="rule-preview">{t("shapeEditor.reads", { sentence: ruleSentence(rule, locale) })}</p>}
       {problem && path && (
         <p id={`${id}-problem`} className="detail-note">
           {problem}
@@ -503,10 +504,10 @@ export default function RuleEditor({ modelOntologyId, paths, initial, languages,
           aria-describedby={problem && path ? `${id}-problem` : undefined}
           onClick={submit}
         >
-          {busy ? "Saving change…" : initial ? "Save rule" : "Add rule"}
+          {t(busy ? "shapeEditor.saving" : initial ? "shapeEditor.save" : "shapeEditor.addRule")}
         </button>
         <button type="button" className="ghost" onClick={onCancel}>
-          Cancel
+          {t("shapeEditor.cancel")}
         </button>
       </div>
       {error && <p className="edit-error">{error}</p>}

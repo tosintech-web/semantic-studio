@@ -102,12 +102,16 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 
 | `frontend/src/modeling/examples.ts` | 具体例の型説明・入力検証 | 11 | 共通表示関数を移行 |
 
-| `frontend/src/modeling/shapeSentences.ts` | ルール・検証の文章 | 12 | 結果パネルの共通見出しを先行移行、その他はTask 12 |
+| `frontend/src/modeling/shapeSentences.ts` | ルール・検証の文章 | 12 | 共通の説明・型と言語の表示・入力確認・結果集計を移行（通知元への接続はTask 12） |
 
 | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 全体テンプレートを移行、enの既存語形処理を保持 |
 
 | `frontend/src/components/RuleBuilder.tsx` | クラスのルール編集 | 11 | 画面所有文言と説明文を移行、編集内容を保持 |
 | `frontend/src/components/RulesBlock.tsx` | ルールの一覧・操作 | 11/12 | 画面所有文言を移行、通知・サーバー警告はTask 12 |
+
+| `frontend/src/components/RuleEditor.tsx` | SHACLルール編集 | 11/12 | 画面所有文言・説明・入力確認を移行、編集値と隠れたフィールドを保持 |
+| `frontend/src/components/ShapesView.tsx` | 検証ルールセット一覧 | 11/12 | 画面所有文言・行と件数バッジを移行、結果データから現在言語で表示 |
+| `frontend/src/components/ShapeForm.tsx` | 検証ルールセット編集 | 11/12 | 画面所有文言・説明・候補・削除確認を移行（サーバーの生成文はTask 12） |
 
 ## 登録済みメッセージ
 
@@ -1954,3 +1958,238 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `rules.checkLabel` | sentence | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
 | `rules.check` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
 | `rules.add` | — | `frontend/src/components/RulesBlock.tsx` | クラスのルール編集 | 11 | 画面所有文言を移行（通知・警告はTask 12） |
+
+| `shapeWords.separator` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.pathOr` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.value` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.and` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.or` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.list` | head, join, tail | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.typeUnknown` | datatype | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.once` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.twice` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.times` | count | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.as` | type | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.pointing` | target | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.length.between` | high, low | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.length.min.one` | count | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.length.min.many` | count | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.length.max.one` | count | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.length.max.many` | count | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.pattern` | pattern | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.range.between` | high, low | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.range.min` | value | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.range.max` | value | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.allowed` | values | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.languages` | languages | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.unique` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.something` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.relation` | label, target | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.rel.exactly` | times | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.rel.between` | high, low | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.rel.min.one` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.rel.min.many` | count | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.rel.max` | times | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.exactlyOne` | label | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.exactly` | count, label | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.between` | high, label, low | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.required` | label | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.min` | count, label | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.maxOne` | label | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.max` | count, label | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.count.any` | label | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.requiredLanguages` | head, languages | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.each` | qualifier | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.typeLength` | length, type | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.everyMatch` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.everyClass` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.everyConcept` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.every` | name | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.shapeEmpty` | target | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.must` | tail, verb | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.joinRules` | head, last | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.shape` | rules, target | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.row.one` | count, target | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.row.many` | count, target | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.string` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.langString` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.integer` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.decimal` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.boolean` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.date` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.dateTime` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.datatype.anyURI` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.offered.string` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.offered.integer` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.offered.decimal` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.offered.boolean` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.offered.date` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.offered.dateTime` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.offered.anyURI` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.ar` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.ca` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.cs` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.da` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.de` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.el` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.en` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.es` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.fi` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.fr` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.he` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.hi` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.hu` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.it` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.ja` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.ko` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.la` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.nb` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.nl` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.no` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.pl` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.pt` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.ro` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.ru` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.sv` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.tr` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.uk` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.language.zh` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.number` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.length` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.counts` | high, low | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.lengths` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.pattern` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.dateTime` | value | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.date` | value | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.numeric` | value | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.range` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.allowed` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.languages` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+| `shapeWords.problem.empty` | — | `frontend/src/modeling/shapeSentences.ts` | 検証ルールの説明・入力確認 | 11/12 | 共通関数を移行、画面への接続は継続 |
+
+| `shapeSummary.stopped` | — | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.noProblems` | — | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.problem.one` | — | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.problem.many` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.timeout` | shapes, statements | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.empty` | — | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.total.one` | count, parts | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.total.many` | count, parts | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.passes.one` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.passes.many` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.fails.one` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.fails.many` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.warnings.one` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.warnings.many` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.nothing.one` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.nothing.many` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.error.one` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeSummary.state.error.many` | count | `frontend/src/modeling/shapeSentences.ts` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.change` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.add` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.path` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.choose` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count.none` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count.required` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count.atMostOne` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count.exactlyOne` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count.atLeast` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count.atMost` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.count.between` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.from` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.to` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.min` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.max` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.valueType` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.dontCheck` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.pointsTo` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.classPicker` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.notChecked` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.noRange` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.changeClass` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.chooseClass` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.length` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.minLength` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.maxLength` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.characters` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.dateTimeRange` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.dateRange` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.numberRange` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.minValue` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.maxValue` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.allowed` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.allowedInput` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.allowedLinks` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.allowedValues` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.languages` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.requiredIn` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.onlyIn` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.uniqueLang` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.more` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.pattern` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.patternInput` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.example.email` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.example.code` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.example.year` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.saving` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.save` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.addRule` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.cancel` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.missingPath` | — | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.path.relationship` | name | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.path.attribute` | name | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.eachClass` | name | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.language` | name, tag | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+| `shapeEditor.reads` | sentence | `frontend/src/components/RuleEditor.tsx` | SHACL編集・結果集計 | 11/12 | 共通関数・画面を移行、結果の通知元への接続は継続 |
+
+| `shapesView.shapeTab` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.resultsTab` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.title` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.add` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.addHint` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.concepts` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.class` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.modelCheck` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.classPicker` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.empty` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.notChecked` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.stale` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.tabs` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.choose` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.intro` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapesView.checking` | — | `frontend/src/components/ShapesView.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.readonly` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.turtle` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.applies` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.targetPicker` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.noTarget` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.change` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.name` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.nameInput` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.rules` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.empty` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.edit` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.remove` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.add` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.suggested` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.chooseTarget` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.reading` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.allSuggested` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.addSuggestion` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.more` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.severity` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.violation` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.warning` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.failureMessage` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.message` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.delete` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.deleteThis` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.cancel` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.editLabel` | path | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.removeLabel` | path | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.suggestionLabel` | sentence | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.deleteQuestion` | name | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.deleteEmpty` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.deleteOne` | — | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |
+| `shapeForm.deleteMany` | count | `frontend/src/components/ShapeForm.tsx` | SHACLの一覧・フォーム | 11/12 | 画面所有文言を移行 |

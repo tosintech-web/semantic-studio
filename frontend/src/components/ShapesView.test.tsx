@@ -48,6 +48,8 @@ vi.mock("../api", async (importOriginal) => ({
   searchNodes,
 }));
 
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
 import type { ProjectKind, ShapeForm, ShapesListing } from "../types";
 import ShapesView from "./ShapesView";
@@ -104,6 +106,7 @@ async function setup(
   kind: ProjectKind = "ontology",
   documents = [doc("model"), doc("shapes")],
   suggestions: unknown = SUGGESTIONS,
+  localized = false,
 ) {
   openProject.mockResolvedValue({
     project: {
@@ -122,9 +125,8 @@ async function setup(
     onError: vi.fn<(message: string) => void>(),
   };
   await act(async () => {
-    render(
-      <ShapesView projectId={PID} kind={kind} languages={["en", "fr"]} modelOntologyId={`${PID}-model`} {...props} />,
-    );
+    const view = <ShapesView projectId={PID} kind={kind} languages={["en", "fr"]} modelOntologyId={`${PID}-model`} {...props} />;
+    render(localized ? <I18nProvider><UiLanguageSelect />{view}</I18nProvider> : view);
   });
 }
 
@@ -770,4 +772,55 @@ describe("ShapesView in two columns (load-and-shapes 5.3, AC-4)", () => {
     expect(results.tabIndex).toBe(0);
     expect(shape.tabIndex).toBe(-1);
   });
+});
+
+
+it("switches SHACL list and form labels without refetching or resetting an open rule", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await setup([PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  expect(screen.getByRole("heading", { level: 2, name: "検証ルールセット" })).toBeTruthy();
+  expect(document.querySelector(".shape-sentence")?.textContent).toBe("すべてのPerson：「name」が1件以上必要です。");
+  fireEvent.click(screen.getByRole("button", { name: "nameのルールを編集" }));
+  const editor = screen.getByRole("group", { name: "ルールを変更" });
+  fireEvent.change(within(editor).getByRole("combobox", { name: "件数" }), { target: { value: "atLeast" } });
+  const count = within(editor).getByRole("spinbutton", { name: "最小件数" });
+  fireEvent.change(count, { target: { value: "3" } });
+  const calls = [getShapes.mock.calls.length, getShapeSuggestions.mock.calls.length];
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("group", { name: "Change the rule" })).toBe(editor);
+  expect((count as HTMLInputElement).value).toBe("3");
+  expect([getShapes.mock.calls.length, getShapeSuggestions.mock.calls.length]).toEqual(calls);
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps the delete confirmation open while its count and actions change language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await setup([PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  fireEvent.click(screen.getByRole("button", { name: "この検証ルールセットを削除" }));
+  const dialog = screen.getByRole("dialog", { name: "Person rulesを削除しますか？" });
+  expect(dialog.textContent).toContain("ルール1件も一緒に削除します。元に戻す操作で復元できます。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("dialog", { name: "Delete Person rules?" })).toBe(dialog);
+  expect(dialog.textContent).toContain("Its rule goes with it. Undo brings it back.");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords an unseen result badge without rerunning validation", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await setup([PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  validateProject.mockResolvedValue({
+    stopped: false, durationMs: 1, statements: 4, shapeCount: 1,
+    revisions: { model: 1, shapes: 1 },
+    shapes: [{ id: PERSON.id, name: PERSON.name, state: "fails", target: null, focusCount: 2, failingCount: 1, problemCount: 3, warningCount: 0, problems: [], problemsTotal: 3, error: null }],
+  });
+  await act(async () => { await projectStore.validate(); });
+  const tab = screen.getByRole("tab", { name: /検証結果.*問題3件/ });
+  expect(tab.getAttribute("aria-selected")).toBe("false");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("tab", { name: "Results, 3 problems" })).toBe(tab);
+  expect(validateProject).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });
