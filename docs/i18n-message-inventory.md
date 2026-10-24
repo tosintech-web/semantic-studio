@@ -118,6 +118,9 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/WhyDisclosure.tsx` | 根拠の開閉・表示の枠 | 11/12 | 画面所有文言を移行、開閉と取得済み結果を保持（サーバーの根拠文はTask 12） |
 | `frontend/src/components/InferredBlock.tsx` | 詳細の推論結果の枠 | 11/12 | 見出しと個体を持てないことの説明を移行（事実文・APIエラーの生成元はTask 12） |
 
+| `frontend/src/home/miniature.ts` | 構成バーの種類名 | 11 | 現在の翻訳関数を受け取る（配置・比率・色は保持） |
+| `frontend/src/components/Logo.tsx` | 説明用タグライン | 11 | 製品名とマークを保持し説明のみ翻訳 |
+
 ## 登録済みメッセージ
 
 一覧は現在のカタログと使用箇所から生成した作業記録。動的キーの接頭辞も使用箇所として記載する。
@@ -712,7 +715,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `parse.syntax` | format, line | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `model.invalid_value` | value, datatype | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `validation.min_count` | name, count | `frontend/src/sparql/generate.ts` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
-| `reasoning.timeout` | seconds | `frontend/src/components/RulesBlock.tsx` <br>`backend/app/reasoning.py` | UI・読み上げ・通知 | 12 | 実際のタイムアウト値から生成、推論画面に接続済み |
+| `reasoning.timeout` | seconds | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | UI・読み上げ・通知 | 12 | 実際のタイムアウト値から生成、推論画面に接続済み |
 | `entities.page_too_large` | total, suggested_limit | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
 | `entities.view_changed` | — | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
 | `request.invalid` | — | `frontend/src/components/RulesBlock.tsx` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
@@ -2253,3 +2256,6 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `inferred.about` | name | `frontend/src/components/InferredBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
 | `inferred.never` | name | `frontend/src/components/InferredBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
 | `inferred.empty` | name | `frontend/src/components/InferredBlock.tsx` | 推論画面・根拠・詳細の枠 | 11/12 | 画面所有文言を移行、事実・根拠のサーバー文は接続待ち |
+
+| `home.compositionBand` | kind, count | `frontend/src/components/OntologyCard.tsx` | 構成バーの種類と件数 | 11 | 現在の言語で表示、比率と色は保持 |
+| `brand.tagline` | — | `frontend/src/components/Logo.tsx` | ロゴの説明 | 11 | 製品名とマークを保持、説明のみ翻訳 |

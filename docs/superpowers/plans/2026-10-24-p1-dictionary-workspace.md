@@ -359,6 +359,8 @@ SparqlEditor,SparqlPreview,NothingSelected}.tsx`、`canvas/`、`modeling/sentenc
 
 2026-10-24補足：全画面の所有文言を対象とする仕様に従い、一覧で漏れていた
 GraphViewのズーム・PNG出力等の操作案内と、SideTabsの共通タブ表示もTask 11に含める。
+全体監査で見つかった`home/miniature.ts`の構成バーの種類名、`OntologyCard`の帯の説明、
+`Logo`の説明用タグラインも対象とする。製品名・マーク、図の配置・色・比率は保持する。
 
 - [ ] inventoryのTask 11対象を追加し、使用する全メッセージ/引数をカタログに定義する。
   標準用語の意味の定義はglossaryを唯一の意味定義とし、日英の文章を同じキーへ結び付ける。

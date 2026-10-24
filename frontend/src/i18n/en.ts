@@ -15,6 +15,8 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "home.compositionBand": "{kind}: {count}",
+  "brand.tagline": "ONTOLOGY WORKSPACE",
   "reasonUI.reason": "Reason",
   "reasonUI.stop": "Stop",
   "reasonUI.showInferred": "Show inferred",

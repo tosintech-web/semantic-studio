@@ -15,6 +15,8 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "home.compositionBand": "{kind}：{count}件",
+  "brand.tagline": "オントロジー作業スペース",
   "reasonUI.reason": "推論",
   "reasonUI.stop": "停止",
   "reasonUI.showInferred": "推論結果を表示",

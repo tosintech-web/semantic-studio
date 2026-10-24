@@ -11,7 +11,7 @@ BASIC IDEA
     aperture for "studio", and relations converging on a concept for the
     semantics. Drawn as inline SVG whose colours come from CSS variables, so it
     follows the active theme. LogoMark is the icon alone; Logo adds the wordmark
-    and tagline.
+    and descriptive tagline in the current UI language.
 
 INPUTS / INPUT SOURCES (props)
     - LogoMark: an optional pixel size.
@@ -20,6 +20,8 @@ EXPECTED OUTPUT
     - The rendered SVG mark, or the full brand block (mark + text).
 ================================================================================
 */
+
+import { useI18n } from "../i18n/I18nProvider";
 
 /** The icon alone: three arcs around a faceted core, sized in pixels. */
 export function LogoMark({ size = 30 }: { size?: number }) {
@@ -52,6 +54,7 @@ export function LogoMark({ size = 30 }: { size?: number }) {
 }
 
 export default function Logo() {
+  const { t } = useI18n();
   return (
     <div className="brand" title="Semantic Studio">
       <LogoMark />
@@ -60,7 +63,7 @@ export default function Logo() {
           <span className="brand-name-1">SEMANTIC</span>
           <span className="brand-name-2">STUDIO</span>
         </div>
-        <div className="brand-tagline">ONTOLOGY WORKSPACE</div>
+        <div className="brand-tagline">{t("brand.tagline")}</div>
       </div>
     </div>
   );

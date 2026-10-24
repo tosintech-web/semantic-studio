@@ -84,7 +84,9 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
-import type { UiLocale } from "../i18n/types";
+import type { Translator, UiLocale } from "../i18n/types";
+import { translate } from "../i18n/format";
+import { edgeLabelMessage } from "../i18n/kindLabel";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Graph from "graphology";                       // in-memory graph data structure
@@ -501,7 +503,8 @@ function edgeKey(edge: VizEdge): string {
  *  canvas's words), else its label, else its kind. */
 function edgeWords(edge: VizEdge, locale: UiLocale): string {
   if (edge.kind === "rule" && edge.rule) return shortLabel(edge.rule, locale);
-  return edge.label || edge.kind;
+  const t = ((code, args) => translate(locale, code, args)) as Translator;
+  return edge.label || edgeLabelMessage(edge.kind, t);
 }
 
 const EMPTY_SET: Set<string> = new Set();
@@ -554,7 +557,7 @@ export default function GraphView({
   const { t, locale } = useI18n();
   const localeRef = useRef(locale);
   localeRef.current = locale;
-  const ruleLabelsRef = useRef(new Map<string, NonNullable<VizEdge["rule"]>>());
+  const edgeLabelsRef = useRef(new Map<string, VizEdge>());
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
@@ -750,7 +753,7 @@ export default function GraphView({
     sigmaRef.current?.kill();
     sigmaRef.current = null;
     graphRef.current = null;
-    ruleLabelsRef.current.clear();
+    edgeLabelsRef.current.clear();
     if (!data) {
       setDrawnCount(0);
       return;
@@ -773,7 +776,7 @@ export default function GraphView({
       // names sit further apart and their labels have room to render.
       const nameSpan =
         (labelLength.get(edge.source) ?? 8) + (labelLength.get(edge.target) ?? 8);
-      if (edge.kind === "rule" && edge.rule) ruleLabelsRef.current.set(key, edge.rule);
+      if ((edge.kind === "rule" && edge.rule) || !edge.label) edgeLabelsRef.current.set(key, edge);
       graph.addEdgeWithKey(key, edge.source, edge.target, {
         kind: edge.kind,
         label: edgeWords(edge, localeRef.current),
@@ -1210,7 +1213,7 @@ export default function GraphView({
       // not produce but which would throw rather than be ignored.
       if (graph.hasEdge(key)) continue;
       if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) continue;
-      if (edge.kind === "rule" && edge.rule) ruleLabelsRef.current.set(key, edge.rule);
+      if ((edge.kind === "rule" && edge.rule) || !edge.label) edgeLabelsRef.current.set(key, edge);
       graph.addEdgeWithKey(key, edge.source, edge.target, {
         kind: edge.kind,
         label: edgeWords(edge, localeRef.current),
@@ -1267,14 +1270,14 @@ export default function GraphView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expansion?.token]);
 
-  // Reword the existing rule edges. Rebuilding the scene here would discard
+  // Reword rule and generated kind labels. Rebuilding the scene would discard
   // manually placed nodes and reset the camera for a display-only change.
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
     let changed = false;
-    for (const [key, rule] of ruleLabelsRef.current) {
-      const words = shortLabel(rule, locale);
+    for (const [key, edge] of edgeLabelsRef.current) {
+      const words = edgeWords(edge, locale);
       if (graph.hasEdge(key) && graph.getEdgeAttribute(key, "label") !== words) {
         graph.setEdgeAttribute(key, "label", words);
         changed = true;

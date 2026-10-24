@@ -2156,3 +2156,25 @@ it("updates rule labels in the same graph without moving nodes on a UI language 
     expect(graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")])).toEqual(positions);
   } finally { cleanup(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
 });
+
+it("localizes unnamed edge kinds and preserves unknown kinds and actual labels", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const { default: GraphView } = await import("./GraphView");
+  const data = { ...DATA, edges: [
+    { ...DATA.edges[0], label: "" },
+    { ...DATA.edges[0], kind: "assertion", label: "has line <b>{name}</b>" },
+    { ...DATA.edges[0], kind: "constructor", label: "" },
+  ] };
+  try {
+    await act(async () => { render(<I18nProvider><UiLanguageSelect /><GraphView data={data} theme="light" hiddenKinds={new Set()} selected={null} onSelect={vi.fn()} focusTick={0} /></I18nProvider>); });
+    const renderer = sigmaCalls.last;
+    const graph = renderer.graph;
+    const labels = () => Object.fromEntries(graph.edges().map((key: string) => [graph.getEdgeAttribute(key, "kind"), graph.getEdgeAttribute(key, "label")]));
+    expect(labels()).toEqual({ subClassOf: "下位クラス", assertion: "has line <b>{name}</b>", constructor: "constructor" });
+    const positions = graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")]);
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(labels()).toEqual({ subClassOf: "subclass of", assertion: "has line <b>{name}</b>", constructor: "constructor" });
+    expect(sigmaCalls.last).toBe(renderer);
+    expect(graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")])).toEqual(positions);
+  } finally { cleanup(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});

@@ -29,6 +29,8 @@ EXPECTED OUTPUT
 */
 
 import { describe, expect, it } from "vitest";
+import { translate } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import { CARD_MINIATURE, compositionSegments, layoutSketch } from "./miniature";
 import type { CardSketch } from "../types";
 import { limitMs } from "../budget";
@@ -220,4 +222,15 @@ describe("compositionSegments", () => {
     expect(segments).toHaveLength(1);
     expect(segments[0].percent).toBe(100);
   });
+});
+
+
+it("translates composition labels without changing segment identity, order or percentages", () => {
+  const counts = { class: 30, individual: 60, constructor: 10 };
+  const original = JSON.stringify(counts);
+  const t = ((code, args) => translate("ja", code, args)) as Translator;
+  const japanese = compositionSegments(counts, t);
+  expect(japanese.map(segment => segment.label)).toEqual(["個体", "クラス", "その他"]);
+  expect(japanese.map(({ label: _label, ...facts }) => facts)).toEqual(compositionSegments(counts).map(({ label: _label, ...facts }) => facts));
+  expect(JSON.stringify(counts)).toBe(original);
 });

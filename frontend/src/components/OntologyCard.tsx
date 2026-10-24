@@ -155,8 +155,8 @@ function OntologyCard({
     [summary.card, box],
   );
   const segments = useMemo(
-    () => compositionSegments(summary.kindCounts),
-    [summary.kindCounts],
+    () => compositionSegments(summary.kindCounts, t),
+    [summary.kindCounts, t],
   );
   const palette = PALETTES[theme];
   const added = addedOn(summary.addedAt, locale);
@@ -331,7 +331,7 @@ function OntologyCard({
                   width: `${segment.percent}%`,
                   background: kindColor(segment.kind, theme),
                 }}
-                title={`${segment.label}: ${segment.count.toLocaleString()}`}
+                title={t("home.compositionBand", { kind: segment.label, count: segment.count })}
               />
             ))}
           </div>
