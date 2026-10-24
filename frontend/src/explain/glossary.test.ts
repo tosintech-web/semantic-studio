@@ -26,7 +26,9 @@ EXPECTED OUTPUT
 */
 
 import { describe, expect, it } from "vitest";
-import { MAPPINGS } from "../modeling/sentences";
+import { MAPPINGS, mappingChoices } from "../modeling/sentences";
+import { translate } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import type { NodeDetails, TermRef } from "../types";
 import EXAMPLE_TERMS from "./exampleTerms.json";
 import { GLOSSARY, definition, panelTerms } from "./glossary";
@@ -157,5 +159,23 @@ describe("panelTerms", () => {
   it("names a term with no label by its prefixed form", () => {
     const [term] = panelTerms([{ predicate: uri(RDF_TYPE, "rdf:type"), object: literal("x", null) }], []);
     expect(term.name).toBe("rdf:type");
+  });
+});
+
+describe("Japanese standard-term glossary", () => {
+  it("defines every existing standard IRI in Japanese without defining prototype keys", () => {
+    expect(definition(RDF_TYPE, "ja")).toBe("対象がどの種類に属するかを示します。値はクラスです。");
+    for (const iri of Object.keys(GLOSSARY)) expect(definition(iri, "ja"), iri).toMatch(/[ぁ-んァ-ン一-龯]/);
+    expect(definition("constructor", "ja")).toBeUndefined();
+    expect(definition("__proto__", "ja")).toBeUndefined();
+  });
+  it("shares mapping meanings with editing choices and keeps panel term identities unchanged", () => {
+    const ja = ((code, args) => translate("ja", code, args)) as Translator;
+    for (const mapping of mappingChoices(ja)) expect(definition(SKOS + mapping.id, "ja")).toBe(mapping.means);
+    const statements = [{ predicate: uri(RDF_TYPE, "rdf:type", "型"), object: literal("x", null) }];
+    const [english] = panelTerms(statements, []);
+    const [japanese] = panelTerms(statements, [], "ja");
+    expect({ ...japanese, definition: english.definition }).toEqual(english);
+    expect(japanese.definition).toBe(definition(RDF_TYPE, "ja"));
   });
 });

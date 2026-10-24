@@ -43,7 +43,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | source path | 用途 | Task | 状態 |
 | --- | --- | --- | --- |
 | `frontend/src/components/DetailPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/ExplainBlock.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ExplainBlock.tsx` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/components/ExploreStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/HierarchyView.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/HierarchyActions.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -74,12 +74,12 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/SparqlPreview.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の操作文言を移行済み、外部生成元は接続待ち |
 | `frontend/src/components/NothingSelected.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の文言を移行済み |
 | `frontend/src/types.ts` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
-| `frontend/src/i18n/parts.ts` | リンク付き翻訳テンプレートの組み立て | 11 | 共通機構を実装、説明画面への接続待ち |
+| `frontend/src/i18n/parts.ts` | リンク付き翻訳テンプレートの組み立て | 11 | 説明画面に接続済み、最終ブラウザ確認待ち |
 | `frontend/src/components/SearchBox.tsx` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
 | `frontend/src/modeling/sentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/modeling/ruleSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/explain/explainSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/explain/glossary.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/explain/explainSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
+| `frontend/src/explain/glossary.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/sparql/starters.ts` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
 | `frontend/src/canvas/useCanvasData.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/relate.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -212,12 +212,12 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `imports.useLibrary` | — | `frontend/src/components/ImportsPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `app.notGraphNode` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `app.expansion.none` | drawn, total | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `app.expansion.one.complete` | added, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
-| `app.expansion.one.partial` | added, budget, neighbors, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
-| `app.expansion.many.complete` | added, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
-| `app.expansion.many.partial` | added, budget, neighbors, drawn, total | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
-| `query.shownOnGraph.one` | count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
-| `query.shownOnGraph.many` | count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `app.expansion.one.complete` | added, drawn, total | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
+| `app.expansion.one.partial` | added, budget, neighbors, drawn, total | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
+| `app.expansion.many.complete` | added, drawn, total | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
+| `app.expansion.many.partial` | added, budget, neighbors, drawn, total | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
+| `query.shownOnGraph.one` | count | `frontend/src/sparql/resultNodes.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
+| `query.shownOnGraph.many` | count | `frontend/src/sparql/resultNodes.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
 | `app.kindOntology` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `app.kindTaxonomy` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `app.projectCopied` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -388,14 +388,14 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `home.docsScope` | — | `frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.docsWarn` | — | `frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.generate` | — | `frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `home.open` | — | `frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `home.open` | — | `frontend/src/components/OntologyCard.tsx`<br>`frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.source` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.download` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.fromThis` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.remove` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.example` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.readOnly` | — | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `home.working` | — | `frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `home.working` | — | `frontend/src/components/OntologyCard.tsx`<br>`frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.rename` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.saveName` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.toTaxonomy` | — | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -418,7 +418,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `home.docsInclude.one_many` | individuals, assertions | `frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.docsInclude.many_one` | individuals, assertions | `frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.docsInclude.many_many` | individuals, assertions | `frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `home.more` | name | `frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `home.more` | name | `frontend/src/components/OntologyCard.tsx`<br>`frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.newName` | name | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.openName` | name | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.added` | date | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -463,15 +463,15 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `kindCount.other.many` | count | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.title` | — | `frontend/src/components/NewProjectDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.kindQuestion` | — | `frontend/src/components/NewProjectDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `project.ontology` | — | `frontend/src/projects/form.ts`<br>`frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `project.taxonomy` | — | `frontend/src/projects/form.ts`<br>`frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `project.ontology` | — | `frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `project.taxonomy` | — | `frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.ontologyHelp` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.taxonomyHelp` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.template.empty` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.template.small` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.template.taxonomy-empty` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.template.taxonomy-small` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `project.chooseKind` | — | `frontend/src/projects/form.ts`<br>`frontend/src/components/NewProjectDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `project.chooseKind` | — | `frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.name` | — | `frontend/src/components/NewProjectDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.source` | — | `frontend/src/components/NewProjectDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.chooseFirst` | — | `frontend/src/components/NewProjectDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -490,7 +490,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -556,7 +556,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `network.outcome.too-large` | — | `frontend/src/networkWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.outcome.other` | — | `frontend/src/networkWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `common.quote` | value | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.listSeparator` | — | `frontend/src/removalPrompt.ts`<br>`frontend/src/explore/suggestions.ts`<br>`frontend/src/components/NetworkApprovalDialog.tsx`<br>`frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.listSeparator` | — | `frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkApprovalDialog.tsx`<br>`frontend/src/explore/suggestions.ts`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `status.empty` | — | `frontend/src/statusWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `status.projects.one` | count | `frontend/src/statusWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `status.projects.many` | count | `frontend/src/statusWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -568,14 +568,14 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `status.both.many_many` | projects, ontologies | `frontend/src/statusWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `status.statements.one` | count | `frontend/src/statusWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `status.statements.many` | count | `frontend/src/statusWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.unknown` | name | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.zero` | name | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.count.one` | name, count | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.named.one` | name, count, names | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.done.one` | name, count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
-| `remove.count.many` | name, count | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.named.many` | name, count, names | `frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `remove.done.many` | name, count | producer接続待ち | UI・読み上げ・通知 | 2/3/7/8/10 | 契約のみ |
+| `remove.unknown` | name | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.zero` | name | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.count.one` | name, count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.named.one` | name, count, names | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.done.one` | name, count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
+| `remove.count.many` | name, count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.named.many` | name, count, names | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `remove.done.many` | name, count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/removalPrompt.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | 静的使用箇所確認（動的候補を含む） |
 | `load.sending` | name, sent, total, unit | `frontend/src/loadWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.downloading.one` | elapsed | `frontend/src/loadWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.still.one` | elapsed | `frontend/src/loadWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -629,10 +629,10 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `entities.label` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.iri` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.description` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `entities.reference` | — | `frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `entities.undefined` | — | `frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `entities.copy` | — | `frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `entities.copied` | — | `frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `entities.reference` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `entities.undefined` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `entities.copy` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `entities.copied` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.range` | start, end, total | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.previous` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.next` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -646,26 +646,26 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/EntityPicker.tsx` <br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `search.loading` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `search.loading` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.one` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `search.none` | — | `frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `search.none` | — | `frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.count` | count | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.more` | count | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `search.narrow` | count | `frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `search.narrow` | count | `frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.showAll` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.undrawn` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.undrawnTitle` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `search.from` | name | `frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `search.from` | name | `frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.importNone` | — | `frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `match.name` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `match.alias` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `match.reading` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `match.search` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `match.identifier` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/SearchBox.tsx`<br>`frontend/src/components/EntityPicker.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `match.name` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `match.alias` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `match.reading` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `match.search` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `match.identifier` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.home` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.view` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.explore` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -677,52 +677,52 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.language` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.apply` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.invalidLanguage` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.error` | — | `frontend/src/i18n/serverMessage.ts`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx`<br>`frontend/src/components/TurtleEditor.tsx` <br>`frontend/src/i18n/parts.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.notSet` | — | `frontend/src/i18n/format.ts` <br>`frontend/src/i18n/parts.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.error` | — | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/i18n/parts.ts`<br>`frontend/src/i18n/serverMessage.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.notSet` | — | `frontend/src/i18n/format.ts`<br>`frontend/src/i18n/parts.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.title` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.description` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.reload` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.success` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `parse.syntax` | format, line | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `model.invalid_value` | value, datatype | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
-| `validation.min_count` | name, count | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
-| `reasoning.timeout` | seconds | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
+| `validation.min_count` | name, count | `frontend/src/sparql/generate.ts` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
+| `reasoning.timeout` | seconds | `frontend/src/components/RulesBlock.tsx` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
 | `entities.page_too_large` | total, suggested_limit | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
 | `entities.view_changed` | — | `frontend/src/components/EntityList.tsx`<br>`backend/app/routers/ontologies.py` | UI・読み上げ・通知 | 12 | カタログ登録済み |
-| `request.invalid` | — | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
-| `results.title` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.page` | page, pages | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.capHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.cap` | count | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.noExport` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.csvHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.jsonHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.csv` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.json` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.frameHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.frame` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.clearHint` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.clear` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.noRows` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.sort` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.source` | name | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.pages` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.first` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.prev` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.next` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.last` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.alreadyFirst` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.alreadyLast` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.range` | end, page, pages, start, total | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.exportTitle` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.exportBody` | count | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.exportAnyway` | — | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.services` | hosts | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.serviceCap` | count, host | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `results.serviceSkipped` | error, host | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
-| `sentence.parent` | child, parent | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `request.invalid` | — | `frontend/src/components/RulesBlock.tsx` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
+| `results.title` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.page` | page, pages | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.capHint` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.cap` | count | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.noExport` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.csvHint` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.jsonHint` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.csv` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.json` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.frameHint` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.frame` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.clearHint` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.clear` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.noRows` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.sort` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.source` | name | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.pages` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.first` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.prev` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.next` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.last` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.alreadyFirst` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.alreadyLast` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.range` | end, page, pages, start, total | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.exportTitle` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.exportBody` | count | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.exportAnyway` | — | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.services` | hosts | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.serviceCap` | count, host | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `results.serviceSkipped` | error, host | `frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/RulesBlock.tsx`<br>`frontend/src/sparql/exportResults.ts` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `sentence.parent` | child, parent | `frontend/src/explain/explainSentences.ts`<br>`frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `sentence.link.subClassOf` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
-| `sentence.link.broader` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `sentence.link.broader` | from, to | `frontend/src/explain/explainSentences.ts`<br>`frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `sentence.link.related` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `sparql.preview.editHint` | — | `frontend/src/components/SparqlPreview.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
 | `sparql.preview.newHint` | — | `frontend/src/components/SparqlPreview.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
@@ -808,15 +808,15 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `characteristic.name.irreflexive` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `characteristic.name.reflexive` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `mapping.exactMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
-| `mapping.exactMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.exactMatch.meaning` | — | `frontend/src/explain/glossary.ts`<br>`frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `mapping.closeMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
-| `mapping.closeMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.closeMatch.meaning` | — | `frontend/src/explain/glossary.ts`<br>`frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `mapping.broadMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
-| `mapping.broadMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.broadMatch.meaning` | — | `frontend/src/explain/glossary.ts`<br>`frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `mapping.narrowMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
-| `mapping.narrowMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.narrowMatch.meaning` | — | `frontend/src/explain/glossary.ts`<br>`frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `mapping.relatedMatch.name` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
-| `mapping.relatedMatch.meaning` | — | `frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `mapping.relatedMatch.meaning` | — | `frontend/src/explain/glossary.ts`<br>`frontend/src/modeling/sentences.ts` | 型・読み取り専用境界・特性・対応関係の案内 | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `emptyModel.title` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
 | `emptyModel.helpClass` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
 | `emptyModel.helpConcept` | — | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
@@ -834,6 +834,174 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `modelCount.attribute.many` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
 | `modelCount.example.one` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
 | `modelCount.example.many` | count | `frontend/src/components/NothingSelected.tsx` | 選択前の編集案内とモデル集計 | 11 | カタログ・画面接続済み |
+| `explain.kind.class` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.objectProperty` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.datatypeProperty` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.annotationProperty` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.property` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.individual` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.concept` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.conceptScheme` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.collection` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.ontology` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.kind.other` | label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.stop` | — | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.list.separator` | — | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.list.and` | — | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.list.or` | — | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.end.unnamed` | — | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.end.missing` | — | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.end.union` | classes | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.end.separate` | classes | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.count` | count | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.countMore` | count | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.names.all` | names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.names.some` | names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.property` | from, label, to | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.inverse` | inverse | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.attribute.typed` | domain, label, type | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.attribute.untyped` | domain, label | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.individual` | label, types | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.schemes` | schemes | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.heading` | — | `frontend/src/components/ExplainBlock.tsx` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.terms` | count | `frontend/src/components/ExplainBlock.tsx` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.description.complete` | text | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.description.fragment` | text | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.descriptionMarked.complete` | language, text | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.descriptionMarked.fragment` | language, text | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.children.one` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.children.many` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.membersOwn.one` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.membersOwn.many` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.membersExcluded.one` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.membersExcluded.many` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.collection.one` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.collection.many` | count, names | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.narrower.one` | count | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.narrower.many` | count | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.top.one` | count | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `explain.top.many` | count | `frontend/src/explain/explainSentences.ts` | リンク付き説明・件数・著者の説明 | 11 | カタログ・画面接続済み |
+| `glossary.rdf.type` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdf.Property` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdf.langString` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdf.List` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdf.first` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdf.rest` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdf.nil` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.subClassOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.subPropertyOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.domain` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.range` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.label` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.comment` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.Class` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.Literal` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.Resource` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.Datatype` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.isDefinedBy` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.seeAlso` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.rdfs.member` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.Ontology` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.Class` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.Thing` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.Nothing` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.NamedIndividual` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.ObjectProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.DatatypeProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.AnnotationProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.FunctionalProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.InverseFunctionalProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.SymmetricProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.AsymmetricProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.TransitiveProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.ReflexiveProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.IrreflexiveProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.inverseOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.equivalentClass` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.equivalentProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.disjointWith` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.AllDisjointClasses` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.members` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.sameAs` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.differentFrom` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.versionInfo` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.versionIRI` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.priorVersion` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.imports` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.deprecated` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.Restriction` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.onProperty` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.onClass` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.someValuesFrom` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.allValuesFrom` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.hasValue` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.cardinality` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.minCardinality` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.maxCardinality` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.qualifiedCardinality` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.minQualifiedCardinality` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.maxQualifiedCardinality` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.intersectionOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.unionOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.complementOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.oneOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.owl.disjointUnionOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.Concept` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.ConceptScheme` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.Collection` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.OrderedCollection` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.prefLabel` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.altLabel` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.hiddenLabel` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.definition` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.scopeNote` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.note` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.example` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.editorialNote` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.historyNote` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.changeNote` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.notation` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.broader` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.narrower` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.related` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.inScheme` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.hasTopConcept` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.topConceptOf` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.member` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.skos.memberList` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.title` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.description` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.creator` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.contributor` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.publisher` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.created` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.modified` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.issued` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.date` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.license` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.rights` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.source` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.subject` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dcterms.Agent` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dc.title` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dc.description` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dc.date` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dc.creator` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.dc.subject` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.string` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.integer` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.nonNegativeInteger` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.positiveInteger` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.int` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.decimal` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.double` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.float` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.boolean` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.date` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.dateTime` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.time` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.gYear` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `glossary.xsd.anyURI` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 
 ## 対象外・生成元待ち
 
@@ -866,3 +1034,7 @@ SPARQLエディターの`saveLabel`・`saveTitle`はQueryPanelが生成するた
 開始候補の英語の複数形変換は英語表示時に限定する。日本語の案内には元の名称を渡し、言語を変えても生成するQueryStateとSPARQL本文は同一に保つ。`source → relationship → target`の矢印表記は、名前を並べた構造表示として原表記を維持する。
 
 OWL特性・SKOS対応関係の選択肢は`characteristicChoices(t)`／`mappingChoices(t)`で表示時の翻訳を受け取る。従来の定数は英語の互換投影であり、ID・OWL名・順序・moreフラグは変えない。対応関係の意味はこの共通定義からglossaryでも利用し、別の意味定義を複製しない。
+
+標準用語の意味はglossaryのIRI→コード登録から解決する。日英は同じコードに対応し、SKOS対応関係は編集選択肢と同じ意味コードを共有する。英語互換の`GLOSSARY`定数はこの登録の投影である。本文内の数値・日付はデータ型の字句例として保持する。未知のカスタム定義・著者の原文は翻訳で置換しない。
+
+使用箇所はTypeScript構文木の文字列・リテラル接頭辞を持つテンプレートから検査する。動的キーはテンプレートの静的部分が一致する候補を記載し、すべての分岐の実行済み証明とは区別する。接頭辞を持たない任意の文字列式を、すべてのメッセージの使用とは扱わない。

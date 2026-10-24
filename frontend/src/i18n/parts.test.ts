@@ -62,3 +62,9 @@ function partContracts() {
   translateParts("ja", "sentence.parent", { child: "犬", parent: { label: "動物" } });
 }
 void partContracts;
+
+it("preserves supplied text-part boundaries beside reference objects", () => {
+  const ref = { iri: "https://example.org/animal", label: "Animal" };
+  const parts = translateParts("en", "sentence.parent", { child: "Dog", parent: ["an ", ref] });
+  expect(parts[parts.indexOf(ref) - 1]).toBe("an ");
+});

@@ -48,7 +48,9 @@ export function translateParts<K extends MessageId>(locale: UiLocale, code: K,
     const value = values[key];
     if (Array.isArray(value)) {
       if (!value.every(part => typeof part === "string" || reference(part))) return [translate(locale, "common.error")];
-      value.forEach(append);
+      // A supplied Part[] already carries text boundaries beside its links.
+      // Preserve those nodes as well as reference identity for existing renderers.
+      out.push(...value);
     } else if (reference(value)) append(value);
     else if (value === null) append(translate(locale, "common.notSet"));
     else if (typeof value === "number") append(formatNumber(locale, value));

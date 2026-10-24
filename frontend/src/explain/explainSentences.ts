@@ -1,262 +1,137 @@
 /*
 ================================================================================
 FILE: frontend/src/explain/explainSentences.ts
-================================================================================
-
 SUMMARY
-    The words of the detail panel's In plain words block (explain-panel 5.2,
-    D-114): one sentence saying what kind of thing is selected, then at most
-    four facts the file states about it, then its authors' description.
-
+    Localized plain-language facts from the detail response, retaining linked names.
 BASIC IDEA
-    The server sends the structure (`explain` on the node response) and this
-    module writes it, so the wording is tested without rendering and the
-    server never says a word. Every *a* or *an* comes from
-    modeling/sentences.ts (`a`), as do its sentences for a more general
-    class and a broader concept (`parentSentence`, `linkSentence`) and the
-    Edit page's word for a type of value (`asType`, through `typeWord`):
-    that module stays the only place the article rule lives.
-
-    A sentence is a list of parts, text and names, so each name the panel
-    shows can be the panel's term button. A sentence from sentences.ts is
-    asked for with a marker in each name's place and split on the markers;
-    the markers are control characters no label can bring to a split, as a
-    name is never searched for in the sentence.
-
-    A property's label is never read as a verb here: a library's labels are
-    often nouns, and *A Crewed mission crew member an Astronaut* is what the
-    relationship sentence writes for one. *crew member links a Crewed
-    mission to an Astronaut* is true of any label.
-
-    Nothing is said that the structure does not hold: no fact for a count of
-    zero, *a thing* for a missing end, and a count past 10,000 is *more than
-    10,000*.
-
+    Catalog placeholders are resolved before values are inserted. Linked Part[]
+    values keep their identity and text boundaries; names never become syntax.
+    English alone uses the shared article rule. Counts, union/intersection and
+    missing ends describe only the supplied structure; author text stays original.
 INPUTS / INPUT SOURCES
-    - The entity's label, and its `explain` (types.ts, Explain).
-
+    Selected label, Explain metadata, dictionary display language and UI locale.
 EXPECTED OUTPUT
-    - kindSentence, factSentences, descriptionSentence: Sentence values, each
-      a list of strings and {iri, label} names.
-    - explainSentences: the three together, in the block's order.
-    - sentenceText: a sentence as plain text, for tests and titles.
+    Kind/fact/description sentences as strings and original {iri,label} references.
 ================================================================================
 */
-
-import { a, asType, linkSentence, parentSentence } from "../modeling/sentences";
+import { a, asType, typeWord } from "../modeling/sentences";
+import { translateParts } from "../i18n/parts";
+import { translate } from "../i18n/format";
+import type { MessageId, Translator, UiLocale } from "../i18n/types";
 import { own } from "../theme/kinds";
 import type { Explain, ExplainCount, ExplainRef } from "../types";
-
 export type Part = string | ExplainRef;
 export type Sentence = Part[];
-
-/** What each kind is, after its name (5.2's first table, word for word):
- *  the legend's name for it, and the Edit page's plainer word where it has
- *  one. */
-const KIND_WORDS: Record<string, string> = {
-  class: "is a class: a category of things.",
-  objectProperty: "is an object property, also called a relationship: it links one thing to another.",
-  datatypeProperty:
-    "is a datatype property, also called an attribute: it gives a thing a value, such as a number, a date or a piece of text.",
-  annotationProperty:
-    "is an annotation property: it adds a note for people, such as a label or a comment, and does not change what the ontology means.",
-  property: "is a property: it links a thing to another thing or to a value.",
-  individual: "is an individual: one particular thing, not a category.",
-  concept: "is a concept: one term in a vocabulary.",
-  conceptScheme: "is a concept scheme: a vocabulary that holds concepts, arranged from broad to narrow.",
-  collection: "is a collection: a named group of concepts.",
-  ontology: "is the ontology itself: the record that names this vocabulary and who made it.",
-};
-const OTHER_WORDS = "is named in this file, but the file does not say what kind of thing it is.";
-
-/** The most names a sentence lists; the server sends no more. */
 const NAMES_SHOWN = 3;
-/** Where the server's counts stop (graph_builder.EXPLAIN_COUNT_LIMIT). */
 const COUNT_LIMIT = 10_000;
-
-// Stand-ins for names inside a sentence from sentences.ts. Control
-// characters: no label reaches the split with one, as the split is on these
-// alone.
-const FIRST = "\u0001";
-const SECOND = "\u0002";
-
-export function kindSentence(label: string, kind: string): Sentence {
-  return [`${label} ${own(KIND_WORDS, kind) ?? OTHER_WORDS}`];
+const KIND_CODES: Record<string, Extract<MessageId, `explain.kind.${string}`>> = {
+  "class": "explain.kind.class",
+  "objectProperty": "explain.kind.objectProperty",
+  "datatypeProperty": "explain.kind.datatypeProperty",
+  "annotationProperty": "explain.kind.annotationProperty",
+  "property": "explain.kind.property",
+  "individual": "explain.kind.individual",
+  "concept": "explain.kind.concept",
+  "conceptScheme": "explain.kind.conceptScheme",
+  "collection": "explain.kind.collection",
+  "ontology": "explain.kind.ontology",
+};
+const translator = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
+const stop = (sentence: Sentence, locale: UiLocale): Sentence => [...sentence, translate(locale, "explain.stop")];
+export function kindSentence(label: string, kind: string, locale: UiLocale = "en"): Sentence {
+  return translateParts(locale, own(KIND_CODES, kind) ?? "explain.kind.other", { label });
 }
-
-/** *a Mission*, with the name as a part of its own. `a` writes the
- *  article; the name is cut back off the end it was written on. */
-function articled(ref: ExplainRef): Part[] {
-  return [a(ref.label).slice(0, -ref.label.length || undefined), ref];
+function articled(ref: ExplainRef, locale: UiLocale): Part[] {
+  return locale === "en" ? [a(ref.label).slice(0, -ref.label.length || undefined), ref] : [ref];
 }
-
-/** *A, B and C*, each part kept whole. */
-function list(items: Part[][]): Part[] {
+function list(items: Part[][], locale: UiLocale, joiner: "and" | "or" = "and"): Part[] {
   const out: Part[] = [];
-  items.forEach((item, i) => {
-    if (i > 0) out.push(i === items.length - 1 ? " and " : ", ");
+  items.forEach((item, index) => {
+    if (index > 0) out.push(translate(locale, index === items.length - 1 ? `explain.list.${joiner}` : "explain.list.separator"));
     out.push(...item);
   });
   return out;
 }
-
-/** One end of a property: *a Mission*, *a thing*, or *a thing that is a
- *  Person and an Agent* when the file names several, which RDFS reads as
- *  all of them at once. An end given only as a blank node is not *a
- *  thing*: the statements below say what it is. */
-function end(refs: ExplainRef[] | undefined, unnamed = false, form?: "union" | "separate"): Part[] {
-  if ((!refs || refs.length === 0) && unnamed) return ["something the statements below describe"];
-  if (!refs || refs.length === 0) return ["a thing"];
-  if (refs.length === 1) return articled(refs[0]);
-  // A union of named classes is *either* (attribute-reuse 5.3, D-116).
-  if (form === "union") return either(refs.map(articled));
-  return ["a thing that is ", ...list(refs.map(articled))];
+function end(refs: ExplainRef[] | undefined, unnamed: boolean | undefined, form: "union" | "separate" | undefined, locale: UiLocale): Part[] {
+  if (!refs?.length) return [translate(locale, unnamed ? "explain.end.unnamed" : "explain.end.missing")];
+  if (refs.length === 1) return articled(refs[0], locale);
+  const classes = list(refs.map(ref => articled(ref, locale)), locale, form === "union" ? "or" : "and");
+  return translateParts(locale, form === "union" ? "explain.end.union" : "explain.end.separate", { classes });
 }
-
-/** *an Employee or a Manager*, *an Employee, a Contractor or a Manager*. */
-function either(items: Part[][]): Part[] {
-  const out: Part[] = [];
-  items.forEach((item, i) => {
-    if (i > 0) out.push(i === items.length - 1 ? " or " : ", ");
-    out.push(...item);
-  });
-  return out;
+export function countWords(counted: ExplainCount, locale: UiLocale = "en"): string {
+  return translate(locale, counted.capped ? "explain.countMore" : "explain.count", { count: counted.capped ? COUNT_LIMIT : counted.count });
 }
-
-/** A sentence from sentences.ts with names in its two places. */
-function filled(template: string, first: Part[], second: Part[]): Sentence {
-  const out: Sentence = [];
-  for (const piece of template.split(/(\u0001|\u0002)/)) {
-    if (piece === FIRST) out.push(...first);
-    else if (piece === SECOND) out.push(...second);
-    else if (piece) out.push(piece);
-  }
-  return out;
-}
-
-/** *2*, *10,000*, *more than 10,000*. */
-export function countWords(counted: ExplainCount): string {
-  if (counted.capped) return `more than ${COUNT_LIMIT.toLocaleString("en-US")}`;
-  return counted.count.toLocaleString("en-US");
-}
-
-function counted(counted: ExplainCount, one: string, many: string): string {
-  return `${countWords(counted)} ${counted.count === 1 && !counted.capped ? one : many}`;
-}
-
-/** The names after a count: all of them, or *among them* three. */
-function names(counted: ExplainCount): Part[] {
+function names(counted: ExplainCount, locale: UiLocale): Part[] {
   const shown = (counted.names ?? []).slice(0, NAMES_SHOWN);
-  if (shown.length === 0) return [];
+  if (!shown.length) return [];
   const all = shown.length === counted.count && !counted.capped;
-  return [all ? ", " : ", among them ", ...list(shown.map((ref) => [ref]))];
+  return translateParts(locale, all ? "explain.names.all" : "explain.names.some", { names: list(shown.map(ref => [ref]), locale) });
 }
-
 function present(counted: ExplainCount | undefined): counted is ExplainCount {
   return counted !== undefined && (counted.count > 0 || counted.capped);
 }
-
-/** The facts the file states, only for what is there (5.2's second
- *  table): three sentences at most, a class's, within 5.2's four. */
-export function factSentences(label: string, explain: Explain): Sentence[] {
+export function factSentences(label: string, explain: Explain, locale: UiLocale = "en"): Sentence[] {
   const out: Sentence[] = [];
+  const variant = (counted: ExplainCount) => counted.count === 1 && !counted.capped ? "one" : "many";
   switch (explain.kind) {
     case "class": {
-      if (explain.parents?.length) {
-        const parents = list(explain.parents.map((ref) => [ref]));
-        out.push([...filled(parentSentence(FIRST, SECOND), [label], parents), "."]);
-      }
-      const children = explain.children;
-      if (present(children)) {
-        out.push([`It has ${counted(children, "more specific class", "more specific classes")}`, ...names(children), "."]);
-      }
+      if (explain.parents?.length) out.push(stop(translateParts(locale, "sentence.parent", { child: label, parent: list(explain.parents.map(ref => [ref]), locale) }), locale));
+      if (present(explain.children)) out.push(translateParts(locale, `explain.children.${variant(explain.children)}`, { count: countWords(explain.children, locale), names: names(explain.children, locale) }));
       if (present(explain.members)) {
-        // The app infers nothing here, so a member of a subclass is not
-        // counted, and with subclasses that has to be said.
-        const tail = present(children) ? ", not counting those of its more specific classes" : "";
-        out.push([
-          `It has ${counted(explain.members, "individual", "individuals")} of its own`,
-          ...names(explain.members),
-          `${tail}.`,
-        ]);
+        // Subclass members were not counted by the server; never imply they were.
+        const code = present(explain.children) ? `explain.membersExcluded.${variant(explain.members)}` as const : `explain.membersOwn.${variant(explain.members)}` as const;
+        out.push(translateParts(locale, code, { count: countWords(explain.members, locale), names: names(explain.members, locale) }));
       }
       break;
     }
     case "objectProperty":
-    case "property": {
-      out.push([
-        `${label} links `,
-        ...end(explain.domains, explain.unnamedDomain, explain.domainForm),
-        " to ",
-        ...end(explain.ranges, explain.unnamedRange),
-        ".",
-      ]);
-      if (explain.inverse) out.push(['Its other way round is "', explain.inverse, '".']);
+    case "property":
+      out.push(translateParts(locale, "explain.property", { label, from: end(explain.domains, explain.unnamedDomain, explain.domainForm, locale), to: end(explain.ranges, explain.unnamedRange, undefined, locale) }));
+      if (explain.inverse) out.push(translateParts(locale, "explain.inverse", { inverse: explain.inverse }));
       break;
-    }
     case "datatypeProperty": {
-      const value = explain.datatype ? `a value: ${asType(explain.datatype)}.` : "a value.";
-      out.push([`${label} gives `, ...end(explain.domains, explain.unnamedDomain, explain.domainForm), ` ${value}`]);
+      const domain = end(explain.domains, explain.unnamedDomain, explain.domainForm, locale);
+      out.push(explain.datatype
+        ? translateParts(locale, "explain.attribute.typed", { label, domain, type: locale === "en" ? asType(explain.datatype) : typeWord(explain.datatype, translator(locale)) })
+        : translateParts(locale, "explain.attribute.untyped", { label, domain }));
       break;
     }
-    case "individual": {
-      if (explain.types?.length) out.push([`${label} is `, ...list(explain.types.map(articled)), "."]);
+    case "individual":
+      if (explain.types?.length) out.push(translateParts(locale, "explain.individual", { label, types: list(explain.types.map(ref => articled(ref, locale)), locale) }));
       break;
-    }
-    case "concept": {
-      if (explain.broader?.length) {
-        const broader = list(explain.broader.map((ref) => [ref]));
-        out.push([...filled(linkSentence("broader", FIRST, SECOND), [label], broader), "."]);
-      }
-      if (explain.schemes?.length) out.push(["It belongs to ", ...list(explain.schemes.map((ref) => [ref])), "."]);
-      if (present(explain.narrower)) out.push([`It has ${counted(explain.narrower, "narrower concept", "narrower concepts")}.`]);
+    case "concept":
+      if (explain.broader?.length) out.push(stop(translateParts(locale, "sentence.link.broader", { from: label, to: list(explain.broader.map(ref => [ref]), locale) }), locale));
+      if (explain.schemes?.length) out.push(translateParts(locale, "explain.schemes", { schemes: list(explain.schemes.map(ref => [ref]), locale) }));
+      if (present(explain.narrower)) out.push(translateParts(locale, `explain.narrower.${variant(explain.narrower)}`, { count: countWords(explain.narrower, locale) }));
       break;
-    }
-    case "conceptScheme": {
-      if (present(explain.topConcepts)) out.push([`It has ${counted(explain.topConcepts, "top concept", "top concepts")}.`]);
+    case "conceptScheme":
+      if (present(explain.topConcepts)) out.push(translateParts(locale, `explain.top.${variant(explain.topConcepts)}`, { count: countWords(explain.topConcepts, locale) }));
       break;
-    }
-    case "collection": {
-      if (present(explain.members)) {
-        out.push([`It has ${counted(explain.members, "member", "members")}`, ...names(explain.members), "."]);
-      }
+    case "collection":
+      if (present(explain.members)) out.push(translateParts(locale, `explain.collection.${variant(explain.members)}`, { count: countWords(explain.members, locale), names: names(explain.members, locale) }));
       break;
-    }
   }
   return out;
 }
-
-/** Whether a language tag is the one wanted, by prefix: en-GB is en. */
 function sameLanguage(tag: string, wanted: string): boolean {
-  const t = tag.toLowerCase();
-  const w = wanted.toLowerCase();
-  return t === w || t.startsWith(`${w}-`);
+  const tagLower = tag.toLowerCase();
+  const wantedLower = wanted.toLowerCase();
+  return tagLower === wantedLower || tagLower.startsWith(`${wantedLower}-`);
 }
-
-/** The authors' own words, quoted, or nothing when they wrote none. Text
- *  in another language than the one shown says which, as a name shown in
- *  its fallback language does (D-085): *Its authors describe it (de):*. */
-export function descriptionSentence(explain: Explain, language: string | null = null): Sentence | null {
+export function descriptionSentence(explain: Explain, language: string | null = null, locale: UiLocale = "en"): Sentence | null {
   const text = explain.description?.text.trim();
   if (!text) return null;
   const tag = explain.description?.lang;
-  const marked = tag && !sameLanguage(tag, language ?? "en") ? ` (${tag})` : "";
-  // The authors' full stop stays inside their quotation; one is added only
-  // when they wrote none.
-  return [`Its authors describe it${marked}: "${text}"${/[.!?]$/.test(text) ? "" : "."}`];
+  const marked = tag && !sameLanguage(tag, language ?? "en");
+  const complete = (locale === "en" ? /[.!?]$/ : /[.!?。！？]$/).test(text);
+  return marked
+    ? translateParts(locale, complete ? "explain.descriptionMarked.complete" : "explain.descriptionMarked.fragment", { text, language: tag })
+    : translateParts(locale, complete ? "explain.description.complete" : "explain.description.fragment", { text });
 }
-
-/** The block, in order: kind, facts, description. `language` is the one
- *  names are shown in; null is the library's English. */
-export function explainSentences(label: string, explain: Explain, language: string | null = null): Sentence[] {
-  const description = descriptionSentence(explain, language);
-  return [
-    kindSentence(label, explain.kind),
-    ...factSentences(label, explain),
-    ...(description ? [description] : []),
-  ];
+export function explainSentences(label: string, explain: Explain, language: string | null = null, locale: UiLocale = "en"): Sentence[] {
+  const description = descriptionSentence(explain, language, locale);
+  return [kindSentence(label, explain.kind, locale), ...factSentences(label, explain, locale), ...(description ? [description] : [])];
 }
-
 export function sentenceText(sentence: Sentence): string {
-  return sentence.map((part) => (typeof part === "string" ? part : part.label)).join("");
+  return sentence.map(part => typeof part === "string" ? part : part.label).join("");
 }

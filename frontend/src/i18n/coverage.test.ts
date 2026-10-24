@@ -79,10 +79,19 @@ describe("P1 message inventory", () => {
       if (/\/i18n\/(en|ja|types|server-contracts)\.ts$/.test(path)) continue;
       const fullPath = `frontend${path}`;
       const visit = (node: ts.Node) => {
-        if (ts.isStringLiteral(node) && Object.prototype.hasOwnProperty.call(en, node.text)) {
+        if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && Object.prototype.hasOwnProperty.call(en, node.text)) {
           expect(documented.get(node.text)?.[2], `${fullPath}: ${node.text}`).toContain(`\`${fullPath}\``);
         }
-        if (ts.isCallExpression(node) && ["t", "makeUiMessage"].includes(node.expression.getText()) && node.arguments[0] && ts.isStringLiteral(node.arguments[0])) {
+        // A finite template family also owns source uses. Match its static
+        // portions rather than mistaking dynamic producers for unused contracts.
+        if (ts.isTemplateExpression(node) && node.head.text.length > 0) {
+          const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const pattern = new RegExp("^" + escaped(node.head.text) + node.templateSpans.map(span => ".*" + escaped(span.literal.text)).join("") + "$");
+          for (const code of Object.keys(en)) {
+            if (pattern.test(code)) expect(documented.get(code)?.[2], `${fullPath}: dynamic ${code}`).toContain(`\`${fullPath}\``);
+          }
+        }
+        if (ts.isCallExpression(node) && ["t", "makeUiMessage"].includes(node.expression.getText()) && node.arguments[0] && (ts.isStringLiteral(node.arguments[0]) || ts.isNoSubstitutionTemplateLiteral(node.arguments[0]))) {
           expect(Object.prototype.hasOwnProperty.call(en, node.arguments[0].text), `${fullPath}: ${node.arguments[0].text}`).toBe(true);
         }
         ts.forEachChild(node, visit);
