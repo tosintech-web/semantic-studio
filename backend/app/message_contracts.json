@@ -522,6 +522,406 @@
     "model.warning.domain.attribute": {
       "name": "string",
       "classes": "parts"
-    }
+    },
+    "editing.guard.field_required": {
+      "field": "parts"
+    },
+    "editing.guard.invalid_iri": {
+      "value": "string"
+    },
+    "editing.guard.missing_import_reference": {
+      "field": "parts",
+      "name": "string"
+    },
+    "editing.guard.iri_in_use": {
+      "name": "string"
+    },
+    "editing.guard.primary_name_required": {
+      "language": "string"
+    },
+    "editing.guard.property_kind_conflict": {
+      "name": "string",
+      "existing_kind": "parts",
+      "new_kind": "parts"
+    },
+    "editing.guard.invalid_datatype": {
+      "name": "string"
+    },
+    "editing.guard.primary_concept_name": {
+      "language": "string"
+    },
+    "editing.guard.missing_to_change": {
+      "name": "string"
+    },
+    "editing.guard.empty_field": {
+      "field": "parts"
+    },
+    "editing.guard.missing_to_annotate": {
+      "name": "string"
+    },
+    "editing.guard.annotation_exists": {
+      "name": "string",
+      "property": "string"
+    },
+    "editing.guard.annotation_missing_remove": {
+      "name": "string",
+      "property": "string"
+    },
+    "editing.guard.annotation_missing_replace": {
+      "name": "string",
+      "property": "string"
+    },
+    "editing.guard.missing_own_reference": {
+      "field": "parts",
+      "name": "string"
+    },
+    "editing.guard.self_link": {
+      "field": "parts"
+    },
+    "editing.guard.subclass_exists": {
+      "child": "string",
+      "parent": "string"
+    },
+    "editing.guard.subclass_missing": {
+      "child": "string",
+      "parent": "string"
+    },
+    "editing.guard.property_missing": {
+      "name": "string"
+    },
+    "editing.guard.relationship_missing": {
+      "name": "string"
+    },
+    "editing.guard.attribute_not_relationship": {
+      "name": "string"
+    },
+    "editing.guard.not_own_relationship": {
+      "name": "string"
+    },
+    "editing.guard.swap_shared_start": {
+      "name": "string"
+    },
+    "editing.guard.swap_missing_ends": {
+      "name": "string"
+    },
+    "editing.guard.swap_same_class": {
+      "name": "string"
+    },
+    "editing.guard.not_own_property": {
+      "name": "string"
+    },
+    "editing.guard.clear_missing_end": {
+      "name": "string",
+      "field": "parts"
+    },
+    "editing.guard.share_class_missing": {
+      "name": "string"
+    },
+    "editing.guard.share_class_required": {
+      "name": "string"
+    },
+    "editing.guard.shared_parent_is_member": {
+      "name": "string"
+    },
+    "editing.guard.shared_parent_cycle": {
+      "parent": "string",
+      "member": "string"
+    },
+    "editing.guard.union_requires_owl": {
+      "classes": "parts"
+    },
+    "editing.guard.not_common_parent": {
+      "name": "string",
+      "classes": "parts"
+    },
+    "editing.guard.share_method_required": {
+      "name": "string"
+    },
+    "editing.guard.unshare_not_member": {
+      "class_name": "string",
+      "name": "string"
+    },
+    "editing.guard.inverse_wrong_kind": {
+      "name": "string"
+    },
+    "editing.guard.inverse_exists": {
+      "inverse": "string",
+      "name": "string"
+    },
+    "editing.guard.inverse_missing": {
+      "name": "string"
+    },
+    "editing.guard.invalid_characteristic": {},
+    "editing.guard.attribute_characteristic": {
+      "name": "string"
+    },
+    "editing.guard.characteristic_exists": {
+      "name": "string",
+      "characteristic": "parts"
+    },
+    "editing.guard.characteristic_missing": {
+      "name": "string",
+      "characteristic": "parts"
+    },
+    "editing.guard.property_parent_kind": {
+      "name": "string",
+      "kind": "parts"
+    },
+    "editing.guard.subproperty_exists": {
+      "child": "string",
+      "parent": "string"
+    },
+    "editing.guard.subproperty_missing": {
+      "child": "string",
+      "parent": "string"
+    },
+    "editing.guard.broader_exists": {
+      "concept": "string",
+      "broader": "string"
+    },
+    "editing.guard.broader_missing": {
+      "concept": "string",
+      "broader": "string"
+    },
+    "editing.guard.not_concept": {
+      "name": "string"
+    },
+    "editing.guard.related_exists": {
+      "concept": "string",
+      "related": "string"
+    },
+    "editing.guard.related_missing": {
+      "concept": "string",
+      "related": "string"
+    },
+    "editing.guard.mapping_concept_missing": {
+      "name": "string"
+    },
+    "editing.guard.invalid_mapping": {},
+    "editing.guard.mapping_self": {
+      "name": "string"
+    },
+    "editing.guard.mapping_exists": {
+      "name": "string"
+    },
+    "editing.guard.mapping_missing": {
+      "name": "string"
+    },
+    "editing.guard.missing_to_rename": {
+      "name": "string"
+    },
+    "editing.guard.missing_to_delete": {
+      "name": "string"
+    },
+    "editing.guard.example_class_required": {
+      "name": "string"
+    },
+    "editing.guard.example_missing": {
+      "name": "string"
+    },
+    "editing.guard.example_property_required": {
+      "name": "string"
+    },
+    "editing.guard.example_link_required": {
+      "name": "string"
+    },
+    "editing.guard.example_target_class": {
+      "target": "string",
+      "class_name": "string",
+      "property": "string"
+    },
+    "editing.guard.example_value_type": {
+      "name": "string",
+      "datatype": "string"
+    },
+    "editing.guard.example_invalid_typed_value": {
+      "value": "string",
+      "datatype": "string"
+    },
+    "editing.guard.example_required_datatype": {
+      "name": "string",
+      "datatype": "string"
+    },
+    "editing.guard.example_language_text": {
+      "name": "string"
+    },
+    "editing.guard.example_no_link": {
+      "name": "string"
+    },
+    "editing.guard.example_value_exists": {
+      "name": "string",
+      "property": "string"
+    },
+    "editing.guard.example_value_missing": {
+      "name": "string",
+      "property": "string"
+    },
+    "editing.guard.own_class_missing": {
+      "name": "string"
+    },
+    "editing.guard.rule_property_required": {
+      "name": "string"
+    },
+    "editing.guard.rule_class_required": {
+      "name": "string"
+    },
+    "editing.guard.attribute_rule_kind": {
+      "name": "string"
+    },
+    "editing.guard.rule_datatype_required": {
+      "name": "string"
+    },
+    "editing.guard.class_rule_exists": {
+      "name": "string"
+    },
+    "editing.guard.disjoint_exists": {
+      "first": "string",
+      "second": "string"
+    },
+    "editing.guard.disjoint_group_readonly": {
+      "first": "string",
+      "second": "string"
+    },
+    "editing.guard.disjoint_missing": {
+      "first": "string",
+      "second": "string"
+    },
+    "editing.guard.equivalent_exists": {
+      "first": "string",
+      "second": "string"
+    },
+    "editing.guard.equivalent_missing": {
+      "first": "string",
+      "second": "string"
+    },
+    "editing.guard.shape_readonly": {
+      "name": "string",
+      "count": "number"
+    },
+    "editing.guard.field_nonnegative_integer": {
+      "field": "parts"
+    },
+    "editing.guard.field_value_required": {
+      "field": "parts"
+    },
+    "editing.guard.field_number_or_date": {
+      "field": "parts"
+    },
+    "editing.guard.field_language_required": {
+      "field": "parts"
+    },
+    "editing.guard.invalid_language": {
+      "language": "string"
+    },
+    "editing.guard.count_bounds_conflict": {
+      "low": "number",
+      "high": "number"
+    },
+    "editing.guard.shape_target_missing": {
+      "name": "string"
+    },
+    "editing.guard.pattern_invalid": {},
+    "editing.guard.shape_message_missing": {
+      "name": "string"
+    },
+    "editing.guard.shape_path_exists": {
+      "path": "parts"
+    },
+    "editing.guard.shape_path_missing_change": {
+      "name": "string"
+    },
+    "editing.guard.shape_path_missing_remove": {
+      "name": "string"
+    },
+    "editing.guard.check_exists": {
+      "name": "string"
+    },
+    "editing.guard.check_path_conflict": {
+      "name": "string",
+      "path": "parts"
+    },
+    "editing.guard.unknown_command": {
+      "name": "string"
+    },
+    "editing.guard.rule_gone": {
+      "name": "string"
+    },
+    "editing.guard.rule_missing_model": {
+      "name": "string"
+    },
+    "editing.guard.pref_label_language": {
+      "name": "string",
+      "language": "string"
+    },
+    "editing.guard.pref_label_plain": {
+      "name": "string"
+    },
+    "editing.guard.share_already_direct": {
+      "name": "string",
+      "class_name": "string"
+    },
+    "editing.guard.share_already_inherited": {
+      "name": "string",
+      "class_name": "string",
+      "parent": "string"
+    },
+    "editing.guard.share_expression": {
+      "name": "string"
+    },
+    "editing.guard.share_separate": {
+      "name": "string",
+      "classes": "parts"
+    },
+    "editing.guard.imported_parent": {
+      "name": "string",
+      "source": "string"
+    },
+    "editing.guard.imported_parent_unknown": {
+      "name": "string"
+    },
+    "editing.guard.property_exists": {
+      "name": "string",
+      "kind": "parts"
+    },
+    "editing.guard.property_exists_domain": {
+      "name": "string",
+      "kind": "parts",
+      "classes": "parts"
+    },
+    "words.field.iri": {},
+    "words.field.rename_iri": {},
+    "words.field.annotation_property": {},
+    "words.field.attribute_relationship": {},
+    "words.field.broader": {},
+    "words.field.datatype": {},
+    "words.field.domain": {},
+    "words.field.filler": {},
+    "words.field.link": {},
+    "words.field.mapping_target": {},
+    "words.field.new_iri": {},
+    "words.field.parent": {},
+    "words.field.parent_class": {},
+    "words.field.path": {},
+    "words.field.relationship_attribute": {},
+    "words.field.related": {},
+    "words.field.child": {},
+    "words.field.range": {},
+    "words.field.thing": {},
+    "words.field.entity": {},
+    "words.field.value_type": {},
+    "words.field.value": {},
+    "words.field.label": {},
+    "words.field.comment": {},
+    "words.field.start": {},
+    "words.field.end": {},
+    "words.field.minimum": {},
+    "words.field.maximum": {},
+    "words.field.min_count": {},
+    "words.field.max_count": {},
+    "words.field.min_length": {},
+    "words.field.max_length": {},
+    "words.field.boundary": {},
+    "words.field.allowed_languages": {},
+    "words.field.name_languages": {}
   }
 }

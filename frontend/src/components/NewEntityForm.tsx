@@ -11,7 +11,8 @@ SUMMARY
 BASIC IDEA
     UI messages use the active locale. Name, identifier, datatype and More
     options remain component state across language changes; explicit caller
-    labels and original conflict text are preserved at this display boundary.
+    labels stay caller-owned; existing-property conflicts render validated
+    producer facts in the active locale, keeping legacy-only text intact.
 
     Names first (5.1). A learner types "Invoice item" and the server mints the
     IRI from it, as it always has. An expert who wants to choose the IRI opens
@@ -52,6 +53,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { WireMessage } from "../i18n/server-contracts";
+import { historyLabel } from "../modeling/projectNotices";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useOn } from "../modeling/sentences";
@@ -90,7 +93,7 @@ interface Props {
   };
   /** A create refused because the name is a property already (5.1's 409):
    *  its sentence, and the same choice the suggestions give. */
-  existing?: { sentence: string; className: string; onUse: () => void; onAnother: () => void } | null;
+  existing?: { sentence: string; uiMessage?: WireMessage | null; className: string; onUse: () => void; onAnother: () => void } | null;
 }
 
 export default function NewEntityForm({
@@ -172,7 +175,7 @@ export default function NewEntityForm({
       />
       {existing ? (
         <div className="reuse-existing">
-          <p id={`${id}-error`}>{existing.sentence}</p>
+          <p id={`${id}-error`}>{historyLabel(existing.sentence, existing.uiMessage, t)}</p>
           <div className="edit-actions">
             <button type="button" aria-disabled={busy} onClick={() => !busy && existing.onUse()}>
               {useOn(existing.className, locale)}

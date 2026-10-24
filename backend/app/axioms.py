@@ -64,7 +64,8 @@ EXPECTED OUTPUT
     - covers(reading, ancestors) and class_properties(view, cls, name):
       which properties a class has, and how (own, shared, both, through).
     - reuse_plan(view, own, prop, cls, name) -> the case of 5.2 for using a
-      property on one more class, with the choices it offers.
+      property on one more class, with the choices it offers and display facts
+      for a refusal; legacy refusal sentences remain available.
 
     A property's domain is read here and nowhere else but editing.py, which
     writes it (test_axioms.py scans). Two rdfs:domain values mean *both*
@@ -85,6 +86,7 @@ from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.collection import Collection
 from rdflib.namespace import OWL, RDF, RDFS, XSD
 
+from .messages import literal_part, make_message, word_part
 from . import examples
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
@@ -914,7 +916,7 @@ def reuse_plan(view: Graph, own: Graph, prop, cls, name: Name, imported_from: Op
     if reading.form == "expression":
         return {**plan, "case": None, "refused": (
             f"The class {name(prop)} belongs to is written as an expression in Turtle; change it there."
-        )}
+        ), "refusedUiMessage": make_message("editing.guard.share_expression", name=name(prop))}
     if reading.form == "none":
         return {**plan, "case": "A"}
     lineage = up(cls)
@@ -924,7 +926,10 @@ def reuse_plan(view: Graph, own: Graph, prop, cls, name: Name, imported_from: Op
         return {**plan, "case": None, "refused": (
             f"{name(prop)} lists {domain_names(reading, name)} separately, which means both. "
             "Share it from its warning first."
-        )}
+        ), "refusedUiMessage": make_message("editing.guard.share_separate", name=name(prop), classes=[
+            part for index, member in enumerate(members)
+            for part in ([word_part("words.list.and")] if index else []) + [literal_part(name(member))]
+        ])}
     if all(cls in up(c) for c in members):
         return {**plan, "case": "C"}
 

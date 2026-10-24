@@ -120,3 +120,54 @@ it("does not repeat a no-change reuse notice when the same class props are recre
   expect(planShare).toHaveBeenCalledTimes(1);
   expect(runner.run).not.toHaveBeenCalled();
 });
+
+it.each(["plan", "request"])("translates %s refusal at render time and preserves escaped original details", async mode => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const property = { iri: "https://example.test/p", label: "関係 <b>{name}" };
+  const legacy = "Original refusal <img>{name}";
+  const wire = { code: "editing.guard.share_expression", args: { name: property.label } };
+  planShare.mockReset();
+  if (mode === "plan") planShare.mockResolvedValue({ revision: 1, plan: {
+    case: null, refused: legacy, refusedUiMessage: wire, property: { ...property, kind: "relationship" },
+    domain: { form: "expression", classes: [] },
+  } });
+  else planShare.mockRejectedValue(Object.assign(new Error(legacy), { uiMessage: wire }));
+  const run = vi.fn();
+  const { container } = render(<I18nProvider><UiLanguageSelect /><ReusePlan pid="prj-synthetic" ontologyId="model"
+    property={property} cls={null} runner={{ busy: false, errors: {}, run, clear: vi.fn(), alive: () => true }}
+    onDone={vi.fn()} onCancel={vi.fn()} /></I18nProvider>);
+  await screen.findByText(`「${property.label}」の所属先はTurtleのクラス式で定義されています。Turtleで編集してください。`);
+  const summary = screen.getByText("技術的な詳細");
+  fireEvent.click(summary);
+  const details = summary.closest("details")!;
+  details.open = true;
+  summary.focus();
+  expect(details.querySelector("pre")?.textContent).toBe(legacy);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(`The domain of ${property.label} is a class expression written in Turtle. Edit it there.`)).toBeTruthy();
+  expect(screen.getByText("Technical details").closest("details")).toBe(details);
+  expect(details.open).toBe(true);
+  expect(document.activeElement).toBe(summary);
+  expect(planShare).toHaveBeenCalledTimes(1);
+  expect(run).not.toHaveBeenCalled();
+  expect(container.querySelector("b, img")).toBeNull();
+});
+
+it("uses a localized fallback for unknown plan metadata and keeps its original reason accessible", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  planShare.mockReset();
+  const property = { iri: "https://example.test/p", label: "p" };
+  planShare.mockResolvedValue({ revision: 1, plan: { case: null, refused: "Future reason <img>",
+    refusedUiMessage: { code: "future.refusal", args: {} }, property: { ...property, kind: "attribute" },
+    domain: { form: "expression", classes: [] } } });
+  const { container } = render(<I18nProvider><UiLanguageSelect /><ReusePlan pid="prj-synthetic" ontologyId="model"
+    property={property} cls={null} runner={{ busy: false, errors: {}, run: vi.fn(), clear: vi.fn(), alive: () => true }}
+    onDone={vi.fn()} onCancel={vi.fn()} /></I18nProvider>);
+  await screen.findByText("操作を完了できませんでした。詳細を確認してください。");
+  expect(container.querySelector("pre")?.textContent).toBe("Future reason <img>");
+  const details = container.querySelector("details");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(container.querySelector("details")).toBe(details);
+  expect(planShare).toHaveBeenCalledTimes(1);
+  expect(container.querySelector("img")).toBeNull();
+});

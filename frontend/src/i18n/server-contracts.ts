@@ -257,6 +257,371 @@ export const SERVER_CONTRACTS = {
     "characteristic": "parts",
     "name": "string"
   },
+  "editing.guard.annotation_exists": {
+    "name": "string",
+    "property": "string"
+  },
+  "editing.guard.annotation_missing_remove": {
+    "name": "string",
+    "property": "string"
+  },
+  "editing.guard.annotation_missing_replace": {
+    "name": "string",
+    "property": "string"
+  },
+  "editing.guard.attribute_characteristic": {
+    "name": "string"
+  },
+  "editing.guard.attribute_not_relationship": {
+    "name": "string"
+  },
+  "editing.guard.attribute_rule_kind": {
+    "name": "string"
+  },
+  "editing.guard.broader_exists": {
+    "broader": "string",
+    "concept": "string"
+  },
+  "editing.guard.broader_missing": {
+    "broader": "string",
+    "concept": "string"
+  },
+  "editing.guard.characteristic_exists": {
+    "characteristic": "parts",
+    "name": "string"
+  },
+  "editing.guard.characteristic_missing": {
+    "characteristic": "parts",
+    "name": "string"
+  },
+  "editing.guard.check_exists": {
+    "name": "string"
+  },
+  "editing.guard.check_path_conflict": {
+    "name": "string",
+    "path": "parts"
+  },
+  "editing.guard.class_rule_exists": {
+    "name": "string"
+  },
+  "editing.guard.clear_missing_end": {
+    "field": "parts",
+    "name": "string"
+  },
+  "editing.guard.count_bounds_conflict": {
+    "high": "number",
+    "low": "number"
+  },
+  "editing.guard.disjoint_exists": {
+    "first": "string",
+    "second": "string"
+  },
+  "editing.guard.disjoint_group_readonly": {
+    "first": "string",
+    "second": "string"
+  },
+  "editing.guard.disjoint_missing": {
+    "first": "string",
+    "second": "string"
+  },
+  "editing.guard.empty_field": {
+    "field": "parts"
+  },
+  "editing.guard.equivalent_exists": {
+    "first": "string",
+    "second": "string"
+  },
+  "editing.guard.equivalent_missing": {
+    "first": "string",
+    "second": "string"
+  },
+  "editing.guard.example_class_required": {
+    "name": "string"
+  },
+  "editing.guard.example_invalid_typed_value": {
+    "datatype": "string",
+    "value": "string"
+  },
+  "editing.guard.example_language_text": {
+    "name": "string"
+  },
+  "editing.guard.example_link_required": {
+    "name": "string"
+  },
+  "editing.guard.example_missing": {
+    "name": "string"
+  },
+  "editing.guard.example_no_link": {
+    "name": "string"
+  },
+  "editing.guard.example_property_required": {
+    "name": "string"
+  },
+  "editing.guard.example_required_datatype": {
+    "datatype": "string",
+    "name": "string"
+  },
+  "editing.guard.example_target_class": {
+    "class_name": "string",
+    "property": "string",
+    "target": "string"
+  },
+  "editing.guard.example_value_exists": {
+    "name": "string",
+    "property": "string"
+  },
+  "editing.guard.example_value_missing": {
+    "name": "string",
+    "property": "string"
+  },
+  "editing.guard.example_value_type": {
+    "datatype": "string",
+    "name": "string"
+  },
+  "editing.guard.field_language_required": {
+    "field": "parts"
+  },
+  "editing.guard.field_nonnegative_integer": {
+    "field": "parts"
+  },
+  "editing.guard.field_number_or_date": {
+    "field": "parts"
+  },
+  "editing.guard.field_required": {
+    "field": "parts"
+  },
+  "editing.guard.field_value_required": {
+    "field": "parts"
+  },
+  "editing.guard.imported_parent": {
+    "name": "string",
+    "source": "string"
+  },
+  "editing.guard.imported_parent_unknown": {
+    "name": "string"
+  },
+  "editing.guard.invalid_characteristic": {},
+  "editing.guard.invalid_datatype": {
+    "name": "string"
+  },
+  "editing.guard.invalid_iri": {
+    "value": "string"
+  },
+  "editing.guard.invalid_language": {
+    "language": "string"
+  },
+  "editing.guard.invalid_mapping": {},
+  "editing.guard.inverse_exists": {
+    "inverse": "string",
+    "name": "string"
+  },
+  "editing.guard.inverse_missing": {
+    "name": "string"
+  },
+  "editing.guard.inverse_wrong_kind": {
+    "name": "string"
+  },
+  "editing.guard.iri_in_use": {
+    "name": "string"
+  },
+  "editing.guard.mapping_concept_missing": {
+    "name": "string"
+  },
+  "editing.guard.mapping_exists": {
+    "name": "string"
+  },
+  "editing.guard.mapping_missing": {
+    "name": "string"
+  },
+  "editing.guard.mapping_self": {
+    "name": "string"
+  },
+  "editing.guard.missing_import_reference": {
+    "field": "parts",
+    "name": "string"
+  },
+  "editing.guard.missing_own_reference": {
+    "field": "parts",
+    "name": "string"
+  },
+  "editing.guard.missing_to_annotate": {
+    "name": "string"
+  },
+  "editing.guard.missing_to_change": {
+    "name": "string"
+  },
+  "editing.guard.missing_to_delete": {
+    "name": "string"
+  },
+  "editing.guard.missing_to_rename": {
+    "name": "string"
+  },
+  "editing.guard.not_common_parent": {
+    "classes": "parts",
+    "name": "string"
+  },
+  "editing.guard.not_concept": {
+    "name": "string"
+  },
+  "editing.guard.not_own_property": {
+    "name": "string"
+  },
+  "editing.guard.not_own_relationship": {
+    "name": "string"
+  },
+  "editing.guard.own_class_missing": {
+    "name": "string"
+  },
+  "editing.guard.pattern_invalid": {},
+  "editing.guard.pref_label_language": {
+    "language": "string",
+    "name": "string"
+  },
+  "editing.guard.pref_label_plain": {
+    "name": "string"
+  },
+  "editing.guard.primary_concept_name": {
+    "language": "string"
+  },
+  "editing.guard.primary_name_required": {
+    "language": "string"
+  },
+  "editing.guard.property_exists": {
+    "kind": "parts",
+    "name": "string"
+  },
+  "editing.guard.property_exists_domain": {
+    "classes": "parts",
+    "kind": "parts",
+    "name": "string"
+  },
+  "editing.guard.property_kind_conflict": {
+    "existing_kind": "parts",
+    "name": "string",
+    "new_kind": "parts"
+  },
+  "editing.guard.property_missing": {
+    "name": "string"
+  },
+  "editing.guard.property_parent_kind": {
+    "kind": "parts",
+    "name": "string"
+  },
+  "editing.guard.related_exists": {
+    "concept": "string",
+    "related": "string"
+  },
+  "editing.guard.related_missing": {
+    "concept": "string",
+    "related": "string"
+  },
+  "editing.guard.relationship_missing": {
+    "name": "string"
+  },
+  "editing.guard.rule_class_required": {
+    "name": "string"
+  },
+  "editing.guard.rule_datatype_required": {
+    "name": "string"
+  },
+  "editing.guard.rule_gone": {
+    "name": "string"
+  },
+  "editing.guard.rule_missing_model": {
+    "name": "string"
+  },
+  "editing.guard.rule_property_required": {
+    "name": "string"
+  },
+  "editing.guard.self_link": {
+    "field": "parts"
+  },
+  "editing.guard.shape_message_missing": {
+    "name": "string"
+  },
+  "editing.guard.shape_path_exists": {
+    "path": "parts"
+  },
+  "editing.guard.shape_path_missing_change": {
+    "name": "string"
+  },
+  "editing.guard.shape_path_missing_remove": {
+    "name": "string"
+  },
+  "editing.guard.shape_readonly": {
+    "count": "number",
+    "name": "string"
+  },
+  "editing.guard.shape_target_missing": {
+    "name": "string"
+  },
+  "editing.guard.share_already_direct": {
+    "class_name": "string",
+    "name": "string"
+  },
+  "editing.guard.share_already_inherited": {
+    "class_name": "string",
+    "name": "string",
+    "parent": "string"
+  },
+  "editing.guard.share_class_missing": {
+    "name": "string"
+  },
+  "editing.guard.share_class_required": {
+    "name": "string"
+  },
+  "editing.guard.share_expression": {
+    "name": "string"
+  },
+  "editing.guard.share_method_required": {
+    "name": "string"
+  },
+  "editing.guard.share_separate": {
+    "classes": "parts",
+    "name": "string"
+  },
+  "editing.guard.shared_parent_cycle": {
+    "member": "string",
+    "parent": "string"
+  },
+  "editing.guard.shared_parent_is_member": {
+    "name": "string"
+  },
+  "editing.guard.subclass_exists": {
+    "child": "string",
+    "parent": "string"
+  },
+  "editing.guard.subclass_missing": {
+    "child": "string",
+    "parent": "string"
+  },
+  "editing.guard.subproperty_exists": {
+    "child": "string",
+    "parent": "string"
+  },
+  "editing.guard.subproperty_missing": {
+    "child": "string",
+    "parent": "string"
+  },
+  "editing.guard.swap_missing_ends": {
+    "name": "string"
+  },
+  "editing.guard.swap_same_class": {
+    "name": "string"
+  },
+  "editing.guard.swap_shared_start": {
+    "name": "string"
+  },
+  "editing.guard.union_requires_owl": {
+    "classes": "parts"
+  },
+  "editing.guard.unknown_command": {
+    "name": "string"
+  },
+  "editing.guard.unshare_not_member": {
+    "class_name": "string",
+    "name": "string"
+  },
   "editing.refusal.allowed_values_required": {},
   "editing.refusal.annotation_identity_required": {},
   "editing.refusal.attribute_value_kind": {},
@@ -510,6 +875,41 @@ export const SERVER_CONTRACTS = {
   "words.characteristic.reflexive": {},
   "words.characteristic.symmetric": {},
   "words.characteristic.transitive": {},
+  "words.field.allowed_languages": {},
+  "words.field.annotation_property": {},
+  "words.field.attribute_relationship": {},
+  "words.field.boundary": {},
+  "words.field.broader": {},
+  "words.field.child": {},
+  "words.field.comment": {},
+  "words.field.datatype": {},
+  "words.field.domain": {},
+  "words.field.end": {},
+  "words.field.entity": {},
+  "words.field.filler": {},
+  "words.field.iri": {},
+  "words.field.label": {},
+  "words.field.link": {},
+  "words.field.mapping_target": {},
+  "words.field.max_count": {},
+  "words.field.max_length": {},
+  "words.field.maximum": {},
+  "words.field.min_count": {},
+  "words.field.min_length": {},
+  "words.field.minimum": {},
+  "words.field.name_languages": {},
+  "words.field.new_iri": {},
+  "words.field.parent": {},
+  "words.field.parent_class": {},
+  "words.field.path": {},
+  "words.field.range": {},
+  "words.field.related": {},
+  "words.field.relationship_attribute": {},
+  "words.field.rename_iri": {},
+  "words.field.start": {},
+  "words.field.thing": {},
+  "words.field.value": {},
+  "words.field.value_type": {},
   "words.kind.annotationProperty": {},
   "words.kind.class": {},
   "words.kind.concept": {},
@@ -600,6 +1000,114 @@ export interface ServerMessageArgs {
   "command.shared_parent": { "names": string; "property": string };
   "command.swapped_ends": { "name": string };
   "command.unmarked_characteristic": { "characteristic": string; "name": string };
+  "editing.guard.annotation_exists": { "name": string; "property": string };
+  "editing.guard.annotation_missing_remove": { "name": string; "property": string };
+  "editing.guard.annotation_missing_replace": { "name": string; "property": string };
+  "editing.guard.attribute_characteristic": { "name": string };
+  "editing.guard.attribute_not_relationship": { "name": string };
+  "editing.guard.attribute_rule_kind": { "name": string };
+  "editing.guard.broader_exists": { "broader": string; "concept": string };
+  "editing.guard.broader_missing": { "broader": string; "concept": string };
+  "editing.guard.characteristic_exists": { "characteristic": string; "name": string };
+  "editing.guard.characteristic_missing": { "characteristic": string; "name": string };
+  "editing.guard.check_exists": { "name": string };
+  "editing.guard.check_path_conflict": { "name": string; "path": string };
+  "editing.guard.class_rule_exists": { "name": string };
+  "editing.guard.clear_missing_end": { "field": string; "name": string };
+  "editing.guard.count_bounds_conflict": { "high": number; "low": number };
+  "editing.guard.disjoint_exists": { "first": string; "second": string };
+  "editing.guard.disjoint_group_readonly": { "first": string; "second": string };
+  "editing.guard.disjoint_missing": { "first": string; "second": string };
+  "editing.guard.empty_field": { "field": string };
+  "editing.guard.equivalent_exists": { "first": string; "second": string };
+  "editing.guard.equivalent_missing": { "first": string; "second": string };
+  "editing.guard.example_class_required": { "name": string };
+  "editing.guard.example_invalid_typed_value": { "datatype": string; "value": string };
+  "editing.guard.example_language_text": { "name": string };
+  "editing.guard.example_link_required": { "name": string };
+  "editing.guard.example_missing": { "name": string };
+  "editing.guard.example_no_link": { "name": string };
+  "editing.guard.example_property_required": { "name": string };
+  "editing.guard.example_required_datatype": { "datatype": string; "name": string };
+  "editing.guard.example_target_class": { "class_name": string; "property": string; "target": string };
+  "editing.guard.example_value_exists": { "name": string; "property": string };
+  "editing.guard.example_value_missing": { "name": string; "property": string };
+  "editing.guard.example_value_type": { "datatype": string; "name": string };
+  "editing.guard.field_language_required": { "field": string };
+  "editing.guard.field_nonnegative_integer": { "field": string };
+  "editing.guard.field_number_or_date": { "field": string };
+  "editing.guard.field_required": { "field": string };
+  "editing.guard.field_value_required": { "field": string };
+  "editing.guard.imported_parent": { "name": string; "source": string };
+  "editing.guard.imported_parent_unknown": { "name": string };
+  "editing.guard.invalid_characteristic": undefined;
+  "editing.guard.invalid_datatype": { "name": string };
+  "editing.guard.invalid_iri": { "value": string };
+  "editing.guard.invalid_language": { "language": string };
+  "editing.guard.invalid_mapping": undefined;
+  "editing.guard.inverse_exists": { "inverse": string; "name": string };
+  "editing.guard.inverse_missing": { "name": string };
+  "editing.guard.inverse_wrong_kind": { "name": string };
+  "editing.guard.iri_in_use": { "name": string };
+  "editing.guard.mapping_concept_missing": { "name": string };
+  "editing.guard.mapping_exists": { "name": string };
+  "editing.guard.mapping_missing": { "name": string };
+  "editing.guard.mapping_self": { "name": string };
+  "editing.guard.missing_import_reference": { "field": string; "name": string };
+  "editing.guard.missing_own_reference": { "field": string; "name": string };
+  "editing.guard.missing_to_annotate": { "name": string };
+  "editing.guard.missing_to_change": { "name": string };
+  "editing.guard.missing_to_delete": { "name": string };
+  "editing.guard.missing_to_rename": { "name": string };
+  "editing.guard.not_common_parent": { "classes": string; "name": string };
+  "editing.guard.not_concept": { "name": string };
+  "editing.guard.not_own_property": { "name": string };
+  "editing.guard.not_own_relationship": { "name": string };
+  "editing.guard.own_class_missing": { "name": string };
+  "editing.guard.pattern_invalid": undefined;
+  "editing.guard.pref_label_language": { "language": string; "name": string };
+  "editing.guard.pref_label_plain": { "name": string };
+  "editing.guard.primary_concept_name": { "language": string };
+  "editing.guard.primary_name_required": { "language": string };
+  "editing.guard.property_exists": { "kind": string; "name": string };
+  "editing.guard.property_exists_domain": { "classes": string; "kind": string; "name": string };
+  "editing.guard.property_kind_conflict": { "existing_kind": string; "name": string; "new_kind": string };
+  "editing.guard.property_missing": { "name": string };
+  "editing.guard.property_parent_kind": { "kind": string; "name": string };
+  "editing.guard.related_exists": { "concept": string; "related": string };
+  "editing.guard.related_missing": { "concept": string; "related": string };
+  "editing.guard.relationship_missing": { "name": string };
+  "editing.guard.rule_class_required": { "name": string };
+  "editing.guard.rule_datatype_required": { "name": string };
+  "editing.guard.rule_gone": { "name": string };
+  "editing.guard.rule_missing_model": { "name": string };
+  "editing.guard.rule_property_required": { "name": string };
+  "editing.guard.self_link": { "field": string };
+  "editing.guard.shape_message_missing": { "name": string };
+  "editing.guard.shape_path_exists": { "path": string };
+  "editing.guard.shape_path_missing_change": { "name": string };
+  "editing.guard.shape_path_missing_remove": { "name": string };
+  "editing.guard.shape_readonly": { "count": number; "name": string };
+  "editing.guard.shape_target_missing": { "name": string };
+  "editing.guard.share_already_direct": { "class_name": string; "name": string };
+  "editing.guard.share_already_inherited": { "class_name": string; "name": string; "parent": string };
+  "editing.guard.share_class_missing": { "name": string };
+  "editing.guard.share_class_required": { "name": string };
+  "editing.guard.share_expression": { "name": string };
+  "editing.guard.share_method_required": { "name": string };
+  "editing.guard.share_separate": { "classes": string; "name": string };
+  "editing.guard.shared_parent_cycle": { "member": string; "parent": string };
+  "editing.guard.shared_parent_is_member": { "name": string };
+  "editing.guard.subclass_exists": { "child": string; "parent": string };
+  "editing.guard.subclass_missing": { "child": string; "parent": string };
+  "editing.guard.subproperty_exists": { "child": string; "parent": string };
+  "editing.guard.subproperty_missing": { "child": string; "parent": string };
+  "editing.guard.swap_missing_ends": { "name": string };
+  "editing.guard.swap_same_class": { "name": string };
+  "editing.guard.swap_shared_start": { "name": string };
+  "editing.guard.union_requires_owl": { "classes": string };
+  "editing.guard.unknown_command": { "name": string };
+  "editing.guard.unshare_not_member": { "class_name": string; "name": string };
   "editing.refusal.allowed_values_required": undefined;
   "editing.refusal.annotation_identity_required": undefined;
   "editing.refusal.attribute_value_kind": undefined;
@@ -716,6 +1224,41 @@ export interface ServerMessageArgs {
   "words.characteristic.reflexive": undefined;
   "words.characteristic.symmetric": undefined;
   "words.characteristic.transitive": undefined;
+  "words.field.allowed_languages": undefined;
+  "words.field.annotation_property": undefined;
+  "words.field.attribute_relationship": undefined;
+  "words.field.boundary": undefined;
+  "words.field.broader": undefined;
+  "words.field.child": undefined;
+  "words.field.comment": undefined;
+  "words.field.datatype": undefined;
+  "words.field.domain": undefined;
+  "words.field.end": undefined;
+  "words.field.entity": undefined;
+  "words.field.filler": undefined;
+  "words.field.iri": undefined;
+  "words.field.label": undefined;
+  "words.field.link": undefined;
+  "words.field.mapping_target": undefined;
+  "words.field.max_count": undefined;
+  "words.field.max_length": undefined;
+  "words.field.maximum": undefined;
+  "words.field.min_count": undefined;
+  "words.field.min_length": undefined;
+  "words.field.minimum": undefined;
+  "words.field.name_languages": undefined;
+  "words.field.new_iri": undefined;
+  "words.field.parent": undefined;
+  "words.field.parent_class": undefined;
+  "words.field.path": undefined;
+  "words.field.range": undefined;
+  "words.field.related": undefined;
+  "words.field.relationship_attribute": undefined;
+  "words.field.rename_iri": undefined;
+  "words.field.start": undefined;
+  "words.field.thing": undefined;
+  "words.field.value": undefined;
+  "words.field.value_type": undefined;
   "words.kind.annotationProperty": undefined;
   "words.kind.class": undefined;
   "words.kind.concept": undefined;

@@ -928,7 +928,8 @@ export function planShare(
 export function alreadyDefined(e: unknown): AlreadyDefined | null {
   if (!(e instanceof ApiError) || e.status !== 409) return null;
   const detail = e.detail as AlreadyDefined | undefined;
-  return detail?.code === "already_defined" ? detail : null;
+  if (detail?.code !== "already_defined") return null;
+  return e.uiMessage ? { ...detail, uiMessage: e.uiMessage } : detail;
 }
 
 // The annotation properties the form offers, each with its default type.

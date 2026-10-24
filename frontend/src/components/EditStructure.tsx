@@ -321,6 +321,7 @@ export default function EditStructure({
   const existingChoice = existing
     ? {
         sentence: existing.message,
+        uiMessage: existing.uiMessage,
         className: name,
         onUse: () => setReuse({ iri: existing.property.iri, label: existing.property.label }),
         onAnother: () => setExisting(null),

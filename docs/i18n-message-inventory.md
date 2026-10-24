@@ -532,7 +532,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -2714,3 +2714,151 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `model.warning.domain.attribute` | classes, name | `backend/app/modeling_checks.py` | モデルの拒否・警告・修正案内 | 12 | 元の文字列と判定を保持、最小限の事実を追加 |
 
 | `warning.unknown` | — | `frontend/src/components/WarningMessage.tsx` | 未対応の警告の案内 | 12 | 警告として案内し、元の文を詳細に保持 |
+
+## 編集時の動的拒否メッセージ（Task 12）
+
+| key | 引数 | 生成元 | 用途 | Task | 状態 |
+| --- | --- | --- | --- | --- | --- |
+| `editing.guard.field_required` | field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.invalid_iri` | value | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.missing_import_reference` | field, name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.iri_in_use` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.primary_name_required` | language | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.property_kind_conflict` | name, existing_kind, new_kind | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.invalid_datatype` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.primary_concept_name` | language | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.missing_to_change` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.empty_field` | field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.missing_to_annotate` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.annotation_exists` | name, property | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.annotation_missing_remove` | name, property | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.annotation_missing_replace` | name, property | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.missing_own_reference` | field, name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.self_link` | field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.subclass_exists` | child, parent | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.subclass_missing` | child, parent | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.property_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.relationship_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.attribute_not_relationship` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.not_own_relationship` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.swap_shared_start` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.swap_missing_ends` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.swap_same_class` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.not_own_property` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.clear_missing_end` | name, field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.share_class_missing` | name | `backend/app/editing.py`<br>`backend/app/axioms.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.share_class_required` | name | `backend/app/editing.py`<br>`backend/app/axioms.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shared_parent_is_member` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shared_parent_cycle` | parent, member | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.union_requires_owl` | classes | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.not_common_parent` | name, classes | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.share_method_required` | name | `backend/app/editing.py`<br>`backend/app/axioms.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.unshare_not_member` | class_name, name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.inverse_wrong_kind` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.inverse_exists` | inverse, name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.inverse_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.invalid_characteristic` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.attribute_characteristic` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.characteristic_exists` | name, characteristic | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.characteristic_missing` | name, characteristic | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.property_parent_kind` | name, kind | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.subproperty_exists` | child, parent | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.subproperty_missing` | child, parent | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.broader_exists` | concept, broader | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.broader_missing` | concept, broader | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.not_concept` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.related_exists` | concept, related | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.related_missing` | concept, related | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.mapping_concept_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.invalid_mapping` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.mapping_self` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.mapping_exists` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.mapping_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.missing_to_rename` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.missing_to_delete` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_class_required` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_property_required` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_link_required` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_target_class` | target, class_name, property | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_value_type` | name, datatype | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_invalid_typed_value` | value, datatype | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_required_datatype` | name, datatype | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_language_text` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_no_link` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_value_exists` | name, property | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.example_value_missing` | name, property | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.own_class_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.rule_property_required` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.rule_class_required` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.attribute_rule_kind` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.rule_datatype_required` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.class_rule_exists` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.disjoint_exists` | first, second | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.disjoint_group_readonly` | first, second | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.disjoint_missing` | first, second | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.equivalent_exists` | first, second | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.equivalent_missing` | first, second | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shape_readonly` | name, count | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.field_nonnegative_integer` | field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.field_value_required` | field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.field_number_or_date` | field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.field_language_required` | field | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.invalid_language` | language | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.count_bounds_conflict` | low, high | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shape_target_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.pattern_invalid` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shape_message_missing` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shape_path_exists` | path | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shape_path_missing_change` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.shape_path_missing_remove` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.check_exists` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.check_path_conflict` | name, path | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.unknown_command` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.rule_gone` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.rule_missing_model` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.pref_label_language` | name, language | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.pref_label_plain` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.share_already_direct` | name, class_name | `backend/app/editing.py`<br>`backend/app/axioms.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.share_already_inherited` | name, class_name, parent | `backend/app/editing.py`<br>`backend/app/axioms.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.share_expression` | name | `backend/app/editing.py`<br>`backend/app/axioms.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.share_separate` | name, classes | `backend/app/editing.py`<br>`backend/app/axioms.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.imported_parent` | name, source | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.imported_parent_unknown` | name | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.property_exists` | name, kind | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `editing.guard.property_exists_domain` | name, kind, classes | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.iri` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.rename_iri` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.annotation_property` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.attribute_relationship` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.broader` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.datatype` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.domain` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.filler` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.link` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.mapping_target` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.new_iri` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.parent` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.parent_class` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.path` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.relationship_attribute` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.related` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.child` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.range` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.thing` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.entity` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.value_type` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.value` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.label` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.comment` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.start` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.end` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.minimum` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.maximum` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.min_count` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.max_count` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.min_length` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.max_length` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.boundary` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.allowed_languages` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |
+| `words.field.name_languages` | — | `backend/app/editing.py` | 編集時の拒否・共有設定 | 12 | 元の文字列・API形式を保持し、事実から日英表示 |

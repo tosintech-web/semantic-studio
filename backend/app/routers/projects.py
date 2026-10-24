@@ -14,6 +14,9 @@ SUMMARY
     Stop, its pages and its reasons (axioms-and-reasoning Stage A).
 
 BASIC IDEA
+    Command refusals retain their original status and detail payload, adding
+    validated display metadata for the current UI language, including 404/409.
+
     Thin, like the other routers: shape the request, call projects.py or
     editing.py, and map their exceptions to status codes in one place. An id
     or document name the server did not issue is 404 whatever it looks like;
@@ -143,12 +146,14 @@ def _errors():
     except AlreadyDefined as exc:
         # A property of that name and kind is there already (attribute-reuse
         # 5.1): the form offers to use it, so the property goes with the words.
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "already_defined", "property": exc.property, "message": str(exc)},
-        ) from exc
+        detail = {"code": "already_defined", "property": exc.property, "message": str(exc)}
+        if exc.ui_message is not None:
+            raise UiHTTPException(status_code=409, detail=detail, ui_message=exc.ui_message) from exc
+        raise HTTPException(status_code=409, detail=detail) from exc
     except NoSuchRule as exc:
         # A restriction named by its content that is not there (axioms 5.10).
+        if exc.ui_message is not None:
+            raise UiHTTPException(status_code=404, detail=str(exc), ui_message=exc.ui_message) from exc
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (CommandError, ProjectError, ReasoningRefused) as exc:
         if getattr(exc, "ui_message", None) is not None:

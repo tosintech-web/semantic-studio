@@ -12,7 +12,8 @@ SUMMARY
 
 BASIC IDEA
     UI locale changes render-time guidance without refetching the plan or
-    replacing a parent-name draft; stored notices remain producer-owned.
+    replacing a parent-name draft; refusals retain their facts and escaped
+    original details, and stored notices remain producer-owned.
 
     The server alone decides the case: the plan is ShareDomain's dry run,
     asked once as the form opens, and its answer is worded here through
@@ -44,6 +45,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError, renderServerMessage } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState } from "react";
 import { planShare } from "../api";
@@ -82,7 +84,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   const { busy, errors, run } = runner;
   const id = useId();
   const [plan, setPlan] = useState<SharePlan | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{ cause: unknown; message: string } | null>(null);
   const [parentOpen, setParentOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const [parentName, setParentName] = useState("");
@@ -93,7 +95,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
     let live = true;
     planShare(pid, property.iri, cls?.iri)
       .then((answer) => live && setPlan(answer.plan))
-      .catch((e: unknown) => live && setFailed(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setFailed({ cause: e, message: e instanceof Error ? e.message : String(e) }));
     return () => {
       live = false;
     };
@@ -143,7 +145,8 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   if (failed) {
     return (
       <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })}>
-        <p className="edit-error">{failed}</p>
+        <p className="edit-error">{renderServerError(failed.cause, t)}</p>
+        <details><summary>{t("common.details")}</summary><pre>{failed.message}</pre></details>
         <div className="edit-actions">{cancel}</div>
       </div>
     );
@@ -158,7 +161,8 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   if (plan.case === null || plan.case === "B") {
     return (
       <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })} ref={box}>
-        <p>{plan.case === "B" && cls ? planAlready(name, cls.label, plan.via?.label ?? cls.label, locale) : plan.refused}</p>
+        <p>{plan.case === "B" && cls ? planAlready(name, cls.label, plan.via?.label ?? cls.label, locale) : renderServerMessage(plan.refusedUiMessage, plan.refused ?? "", t)}</p>
+        {plan.case === null && <details><summary>{t("common.details")}</summary><pre>{plan.refused}</pre></details>}
         <div className="edit-actions">{cancel}</div>
       </div>
     );

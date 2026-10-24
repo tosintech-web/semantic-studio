@@ -10,7 +10,7 @@ SUMMARY
     (D-082, D-083). This is the only module that mutates a project document's
     graph; test_no_direct_mutation.py holds the rest of the code to that.
 
-    Value and fixed command refusals carry validated display facts while
+    All command refusals carry producer-owned display facts while
     retaining their original exception types, text and RDF checks.
 
 BASIC IDEA
@@ -208,6 +208,66 @@ OPAQUE_SCHEMES = {"urn", "mailto", "tag", "info", "doi", "did", "data", "tel"}
 CURIE = re.compile(r"([A-Za-z][A-Za-z0-9_.-]*)?:([^\s<>\"{}|\\^`:]*)")
 
 
+# Finite owned field roles are noun tokens; unknown extension labels stay data.
+_FIELD_CODES = {
+    'IRI': 'words.field.iri',
+    'IRI to rename': 'words.field.rename_iri',
+    'annotation property': 'words.field.annotation_property',
+    'attribute or relationship': 'words.field.attribute_relationship',
+    'broader': 'words.field.broader',
+    'broader concept': 'words.field.broader',
+    'datatype': 'words.field.datatype',
+    'domain': 'words.field.domain',
+    'filler': 'words.field.filler',
+    'link': 'words.field.link',
+    'mapping target': 'words.field.mapping_target',
+    'new IRI': 'words.field.new_iri',
+    'parent': 'words.field.parent',
+    'parent class': 'words.field.parent_class',
+    'path': 'words.field.path',
+    'relationship or attribute': 'words.field.relationship_attribute',
+    'related': 'words.field.related',
+    'child': 'words.field.child',
+    'range': 'words.field.range',
+    'thing': 'words.field.thing',
+    'entity': 'words.field.entity',
+    'type of value': 'words.field.value_type',
+    'value': 'words.field.value',
+    'label': 'words.field.label',
+    'comment': 'words.field.comment',
+    'start': 'words.field.start',
+    'end': 'words.field.end',
+    'minimum': 'words.field.minimum',
+    'maximum': 'words.field.maximum',
+    'minCount': 'words.field.min_count',
+    'maxCount': 'words.field.max_count',
+    'minLength': 'words.field.min_length',
+    'maxLength': 'words.field.max_length',
+    'boundary': 'words.field.boundary',
+    'the allowed languages': 'words.field.allowed_languages',
+    'a name in each language': 'words.field.name_languages',
+    'attribute': 'words.kind.datatypeProperty',
+    'relationship': 'words.kind.objectProperty',
+    'class': 'words.kind.class',
+    'concept': 'words.kind.concept',
+    'concept scheme': 'words.kind.conceptScheme',
+    'example': 'words.kind.example',
+    'property': 'words.kind.property',
+}
+
+
+def _field_parts(what: str) -> list[dict]:
+    code = _FIELD_CODES.get(what)
+    return [word_part(code)] if code else [literal_part(str(what))]
+
+
+def _imported_parent_message(plan: dict) -> dict:
+    first = plan["imported"][0]
+    if first.get("from"):
+        return make_message("editing.guard.imported_parent", name=first["label"], source=first["from"])
+    return make_message("editing.guard.imported_parent_unknown", name=first["label"])
+
+
 class CommandError(ValueError):
     """A command refused, retaining its legacy sentence and optional UI facts."""
 
@@ -221,8 +281,8 @@ class AlreadyDefined(CommandError):
     (attribute-reuse 5.1): the form offers to use it rather than a second
     one, so the refusal carries the property, not only a sentence."""
 
-    def __init__(self, message: str, prop: dict):
-        super().__init__(message)
+    def __init__(self, message: str, prop: dict, *, ui_message: dict | None = None):
+        super().__init__(message, ui_message=ui_message)
         self.property = prop
 
 
@@ -654,7 +714,10 @@ class Context:
         if isinstance(value, URIRef):
             return value
         if not isinstance(value, str) or not value.strip():
-            raise CommandError(f"A {what} is required.")
+            raise CommandError(
+                f'A {what} is required.',
+                ui_message=make_message('editing.guard.field_required', field=_field_parts(what)),
+            )
         value = value.strip()
         curie = CURIE.fullmatch(value)
         if curie and "//" not in value:
@@ -665,7 +728,10 @@ class Context:
             "//" in value or value.split(":", 1)[0].lower() in OPAQUE_SCHEMES
         ):
             return URIRef(value)
-        raise CommandError(f'"{value}" is not an absolute IRI or a known prefixed name.')
+        raise CommandError(
+            f'"{value}" is not an absolute IRI or a known prefixed name.',
+            ui_message=make_message('editing.guard.invalid_iri', value=value),
+        )
 
     def _namespace(self, prefix: str) -> Optional[str]:
         # The project's own prefix first: it names the base IRI even before
@@ -692,12 +758,16 @@ class Context:
 
     def require(self, iri: URIRef, what: str) -> None:
         if not self.exists(iri):
-            raise CommandError(f"There is no {what} {self.short(iri)} in this document or its imports.")
+            raise CommandError(
+                f'There is no {what} {self.short(iri)} in this document or its imports.',
+                ui_message=make_message('editing.guard.missing_import_reference', field=_field_parts(what), name=self.short(iri)),
+            )
 
     def require_new(self, iri: URIRef) -> None:
         if self.mentioned(iri):
             raise CommandError(
-                f"{self.short(iri)} is already used in this document; choose another IRI."
+                f'{self.short(iri)} is already used in this document; choose another IRI.',
+                ui_message=make_message('editing.guard.iri_in_use', name=self.short(iri)),
             )
 
     def short(self, iri: URIRef) -> str:
@@ -723,7 +793,8 @@ class Context:
         label = args.get(key)
         if not isinstance(label, str) or not label.strip():
             raise CommandError(
-                f"A new entity needs a name in the project's primary language ({self.primary})."
+                f"A new entity needs a name in the project's primary language ({self.primary}).",
+                ui_message=make_message('editing.guard.primary_name_required', language=self.primary),
             )
         return label.strip()
 
@@ -827,17 +898,25 @@ def _new_property(ctx: Context, iri: URIRef, kind: URIRef) -> None:
         named = axioms.domain_names(reading, ctx.name)
         rng = ctx.graph.value(iri, RDFS.range)
         raise AlreadyDefined(
-            f"There is already {sentences.a(word)} {name}" + (f", of {named}." if named else "."),
+            f'There is already {sentences.a(word)} {name}' + (f', of {named}.' if named else '.'),
             {
                 "iri": str(iri), "label": name, "kind": word,
                 "domain": axioms.domain_json(reading, ctx.name),
                 "range": str(rng) if isinstance(rng, URIRef) else None,
             },
+            ui_message=(make_message(
+                "editing.guard.property_exists_domain", name=name, kind=_field_parts(word),
+                classes=_named_parts(reading.classes, ctx.name,
+                    separator="words.list.and" if reading.form == "separate" else "words.list.or"),
+            ) if named else make_message(
+                "editing.guard.property_exists", name=name, kind=_field_parts(word),
+            )),
         )
     if other in types:
         other_word = "relationship" if word == "attribute" else "attribute"
         raise CommandError(
-            f"{name} is {sentences.a(other_word)} in this project; {sentences.a(word)} needs another name."
+            f'{name} is {sentences.a(other_word)} in this project; {sentences.a(word)} needs another name.',
+            ui_message=make_message('editing.guard.property_kind_conflict', name=name, existing_kind=_field_parts(other_word), new_kind=_field_parts(word)),
         )
     ctx.require_new(iri)
 
@@ -873,7 +952,10 @@ def cmd_create_datatype_property(ctx: Context, a: dict) -> Change:
     if a.get("datatype"):
         datatype = ctx.iri(a["datatype"], "datatype")
         if not str(datatype).startswith(str(XSD)) and datatype != RDF.langString:
-            raise CommandError(f"{ctx.short(datatype)} is not an XML Schema datatype.")
+            raise CommandError(
+                f'{ctx.short(datatype)} is not an XML Schema datatype.',
+                ui_message=make_message('editing.guard.invalid_datatype', name=ctx.short(datatype)),
+            )
         adds.append((iri, RDFS.range, datatype))
     return _created(
         _change(
@@ -889,8 +971,8 @@ def cmd_create_concept(ctx: Context, a: dict) -> Change:
     lang = a.get("lang") or ctx.primary
     if not lang_matches(lang, ctx.primary) and not lang_matches(ctx.primary, lang):
         raise CommandError(
-            f"A new concept is named in the project's primary language ({ctx.primary}) first; "
-            "add other languages with SetLabel."
+            f"A new concept is named in the project's primary language ({ctx.primary}) first; add other languages with SetLabel.",
+            ui_message=make_message('editing.guard.primary_concept_name', language=ctx.primary),
         )
     iri = ctx.minted(a, label, lower_first=False)
     ctx.require_new(iri)
@@ -930,10 +1012,16 @@ def cmd_create_concept(ctx: Context, a: dict) -> Change:
 def _set_text(ctx: Context, a: dict, predicate_for: Callable[[URIRef], URIRef], what: str) -> Change:
     iri = ctx.iri(a.get("iri"))
     if not ctx.mentioned(iri):
-        raise CommandError(f"There is no {ctx.short(iri)} in this document to change.")
+        raise CommandError(
+            f'There is no {ctx.short(iri)} in this document to change.',
+            ui_message=make_message('editing.guard.missing_to_change', name=ctx.short(iri)),
+        )
     value = a.get("value")
     if not isinstance(value, str) or not value.strip():
-        raise CommandError(f"A {what} cannot be empty.")
+        raise CommandError(
+            f'A {what} cannot be empty.',
+            ui_message=make_message('editing.guard.empty_field', field=_field_parts(what)),
+        )
     lang = a.get("lang") or ctx.primary
     if not valid_lang(lang):
         raise CommandError(f'"{lang}" is not a well-formed language tag (for example en or fr).',
@@ -969,7 +1057,10 @@ def cmd_set_comment(ctx: Context, a: dict) -> Change:
 def _annotation_target(ctx: Context, a: dict) -> tuple[URIRef, URIRef]:
     iri = ctx.iri(a.get("iri"))
     if not ctx.mentioned(iri):
-        raise CommandError(f"There is no {ctx.short(iri)} in this document to annotate.")
+        raise CommandError(
+            f'There is no {ctx.short(iri)} in this document to annotate.',
+            ui_message=make_message('editing.guard.missing_to_annotate', name=ctx.short(iri)),
+        )
     prop = ctx.iri(a.get("property"), "annotation property")
     return iri, prop
 
@@ -984,8 +1075,8 @@ def _check_pref_label(ctx: Context, iri: URIRef, prop: URIRef, term, ignoring=No
         if (existing.language or "").lower() == lang:
             where = f"in {term.language}" if term.language else "without a language"
             raise CommandError(
-                f"{ctx.name(iri)} already has a skos:prefLabel {where}; a concept has at most one "
-                "per language. Use ReplaceAnnotation to change it."
+                f'{ctx.name(iri)} already has a skos:prefLabel {where}; a concept has at most one per language. Use ReplaceAnnotation to change it.',
+                ui_message=make_message('editing.guard.pref_label_language', name=ctx.name(iri), language=term.language) if term.language else make_message('editing.guard.pref_label_plain', name=ctx.name(iri)),
             )
 
 
@@ -994,7 +1085,10 @@ def cmd_add_annotation(ctx: Context, a: dict) -> Change:
     term = parse_value(a.get("value"), ctx.primary, lambda v: ctx.iri(v, "link"))
     _check_pref_label(ctx, iri, prop, term)
     if (iri, prop, term) in ctx.graph:
-        raise CommandError(f"{ctx.name(iri)} already has that {ctx.short(prop)}.")
+        raise CommandError(
+            f'{ctx.name(iri)} already has that {ctx.short(prop)}.',
+            ui_message=make_message('editing.guard.annotation_exists', name=ctx.name(iri), property=ctx.short(prop)),
+        )
     return _change(
         ctx.graph,
         f"Added {ctx.short(prop)} to {ctx.name(iri)}",
@@ -1023,7 +1117,10 @@ def cmd_remove_annotation(ctx: Context, a: dict) -> Change:
     term = parse_value(a.get("value"), ctx.primary, lambda v: ctx.iri(v, "link"))
     term = _stored(ctx, iri, prop, term)
     if (iri, prop, term) not in ctx.graph:
-        raise CommandError(f"{ctx.name(iri)} has no such {ctx.short(prop)} to remove.")
+        raise CommandError(
+            f'{ctx.name(iri)} has no such {ctx.short(prop)} to remove.',
+            ui_message=make_message('editing.guard.annotation_missing_remove', name=ctx.name(iri), property=ctx.short(prop)),
+        )
     return _change(
         ctx.graph,
         f"Removed {ctx.short(prop)} from {ctx.name(iri)}",
@@ -1038,7 +1135,10 @@ def cmd_replace_annotation(ctx: Context, a: dict) -> Change:
     old = _stored(ctx, iri, prop, parse_value(a.get("oldValue"), ctx.primary, resolve))
     new = parse_value(a.get("newValue"), ctx.primary, resolve)
     if (iri, prop, old) not in ctx.graph:
-        raise CommandError(f"{ctx.name(iri)} has no such {ctx.short(prop)} to replace.")
+        raise CommandError(
+            f'{ctx.name(iri)} has no such {ctx.short(prop)} to replace.',
+            ui_message=make_message('editing.guard.annotation_missing_replace', name=ctx.name(iri), property=ctx.short(prop)),
+        )
     _check_pref_label(ctx, iri, prop, new, ignoring=old)
     return _change(
         ctx.graph,
@@ -1079,17 +1179,26 @@ def _pair(ctx: Context, a: dict, first: str, second: str, what: str) -> tuple[UR
     x = ctx.iri(a.get(first), first)
     y = ctx.iri(a.get(second), second)
     if not ctx.mentioned(x):
-        raise CommandError(f"There is no {what} {ctx.short(x)} in this document.")
+        raise CommandError(
+            f'There is no {what} {ctx.short(x)} in this document.',
+            ui_message=make_message('editing.guard.missing_own_reference', field=_field_parts(what), name=ctx.short(x)),
+        )
     ctx.require(y, what)
     if x == y:
-        raise CommandError(f"A {what} cannot be linked to itself.")
+        raise CommandError(
+            f'A {what} cannot be linked to itself.',
+            ui_message=make_message('editing.guard.self_link', field=_field_parts(what)),
+        )
     return x, y
 
 
 def cmd_add_subclass(ctx: Context, a: dict) -> Change:
     child, parent = _pair(ctx, a, "child", "parent", "class")
     if (child, RDFS.subClassOf, parent) in ctx.graph:
-        raise CommandError(f"{ctx.name(child)} is already a subclass of {ctx.name(parent)}.")
+        raise CommandError(
+            f'{ctx.name(child)} is already a subclass of {ctx.name(parent)}.',
+            ui_message=make_message('editing.guard.subclass_exists', child=ctx.name(child), parent=ctx.name(parent)),
+        )
     return _change(
         ctx.graph,
         f"Made {ctx.name(child)} a subclass of {ctx.name(parent)}",
@@ -1101,7 +1210,10 @@ def cmd_add_subclass(ctx: Context, a: dict) -> Change:
 def cmd_remove_subclass(ctx: Context, a: dict) -> Change:
     child, parent = _pair(ctx, a, "child", "parent", "class")
     if (child, RDFS.subClassOf, parent) not in ctx.graph:
-        raise CommandError(f"{ctx.name(child)} is not a subclass of {ctx.name(parent)}.")
+        raise CommandError(
+            f'{ctx.name(child)} is not a subclass of {ctx.name(parent)}.',
+            ui_message=make_message('editing.guard.subclass_missing', child=ctx.name(child), parent=ctx.name(parent)),
+        )
     return _change(
         ctx.graph,
         f"Removed {ctx.name(child)} as a subclass of {ctx.name(parent)}",
@@ -1113,7 +1225,10 @@ def cmd_remove_subclass(ctx: Context, a: dict) -> Change:
 def _set_single(ctx: Context, a: dict, predicate: URIRef, what: str) -> Change:
     prop = ctx.iri(a.get("property"), "property")
     if not ctx.mentioned(prop):
-        raise CommandError(f"There is no property {ctx.short(prop)} in this document.")
+        raise CommandError(
+            f'There is no property {ctx.short(prop)} in this document.',
+            ui_message=make_message('editing.guard.property_missing', name=ctx.short(prop)),
+        )
     target = ctx.iri(a.get("target"), what)
     ctx.require(target, what)
     old = _end_removes(ctx, prop, predicate)
@@ -1149,13 +1264,20 @@ def cmd_set_range(ctx: Context, a: dict) -> Change:
 def _relationship(ctx: Context, a: dict) -> URIRef:
     prop = ctx.iri(a.get("property"), "relationship")
     if not ctx.mentioned(prop):
-        raise CommandError(f"There is no relationship {ctx.short(prop)} in this document.")
+        raise CommandError(
+            f'There is no relationship {ctx.short(prop)} in this document.',
+            ui_message=make_message('editing.guard.relationship_missing', name=ctx.short(prop)),
+        )
     if (prop, RDF.type, OWL.DatatypeProperty) in ctx.graph:
         raise CommandError(
-            f"{ctx.name(prop)} is an attribute: its range is a type of value, not a class at the other end."
+            f'{ctx.name(prop)} is an attribute: its range is a type of value, not a class at the other end.',
+            ui_message=make_message('editing.guard.attribute_not_relationship', name=ctx.name(prop)),
         )
     if (prop, RDF.type, OWL.ObjectProperty) not in ctx.graph:
-        raise CommandError(f"{ctx.name(prop)} is not a relationship of this document.")
+        raise CommandError(
+            f'{ctx.name(prop)} is not a relationship of this document.',
+            ui_message=make_message('editing.guard.not_own_relationship', name=ctx.name(prop)),
+        )
     return prop
 
 
@@ -1172,14 +1294,20 @@ def cmd_swap_ends(ctx: Context, a: dict) -> Change:
         # Its end would become several classes, which no form reads: a
         # shared range is a follow-up of attribute-reuse (Section 4).
         raise CommandError(
-            f"{ctx.name(prop)} starts at several classes, so it cannot be swapped; "
-            "its end would become several classes."
+            f'{ctx.name(prop)} starts at several classes, so it cannot be swapped; its end would become several classes.',
+            ui_message=make_message('editing.guard.swap_shared_start', name=ctx.name(prop)),
         )
     if not domains and not ranges:
-        raise CommandError(f"{ctx.name(prop)} has no start or end to swap yet.")
+        raise CommandError(
+            f'{ctx.name(prop)} has no start or end to swap yet.',
+            ui_message=make_message('editing.guard.swap_missing_ends', name=ctx.name(prop)),
+        )
     if set(domains) == set(ranges):
         # Person knows Person: the refusal says why, not only that nothing changed.
-        raise CommandError(f"{ctx.name(prop)} starts and ends at the same class, so swapping changes nothing.")
+        raise CommandError(
+            f'{ctx.name(prop)} starts and ends at the same class, so swapping changes nothing.',
+            ui_message=make_message('editing.guard.swap_same_class', name=ctx.name(prop)),
+        )
     removes = [(prop, RDFS.domain, d) for d in domains] + [(prop, RDFS.range, r) for r in ranges]
     adds = [(prop, RDFS.range, d) for d in domains] + [(prop, RDFS.domain, r) for r in ranges]
     return _change(
@@ -1237,7 +1365,10 @@ def _property(ctx: Context, a: dict, key: str = "property") -> URIRef:
     prop = ctx.iri(a.get(key), "property")
     types = set(ctx.graph.objects(prop, RDF.type))
     if not types & {OWL.ObjectProperty, OWL.DatatypeProperty}:
-        raise CommandError(f"{ctx.short(prop)} is not a relationship or an attribute of this document.")
+        raise CommandError(
+            f'{ctx.short(prop)} is not a relationship or an attribute of this document.',
+            ui_message=make_message('editing.guard.not_own_property', name=ctx.short(prop)),
+        )
     return prop
 
 
@@ -1245,7 +1376,10 @@ def _clear_end(ctx: Context, a: dict, predicate: URIRef, word: str) -> Change:
     prop = _property(ctx, a)
     removes = _end_removes(ctx, prop, predicate)
     if not removes:
-        raise CommandError(f"{ctx.name(prop)} has no {word} to clear.")
+        raise CommandError(
+            f'{ctx.name(prop)} has no {word} to clear.',
+            ui_message=make_message('editing.guard.clear_missing_end', name=ctx.name(prop), field=_field_parts(word)),
+        )
     return _change(
         ctx.graph,
         f"Cleared the {word} of {ctx.name(prop)}",
@@ -1272,12 +1406,12 @@ def _share_name(ctx: Context) -> Callable[[URIRef], str]:
     return lambda iri: _rule_name(ctx, iri)
 
 
-def _named_parts(items, name: Callable) -> list[dict]:
+def _named_parts(items, name: Callable, *, separator: str = "words.list.and") -> list[dict]:
     """Keep a class group flat and its conjunction independent of UI language."""
     parts = []
     for index, item in enumerate(items):
         if index:
-            parts.append(word_part("words.list.and"))
+            parts.append(word_part(separator))
         parts.append(literal_part(name(item)))
     return parts
 
@@ -1295,7 +1429,10 @@ def share_plan(ctx: Context, a: dict) -> dict:
         return _separate_plan(ctx, prop)
     cls = ctx.iri(a.get("class"), "class")
     if not examples.is_class(_view(ctx), cls):
-        raise CommandError(f"There is no class {ctx.short(cls)} in this document or its imports.")
+        raise CommandError(
+            f'There is no class {ctx.short(cls)} in this document or its imports.',
+            ui_message=make_message('editing.guard.share_class_missing', name=ctx.short(cls)),
+        )
     return axioms.reuse_plan(_view(ctx), ctx.graph, prop, cls, _share_name(ctx), ctx.imported_from)
 
 
@@ -1305,7 +1442,10 @@ def _separate_plan(ctx: Context, prop: URIRef) -> dict:
     view, name = _view(ctx), _share_name(ctx)
     reading = axioms.domain_of(ctx.graph, prop)
     if reading.form != "separate":
-        raise CommandError(f"Say which class to share {name(prop)} with.")
+        raise CommandError(
+            f'Say which class to share {name(prop)} with.',
+            ui_message=make_message('editing.guard.share_class_required', name=name(prop)),
+        )
     members = list(reading.classes)
     all_owl = all(axioms.class_type(view, c) == "owl" for c in members)
     outside = [c for c in members if not axioms.defined(ctx.graph, c)]
@@ -1337,13 +1477,22 @@ def _parent_change(ctx: Context, a: dict, everyone: list, rdfs: bool) -> tuple:
     if a.get("parent"):
         parent = ctx.iri(a["parent"], "parent class")
         if not examples.is_class(view, parent):
-            raise CommandError(f"There is no class {ctx.short(parent)} in this document or its imports.")
+            raise CommandError(
+                f'There is no class {ctx.short(parent)} in this document or its imports.',
+                ui_message=make_message('editing.guard.share_class_missing', name=ctx.short(parent)),
+            )
         if parent in everyone:
-            raise CommandError(f"{name(parent)} is one of the classes being shared; choose another parent.")
+            raise CommandError(
+                f'{name(parent)} is one of the classes being shared; choose another parent.',
+                ui_message=make_message('editing.guard.shared_parent_is_member', name=name(parent)),
+            )
         above = axioms.ancestors(view, parent)
         for c in everyone:
             if c in above:
-                raise CommandError(f"{name(parent)} is already a kind of {name(c)}, so it cannot be its parent too.")
+                raise CommandError(
+                    f'{name(parent)} is already a kind of {name(c)}, so it cannot be its parent too.',
+                    ui_message=make_message('editing.guard.shared_parent_cycle', parent=name(parent), member=name(c)),
+                )
     else:
         label = ctx.primary_label(a, "parentLabel")
         parent = ctx.minted({"iri": a.get("parentIri")}, label, lower_first=False)
@@ -1368,7 +1517,10 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
     p = name(prop)
     case = plan["case"]
     if case is None:
-        raise CommandError(plan["refused"])
+        raise CommandError(
+            plan['refused'],
+            ui_message=plan.get('refusedUiMessage'),
+        )
     view = _view(ctx)
     reading = axioms.domain_of(ctx.graph, prop)
     cls = None
@@ -1387,8 +1539,8 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
         if case == "B":
             via = plan["via"]["label"]
             raise CommandError(
-                f"{c} already has {p}." if via == c
-                else f"{c} already has {p}, because {sentences.a(c)} is {sentences.a(via)}."
+                f'{c} already has {p}.' if via == c else f'{c} already has {p}, because {sentences.a(c)} is {sentences.a(via)}.',
+                ui_message=make_message('editing.guard.share_already_direct', name=p, class_name=c) if via == c else make_message('editing.guard.share_already_inherited', name=p, class_name=c, parent=via),
             )
         if case == "C":
             return _change(
@@ -1407,8 +1559,8 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
     if how == "union":
         if not plan["choices"]["union"]:
             raise CommandError(
-                f'RDFS has no way to say "either", and {names} include an RDFS class. '
-                "Give them a shared parent instead."
+                f'RDFS has no way to say "either", and {names} include an RDFS class. Give them a shared parent instead.',
+                ui_message=make_message('editing.guard.union_requires_owl', classes=_named_parts(everyone, name)),
             )
         members = list(reading.classes) if cls is None else axioms.shared_members(view, reading, cls)
         return _change(
@@ -1420,7 +1572,10 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
         )
     if how == "parent":
         if not plan["choices"]["parent"]:
-            raise CommandError(_imported_sentence(plan))
+            raise CommandError(
+                _imported_sentence(plan),
+                ui_message=_imported_parent_message(plan),
+            )
         parent, adds = _parent_change(ctx, a, everyone, rdfs=not plan["choices"]["union"])
         adds.append((prop, RDFS.domain, parent))
         return _change(
@@ -1433,7 +1588,10 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
     if how == "up":
         target = ctx.iri(a.get("parent"), "parent class")
         if str(target) not in {u["iri"] for u in plan["choices"]["up"]}:
-            raise CommandError(f"{name(target)} is not a parent {names} share.")
+            raise CommandError(
+                f'{name(target)} is not a parent {names} share.',
+                ui_message=make_message('editing.guard.not_common_parent', name=name(target), classes=_named_parts(everyone, name)),
+            )
         return _change(
             ctx.graph,
             f"Moved {p} up to {name(target)}",
@@ -1441,7 +1599,10 @@ def cmd_share_domain(ctx: Context, a: dict) -> Change:
             removes,
             ui_message=make_message("command.moved_domain", property=p, class_name=name(target)),
         )
-    raise CommandError(f"Say how to share {p}: as a union, with a shared parent, or up to a parent they share.")
+    raise CommandError(
+        f'Say how to share {p}: as a union, with a shared parent, or up to a parent they share.',
+        ui_message=make_message('editing.guard.share_method_required', name=p),
+    )
 
 
 def cmd_unshare_domain(ctx: Context, a: dict) -> Change:
@@ -1453,7 +1614,10 @@ def cmd_unshare_domain(ctx: Context, a: dict) -> Change:
     name = _share_name(ctx)
     reading = axioms.domain_of(ctx.graph, prop)
     if cls not in reading.classes:
-        raise CommandError(f"{name(cls)} is not one of the classes {name(prop)} belongs to.")
+        raise CommandError(
+            f'{name(cls)} is not one of the classes {name(prop)} belongs to.',
+            ui_message=make_message('editing.guard.unshare_not_member', class_name=name(cls), name=name(prop)),
+        )
     left = [c for c in reading.classes if c != cls]
     if reading.form == "union":
         removes = _end_removes(ctx, prop, RDFS.domain)
@@ -1498,9 +1662,15 @@ def cmd_set_inverse(ctx: Context, a: dict) -> Change:
         if ctx.imported is not None:
             kinds |= set(ctx.imported.objects(inverse, RDF.type))
         if OWL.DatatypeProperty in kinds or (kinds and OWL.ObjectProperty not in kinds):
-            raise CommandError(f"{ctx.name(inverse)} is not a relationship, so it cannot be the other way round.")
+            raise CommandError(
+                f'{ctx.name(inverse)} is not a relationship, so it cannot be the other way round.',
+                ui_message=make_message('editing.guard.inverse_wrong_kind', name=ctx.name(inverse)),
+            )
         if (inverse, OWL.inverseOf, prop) in ctx.graph or (prop, OWL.inverseOf, inverse) in ctx.graph:
-            raise CommandError(f"{ctx.name(inverse)} is already the other way round of {ctx.name(prop)}.")
+            raise CommandError(
+                f'{ctx.name(inverse)} is already the other way round of {ctx.name(prop)}.',
+                ui_message=make_message('editing.guard.inverse_exists', inverse=ctx.name(inverse), name=ctx.name(prop)),
+            )
         # The other way round of a chaining relationship is not simple either
         # (5.9). One made from a name has no characteristics, so it is fine.
         refusal = modeling_checks.inverse_chaining_refusal(ctx.graph, prop, inverse, ctx.name)
@@ -1545,7 +1715,10 @@ def cmd_clear_inverse(ctx: Context, a: dict) -> Change:
         other = ctx.iri(a["inverse"], "relationship")
         removes = [t for t in removes if other in (t[0], t[2])]
     if not removes:
-        raise CommandError(f"{ctx.name(prop)} has no other way round to remove.")
+        raise CommandError(
+            f'{ctx.name(prop)} has no other way round to remove.',
+            ui_message=make_message('editing.guard.inverse_missing', name=ctx.name(prop)),
+        )
     return _change(
         ctx.graph,
         f"Removed the other way round of {ctx.name(prop)}",
@@ -1566,7 +1739,10 @@ def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
     name = a.get("characteristic")
     if name not in modeling_checks.CHARACTERISTICS:
         offered = ", ".join(modeling_checks.CHARACTERISTICS)
-        raise CommandError(f"The characteristic is one of {offered}.")
+        raise CommandError(
+            f'The characteristic is one of {offered}.',
+            ui_message=make_message('editing.guard.invalid_characteristic'),
+        )
     on = a.get("on")
     if not isinstance(on, bool):
         raise CommandError(
@@ -1575,8 +1751,8 @@ def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
         )
     if (prop, RDF.type, OWL.DatatypeProperty) in ctx.graph and name != "functional":
         raise CommandError(
-            f'{ctx.name(prop)} is an attribute; an attribute can only be "one value only". '
-            "The others describe links between things."
+            f'{ctx.name(prop)} is an attribute; an attribute can only be "one value only". The others describe links between things.',
+            ui_message=make_message('editing.guard.attribute_characteristic', name=ctx.name(prop)),
         )
     refusal = modeling_checks.characteristic_refusal(ctx.graph, prop, name, on, ctx.name)
     if refusal:
@@ -1586,7 +1762,10 @@ def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
     words = "one value only" if attribute else modeling_checks.WORDS[name]
     if on:
         if triple in ctx.graph:
-            raise CommandError(f'{ctx.name(prop)} is already "{words}".')
+            raise CommandError(
+                f'{ctx.name(prop)} is already "{words}".',
+                ui_message=make_message('editing.guard.characteristic_exists', name=ctx.name(prop), characteristic=_characteristic_parts(name, attribute)),
+            )
         return _change(
             ctx.graph,
             f'Marked {ctx.name(prop)} as "{words}"',
@@ -1598,7 +1777,10 @@ def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
             ),
         )
     if triple not in ctx.graph:
-        raise CommandError(f'{ctx.name(prop)} is not "{words}".')
+        raise CommandError(
+            f'{ctx.name(prop)} is not "{words}".',
+            ui_message=make_message('editing.guard.characteristic_missing', name=ctx.name(prop), characteristic=_characteristic_parts(name, attribute)),
+        )
     return _change(
         ctx.graph,
         f'Unmarked {ctx.name(prop)} as "{words}"',
@@ -1628,8 +1810,8 @@ def _sub_pair(ctx: Context, a: dict) -> tuple[URIRef, URIRef]:
     if _property_kind(ctx, parent) != _property_kind(ctx, child):
         word = "relationship" if (child, RDF.type, OWL.ObjectProperty) in ctx.graph else "attribute"
         raise CommandError(
-            f"{ctx.name(child)} is {sentences.a(word)}; "
-            f"its more general one must be {sentences.a(word)} too."
+            f'{ctx.name(child)} is {sentences.a(word)}; its more general one must be {sentences.a(word)} too.',
+            ui_message=make_message('editing.guard.property_parent_kind', name=ctx.name(child), kind=_field_parts(word)),
         )
     return child, parent
 
@@ -1642,7 +1824,10 @@ def cmd_add_subproperty(ctx: Context, a: dict) -> Change:
     if refusal:
         raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     if (child, RDFS.subPropertyOf, parent) in ctx.graph:
-        raise CommandError(f"{ctx.name(child)} is already a more specific kind of {ctx.name(parent)}.")
+        raise CommandError(
+            f'{ctx.name(child)} is already a more specific kind of {ctx.name(parent)}.',
+            ui_message=make_message('editing.guard.subproperty_exists', child=ctx.name(child), parent=ctx.name(parent)),
+        )
     return _change(
         ctx.graph,
         f"Made {ctx.name(child)} a more specific kind of {ctx.name(parent)}",
@@ -1655,7 +1840,10 @@ def cmd_remove_subproperty(ctx: Context, a: dict) -> Change:
     child = _property(ctx, a, "child")
     parent = ctx.iri(a.get("parent"), "parent")
     if (child, RDFS.subPropertyOf, parent) not in ctx.graph:
-        raise CommandError(f"{ctx.name(child)} is not a more specific kind of {ctx.name(parent)}.")
+        raise CommandError(
+            f'{ctx.name(child)} is not a more specific kind of {ctx.name(parent)}.',
+            ui_message=make_message('editing.guard.subproperty_missing', child=ctx.name(child), parent=ctx.name(parent)),
+        )
     return _change(
         ctx.graph,
         f"Removed {ctx.name(parent)} as more general than {ctx.name(child)}",
@@ -1714,7 +1902,10 @@ def cmd_add_broader(ctx: Context, a: dict) -> Change:
         raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     concept, broader = _pair(ctx, a, "concept", "broader", "concept")
     if (concept, SKOS.broader, broader) in ctx.graph:
-        raise CommandError(f"{ctx.name(concept)} is already narrower than {ctx.name(broader)}.")
+        raise CommandError(
+            f'{ctx.name(concept)} is already narrower than {ctx.name(broader)}.',
+            ui_message=make_message('editing.guard.broader_exists', concept=ctx.name(concept), broader=ctx.name(broader)),
+        )
     adds, removes = _top_delta(ctx.graph, concept, _broaders(ctx.graph, concept) | {broader})
     return _change(
         ctx.graph,
@@ -1729,7 +1920,10 @@ def cmd_remove_broader(ctx: Context, a: dict) -> Change:
     concept, broader = _pair(ctx, a, "concept", "broader", "concept")
     removes = [(concept, SKOS.broader, broader), (broader, SKOS.narrower, concept)]
     if not any(t in ctx.graph for t in removes):
-        raise CommandError(f"{ctx.name(concept)} is not narrower than {ctx.name(broader)}.")
+        raise CommandError(
+            f'{ctx.name(concept)} is not narrower than {ctx.name(broader)}.',
+            ui_message=make_message('editing.guard.broader_missing', concept=ctx.name(concept), broader=ctx.name(broader)),
+        )
     adds, top_removes = _top_delta(ctx.graph, concept, _broaders(ctx.graph, concept) - {broader})
     return _change(
         ctx.graph,
@@ -1746,7 +1940,10 @@ def _concepts(ctx: Context, a: dict, first: str, second: str) -> tuple[URIRef, U
         if (c, RDF.type, SKOS.Concept) not in ctx.graph and not (
             ctx.imported is not None and (c, RDF.type, SKOS.Concept) in ctx.imported
         ):
-            raise CommandError(f"{ctx.name(c)} is not a concept.")
+            raise CommandError(
+                f'{ctx.name(c)} is not a concept.',
+                ui_message=make_message('editing.guard.not_concept', name=ctx.name(c)),
+            )
     return x, y
 
 
@@ -1758,7 +1955,10 @@ def cmd_add_related(ctx: Context, a: dict) -> Change:
         raise CommandError(refusal, ui_message=getattr(refusal, "ui_message", None))
     both = [(concept, SKOS.related, related), (related, SKOS.related, concept)]
     if all(t in ctx.graph for t in both):
-        raise CommandError(f"{ctx.name(concept)} is already related to {ctx.name(related)}.")
+        raise CommandError(
+            f'{ctx.name(concept)} is already related to {ctx.name(related)}.',
+            ui_message=make_message('editing.guard.related_exists', concept=ctx.name(concept), related=ctx.name(related)),
+        )
     return _change(
         ctx.graph,
         f"Related {ctx.name(concept)} to {ctx.name(related)}",
@@ -1771,7 +1971,10 @@ def cmd_remove_related(ctx: Context, a: dict) -> Change:
     concept, related = _pair(ctx, a, "concept", "related", "concept")
     both = [(concept, SKOS.related, related), (related, SKOS.related, concept)]
     if not any(t in ctx.graph for t in both):
-        raise CommandError(f"{ctx.name(concept)} is not related to {ctx.name(related)}.")
+        raise CommandError(
+            f'{ctx.name(concept)} is not related to {ctx.name(related)}.',
+            ui_message=make_message('editing.guard.related_missing', concept=ctx.name(concept), related=ctx.name(related)),
+        )
     return _change(
         ctx.graph,
         f"Removed {ctx.name(related)} as related to {ctx.name(concept)}",
@@ -1792,14 +1995,23 @@ MAPPINGS = {
 def _mapping(ctx: Context, a: dict) -> tuple[URIRef, URIRef, URIRef, str]:
     concept = ctx.iri(a.get("concept"), "concept")
     if (concept, RDF.type, SKOS.Concept) not in ctx.graph:
-        raise CommandError(f"There is no concept {ctx.short(concept)} in this document.")
+        raise CommandError(
+            f'There is no concept {ctx.short(concept)} in this document.',
+            ui_message=make_message('editing.guard.mapping_concept_missing', name=ctx.short(concept)),
+        )
     kind = a.get("kind")
     if kind not in MAPPINGS:
-        raise CommandError(f"The mapping is one of {', '.join(MAPPINGS)}.")
+        raise CommandError(
+            f"The mapping is one of {', '.join(MAPPINGS)}.",
+            ui_message=make_message('editing.guard.invalid_mapping'),
+        )
     # A mapping points outside the project; the IRI is checked like any link.
     target = ctx.iri(a.get("target"), "mapping target")
     if target == concept:
-        raise CommandError(f"{ctx.name(concept)} cannot be mapped to itself.")
+        raise CommandError(
+            f'{ctx.name(concept)} cannot be mapped to itself.',
+            ui_message=make_message('editing.guard.mapping_self', name=ctx.name(concept)),
+        )
     predicate, words = MAPPINGS[kind]
     return concept, predicate, target, words
 
@@ -1807,7 +2019,10 @@ def _mapping(ctx: Context, a: dict) -> tuple[URIRef, URIRef, URIRef, str]:
 def cmd_add_mapping(ctx: Context, a: dict) -> Change:
     concept, predicate, target, words = _mapping(ctx, a)
     if (concept, predicate, target) in ctx.graph:
-        raise CommandError(f"{ctx.name(concept)} already has that mapping.")
+        raise CommandError(
+            f'{ctx.name(concept)} already has that mapping.',
+            ui_message=make_message('editing.guard.mapping_exists', name=ctx.name(concept)),
+        )
     return _change(
         ctx.graph,
         f"Added {words} of {ctx.name(concept)}: {target}",
@@ -1824,7 +2039,10 @@ def cmd_add_mapping(ctx: Context, a: dict) -> Change:
 def cmd_remove_mapping(ctx: Context, a: dict) -> Change:
     concept, predicate, target, words = _mapping(ctx, a)
     if (concept, predicate, target) not in ctx.graph:
-        raise CommandError(f"{ctx.name(concept)} has no such mapping to remove.")
+        raise CommandError(
+            f'{ctx.name(concept)} has no such mapping to remove.',
+            ui_message=make_message('editing.guard.mapping_missing', name=ctx.name(concept)),
+        )
     return _change(
         ctx.graph,
         f"Removed {words} of {ctx.name(concept)}: {target}",
@@ -1842,7 +2060,10 @@ def cmd_rename_iri(ctx: Context, a: dict) -> Change:
     old = ctx.iri(a.get("old"), "IRI to rename")
     new = ctx.iri(a.get("new"), "new IRI")
     if not ctx.mentioned(old):
-        raise CommandError(f"There is no {ctx.short(old)} in this document to rename.")
+        raise CommandError(
+            f'There is no {ctx.short(old)} in this document to rename.',
+            ui_message=make_message('editing.guard.missing_to_rename', name=ctx.short(old)),
+        )
     if old == new:
         raise CommandError(
             'The new IRI is the same as the old one.',
@@ -1947,7 +2168,10 @@ _DELETE_KIND_TOKENS = {
 def delete_plan(ctx: Context, a: dict) -> tuple[Change, dict]:
     iri = ctx.iri(a.get("iri"), "entity")
     if not ctx.mentioned(iri):
-        raise CommandError(f"There is no {ctx.short(iri)} in this document to delete.")
+        raise CommandError(
+            f'There is no {ctx.short(iri)} in this document to delete.',
+            ui_message=make_message('editing.guard.missing_to_delete', name=ctx.short(iri)),
+        )
     strategy = a.get("strategy") or "reparent"
     if strategy not in ("reparent", "orphan"):
         raise CommandError(
@@ -2070,7 +2294,10 @@ def cmd_create_example(ctx: Context, a: dict) -> Change:
     _model_doc(ctx)
     cls = ctx.iri(a.get("class"), "class")
     if not examples.is_class(_class_graph(ctx), cls):
-        raise CommandError(f"{ctx.short(cls)} is not a class of this model; an example belongs to a class.")
+        raise CommandError(
+            f'{ctx.short(cls)} is not a class of this model; an example belongs to a class.',
+            ui_message=make_message('editing.guard.example_class_required', name=ctx.short(cls)),
+        )
     label = ctx.primary_label(a)
     iri = ctx.minted(a, label, lower_first=True)
     ctx.require_new(iri)
@@ -2108,14 +2335,20 @@ def _example_field(ctx: Context, a: dict) -> tuple[URIRef, URIRef, str, str]:
     _model_doc(ctx)
     iri = ctx.iri(a.get("iri"), "example")
     if not examples.is_example(_class_graph(ctx), iri) or not ctx.mentioned(iri):
-        raise CommandError(f"There is no example {ctx.short(iri)} in this document.")
+        raise CommandError(
+            f'There is no example {ctx.short(iri)} in this document.',
+            ui_message=make_message('editing.guard.example_missing', name=ctx.short(iri)),
+        )
     prop = ctx.iri(a.get("property"), "attribute or relationship")
     classes = _class_graph(ctx)
     types = set(classes.objects(prop, RDF.type))
     what = ("relationship" if OWL.ObjectProperty in types
             else "attribute" if OWL.DatatypeProperty in types else None)
     if what is None:
-        raise CommandError(f"{ctx.short(prop)} is not an attribute or a relationship of this model.")
+        raise CommandError(
+            f'{ctx.short(prop)} is not an attribute or a relationship of this model.',
+            ui_message=make_message('editing.guard.example_property_required', name=ctx.short(prop)),
+        )
     return iri, prop, pick_label_in(classes, prop, ctx.languages)[0], what
 
 
@@ -2128,7 +2361,10 @@ def _example_value(ctx: Context, a: dict, key: str = "value") -> tuple[URIRef, U
     spec = a.get(key)
     if what == "relationship":
         if not isinstance(spec, dict) or spec.get("kind") != "link":
-            raise CommandError(f"A value of {name} is another example, by its IRI.")
+            raise CommandError(
+                f'A value of {name} is another example, by its IRI.',
+                ui_message=make_message('editing.guard.example_link_required', name=name),
+            )
         term = parse_value(spec, ctx.primary, lambda v: ctx.iri(v, "example"))
         ctx.require(term, "example")
         # Only an individual of the end class, or of a class below it: the
@@ -2140,7 +2376,10 @@ def _example_value(ctx: Context, a: dict, key: str = "value") -> tuple[URIRef, U
             kind = pick_label_in(classes, end, ctx.languages)[0]
             # A command's arguments are `a` here, so the article is reached
             # through its module.
-            raise CommandError(f"{target} is not {sentences.a(kind)}; {name} links only to {sentences.a(kind)}.")
+            raise CommandError(
+                f'{target} is not {sentences.a(kind)}; {name} links only to {sentences.a(kind)}.',
+                ui_message=make_message('editing.guard.example_target_class', target=target, class_name=kind, property=name),
+            )
         return iri, prop, term, name
     rng = classes.value(prop, RDFS.range)
     if isinstance(rng, URIRef) and rng not in _DATATYPE_BY_IRI and rng != RDF.langString and rng != RDFS.Literal:
@@ -2148,23 +2387,41 @@ def _example_value(ctx: Context, a: dict, key: str = "value") -> tuple[URIRef, U
         # import): the value is sent typed with that type, never as text in
         # a language, and checked where rdflib knows the type (PR #51 review).
         if not isinstance(spec, dict) or spec.get("kind") != "typed" or not isinstance(spec.get("value"), str):
-            raise CommandError(f"{name} is a value of type {ctx.short(rng)}; give a value of that type.")
+            raise CommandError(
+                f'{name} is a value of type {ctx.short(rng)}; give a value of that type.',
+                ui_message=make_message('editing.guard.example_value_type', name=name, datatype=ctx.short(rng)),
+            )
         if ctx.iri(spec.get("datatype") or "", "datatype") != rng:
-            raise CommandError(f"{name} is a value of type {ctx.short(rng)}; give a value of that type.")
+            raise CommandError(
+                f'{name} is a value of type {ctx.short(rng)}; give a value of that type.',
+                ui_message=make_message('editing.guard.example_value_type', name=name, datatype=ctx.short(rng)),
+            )
         term = Literal(spec["value"].strip(), datatype=rng)
         if not spec["value"].strip() or term.ill_typed:
-            raise CommandError(f'"{spec["value"]}" is not a valid {ctx.short(rng)}.')
+            raise CommandError(
+                f'''"{spec['value']}" is not a valid {ctx.short(rng)}.''',
+                ui_message=make_message('editing.guard.example_invalid_typed_value', value=spec['value'], datatype=ctx.short(rng)),
+            )
         return iri, prop, term, name
     term = parse_value(spec, ctx.primary, lambda v: ctx.iri(v, "link"))
     if rng in _DATATYPE_BY_IRI and rng != XSD.string:
         # A typed attribute takes a value of its type, checked lexically: the
         # form says so before sending (S22), and this says it again.
         if not isinstance(term, Literal) or term.datatype != rng:
-            raise CommandError(f"{name} is {_VALUE_WORDS[_DATATYPE_BY_IRI[rng]]}; give a value of that type.")
+            raise CommandError(
+                f'{name} is {_VALUE_WORDS[_DATATYPE_BY_IRI[rng]]}; give a value of that type.',
+                ui_message=make_message('editing.guard.example_required_datatype', name=name, datatype=ctx.short(rng)),
+            )
     elif rng == RDF.langString and not (isinstance(term, Literal) and term.language):
-        raise CommandError(f"{name} is text in a language; give the text with its language.")
+        raise CommandError(
+            f'{name} is text in a language; give the text with its language.',
+            ui_message=make_message('editing.guard.example_language_text', name=name),
+        )
     elif not isinstance(term, Literal):
-        raise CommandError(f"{name} is an attribute; its value is text or a typed value, not a link.")
+        raise CommandError(
+            f'{name} is an attribute; its value is text or a typed value, not a link.',
+            ui_message=make_message('editing.guard.example_no_link', name=name),
+        )
     return iri, prop, term, name
 
 
@@ -2205,7 +2462,10 @@ def cmd_set_example_value(ctx: Context, a: dict) -> Change:
 def cmd_add_example_value(ctx: Context, a: dict) -> Change:
     iri, prop, term, name = _example_value(ctx, a)
     if (iri, prop, _stored(ctx, iri, prop, term)) in ctx.graph:
-        raise CommandError(f"{ctx.name(iri)} already has that {name}.")
+        raise CommandError(
+            f'{ctx.name(iri)} already has that {name}.',
+            ui_message=make_message('editing.guard.example_value_exists', name=ctx.name(iri), property=name),
+        )
     label = f"Linked {_linked(ctx, iri, term, name)}" if isinstance(term, URIRef) else f"Added {name} to {ctx.name(iri)}"
     return _change(
         ctx.graph,
@@ -2240,7 +2500,10 @@ def cmd_remove_example_value(ctx: Context, a: dict) -> Change:
     iri, prop, name, _ = _example_field(ctx, a)
     term = _stored(ctx, iri, prop, _stored_value(ctx, a.get("value")))
     if (iri, prop, term) not in ctx.graph:
-        raise CommandError(f"{ctx.name(iri)} has no such {name} to remove.")
+        raise CommandError(
+            f'{ctx.name(iri)} has no such {name} to remove.',
+            ui_message=make_message('editing.guard.example_value_missing', name=ctx.name(iri), property=name),
+        )
     label = (f"Removed the link from {_linked(ctx, iri, term, name)}" if isinstance(term, URIRef)
              else f"Removed {name} from {ctx.name(iri)}")
     return _change(
@@ -2271,7 +2534,10 @@ def _own_class(ctx: Context, a: dict, key: str = "class") -> URIRef:
     imported class, which is read-only (5.10)."""
     cls = ctx.iri(a.get(key), "class")
     if not examples.is_class(ctx.graph, cls):
-        raise CommandError(f"There is no class {ctx.short(cls)} in this document.")
+        raise CommandError(
+            f'There is no class {ctx.short(cls)} in this document.',
+            ui_message=make_message('editing.guard.own_class_missing', name=ctx.short(cls)),
+        )
     return cls
 
 
@@ -2291,7 +2557,10 @@ def _rule_property(ctx: Context, value) -> tuple[URIRef, bool]:
     ctx.require(prop, "relationship or attribute")
     kind = _property_kind(ctx, prop)
     if kind is None:
-        raise CommandError(f"{_rule_name(ctx, prop)} is not a relationship or an attribute.")
+        raise CommandError(
+            f'{_rule_name(ctx, prop)} is not a relationship or an attribute.',
+            ui_message=make_message('editing.guard.rule_property_required', name=_rule_name(ctx, prop)),
+        )
     return prop, kind == OWL.DatatypeProperty
 
 
@@ -2299,7 +2568,10 @@ def _rule_class(ctx: Context, value, what: str) -> URIRef:
     cls = ctx.iri(value, what)
     ctx.require(cls, "class")
     if cls != OWL.Thing and not examples.is_class(_view(ctx), cls):
-        raise CommandError(f"{_rule_name(ctx, cls)} is not a class.")
+        raise CommandError(
+            f'{_rule_name(ctx, cls)} is not a class.',
+            ui_message=make_message('editing.guard.rule_class_required', name=_rule_name(ctx, cls)),
+        )
     return cls
 
 
@@ -2349,7 +2621,8 @@ def _restriction_args(ctx: Context, a: dict) -> axioms.Content:
         )
     if attribute and kind not in axioms.ATTRIBUTE_KINDS:
         raise CommandError(
-            f"{_rule_name(ctx, prop)} is an attribute; an attribute takes exactly, at least, at most or a value."
+            f'{_rule_name(ctx, prop)} is an attribute; an attribute takes exactly, at least, at most or a value.',
+            ui_message=make_message('editing.guard.attribute_rule_kind', name=_rule_name(ctx, prop)),
         )
     n = a.get("n")
     if kind in axioms.COUNT_KINDS:
@@ -2381,7 +2654,10 @@ def _restriction_args(ctx: Context, a: dict) -> axioms.Content:
     elif attribute:
         term = ctx.iri(filler, "type of value")
         if not axioms.is_datatype(term):
-            raise CommandError(f"{ctx.short(term)} is not a type of value.")
+            raise CommandError(
+                f'{ctx.short(term)} is not a type of value.',
+                ui_message=make_message('editing.guard.rule_datatype_required', name=ctx.short(term)),
+            )
     else:
         term = _rule_class(ctx, filler, "class")
     with_ = None
@@ -2422,7 +2698,10 @@ def _restriction_key(ctx: Context, value) -> axioms.Content:
 def _found(ctx: Context, cls: URIRef, key: axioms.Content) -> tuple:
     matches = axioms.find(ctx.graph, cls, key)
     if not matches:
-        raise NoSuchRule(f"{ctx.name(cls)} has no such rule; it may have been changed or removed meanwhile.")
+        raise NoSuchRule(
+            f'{ctx.name(cls)} has no such rule; it may have been changed or removed meanwhile.',
+            ui_message=make_message('editing.guard.rule_gone', name=ctx.name(cls)),
+        )
     return matches[0]
 
 
@@ -2446,7 +2725,10 @@ def _check_restriction(ctx: Context, cls: URIRef, new: axioms.Content, ignoring=
         if node == ignoring:
             continue
         if content.same(new):
-            raise CommandError(f"{ctx.name(cls)} already has this rule.")
+            raise CommandError(
+                f'{ctx.name(cls)} already has this rule.',
+                ui_message=make_message('editing.guard.class_rule_exists', name=ctx.name(cls)),
+            )
     if new.kind not in axioms.COUNT_KINDS:
         return
     if _property_kind(ctx, new.property) == OWL.ObjectProperty:
@@ -2553,7 +2835,10 @@ def cmd_add_disjoint_with(ctx: Context, a: dict) -> Change:
     # Already disjoint by a group (owl:AllDisjointClasses) as well: a second
     # statement of it would say nothing new (X-12, T-26, Q2).
     if _pair_statements(ctx, first, second, OWL.disjointWith) or second in axioms.disjoint_with(ctx.graph, first):
-        raise CommandError(f"{ctx.name(first)} and {_rule_name(ctx, second)} are already disjoint.")
+        raise CommandError(
+            f'{ctx.name(first)} and {_rule_name(ctx, second)} are already disjoint.',
+            ui_message=make_message('editing.guard.disjoint_exists', first=ctx.name(first), second=_rule_name(ctx, second)),
+        )
     return _change(
         ctx.graph,
         f"Made {ctx.name(first)} and {_rule_name(ctx, second)} disjoint",
@@ -2572,10 +2857,13 @@ def cmd_remove_disjoint_with(ctx: Context, a: dict) -> Change:
         # were not disjoint was untrue (X-12, T-25).
         if second in axioms.disjoint_with(ctx.graph, first):
             raise CommandError(
-                f"{ctx.name(first)} and {_rule_name(ctx, second)} are disjoint through a group of "
-                "classes written in Turtle. Edit it in Turtle."
+                f'{ctx.name(first)} and {_rule_name(ctx, second)} are disjoint through a group of classes written in Turtle. Edit it in Turtle.',
+                ui_message=make_message('editing.guard.disjoint_group_readonly', first=ctx.name(first), second=_rule_name(ctx, second)),
             )
-        raise CommandError(f"{ctx.name(first)} and {_rule_name(ctx, second)} are not disjoint in this document.")
+        raise CommandError(
+            f'{ctx.name(first)} and {_rule_name(ctx, second)} are not disjoint in this document.',
+            ui_message=make_message('editing.guard.disjoint_missing', first=ctx.name(first), second=_rule_name(ctx, second)),
+        )
     return _change(
         ctx.graph,
         f"Removed the disjointness of {ctx.name(first)} and {_rule_name(ctx, second)}",
@@ -2588,7 +2876,10 @@ def cmd_add_equivalent_class(ctx: Context, a: dict) -> Change:
     """*Client and Customer mean the same thing* (5.8)."""
     first, second = _class_pair(ctx, a, OWL.equivalentClass)
     if _pair_statements(ctx, first, second, OWL.equivalentClass):
-        raise CommandError(f"{ctx.name(first)} and {_rule_name(ctx, second)} already mean the same thing.")
+        raise CommandError(
+            f'{ctx.name(first)} and {_rule_name(ctx, second)} already mean the same thing.',
+            ui_message=make_message('editing.guard.equivalent_exists', first=ctx.name(first), second=_rule_name(ctx, second)),
+        )
     return _change(
         ctx.graph,
         f"Made {ctx.name(first)} and {_rule_name(ctx, second)} mean the same thing",
@@ -2604,7 +2895,8 @@ def cmd_remove_equivalent_class(ctx: Context, a: dict) -> Change:
     removes = _pair_statements(ctx, first, second, OWL.equivalentClass)
     if not removes:
         raise CommandError(
-            f"{ctx.name(first)} and {_rule_name(ctx, second)} do not mean the same thing in this document."
+            f'{ctx.name(first)} and {_rule_name(ctx, second)} do not mean the same thing in this document.',
+            ui_message=make_message('editing.guard.equivalent_missing', first=ctx.name(first), second=_rule_name(ctx, second)),
         )
     return _change(
         ctx.graph,
@@ -2674,8 +2966,8 @@ def _shape(ctx: Context, a: dict, editable: bool = True):
         shape = shapes_form.read_shape(ctx.graph, node, ctx.model, lambda i: _model_name(ctx, i), ctx.languages)
         if not shape["editable"]:
             raise CommandError(
-                f"{shape['name']} is written in Turtle with parts the form cannot edit "
-                f"({'; '.join(shape['unsupported'])}). Change it in the Turtle editor."
+                f"{shape['name']} is written in Turtle with parts the form cannot edit ({'; '.join(shape['unsupported'])}). Change it in the Turtle editor.",
+                ui_message=make_message('editing.guard.shape_readonly', name=shape['name'], count=len(shape['unsupported'])),
             )
     return node
 
@@ -2718,16 +3010,25 @@ def _rule_path(ctx: Context, value) -> tuple:
 
 def _count(value, what: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise CommandError(f"The {what} is a whole number, 0 or more.")
+        raise CommandError(
+            f'The {what} is a whole number, 0 or more.',
+            ui_message=make_message('editing.guard.field_nonnegative_integer', field=_field_parts(what)),
+        )
     return value
 
 
 def _bound(value, what: str) -> Literal:
     if not isinstance(value, dict) or not isinstance(value.get("value"), str) or not value["value"].strip():
-        raise CommandError(f"The {what} needs a value.")
+        raise CommandError(
+            f'The {what} needs a value.',
+            ui_message=make_message('editing.guard.field_value_required', field=_field_parts(what)),
+        )
     name = _datatype_name(value.get("datatype") or "decimal")
     if name not in ("integer", "decimal", "date", "dateTime"):
-        raise CommandError(f"The {what} is a number or a date.")
+        raise CommandError(
+            f'The {what} is a number or a date.',
+            ui_message=make_message('editing.guard.field_number_or_date', field=_field_parts(what)),
+        )
     raw = value["value"].strip()
     check_lexical(raw, name)
     return Literal(raw, datatype=OFFERED_DATATYPES[name])
@@ -2735,11 +3036,17 @@ def _bound(value, what: str) -> Literal:
 
 def _languages(value, what: str) -> list:
     if not isinstance(value, list) or not value:
-        raise CommandError(f"Choose at least one language for {what}.")
+        raise CommandError(
+            f'Choose at least one language for {what}.',
+            ui_message=make_message('editing.guard.field_language_required', field=_field_parts(what)),
+        )
     out = []
     for tag in value:
         if not isinstance(tag, str) or not valid_lang(tag):
-            raise CommandError(f'"{tag}" is not a well-formed language tag (for example en or fr).')
+            raise CommandError(
+                f'"{tag}" is not a well-formed language tag (for example en or fr).',
+                ui_message=make_message('editing.guard.invalid_language', language=str(tag)),
+            )
         if tag not in out:
             out.append(tag)
     return out
@@ -2761,8 +3068,8 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
     words = {"minCount": "at least", "maxCount": "at most"}
     if "minCount" in counts and "maxCount" in counts and counts["minCount"] > counts["maxCount"]:
         raise CommandError(
-            f"{words['minCount'].capitalize()} {counts['minCount']} is more than "
-            f"{words['maxCount']} {counts['maxCount']}; the rule could never be met."
+            f"{words['minCount'].capitalize()} {counts['minCount']} is more than {words['maxCount']} {counts['maxCount']}; the rule could never be met.",
+            ui_message=make_message('editing.guard.count_bounds_conflict', low=counts['minCount'], high=counts['maxCount']),
         )
     if "minLength" in counts and "maxLength" in counts and counts["minLength"] > counts["maxLength"]:
         raise CommandError(
@@ -2780,7 +3087,10 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
     if rule.get("class"):
         cls = ctx.iri(rule["class"], "class")
         if not ((cls, None, None) in ctx.model or str(cls).startswith(tuple(WELL_KNOWN.values()))):
-            raise CommandError(f"There is no class {ctx.short(cls)} in the model or its imports.")
+            raise CommandError(
+                f'There is no class {ctx.short(cls)} in the model or its imports.',
+                ui_message=make_message('editing.guard.shape_target_missing', name=ctx.short(cls)),
+            )
         body.append((prop, SH["class"], cls))
     if rule.get("pattern"):
         pattern = rule["pattern"]
@@ -2792,7 +3102,10 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
         try:
             re.compile(pattern)
         except re.error as exc:
-            raise CommandError(f"The pattern is not a regular expression this tool can read: {exc}.") from exc
+            raise CommandError(
+                f'The pattern is not a regular expression this tool can read: {exc}.',
+                ui_message=make_message('editing.guard.pattern_invalid'),
+            ) from exc
         body.append((prop, SH.pattern, Literal(pattern)))
     low = _bound(rule["minInclusive"], "minimum") if rule.get("minInclusive") else None
     high = _bound(rule["maxInclusive"], "maximum") if rule.get("maxInclusive") else None
@@ -2904,7 +3217,10 @@ def cmd_create_shape(ctx: Context, a: dict) -> Change:
     else:
         target = ctx.iri(a.get("target"), "class")
         if target not in (SKOS.Concept, OWL.Class) and (target, None, None) not in ctx.model:
-            raise CommandError(f"There is no class {ctx.short(target)} in the model or its imports.")
+            raise CommandError(
+                f'There is no class {ctx.short(target)} in the model or its imports.',
+                ui_message=make_message('editing.guard.shape_target_missing', name=ctx.short(target)),
+            )
     name = a.get("name")
     if name is not None and (not isinstance(name, str) or not name.strip()):
         raise CommandError(
@@ -2947,7 +3263,10 @@ def cmd_set_shape_target(ctx: Context, a: dict) -> Change:
     node = _shape(ctx, a)
     target = ctx.iri(a.get("target"), "class")
     if target not in (SKOS.Concept, OWL.Class) and (target, None, None) not in ctx.model:
-        raise CommandError(f"There is no class {ctx.short(target)} in the model or its imports.")
+        raise CommandError(
+            f'There is no class {ctx.short(target)} in the model or its imports.',
+            ui_message=make_message('editing.guard.shape_target_missing', name=ctx.short(target)),
+        )
     old = [(node, SH.targetClass, o) for o in ctx.graph.objects(node, SH.targetClass)]
     return _change(
         ctx.graph,
@@ -3010,7 +3329,10 @@ def cmd_set_shape_message(ctx: Context, a: dict) -> Change:
     old = [(node, SH.message, o) for o in ctx.graph.objects(node, SH.message)]
     if not value or not value.strip():
         if not old:
-            raise CommandError(f"{_shape_label(ctx, node)} has no message to remove.")
+            raise CommandError(
+                f'{_shape_label(ctx, node)} has no message to remove.',
+                ui_message=make_message('editing.guard.shape_message_missing', name=_shape_label(ctx, node)),
+            )
         return _change(
             ctx.graph,
             f"Removed the message of {_shape_label(ctx, node)}",
@@ -3051,7 +3373,10 @@ def cmd_add_rule(ctx: Context, a: dict) -> Change:
     removes: list = []
     if existing is not None:
         if not a.get("merge"):
-            raise CommandError(f"There is already a rule on {existing['pathLabel']}; edit that one.")
+            raise CommandError(
+                f"There is already a rule on {existing['pathLabel']}; edit that one.",
+                ui_message=make_message('editing.guard.shape_path_exists', path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+            )
         rule = _merged(existing, rule)
         removes = _rules_on(ctx, node, path)
     _, adds = _rule_triples(ctx, node, rule, _severity_of(ctx, node))
@@ -3070,10 +3395,16 @@ def cmd_replace_rule(ctx: Context, a: dict) -> Change:
     path = _rule_path(ctx, a.get("path"))
     rules = _read_rules(ctx, node)
     if path not in rules:
-        raise CommandError(f"{_shape_label(ctx, node)} has no rule on that path to change.")
+        raise CommandError(
+            f'{_shape_label(ctx, node)} has no rule on that path to change.',
+            ui_message=make_message('editing.guard.shape_path_missing_change', name=_shape_label(ctx, node)),
+        )
     new_path, adds = _rule_triples(ctx, node, a.get("rule"), _severity_of(ctx, node))
     if new_path != path and new_path in rules:
-        raise CommandError(f"There is already a rule on {rules[new_path]['pathLabel']}; edit that one.")
+        raise CommandError(
+            f"There is already a rule on {rules[new_path]['pathLabel']}; edit that one.",
+            ui_message=make_message('editing.guard.shape_path_exists', path=shapes_form.path_parts(ctx.model, new_path, ctx.languages)),
+        )
     label = shapes_form.path_label(ctx.model, new_path, ctx.languages)
     return _change(
         ctx.graph,
@@ -3089,7 +3420,10 @@ def cmd_remove_rule(ctx: Context, a: dict) -> Change:
     path = _rule_path(ctx, a.get("path"))
     removes = _rules_on(ctx, node, path)
     if not removes:
-        raise CommandError(f"{_shape_label(ctx, node)} has no rule on that path to remove.")
+        raise CommandError(
+            f'{_shape_label(ctx, node)} has no rule on that path to remove.',
+            ui_message=make_message('editing.guard.shape_path_missing_remove', name=_shape_label(ctx, node)),
+        )
     label = shapes_form.path_label(ctx.model, path, ctx.languages)
     return _change(
         ctx.graph,
@@ -3135,7 +3469,10 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
     key = _restriction_key(ctx, a.get("restriction"))
     matches = [c for _, _, c in axioms.contents(model, cls) if c.same(key, with_matters=key.with_ is not None)]
     if not matches:
-        raise NoSuchRule(f"{_model_name(ctx, cls)} has no such rule in the model.")
+        raise NoSuchRule(
+            f'{_model_name(ctx, cls)} has no such rule in the model.',
+            ui_message=make_message('editing.guard.rule_missing_model', name=_model_name(ctx, cls)),
+        )
     content = matches[0]
     attribute = axioms.property_kind(model, content.property) == "attribute"
     path = (content.property,)
@@ -3160,10 +3497,14 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
         existing = _read_rules(ctx, node).get(path) if targeting else None
         if existing is not None:
             if all(existing.get(k) == v for k, v in plain.items()):
-                raise CommandError(f"{shape_name} already checks this.")
+                raise CommandError(
+                    f'{shape_name} already checks this.',
+                    ui_message=make_message('editing.guard.check_exists', name=shape_name),
+                )
             if any(k in existing and existing[k] != v for k, v in plain.items()):
                 raise CommandError(
-                    f"{shape_name} already checks {path_label} differently; change that rule in the Shapes view."
+                    f'{shape_name} already checks {path_label} differently; change that rule in the Shapes view.',
+                    ui_message=make_message('editing.guard.check_path_conflict', name=shape_name, path=shapes_form.path_parts(model, path, ctx.languages)),
                 )
             rule = _merged(existing, plain)
             removes = _rules_on(ctx, node, path)
@@ -3174,7 +3515,10 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
         prop, triples = axioms.shacl_triples(content, attribute, severity)
         wanted = axioms.signature_of(triples, prop)
         if any(axioms.signature(ctx.graph, p) == wanted for p in ctx.graph.objects(node, SH.property)):
-            raise CommandError(f"{shape_name} already checks this.")
+            raise CommandError(
+                f'{shape_name} already checks this.',
+                ui_message=make_message('editing.guard.check_exists', name=shape_name),
+            )
         adds += [(node, SH.property, prop), *triples]
     _bind_shapes(ctx)
     return _change(
@@ -3538,7 +3882,10 @@ class EditingService:
     def command(self, pid: str, doc: str, name: str, args: dict, dry_run: bool = False) -> dict:
         handler = COMMANDS.get(name)
         if handler is None:
-            raise CommandError(f"There is no command called {name}.")
+            raise CommandError(
+                f'There is no command called {name}.',
+                ui_message=make_message('editing.guard.unknown_command', name=name),
+            )
         if not isinstance(args, dict):
             raise CommandError(
                 "A command's arguments are an object.",

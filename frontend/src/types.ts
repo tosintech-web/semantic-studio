@@ -589,6 +589,7 @@ export interface DomainReading {
 export interface SharePlan {
   case: "A" | "B" | "C" | "D" | "separate" | null;
   refused?: string;
+  refusedUiMessage?: WireMessage | null;
   property: { iri: string; label: string; kind: "attribute" | "relationship" | null };
   class?: { iri: string; label: string; type: "owl" | "rdfs" };
   domain: { form: DomainForm; classes: { iri: string; label: string; type: "owl" | "rdfs" }[] };
@@ -607,6 +608,7 @@ export interface SharePlan {
 /** The 409 a create answers when the name is a property of its kind
  *  already (attribute-reuse 5.1). */
 export interface AlreadyDefined {
+  uiMessage?: WireMessage | null;
   code: "already_defined";
   message: string;
   property: {

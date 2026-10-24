@@ -11,7 +11,8 @@ SUMMARY
     never; an answer older than the latest dropped; Enter still Create; the
     live region saying the count once, never the list; the suggestions'
     buttons in the tab order between the name and More options; and the
-    choice a refused Create gives.
+    choice a refused Create gives, including its current-language display
+    facts without changing the input draft.
 
 BASIC IDEA
     The form is rendered alone with the api mocked: searchNodes and
@@ -283,4 +284,22 @@ it("renders a suggestion reply that arrives after the UI language changes", asyn
   expect(screen.getByText("hasName：Employeeの属性（テキスト）。")).toBeTruthy();
   expect(status()).toBe("既存の属性が1件一致しました");
   expect(searchNodes).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the existing-property choice and draft while localizing its producer facts", () => {
+  vi.useRealTimers();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const existing = { sentence: "There is already an attribute <b>{name}.", className: "Manager",
+    uiMessage: { code: "editing.guard.property_exists", args: { name: "<b>{name}", kind: [{ code: "words.kind.datatypeProperty", args: {} }] } },
+    onUse: vi.fn(), onAnother: vi.fn() };
+  render(<I18nProvider><UiLanguageSelect /><NewEntityForm title="Synthetic" primaryLanguage="ja"
+    onSubmit={vi.fn()} onCancel={vi.fn()} existing={existing} /></I18nProvider>);
+  expect(screen.getByText('属性「<b>{name}」はすでに存在します。')).toBeTruthy();
+  const field = screen.getByRole("textbox", { name: "名前（ja）" });
+  fireEvent.change(field, { target: { value: "新しい名前" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText('The datatype property <b>{name} already exists.')).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "Name (ja)" })).toBe(field);
+  expect((field as HTMLInputElement).value).toBe("新しい名前");
+  expect(existing.onUse).not.toHaveBeenCalled();
 });

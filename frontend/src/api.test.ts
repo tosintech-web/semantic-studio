@@ -699,3 +699,12 @@ it("retains additive server metadata on ApiError alongside the original detail",
   expect(error).toBeInstanceOf(api.ApiError); expect(error.message).toBe("Original English.");
   expect(error.detail).toBe("Original English."); expect(error.uiMessage).toEqual(uiMessage);
 });
+
+it("keeps the already-defined payload and forwards validated display facts without parsing its sentence", () => {
+  const detail = { code: "already_defined", message: "Original <b>{name}", property: { iri: "https://example.test/p" } };
+  const wire = { code: "editing.guard.property_exists", args: { name: "<b>{name}", kind: [{ code: "words.kind.datatypeProperty", args: {} }] } };
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail, wire))).toEqual({ ...detail, uiMessage: wire });
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail))).toBe(detail);
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail, { code: "unknown", args: {} }))).toBe(detail);
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 422, detail, wire))).toBeNull();
+});
