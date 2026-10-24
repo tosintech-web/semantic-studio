@@ -39,8 +39,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { DictionaryViewContext } from "../dictionary/DictionaryViewContext";
 import DetailPanel from "./DetailPanel";
 import type { Explain, NodeDetails } from "../types";
@@ -830,4 +833,33 @@ it("refetches on same-flag imports re-resolution and ignores the older detail an
   expect((getNodeDetails.mock.calls[0][3] as AbortSignal).aborted).toBe(true);
   await act(async () => { old({ ...detailsWith(0), label: "Old label" }); });
   expect(screen.queryByText("Old label")).toBeNull();
+});
+
+it("localizes names, limits and controls while keeping RDF values and node fetches unchanged", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getNodeDetails.mockResolvedValue({ ...detailsWith(1), outgoingTotal: 10, incomingTotal: 3, names: [{ lang: "ja", value: null }] });
+  const expand = vi.fn();
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} onExpand={expand} /></I18nProvider>); });
+  expect(screen.getByRole("heading", { name: "名称" })).toBeTruthy();
+  expect(screen.getByText("未登録")).toBeTruthy();
+  expect(screen.getByText("10件中1件のステートメントを表示しています。")).toBeTruthy();
+  expect(screen.getByText("3件中0件の参照を表示しています。")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "関連をグラフに表示" }));
+  expect(expand).toHaveBeenCalledWith(SUBJECT);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(getNodeDetails).toHaveBeenCalledTimes(1);
+  expect(screen.getByText("Paris 0", { exact: false })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Copy IRI" })).toBeTruthy();
+  cleanup();
+});
+it("retains structured node errors so the explanation follows a later locale switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getNodeDetails.mockRejectedValue(Object.assign(new Error("Original parser diagnostic"), { uiMessage: { code: "parse.syntax", args: { format: "Turtle", line: 4 } } }));
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} /></I18nProvider>); });
+  expect(screen.getByRole("alert").textContent).toContain("Turtleファイルの構文を確認してください（行：4）");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("alert").textContent).toContain("Turtle");
+  expect(screen.getByText("Original parser diagnostic")).toBeTruthy();
+  expect(getNodeDetails).toHaveBeenCalledTimes(1);
+  cleanup();
 });

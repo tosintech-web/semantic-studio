@@ -42,9 +42,9 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 
 | source path | 用途 | Task | 状態 |
 | --- | --- | --- | --- |
-| `frontend/src/components/DetailPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/DetailPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 操作・所有文言を移行、rule/data生成元は別途移行 |
 | `frontend/src/components/ExplainBlock.tsx` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
-| `frontend/src/components/ExploreStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/ExploreStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 操作・所有文言を移行、rule/data生成元は別途移行 |
 | `frontend/src/components/HierarchyView.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/HierarchyActions.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/EntityPicker.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -91,6 +91,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/canvas/ConceptNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/ClassNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/CanvasAids.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/GraphView.tsx` | 探索グラフの共通操作・ズーム・出力案内 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/SideTabs.tsx` | 編集・推論の共通タブ表示 | 11 | 未移行（Task 11進行中） |
 
 ## 登録済みメッセージ
 
@@ -490,7 +492,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -668,7 +670,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `match.identifier` | value | `frontend/src/components/EntityList.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.home` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.view` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `nav.explore` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `nav.explore` | — | `frontend/src/App.tsx`<br>`frontend/src/components/ExploreStart.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.edit` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.query` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `nav.shapes` | — | `frontend/src/App.tsx`<br>`frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1002,6 +1004,32 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `glossary.xsd.time` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.gYear` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.anyURI` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
+| `common.loading` | — | `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `explore.start` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `explore.pickHelp` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `explore.data` | label | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `explore.entityOne` | count, kind | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `explore.entityMany` | count, kind | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.imported` | name | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.data` | label | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.dataRow` | label, row | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.close` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.openIri` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.copyIri` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.fetchingHint` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.expandHint` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.drawing` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.expand` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.names` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.missing` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.rules` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.turtleRule` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.statements` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.references` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.noReferences` | — | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.statementsLimit` | shown, total | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.statementsRulesLimit` | rules, shown, total | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `detail.referencesLimit` | shown, total | `frontend/src/components/DetailPanel.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 
 ## 対象外・生成元待ち
 
@@ -1038,3 +1066,5 @@ OWL特性・SKOS対応関係の選択肢は`characteristicChoices(t)`／`mapping
 標準用語の意味はglossaryのIRI→コード登録から解決する。日英は同じコードに対応し、SKOS対応関係は編集選択肢と同じ意味コードを共有する。英語互換の`GLOSSARY`定数はこの登録の投影である。本文内の数値・日付はデータ型の字句例として保持する。未知のカスタム定義・著者の原文は翻訳で置換しない。
 
 使用箇所はTypeScript構文木の文字列・リテラル接頭辞を持つテンプレートから検査する。動的キーはテンプレートの静的部分が一致する候補を記載し、すべての分岐の実行済み証明とは区別する。接頭辞を持たない任意の文字列式を、すべてのメッセージの使用とは扱わない。
+
+DetailPanelのルール本文（ruleSentences）とデータ出典ラベル（dataSentences）は、生成元の移行で接続する。探索の順位付けはグラフが変わった時だけ再計算し、UI言語の変更では文言の要約のみ更新する。

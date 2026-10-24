@@ -349,13 +349,16 @@ ImportsPanel,SourceView,TurtleEditor,GraphNotice,Legend}.tsx`、`loadWords.ts`�
 
 ## Task 11 — 探索・編集・クエリとフロント説明文の翻訳
 
-**Files:** `components/{DetailPanel,ExplainBlock,ExploreStart,HierarchyView,HierarchyActions,
+**Files:** `components/{DetailPanel,ExplainBlock,ExploreStart,GraphView,SideTabs,HierarchyView,HierarchyActions,
 EntityPicker,EditSection,EditStructure,EditParts,CreateForm,NewEntityForm,RelationshipForm,AttributeForm,
 AnnotationAdder,ConceptRelations,SharedDomain,ReusePlan,DeleteDialog,LinkPanel,ExampleForm,
 QueryPanel,QueryStart,ResultsTable,ResultPanels,PathBar,ClassPropsMenu,PredicateMenu,NextSteps,
 SparqlEditor,SparqlPreview,NothingSelected}.tsx`、`canvas/`、`modeling/sentences.ts`、
 `modeling/ruleSentences.ts`、`explain/explainSentences.ts`、`explain/glossary.ts`、`sparql/starters.ts`、対応テスト。
 種類の表示関数は `types.ts` を変更するが、色の定義を翻訳カタログへコピーしない。
+
+2026-10-24補足：全画面の所有文言を対象とする仕様に従い、一覧で漏れていた
+GraphViewのズーム・PNG出力等の操作案内と、SideTabsの共通タブ表示もTask 11に含める。
 
 - [ ] inventoryのTask 11対象を追加し、使用する全メッセージ/引数をカタログに定義する。
   標準用語の意味の定義はglossaryを唯一の意味定義とし、日英の文章を同じキーへ結び付ける。

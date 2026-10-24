@@ -38,8 +38,11 @@ EXPECTED OUTPUT
 */
 
 import { useState } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import DetailPanel from "./DetailPanel";
 import ExploreStart from "./ExploreStart";
 import type { VizGraph, VizNode } from "../types";
@@ -406,4 +409,19 @@ describe("ExploreStart kind colours (portal-foundations 5.3, AC-4)", () => {
     expect(owl.querySelector<HTMLElement>(".dot")!.style.background).toBe(css("#8fb3e3"));
     expect(plain.querySelector(".starter-detail")!.textContent).toMatch(/^Class ·/);
   });
+});
+
+it("updates exploration guidance without re-ranking nodes or changing selection IRIs", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const graph = graphOf(NODES); const select = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><ExploreStart graph={graph} loading={false} theme="dark" onSelect={select} /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "探索" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "ここから始める" })).toBeTruthy();
+  expect(screen.getByText("クラス・関連214件")).toBeTruthy();
+  const rankings = counts.ranking;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(counts.ranking).toBe(rankings);
+  expect(screen.getByText("Class · 214 connections")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Financial Instrument/ }));
+  expect(select).toHaveBeenCalledWith(NODES[0].id);
 });

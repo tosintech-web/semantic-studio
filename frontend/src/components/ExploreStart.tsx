@@ -37,6 +37,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useMemo } from "react";
 import { describeContents, suggestedEntities } from "../explore/suggestions";
 import { dataLabel } from "../modeling/dataSentences";
@@ -55,12 +56,13 @@ interface Props {
 const HEADING_ID = "explore-start-heading";
 
 export default function ExploreStart({ graph, loading, theme, onSelect, dataSources = [] }: Props) {
-  // Both memos are keyed on the graph object, which changes only when a graph is
+  const { t } = useI18n();
+  // The ranking is keyed on the graph object, which changes only when a graph is
   // fetched. The ranking is a pass over every node — 40,000 of them for the
   // largest ontology measured — and App re-renders on things as ordinary as a
   // hover, so this is the difference between 3 ms per load and 3 ms per render.
   const suggestions = useMemo(() => suggestedEntities(graph), [graph]);
-  const summary = useMemo(() => describeContents(graph), [graph]);
+  const summary = useMemo(() => describeContents(graph, t), [graph, t]);
 
   if (loading) {
     return (
@@ -69,9 +71,9 @@ export default function ExploreStart({ graph, loading, theme, onSelect, dataSour
             script-focusable, and not a stop in the tab order. This is where the
             main area's skip link lands. */}
         <h2 id={HEADING_ID} tabIndex={-1}>
-          Explore
+          {t("nav.explore")}
         </h2>
-        <p className="hint">Loading…</p>
+        <p className="hint">{t("common.loading")}</p>
       </aside>
     );
   }
@@ -84,18 +86,18 @@ export default function ExploreStart({ graph, loading, theme, onSelect, dataSour
   return (
     <aside className="explore-start" aria-labelledby={HEADING_ID}>
       <h2 id={HEADING_ID} tabIndex={-1}>
-        Explore
+        {t("nav.explore")}
       </h2>
       <p className="explore-summary">{summary}</p>
       {dataSources.map((source) => (
         <p key={source.id} className="data-source-line">
-          Includes data {dataLabel(source)}.
+          {t("explore.data", { label: dataLabel(source) })}
         </p>
       ))}
 
       {suggestions.length > 0 && (
         <section>
-          <h3>Start with one of these</h3>
+          <h3>{t("explore.start")}</h3>
           <div className="starter-list">
             {suggestions.map((entity) => (
               <button
@@ -117,9 +119,7 @@ export default function ExploreStart({ graph, loading, theme, onSelect, dataSour
                   {entity.label}
                 </span>
                 <span className="starter-detail">
-                  {kindLabel(entity.kind)} ·{" "}
-                  {entity.degree.toLocaleString()}{" "}
-                  {entity.degree === 1 ? "connection" : "connections"}
+                  {t(entity.degree === 1 ? "explore.entityOne" : "explore.entityMany", { kind: kindLabel(entity.kind, t), count: entity.degree })}
                 </span>
               </button>
             ))}
@@ -127,7 +127,7 @@ export default function ExploreStart({ graph, loading, theme, onSelect, dataSour
         </section>
       )}
 
-      <p className="hint">Or click any node in the graph, or search for one by name.</p>
+      <p className="hint">{t("explore.pickHelp")}</p>
     </aside>
   );
 }
