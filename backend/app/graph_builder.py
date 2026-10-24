@@ -208,6 +208,11 @@ def _preferred_literal(graph: Graph, node: URIRef, predicates, langs: Sequence[s
     values = [(i, value) for i, predicate in enumerate(predicates)
               for value in graph.objects(node, predicate)
               if isinstance(value, Literal) and (not nonempty or str(value).strip())]
+    return preferred_literal(values, langs)
+
+
+def preferred_literal(values, langs: Sequence[str]):
+    """Select from copied (predicate priority, literal) pairs without a graph."""
     def rank(pair):
         predicate, value = pair
         tag = value.language or ""
@@ -901,7 +906,7 @@ def node_details(
         # a relationship among the properties that name it as their domain,
         # by the kind of each term. Project documents only: the library panel
         # does not need it and should not pay for the lookups.
-        result["kind"] = term_kind(graph, ref)
+        result["kind"] = node_kind(graph, ref)
         for row in outgoing:
             _with_kind(graph, row["object"])
         for row in incoming:
@@ -946,13 +951,16 @@ def node_kind(graph: Graph, node: URIRef) -> str:
     mission, would be "other" there and an individual on the graph; the panel
     has to say what the graph shows (explain-panel 5.2). Pass 3's rule, then:
     typed with a class, and not itself a class, scheme or concept, is an
-    individual. test_node_detail.py checks this against build_viz_graph on
+    individual. A general undeclared class also types an individual, so
+    subject-only search resources agree with their detail panel.
+    test_node_detail.py checks this against build_viz_graph on
     every bundled example.
     """
     kinds = _kinds_stated(graph, node)
     if not kinds & {KIND_CLASS, KIND_SCHEME, KIND_CONCEPT}:
         for t in graph.objects(node, RDF.type):
-            if isinstance(t, URIRef) and KIND_CLASS in _kinds_stated(graph, t):
+            if isinstance(t, URIRef) and (KIND_CLASS in _kinds_stated(graph, t) or
+                                         (t not in TYPE_TO_KIND and t not in {OWL.Restriction, RDF.List})):
                 kinds.add(KIND_INDIVIDUAL)
                 break
     return _best_kind(kinds)
