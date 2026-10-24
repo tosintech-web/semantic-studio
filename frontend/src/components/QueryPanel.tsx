@@ -722,7 +722,7 @@ export default function QueryPanel({
       {scope && <p className="query-scope">{scope}</p>}
       {dataSources.map((source) => (
         <p key={source.id} className="query-scope data-source-line">
-          {t("queryPanel.includesData", { source: dataLabel(source) })}
+          {t("queryPanel.includesData", { source: dataLabel(source, locale) })}
         </p>
       ))}
       {loadingSchema && <div className="detail-note">{t("queryPanel.analysing")}</div>}

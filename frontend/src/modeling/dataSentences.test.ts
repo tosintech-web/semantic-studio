@@ -7,7 +7,9 @@ SUMMARY
     The words the data import says (csv-data-import 5.2 to 5.7): the label on
     snapshot data with a sample's words in it, row lists, the preview's
     sentences, the import report's lines and word, and the identifier check;
-    links to no row and a workbook's pickers (Stage B).
+    links to no row and a workbook's pickers (Stage B). Japanese templates
+    retain literal names/values and unknown types, including prototype keys,
+    without English inflections; existing English wording stays covered.
 
 BASIC IDEA
     Pure functions, tested without rendering. Dates are fixed at midday UTC
@@ -34,6 +36,7 @@ import {
   sampleWords,
   sheetOption,
   unmatchedLines,
+  typeWord,
 } from "./dataSentences";
 import type { ImportReportData } from "../types";
 
@@ -202,5 +205,88 @@ describe("Stage B: links that match no row (5.9) and a workbook's pickers (5.8)"
     expect(headerRowOption({ row: 1, cells: ["Organizations of the whole wide world"] })).toBe(
       "Row 1: Organizations of the wh…",
     );
+  });
+});
+
+
+describe("Japanese data descriptions keep source facts and user text", () => {
+  it("keeps the sample, filename and local calendar date in the provenance label", () => {
+    const source = { ...cut, source: "日本語 <b>{sample}</b>.csv" };
+    expect(importedOn(WHEN, "ja")).toBe("2026年10月2日");
+    expect(importedOn("invalid date {value}", "ja")).toBe("invalid date {value}");
+    expect(dataLabel(source, "ja")).toBe("日本語 <b>{sample}</b>.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行");
+    expect(sampleWords(whole, "ja")).toBeNull();
+  });
+
+  it("distinguishes shown rows from unshown row counts", () => {
+    expect(rowList({ count: 0, rows: [] }, "ja")).toBe("");
+    expect(rowList({ count: 1, rows: [7] }, "ja")).toBe("7行目");
+    expect(rowList({ count: 2, rows: [2, 4] }, "ja")).toBe("2、4行目");
+    expect(rowList({ count: 14, rows: [7, 19, 230] }, "ja")).toBe("7、19、230行目、ほか11行");
+  });
+
+  it("describes every preview value without English inflections or rewriting its content", () => {
+    expect(previewSentences({ row: 2, subject: "https://example.test/2", name: "<b>{who}</b>", values: [
+      { column: "birth", label: "birth date", value: "yesterday", kind: "value", datatype: "date", fits: false },
+      { column: "age", label: "age", value: "041", kind: "value", datatype: "integer", fits: true },
+      { column: "note", label: "note", value: "<img>{value}", kind: "value" },
+      { column: "org", label: "member of", value: "acme", kind: "link", target: "https://example.test/acme" },
+    ] }, "Person", "ja")).toEqual([
+      "<b>{who}</b>はPersonです。",
+      '<b>{who}</b>の「birth date」は"yesterday"で、日付ではないため文字列として保持します。',
+      "<b>{who}</b>の「age」は041です。",
+      '<b>{who}</b>の「note」は"<img>{value}"です。',
+      '<b>{who}</b>の「member of」は、IDが"acme"の項目を参照します。',
+    ]);
+    expect(previewSentences({ row: 3, subject: "https://example.test/3", name: null, values: [] }, "Organization", "ja")).toEqual(["3行目はOrganizationです。"]);
+    expect(previewSentences({ row: 4, subject: null, name: null, values: [], skipped: true }, "Person", "ja")).toEqual(["4行目にはIDがないため、データを作成しません。"]);
+  });
+
+  it("keeps skipped, merged, invalid, empty and unmatched report details", () => {
+    const data = report({ clean: false, total: 12480, sample: true,
+      skipped: { count: 14, rows: [7, 19, 230] }, repeated: { count: 1, rows: [8] },
+      keptAsText: [{ column: "born <b>{count}</b>", datatype: "date", count: 40, rows: [2, 52] }],
+      empty: [{ column: "notes", count: 1240 }],
+      unmatched: [{ column: "org", className: "Organization", classIri: "https://example.test/Org", count: 1, rows: [3] }],
+    });
+    expect(reportLines(data, "Person", undefined, "ja")).toEqual([
+      "2,000行、Personを1,986件（サンプル：全12,480行のうち先頭2,000行）",
+      "IDのない14行（7、19、230行目、ほか11行）",
+      "既存のIDを繰り返す1行は、同じ個体に追加します（8行目）",
+      "born <b>{count}</b>：40個の値は日付ではないため、文字列として保持（2、52行目、ほか38行）",
+      "notes：1,240個の空欄には何も書き込みません",
+      "org：1個の値に対応するOrganizationの行がありません（3行目）",
+    ]);
+    expect(reportWord(data, "ja")).toBe("40個の値を文字列として保持、対応する行のないリンク1件、IDのない14行、IDを繰り返す1行");
+    expect(reportLines(report({ individuals: 1 }), "Person", undefined, "ja")).toEqual(["2,000行、Personを1件", "すべての行にIDがあり、すべての値が指定された型に適合しています。"]);
+    expect(reportWord(report(), "ja")).toBe("問題なし");
+  });
+
+  it("shows identifier problems using the real column and affected rows", () => {
+    expect(idProblems({ column: "ID <b>{count}</b>", ok: false, missing: { count: 1, rows: [4] }, repeats: 2, repeated: { count: 3, rows: [2, 3, 5] } }, "ja")).toEqual([
+      "1行に「ID <b>{count}</b>」の値がありません（4行目）。",
+      "「ID <b>{count}</b>」は一意ではありません：2個の値が繰り返されています（2、3、5行目）。",
+    ]);
+  });
+
+  it("localizes known types and keeps unknown type identities", () => {
+    expect(typeWord("date", false, "ja")).toBe("日付");
+    expect(typeWord("integer", true, "ja")).toBe("整数");
+    expect(typeWord(null, false, "ja")).toBe("指定された型の値");
+    expect(typeWord("custom <b>{type}</b>", true, "ja")).toBe("custom <b>{type}</b>");
+  });
+
+  it.each(["constructor", "__proto__", "toString"])("treats inherited key %s as an unknown type", (datatype) => {
+    expect(typeWord(datatype)).toBe(`a ${datatype}`);
+    expect(typeWord(datatype, true)).toBe(datatype);
+    expect(typeWord(datatype, false, "ja")).toBe(datatype);
+  });
+
+  it("keeps workbook identities and the existing bounded header-cell preview", () => {
+    expect(sheetOption({ name: "日本語 <b>{rows}</b>", rows: 5000 }, "ja")).toBe("日本語 <b>{rows}</b>（5,000行）");
+    expect(headerRowOption({ row: 2, cells: [] }, "ja")).toBe("2行目（空行）");
+    expect(headerRowOption({ row: 2, cells: [], unread: true }, "ja")).toBe("2行目");
+    expect(headerRowOption({ row: 3, cells: ["id", "name"] }, "ja")).toBe("3行目：id、name");
+    expect(headerRowOption({ row: 1, cells: ["Organizations of the whole wide world"] }, "ja")).toBe("1行目：Organizations of the wh…");
   });
 });

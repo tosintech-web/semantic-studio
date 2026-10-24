@@ -123,6 +123,10 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 
 | `frontend/src/components/RmlEditor.tsx` | RML編集 | 12 | 画面所有文言とエラー枠を移行、既知RML生成元のmetadata追加は進行中 |
 
+| `frontend/src/modeling/dataSentences.ts` | データ取り込み・出典・レポートの説明 | 12 | 共通ヘルパーを日英対応、各画面への接続は進行中 |
+
+| `frontend/src/components/ImportReport.tsx` | データ取り込みレポート | 12 | 出典・結果・操作を日英対応、レポートとstatusの同一性を保持 |
+
 ## 登録済みメッセージ
 
 一覧は現在のカタログと使用箇所から生成した作業記録。動的キーの接頭辞も使用箇所として記載する。
@@ -2266,3 +2270,64 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `rmlEditor.applying` | — | `frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/RulesBlock.tsx` | RML編集 | 12 | 現在のUI言語で表示、ドラフトとRDFは保持 |
 | `rmlEditor.apply` | — | `frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/RulesBlock.tsx` | RML編集 | 12 | 現在のUI言語で表示、ドラフトとRDFは保持 |
 | `rmlEditor.help` | — | `frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/RulesBlock.tsx` | RML編集 | 12 | 現在のUI言語で表示、ドラフトとRDFは保持 |
+
+| `dataWords.sample` | rows, total | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.source` | source, date | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.sourceSample` | label, sample | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.row.one` | row | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.row.many` | head, last | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.row.more` | shown, more | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.separator` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.rowName` | row | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.rows.one` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.rows.many` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.defaultClass` | — | `frontend/src/components/ImportReport.tsx` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.preview.skipped` | row | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.preview.class` | who, kind | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.preview.link` | who, name, value | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.preview.invalid` | who, name, value, type | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.preview.value` | who, name, value | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.made` | count, kind | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.sampleParen` | sample | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.reportSummary` | rows, made, sample | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.skipped` | rows, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.repeated` | rows, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.kept.one` | column, count, type, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.kept.many` | column, count, type, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.empty` | column, count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.clean` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.unmatched.one` | column, count, kind, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.unmatched.many` | column, count, kind, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.word.kept.one` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.word.kept.many` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.word.unmatched.one` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.word.unmatched.many` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.word.skipped` | rows | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.word.repeated` | rows | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.word.clean` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.id.missing.one` | count, column, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.id.missing.many` | count, column, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.id.repeated.one` | column, count, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.id.repeated.many` | column, count, where | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.sheet` | name, rows | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.headerEmpty` | row | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.header` | row, cells | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.date.one` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.date.many` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.dateTime.one` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.dateTime.many` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.integer.one` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.integer.many` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.number.one` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.number.many` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.boolean.one` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.boolean.many` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.year.one` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.year.many` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.default.one` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.default.many` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.unknown.one` | type | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.type.unknown.many` | type | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+
+| `dataReport.validate` | — | `frontend/src/components/ImportReport.tsx` | データ取り込みレポート | 12 | 現在のUI言語で表示、コールバックを保持 |
+| `dataReport.showData` | — | `frontend/src/components/ImportReport.tsx` | データ取り込みレポート | 12 | 現在のUI言語で表示、コールバックを保持 |

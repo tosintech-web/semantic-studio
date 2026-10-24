@@ -721,3 +721,19 @@ it("does not claim the query was copied when the clipboard is unavailable", asyn
     else Reflect.deleteProperty(navigator, "clipboard");
   }
 });
+
+
+it("updates snapshot provenance in the same view without reloading data", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const source = { id: "people-abc123", source: "people.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true };
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(<I18nProvider><UiLanguageSelect /><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} dataSources={[source]} /></I18nProvider>); });
+  try {
+    const provenance = screen.getByText("Includes data from people.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows.");
+    const queries = listSavedQueries.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+    expect(screen.getByText("データも含みます：people.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行。")).toBe(provenance);
+    expect(runSparql).not.toHaveBeenCalled();
+    expect(listSavedQueries).toHaveBeenCalledTimes(queries);
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});

@@ -56,7 +56,7 @@ interface Props {
 const HEADING_ID = "explore-start-heading";
 
 export default function ExploreStart({ graph, loading, theme, onSelect, dataSources = [] }: Props) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   // The ranking is keyed on the graph object, which changes only when a graph is
   // fetched. The ranking is a pass over every node — 40,000 of them for the
   // largest ontology measured — and App re-renders on things as ordinary as a
@@ -91,7 +91,7 @@ export default function ExploreStart({ graph, loading, theme, onSelect, dataSour
       <p className="explore-summary">{summary}</p>
       {dataSources.map((source) => (
         <p key={source.id} className="data-source-line">
-          {t("explore.data", { label: dataLabel(source) })}
+          {t("explore.data", { label: dataLabel(source, locale) })}
         </p>
       ))}
 

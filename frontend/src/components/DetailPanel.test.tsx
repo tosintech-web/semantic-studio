@@ -897,3 +897,19 @@ it("retains structured node errors so the explanation follows a later locale swi
   expect(getNodeDetails).toHaveBeenCalledTimes(1);
   cleanup();
 });
+
+
+it("updates snapshot provenance in the same view without reloading data", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const source = { id: "people-abc123", source: "people.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true };
+  getNodeDetails.mockResolvedValue({ ...detailsWith(1), fromData: { ...source, row: 7 } });
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} /></I18nProvider>); });
+  try {
+    const provenance = screen.getByText("Data from people.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows, row 7 (read-only)");
+    const calls = getNodeDetails.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+    expect(screen.getByText("データ：people.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行、行7（読み取り専用）")).toBe(provenance);
+    expect(getNodeDetails).toHaveBeenCalledTimes(calls);
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});

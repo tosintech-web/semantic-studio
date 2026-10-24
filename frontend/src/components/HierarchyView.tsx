@@ -119,7 +119,7 @@ EXPECTED OUTPUT
 
 import { useI18n } from "../i18n/I18nProvider";
 import { englishTranslator, formatNumber } from "../i18n/format";
-import type { Translator } from "../i18n/types";
+import type { Translator, UiLocale } from "../i18n/types";
 import { renderServerError } from "../i18n/serverMessage";
 import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import {
@@ -513,9 +513,9 @@ function countOf(forest: HierarchyForest, kind: string, query: string, ownOnly =
 const EMPTY_FOREST: HierarchyForest = { nodes: {}, children: {}, roots: [] };
 
 /** The tree with each snapshot row's id replaced by its snapshot's label. */
-function withDataLabels(data: Hierarchy | null, sources: DataSource[] | undefined, t: Translator = englishTranslator): Hierarchy | null {
+function withDataLabels(data: Hierarchy | null, sources: DataSource[] | undefined, t: Translator = englishTranslator, locale: UiLocale = "en"): Hierarchy | null {
   if (!data || !sources?.length) return data;
-  const labels = new Map(sources.map((source) => [source.id, dataLabel(source)]));
+  const labels = new Map(sources.map((source) => [source.id, dataLabel(source, locale)]));
   const relabel = (forest: HierarchyForest | undefined): HierarchyForest | undefined => {
     if (!forest || !Object.values(forest.nodes).some((n) => n.fromData)) return forest;
     const nodes: Record<string, HierarchyNode> = {};
@@ -577,13 +577,13 @@ export default function HierarchyView({
   canvasShown = false,
   onCounts,
 }: Props) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [fetched, setData] = useState<Hierarchy | null>(null);
   // Snapshot rows named by their snapshot's label (csv-data-import 5.6).
   const data = useMemo(
-    () => withDataLabels(inferred ? fetched : withoutInferred(fetched), dataSources, t),
-    [fetched, dataSources, inferred, t],
+    () => withDataLabels(inferred ? fetched : withoutInferred(fetched), dataSources, t, locale),
+    [fetched, dataSources, inferred, t, locale],
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown | null>(null);

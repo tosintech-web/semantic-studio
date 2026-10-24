@@ -1385,3 +1385,26 @@ it("keeps a row rename draft and its primary RDF language across a UI switch", a
     expect(fetchHierarchy).toHaveBeenCalledTimes(1);
   } finally { view.unmount(); projectStore._reset(); }
 });
+
+
+it("updates snapshot provenance in the same view without reloading data", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const classes = forestOf({ [EX + "Person"]: node("Person") }, {}, [EX + "Person"]);
+  const examples = forestOf({
+    [EX + "Person"]: node("Person", "class", true),
+    [EX + "data/person/7"]: { ...node("Person 7", "individual"), fromData: "people-abc123" },
+  }, { [EX + "Person"]: [EX + "data/person/7"] }, [EX + "Person"]);
+  const tree: Hierarchy = { ...hierarchyOf(classes, EMPTY), examples, counts: { classes: 1, concepts: 0, examples: 1 } };
+  fetchHierarchy.mockResolvedValue(tree);
+  const source = { id: "people-abc123", source: "people.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true };
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="localized-data-tree" selected={null} onSelect={vi.fn()} editing={{ primaryLanguage: "en" }} dataSources={[source]} /></I18nProvider>);
+  try {
+    await unfold("Examples");
+    const provenance = screen.getByText("from people.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows");
+    const calls = fetchHierarchy.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+    expect(screen.getByText("people.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行")).toBe(provenance);
+    expect(fetchHierarchy).toHaveBeenCalledTimes(calls);
+    expect(provenance.closest("[role=treeitem]")?.querySelector(".hierarchy-menu-btn")).toBeNull();
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});

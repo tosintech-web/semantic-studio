@@ -273,8 +273,8 @@ export default function DetailPanel({
             // 5.6): where it came from, its row, and that it is read-only.
             <p className="detail-imported detail-data">
               {details.fromData.row !== null
-                ? t("detail.dataRow", { label: dataLabel(details.fromData), row: details.fromData.row })
-                : t("detail.data", { label: dataLabel(details.fromData) })}
+                ? t("detail.dataRow", { label: dataLabel(details.fromData, locale), row: details.fromData.row })
+                : t("detail.data", { label: dataLabel(details.fromData, locale) })}
             </p>
           )}
         </div>
