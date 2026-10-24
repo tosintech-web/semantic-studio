@@ -99,7 +99,7 @@ export type { Theme } from "./theme/kinds";
 // on none of them and is why it is not a tab. Home is a VIEW rather than a reset
 // — switching to it keeps the loaded ontology, the selection and any query in
 // progress. See D-026. `hierarchy` is the tree view over subClassOf / broader.
-export type AppMode = "view" | "explore" | "query" | "home" | "hierarchy" | "shapes";
+export type AppMode = "view" | "explore" | "query" | "home" | "hierarchy" | "shapes" | "entities";
 
 // Response of GET /source: the file text plus render/truncation metadata.
 export interface OntologySource {

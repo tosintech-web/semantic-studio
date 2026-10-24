@@ -212,6 +212,9 @@ import Logo from "./components/Logo";
 import NetworkApprovalDialog from "./components/NetworkApprovalDialog";
 import NetworkPanel from "./components/NetworkPanel";
 import QueryPanel from "./components/QueryPanel";
+import EntityList from "./components/EntityList";
+import DictionaryContext from "./components/DictionaryContext";
+import ReferenceOnlyPanel from "./components/ReferenceOnlyPanel";
 import SearchBox from "./components/SearchBox";
 import SourceView from "./components/SourceView";
 import {
@@ -477,6 +480,8 @@ export default function App() {
   // started it, in Home's ⋯ menu, is the one that has to say it is busy.
   // Removal is started nowhere else (portal-foundations 5.7).
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [entityQuery, setEntityQuery] = useState("");
+  const [referenceOnlySelection, setReferenceOnlySelection] = useState<string | null>(null);
   const [mode, setMode] = useState<AppMode>("explore");
   // A mode picked from the header with nothing open. It is remembered rather
   // than refused, so the library heading can ask which ontology it should act
@@ -596,7 +601,7 @@ export default function App() {
   // Only a project document's views are named by it; a library ontology open
   // beside a project ignores it, and must not refetch when it moves.
   const storeLanguage = useProjectSelector((s) => s.displayLanguage);
-  const { locale: uiLocale } = useI18n();
+  const { locale: uiLocale, t } = useI18n();
   const { language: displayLanguage, setLanguage: setDictionaryLanguage } = useDictionaryLanguage({
     ontologyId: activeId,
     projectLanguage: editingProjectDoc ? storeLanguage : null,
@@ -834,7 +839,7 @@ export default function App() {
   const pendingSelection = useRef<string | null>(null);
 
   // The shared query-builder state; the schema is only fetched in Query mode.
-  const builder = useQueryBuilder(activeId, mode === "query", includeImports, viewRevision, displayLanguage);
+  const builder = useQueryBuilder(activeId, mode === "query", includeImports, viewRevision, displayLanguage, dictionaryView.viewGeneration);
 
   // Apply and persist the theme whenever it changes (data-theme drives the CSS).
   useEffect(() => {
@@ -908,6 +913,7 @@ export default function App() {
   // than blanking the canvas on every change (found in review).
   const graphFor = useRef<string | null>(null);
   useEffect(() => {
+    if (mode === "entities") { setLoadingGraph(false); return; }
     const identity = `${activeId}|${graphBudget}|${includeImports}`;
     if (graphFor.current !== identity) setGraphData(null);
     graphFor.current = identity;
@@ -959,6 +965,7 @@ export default function App() {
   }, [
     activeId,
     graphBudget,
+    mode === "entities",
     includeImports,
     includeImports ? importsVersion : 0,
     // A project document's revision and display language: an edit, an undo
@@ -1899,6 +1906,11 @@ export default function App() {
               <IconExplore />
               <span>Explore</span>
             </button>
+            <button role="tab" aria-selected={tabSelected("entities")}
+              className={tabSelected("entities") ? "nav-item active" : "nav-item"}
+              onClick={() => onPickMode("entities")} title={activeId ? t("nav.entities") : NO_ONTOLOGY_TITLE}>
+              <span>{t("nav.entities")}</span>
+            </button>
             {/* Edit (edit-page-rework 5.1): the job, between looking at the
                 model and asking it questions. The mode keeps its id,
                 "hierarchy", so saved state and the code need not churn. */}
@@ -2040,7 +2052,8 @@ export default function App() {
             <SearchBox
               ontologyId={activeId}
               theme={theme}
-              onPick={onSearchPick}
+              onPick={mode === "entities" ? (iri) => { setSelected(iri); setReferenceOnlySelection(null); } : onSearchPick}
+              onShowAll={(query) => { setEntityQuery(query); onPickMode("entities"); }}
               drawnIds={drawnIds}
               imports={includeImports}
               placeholder={
@@ -2165,6 +2178,24 @@ export default function App() {
             onDelete: onDeleteProject,
           }}
         />
+      ) : mode === "entities" && activeId ? (
+        <main className="main entity-workspace">
+          <div className="entity-browser">
+            <DictionaryContext name={active?.name ?? ""} editing={editingProjectDoc}
+              documentName={editingProjectDoc && openDocName ? `${openDocName}.ttl` : null}
+              saveState={projectSaving ? "saving" : projectDoc?.dirty ? "dirty" : "saved"} />
+            <EntityList key={activeId} ontologyId={activeId} language={displayLanguage} imports={includeImports}
+              revision={dictionaryView.revision} viewGeneration={dictionaryView.viewGeneration}
+              initialQuery={entityQuery} selectedIri={selected}
+              onSelect={(iri) => { setSelected(iri); setFocusPanel(true); }} onReferenceOnly={setReferenceOnlySelection} />
+          </div>
+          {selected && (referenceOnlySelection === selected ?
+            <ReferenceOnlyPanel key={selected} iri={selected} onClose={() => setSelected(null)} /> :
+            <DetailPanel ontologyId={activeId} iri={selected} imports={includeImports} revision={viewRevision}
+              focusHeading={focusPanel} language={displayLanguage} onNavigate={(iri) => { setSelected(iri); setReferenceOnlySelection(null); }}
+              onClose={() => setSelected(null)} editing={editingModel} readOnlyNote={readOnlyNote}
+              onDeleted={onEntityDeleted} />)}
+        </main>
       ) : mode === "shapes" && openProjectSummary ? (
         <main className="main">
           <ShapesView

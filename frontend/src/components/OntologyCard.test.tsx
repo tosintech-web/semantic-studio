@@ -237,7 +237,7 @@ describe("OntologyCard verbs", () => {
     const { container } = renderCard();
     const verbs = [...container.querySelectorAll(".onto-verb")].map((b) => b.textContent);
 
-    expect(verbs).toEqual(["Explore", "Query", "View"]);
+    expect(verbs).toEqual(["Explore", "Entities", "Query", "View"]);
   });
 
   it("a verb reports the ontology and the mode together", () => {
@@ -259,7 +259,7 @@ describe("OntologyCard verbs", () => {
     // "＋" and "－".
     renderCard();
 
-    for (const verb of ["Explore", "Query", "View"]) {
+    for (const verb of ["Explore", "Entities", "Query", "View"]) {
       const button = screen.getByRole("button", { name: `${verb} FIBO quickstart` });
       // The visible text and the spoken name agree, so the two cannot drift.
       expect(button.textContent).toBe(verb);
@@ -405,7 +405,7 @@ describe("OntologyCard row layout", () => {
     const { container } = renderCard({}, { layout: "row" });
 
     expect(container.querySelector(".onto-card")?.classList.contains("onto-row")).toBe(true);
-    expect(container.querySelectorAll(".onto-verb")).toHaveLength(3);
+    expect(container.querySelectorAll(".onto-verb")).toHaveLength(4);
     expect(menuButton()).toBeTruthy();
     expect(container.querySelector(".onto-mini svg")).toBeTruthy();
   });

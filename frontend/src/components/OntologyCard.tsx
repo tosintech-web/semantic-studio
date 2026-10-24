@@ -89,6 +89,7 @@ interface Props {
  *  them agree. `view` first because it is the least committal. */
 const VERBS: { mode: AppMode; label: string; hint: string }[] = [
   { mode: "explore", label: "Explore", hint: "Browse this ontology and inspect entities" },
+  { mode: "entities", label: "Entities", hint: "Browse all dictionary entries" },
   { mode: "query", label: "Query", hint: "Build a SPARQL query against this ontology" },
   { mode: "view", label: "View", hint: "Read this ontology's file" },
 ];

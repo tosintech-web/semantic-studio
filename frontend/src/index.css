@@ -6637,3 +6637,19 @@ kbd {
   flex: none;
   padding: 4px 12px;
 }
+
+/* Complete dictionary pages remain bounded by the server page size; long IRIs
+   wrap without changing their values or creating page-wide horizontal scroll. */
+.entity-workspace { display: flex; min-height: 0; }
+.entity-browser { flex: 1; min-width: 0; overflow: auto; }
+.dictionary-context { display: flex; flex-wrap: wrap; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
+.dictionary-context strong { overflow-wrap: anywhere; }
+.entity-list { padding: 1rem; }
+.entity-list-controls, .entity-list-pages { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+.entity-list-controls label { display: flex; flex-direction: column; gap: .25rem; }
+.entity-table-scroll { overflow-x: auto; }
+.entity-list table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.entity-list td, .entity-list th { text-align: left; vertical-align: top; padding: .5rem; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.entity-list-pages { margin-top: 1rem; }
+.entity-open, .reference-iri, .result-match { overflow-wrap: anywhere; }
+.result-match { display: block; }

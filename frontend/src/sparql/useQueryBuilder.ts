@@ -201,6 +201,7 @@ export function useQueryBuilder(
   // fetched again when an edit moves it. 0 for the library, which never does.
   revision = 0,
   displayLanguage?: string,
+  viewGeneration = "",
 ) {
   const [schema, setSchema] = useState<QuerySchema | null>(null);      // class-level schema
   const [schemaError, setSchemaError] = useState<string | null>(null); // schema fetch error
@@ -238,7 +239,7 @@ export function useQueryBuilder(
   // fetched for the other setting would offer steps the query cannot use. The
   // query being built is kept across the switch; only the schema is replaced.
   useEffect(() => {
-    const key = `${ontologyId}|${imports}|${revision}|${displayLanguage}`;
+    const key = `${ontologyId}|${imports}|${revision}|${displayLanguage}|${viewGeneration}`;
     if (!active || !ontologyId || requestedFor.current === key) return;
     requestedFor.current = key;
     setLoadingSchema(true);
@@ -254,7 +255,7 @@ export function useQueryBuilder(
     return () => {
       cancelled = true;
     };
-  }, [active, ontologyId, imports, revision, displayLanguage]);
+  }, [active, ontologyId, imports, revision, displayLanguage, viewGeneration]);
 
   // The live SPARQL, regenerated whenever the state or namespaces change.
   const sparql = useMemo(
@@ -648,7 +649,7 @@ export function useQueryBuilder(
   // Names are view metadata, not query structure. Keep the raw state/text
   // intact while a language-specific schema relabels an already open query.
   const pins = useMemo(() => [...new Set(state.steps.flatMap(step => step.pin ? [step.pin.iri] : []))], [state.steps]);
-  const pinScope = JSON.stringify([ontologyId, displayLanguage, pins]);
+  const pinScope = JSON.stringify([ontologyId, displayLanguage, imports, revision, viewGeneration, pins]);
   const [pinNames, setPinNames] = useState<{ scope: string; labels: Record<string, string> }>({ scope: "", labels: {} });
   useEffect(() => {
     if (!active || !ontologyId || displayLanguage === undefined || pins.length === 0) return;

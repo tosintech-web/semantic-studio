@@ -113,6 +113,7 @@ export type HomeLayout = "cards" | "rows";
  *  is answerable — and answering it teaches the model the disabled tabs used to
  *  hide: modes act on an ontology. */
 const PENDING_HEADING: Record<AppMode, string> = {
+  entities: "Choose an ontology to browse its entries",
   explore: "Choose an ontology to explore",
   query: "Choose an ontology to query",
   view: "Choose an ontology to view",

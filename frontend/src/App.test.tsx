@@ -113,6 +113,7 @@ const {
   listData,
   restoreExamples,
   getResultNodes,
+  getEntities,
 } = vi.hoisted(() => ({
   listOntologies: vi.fn(),
   getGraph: vi.fn(),
@@ -166,6 +167,7 @@ const {
   restoreExamples: vi.fn(),
   // query-page-rework 5.2: a query's hidden results drawn.
   getResultNodes: vi.fn(),
+  getEntities: vi.fn(),
 }));
 
 // importOriginal rather than a bare factory, so ApiError stays the real class.
@@ -212,11 +214,13 @@ vi.mock("./api", async (importOriginal) => ({
   listData,
   restoreExamples,
   getResultNodes,
+  getEntities,
 }));
 
 /** Every mocked client function, so a test can count what mount actually did. */
 const ALL_API = {
   getResultNodes,
+  getEntities,
   restoreExamples,
   listData,
   listImports,
@@ -449,6 +453,7 @@ beforeEach(() => {
   getGraph.mockResolvedValue(TRUNCATED);
   listImports.mockResolvedValue({ imports: [], limit: null, resolving: null, offline: false });
   searchNodes.mockResolvedValue([]);
+  getEntities.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 50, revision: "one" });
   // The Hierarchy tab fetches this; one class-forest root, off the budgeted
   // graph (whose nodes list is empty), so selecting it draws it.
   fetchHierarchy.mockResolvedValue({
@@ -1908,7 +1913,7 @@ describe("App About control", () => {
     // Five now: Home (home-screen), then View / Explore / Query, then Hierarchy
     // (hierarchy-view), each a real view that swaps the main region. About still
     // does not, which is the distinction this test is about.
-    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    expect(screen.getAllByRole("tab")).toHaveLength(6);
     expect(tablist.contains(aboutControl())).toBe(false);
     expect(aboutControl().getAttribute("role")).toBeNull();
     expect(aboutControl().getAttribute("aria-haspopup")).toBe("dialog");
@@ -3330,7 +3335,7 @@ describe("App Edit page (edit-page-rework)", () => {
   it("AC-1: the tab is Edit, between Explore and Query; About and Network sit at the right end", async () => {
     await renderApp();
     const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
-    expect(tabs).toEqual(["Home", "View", "Explore", "Edit", "Query"]);
+    expect(tabs).toEqual(["Home", "View", "Explore", "Entities", "Edit", "Query"]);
     const row = document.querySelector(".nav-row")!;
     const last = [...row.children].slice(-4).map((el) => el.getAttribute("aria-label") ?? el.textContent);
     // A spacer, then About, Network and the theme switch at the right end.
@@ -3939,4 +3944,36 @@ describe("App: a run before the graph is drawn (query-page-rework 5.2)", () => {
       resolveGraph(TRUNCATED);
     });
   });
+});
+
+it("opens the full list without waiting for or requesting graph JSON", async () => {
+  await renderApp();
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
+  await act(async () => { fireEvent.click(cardVerb("Entities", "FIBO")); });
+  expect(getEntities).toHaveBeenCalled(); expect(getGraph).not.toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: "Entities" })).toBeTruthy();
+  expect(screen.queryByTestId("graph")).toBeNull();
+});
+
+it("uses reference-only details and never asks a missing node to open an edit form", async () => {
+  getEntities.mockResolvedValue({ items: [{ iri: "https://example.org/ref", label: "Reference", kind: "other", description: null, match: null, label_language: null, label_fallback: false, label_truncated: false, reference_only: true }], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderApp(); await act(async () => { fireEvent.click(cardVerb("Entities", "FIBO")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Reference" })); });
+  expect(screen.getByRole("complementary", { name: "Reference only" })).toBeTruthy();
+  expect(getNodeDetails).not.toHaveBeenCalled(); expect(getNeighborhood).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Copy full IRI" })).toBeTruthy();
+});
+it("keeps the selected entity and refreshes the project list after Undo", async () => {
+  const row = { iri: "http://x/Bond", label: "Bond", kind: "class", description: null, match: null, label_language: "en", label_fallback: false, label_truncated: false, reference_only: false };
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderProject({ canUndo: true, undoLabel: "Changed Bond", dirty: true });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Bond" })); });
+  const calls = getEntities.mock.calls.length;
+  undoChange.mockResolvedValue({ revision: 1, label: "Changed Bond", state: docState({ revision: 1 }) });
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "two" });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Undo: Changed Bond" })); });
+  expect(getEntities.mock.calls.length).toBe(calls + 1);
+  expect(screen.getByRole("heading", { name: "Bond" })).toBeTruthy();
+  expect(screen.getByRole("row", { name: /Bond/ }).getAttribute("aria-selected")).toBe("true");
 });

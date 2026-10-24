@@ -37,3 +37,10 @@ it("refreshes existing step property and pin names without changing the query", 
   expect(result.current.state.steps[0].props[0].filter?.value).toBe("unchanged");
   expect(result.current.sparql).toBe(text);
 });
+it("refreshes the same imports=true query schema after re-resolution", async () => {
+  const empty: QuerySchema = { classes: [], links: [], dataProperties: {}, superClasses: {}, namespaces: {}, truncated: false };
+  vi.mocked(api.getQuerySchema).mockResolvedValue(empty);
+  const { rerender } = renderHook(({ generation }) => useQueryBuilder("dictionary", true, true, 0, "ja", generation), { initialProps: { generation: "1" } });
+  await waitFor(() => expect(api.getQuerySchema).toHaveBeenCalledTimes(1));
+  rerender({ generation: "2" }); await waitFor(() => expect(api.getQuerySchema).toHaveBeenCalledTimes(2));
+});
