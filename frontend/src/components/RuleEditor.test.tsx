@@ -6,6 +6,9 @@ SUMMARY
     SHACL rule editing keeps values, hidden fields and selected identities when
     the user changes UI language.
 BASIC IDEA
+    Read-only precision guidance preserves original drafts/data and identities;
+    language changes do not repeat reads or submit rounded integer counts.
+
     Drive the real form in both languages and inspect the complete submitted
     rule. No API call or translating saved RDF is involved.
 INPUTS / INPUT SOURCES
@@ -54,4 +57,24 @@ it("shows a current-language problem without changing the numeric bounds", () =>
   expect((screen.getByRole("spinbutton", { name: "from" }) as HTMLInputElement).value).toBe("3");
   expect((screen.getByRole("spinbutton", { name: "to" }) as HTMLInputElement).value).toBe("1");
   expect(onSubmit).not.toHaveBeenCalled();
+});
+
+it("blocks unsafe integer counts without rounding the draft, then submits an exact supported count", () => {
+  const initial: ShapeRule = { path: ["https://example.test/name"], pathLabel: "name", pathKind: "attribute", datatype: "xsd:string", minCount: 2 };
+  const onSubmit = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><RuleEditor modelOntologyId="synthetic-model" paths={[{ path: initial.path, label: "name", kind: "attribute", datatype: "xsd:string" }]}
+    initial={initial} languages={["ja", "en"]} busy={false} onSubmit={onSubmit} onCancel={vi.fn()} /></I18nProvider>);
+  const field = screen.getByRole("spinbutton", { name: "最小件数" }) as HTMLInputElement;
+  const exact = "9007199254740993";
+  fireEvent.change(field, { target: { value: exact } });
+  expect(screen.getByText("件数・文字数が9,007,199,254,740,991を超える場合は、値を正確に保持するためTurtleで編集してください。")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(field.value).toBe(exact);
+  expect(screen.getByText("Edit counts or lengths above 9,007,199,254,740,991 in Turtle to preserve their exact value.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
+  expect(onSubmit).not.toHaveBeenCalled();
+  fireEvent.change(field, { target: { value: "3" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
+  expect(onSubmit).toHaveBeenCalledTimes(1);
+  expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ minCount: 3 }));
 });

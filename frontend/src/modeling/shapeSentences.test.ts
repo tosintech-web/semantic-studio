@@ -9,6 +9,9 @@ SUMMARY
     live region's summary, and the checks that keep Add disabled.
 
 BASIC IDEA
+    Integer form boundaries preserve exact supported counts and direct larger
+    RDF values to Turtle without changing their meaning or their source.
+
     Every rule and every result is a sentence in the learner's own names
     (Section 7), so each sentence is asserted word for word.
 
@@ -329,4 +332,11 @@ it("summarizes validation outcomes in Japanese from the original result facts", 
   expect(validationSummary({ ...result, stopped: true }, "ja")).toBe("検証に時間がかかったため停止しました（ルールセット3件、ステートメント1,200件）。");
   expect(problemsFound({ ...result, stopped: true }, "ja")).toBe("停止");
   expect(JSON.stringify(result)).toBe(original);
+});
+
+it.each(["minCount", "maxCount", "minLength", "maxLength"] as const)("keeps safe %s counts editable and refuses a rounded browser integer", field => {
+  const base = { path: ["https://example.test/name"] };
+  expect(ruleProblem({ ...base, [field]: Number.MAX_SAFE_INTEGER }, "ja")).toBeNull();
+  expect(ruleProblem({ ...base, [field]: Number.MAX_SAFE_INTEGER + 1 }, "ja")).toBe("件数・文字数が9,007,199,254,740,991を超える場合は、値を正確に保持するためTurtleで編集してください。");
+  expect(ruleProblem({ ...base, [field]: Number.MAX_SAFE_INTEGER + 1 }, "en")).toBe("Edit counts or lengths above 9,007,199,254,740,991 in Turtle to preserve their exact value.");
 });

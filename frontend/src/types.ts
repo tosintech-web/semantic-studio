@@ -1220,6 +1220,7 @@ export interface ShapeForm {
   id: string;
   iri: string | null;
   name: string;
+  nameUiMessage?: WireMessage | null;
   named: boolean;
   target: ShapeTarget | null;
   severity: "violation" | "warning" | "info";
@@ -1227,6 +1228,8 @@ export interface ShapeForm {
   rules: ShapeRule[];
   editable: boolean;
   unsupported: string[];
+  /** Aligned with the deduplicated unsupported strings; absent on older servers. */
+  unsupportedUiMessages?: (WireMessage | null)[];
 }
 
 export interface ShapesListing {

@@ -13,6 +13,10 @@ SUMMARY
     not, and Edit in Turtle.
 
 BASIC IDEA
+    Read-only reasons use aligned producer facts in the current UI locale, with
+    original details and identities preserved. Translated placeholder names are
+    display-only; the name input still edits only an authored RDF label.
+
     Fetch failures retain their original cause. Display metadata follows the UI
     locale at render time, with escaped original details kept separately.
 
@@ -47,7 +51,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { renderServerError } from "../i18n/serverMessage";
+import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getShapeSuggestions } from "../api";
@@ -80,6 +84,7 @@ export default function ShapeForm({
   onEditInTurtle,
 }: Props) {
   const { t, locale } = useI18n();
+  const displayName = validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : shape.name;
   const runner = useRunner("shapes");
   const { busy, errors, run } = runner;
   const [suggestions, setSuggestions] = useState<ShapeSuggestions | null>(null);
@@ -142,16 +147,21 @@ export default function ShapeForm({
     return (
       <section className="shape-form read-only" aria-labelledby="shape-form-heading">
         <h3 id="shape-form-heading" tabIndex={-1}>
-          {shape.name}
+          {displayName}
         </h3>
         <p className="shape-sentence">{sentence}</p>
         <p className="detail-note">
           {t("shapeForm.readonly")}
         </p>
         <ul className="shape-unsupported">
-          {shape.unsupported.map((part) => (
-            <li key={part}>{part}</li>
-          ))}
+          {shape.unsupported.map((part, index) => {
+            const described = shape.unsupportedUiMessages != null;
+            const message = shape.unsupportedUiMessages?.[index];
+            return <li key={part}>
+              <p>{!described ? part : validWireMessage(message) ? renderServerMessage(message, part, t) : t("shape.readonly.unknown")}</p>
+              {described && <details className="technical-details"><summary>{t("common.details")}</summary><pre>{part}</pre></details>}
+            </li>;
+          })}
         </ul>
         <button type="button" className="primary" onClick={() => onEditInTurtle(shape)}>
           {t("shapeForm.turtle")}
@@ -188,7 +198,7 @@ export default function ShapeForm({
   return (
     <section className="shape-form" aria-labelledby="shape-form-heading">
       <h3 id="shape-form-heading" tabIndex={-1}>
-        {shape.name}
+        {displayName}
       </h3>
       <p className="shape-sentence">{sentence}</p>
 
@@ -372,7 +382,7 @@ export default function ShapeForm({
 
       {confirmDelete && (
         <ConfirmDialog
-          title={t("shapeForm.deleteQuestion", { name: shape.name })}
+          title={t("shapeForm.deleteQuestion", { name: displayName })}
           escape="cancel"
           busy={busy}
           actions={[

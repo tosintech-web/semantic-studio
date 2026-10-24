@@ -14,6 +14,9 @@ SUMMARY
     and each row's last result as a word.
 
 BASIC IDEA
+    Read-only precision guidance preserves original drafts/data and identities;
+    language changes do not repeat reads or submit rounded integer counts.
+
     Rejected reads preserve their original details and display facts through UI
     language changes without refetching or replacing retained content.
 
@@ -851,5 +854,33 @@ it.each(["list", "suggestions"])("keeps %s error facts and original details when
   expect(getShapes).toHaveBeenCalledTimes(listCalls);
   expect(getShapeSuggestions).toHaveBeenCalledTimes(suggestionCalls);
   expect(document.querySelector(".shapes-view img, .shapes-view b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each([true, false])("shows read-only reason facts (known: %s), keeps the original and opens the same Turtle target", async known => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const predicate = "sh:or <img>{predicate}";
+  const original = "uses sh:or <b>{predicate}";
+  const readonly: ShapeForm = { ...CONTACT, name: "Unnamed shape", named: false,
+    nameUiMessage: { code: "words.validation.unnamed_shape", args: {} }, unsupported: [original],
+    unsupportedUiMessages: [{ code: known ? "shape.readonly.uses_predicate" : "future.reason", args: { predicate } }],
+  };
+  await setup([readonly], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  expect(screen.getByRole("heading", { name: "名前のない検証ルール" })).toBeTruthy();
+  expect(screen.getByText(known ? `${predicate}を使用しているため、このフォームでは編集できません。` : "このフォームの編集範囲外の部分があります。原文を詳細で確認してください。")).toBeTruthy();
+  const pre = screen.getByText(original, { selector: "pre" });
+  const details = pre.closest("details")!; details.open = true;
+  const summary = details.querySelector("summary")!; summary.focus();
+  const calls = getShapes.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(known ? `This shape uses ${predicate}, which this form cannot edit.` : "Part of this shape is outside what this form can edit. Check the original details.")).toBeTruthy();
+  expect(screen.getByText(original, { selector: "pre" })).toBe(pre);
+  expect(details.open).toBe(true); expect(document.activeElement).toBe(summary);
+  expect(getShapes).toHaveBeenCalledTimes(calls);
+  expect(getShapeSuggestions).not.toHaveBeenCalled();
+  expect(runCommand).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Edit in Turtle" }));
+  expect(props.onEditInTurtle).toHaveBeenCalledWith(readonly);
+  expect(document.querySelector(".shape-unsupported b, .shape-unsupported img")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

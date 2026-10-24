@@ -459,6 +459,10 @@ leaves one behind.
 - The About backdrop is the dialog's sibling; its key handler is on `document`. [About panel]
 - The Edit side panel lives in `App.tsx`, the detail panel inside it; property forests hold only `subPropertyOf` ends. [Hierarchy view, Edit page]
 
+**Shape-form precision**
+- Count and length values above JavaScript's exact integer range stay read-only in the form; Turtle and SHACL retain them without a new cap. [Shape-form integer precision]
+- Unsupported reason metadata follows the deduplicated legacy strings, and metadata-only names never allocate namespace prefixes. [Shape-form integer precision]
+
 **Edit page**
 - An outline section clips its content; open sections have a 120 px minimum and are capped at their rows. [Edit page]
 - One draft, in the project store: the canvas box and the side panel's form share its name; the store makes it in one command. [Edit page]

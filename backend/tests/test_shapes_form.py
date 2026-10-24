@@ -11,6 +11,9 @@ SUMMARY
     the suggestions of 5.4, row S17.
 
 BASIC IDEA
+    The actual shapes route also preserves large RDF counts and the original
+    Turtle while returning aligned read-only reason metadata.
+
     shapes_form reads graphs and nothing else, so most cases are inline
     Turtle handed to it directly; the suggestions are also asked for
     through the route, which is how they follow a model change.
@@ -343,3 +346,29 @@ def test_two_domain_lines_offer_the_property_only_where_every_class_applies():
     offered = lambda cls: {e["label"] for e in shapes_form.paths_for(g, URIRef(UNI + cls), _local, ["en"])}  # noqa: E731
     assert "badge" not in offered("Manager") and "badge" not in offered("Team")
     assert "badge" in offered("TeamManager")
+
+
+def test_readonly_metadata_and_large_counts_roundtrip_through_the_actual_shapes_route(pid):
+    created = client.post(f"/api/projects/{pid}/documents/shapes/commands", json={
+        "command": "CreateShape", "args": {"target": EX + "Person"}})
+    assert created.status_code == 200, created.text
+    large = 2**53 + 1
+    text = PREFIXES + f'''\n# Keep this count exact in Turtle.\nshop:S a sh:NodeShape ; sh:targetClass shop:Person ;
+        sh:or ( [ sh:path shop:name ] ) ;
+        sh:property [ sh:path shop:name ; sh:minCount {large} ] .\n'''
+    applied = client.put(f"/api/projects/{pid}/documents/shapes/source", json={"text": text})
+    assert applied.status_code == 200, applied.text
+    before = client.get(f"/api/projects/{pid}/documents/shapes/source").json()
+    response = client.get(f"/api/projects/{pid}/shapes")
+    assert response.status_code == 200, response.text
+    shape = response.json()["shapes"][0]
+    assert shape["id"] == EX + "S" and shape["name"] == "shop:S"
+    assert not shape["editable"] and "minCount" not in shape["rules"][0]
+    assert len(shape["unsupported"]) == len(shape["unsupportedUiMessages"]) == 2
+    assert shape["unsupportedUiMessages"] == [
+        {"code": "shape.readonly.uses_predicate", "args": {"predicate": "sh:or"}},
+        {"code": "shape.readonly.precision", "args": {"predicate": "sh:minCount", "value": str(large)}},
+    ]
+    after = client.get(f"/api/projects/{pid}/documents/shapes/source").json()
+    assert after["text"] == before["text"] == text
+    assert after["revision"] == before["revision"]

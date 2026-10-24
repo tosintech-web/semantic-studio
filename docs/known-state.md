@@ -2526,3 +2526,21 @@ Turtle text including its comment. The old scalar and flat-parts wire contracts
 are unchanged by these producers. This completes success-label producers only;
 custom client announcement callbacks and known refusals/warnings/results still
 require their own migration and end-to-end verification.
+
+
+### Shape-form integer precision and read-only reasons (P1)
+
+SHACL count and length values remain unrestricted RDF integers in Turtle and
+validation. The form reads counts above JavaScript's exact integer range as
+read-only and leaves their triples untouched. `ruleProblem` also rejects unsafe
+integer drafts, so entering a large count cannot submit a rounded Number.
+Ordinary safe integers keep the existing editing behavior. Bounds and literal
+values remain strings; this safeguard does not add a dataset or validator cap.
+
+Read-only reasons retain their original strings, order and deduplication. An
+optional `unsupportedUiMessages` array aligns display facts with those unique
+strings. Metadata-only IRI display uses existing bindings without allocating a
+prefix: allocating one before the legacy name is computed would change it from
+`ns1:S` to `ns2:S`. Authored shape labels stay data; only an unlabeled blank
+shape gets the translated unnamed-shape marker. Original reasons remain in
+keyboard-accessible details, and Edit in Turtle receives the same shape object.

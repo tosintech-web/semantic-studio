@@ -1402,6 +1402,45 @@
     "words.language.sv": {},
     "words.language.tr": {},
     "words.language.uk": {},
-    "words.language.zh": {}
+    "words.language.zh": {},
+    "shape.readonly.uses_predicate": {
+      "predicate": "string"
+    },
+    "shape.readonly.rule_reference": {
+      "rule": "string"
+    },
+    "shape.readonly.path": {},
+    "shape.readonly.duplicate_path": {
+      "path": "parts"
+    },
+    "shape.readonly.predicate_value": {
+      "predicate": "string"
+    },
+    "shape.readonly.datatype": {
+      "datatype": "string"
+    },
+    "shape.readonly.class_expression": {},
+    "shape.readonly.allowed_list": {},
+    "shape.readonly.allowed_type": {},
+    "shape.readonly.language_list": {},
+    "shape.readonly.additional_types": {
+      "types": "parts"
+    },
+    "shape.readonly.multiple_targets": {
+      "count": "number"
+    },
+    "shape.readonly.target_expression": {},
+    "shape.readonly.multiple_messages": {
+      "count": "number"
+    },
+    "shape.readonly.rule_severity": {},
+    "shape.readonly.severity": {
+      "severity": "string"
+    },
+    "shape.readonly.precision": {
+      "predicate": "string",
+      "value": "string"
+    },
+    "shape.readonly.unknown": {}
   }
 }

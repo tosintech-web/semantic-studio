@@ -3040,3 +3040,27 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `words.language.tr` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
 | `words.language.uk` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
 | `words.language.zh` | — | `backend/app/shacl.py` | 検証結果の説明・標準語 | 12 | 原文と並び順・上限を保持し、表示対象だけに事実を追加 |
+
+## フォームの編集範囲と読み取り専用の理由（Task 12）
+
+| key | 引数 | 生成元 | 用途 | Task | 状態 |
+| --- | --- | --- | --- | --- | --- |
+| `shape.readonly.uses_predicate` | predicate | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.rule_reference` | rule | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.path` | — | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.duplicate_path` | path | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.predicate_value` | predicate | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.datatype` | datatype | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.class_expression` | — | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.allowed_list` | — | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.allowed_type` | — | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.language_list` | — | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.additional_types` | types | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.multiple_targets` | count | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.target_expression` | — | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.multiple_messages` | count | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.rule_severity` | — | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.severity` | severity | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.precision` | predicate, value | `backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shape.readonly.unknown` | — | `frontend/src/components/ShapeForm.tsx`<br>`backend/app/shapes_form.py` | 編集範囲の説明 | 12 | 原文・重複排除・RDFを保持し、生成元の事実で表示 |
+| `shapeWords.problem.precision` | limit | `frontend/src/modeling/shapeSentences.ts` | 数値の精度保護 | 12 | 入力原文を保持し、Turtleへ案内 |

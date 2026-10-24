@@ -937,6 +937,45 @@ export const SERVER_CONTRACTS = {
   "rml.unsupported": {
     "name": "string"
   },
+  "shape.readonly.additional_types": {
+    "types": "parts"
+  },
+  "shape.readonly.allowed_list": {},
+  "shape.readonly.allowed_type": {},
+  "shape.readonly.class_expression": {},
+  "shape.readonly.datatype": {
+    "datatype": "string"
+  },
+  "shape.readonly.duplicate_path": {
+    "path": "parts"
+  },
+  "shape.readonly.language_list": {},
+  "shape.readonly.multiple_messages": {
+    "count": "number"
+  },
+  "shape.readonly.multiple_targets": {
+    "count": "number"
+  },
+  "shape.readonly.path": {},
+  "shape.readonly.precision": {
+    "predicate": "string",
+    "value": "string"
+  },
+  "shape.readonly.predicate_value": {
+    "predicate": "string"
+  },
+  "shape.readonly.rule_reference": {
+    "rule": "string"
+  },
+  "shape.readonly.rule_severity": {},
+  "shape.readonly.severity": {
+    "severity": "string"
+  },
+  "shape.readonly.target_expression": {},
+  "shape.readonly.unknown": {},
+  "shape.readonly.uses_predicate": {
+    "predicate": "string"
+  },
   "snapshots.choices_object": {},
   "snapshots.choose_sheet": {},
   "snapshots.class_required": {},
@@ -1731,6 +1770,24 @@ export interface ServerMessageArgs {
   "rml.template_close": { "template": string };
   "rml.template_open": { "template": string };
   "rml.unsupported": { "name": string };
+  "shape.readonly.additional_types": { "types": string };
+  "shape.readonly.allowed_list": undefined;
+  "shape.readonly.allowed_type": undefined;
+  "shape.readonly.class_expression": undefined;
+  "shape.readonly.datatype": { "datatype": string };
+  "shape.readonly.duplicate_path": { "path": string };
+  "shape.readonly.language_list": undefined;
+  "shape.readonly.multiple_messages": { "count": number };
+  "shape.readonly.multiple_targets": { "count": number };
+  "shape.readonly.path": undefined;
+  "shape.readonly.precision": { "predicate": string; "value": string };
+  "shape.readonly.predicate_value": { "predicate": string };
+  "shape.readonly.rule_reference": { "rule": string };
+  "shape.readonly.rule_severity": undefined;
+  "shape.readonly.severity": { "severity": string };
+  "shape.readonly.target_expression": undefined;
+  "shape.readonly.unknown": undefined;
+  "shape.readonly.uses_predicate": { "predicate": string };
   "snapshots.choices_object": undefined;
   "snapshots.choose_sheet": undefined;
   "snapshots.class_required": undefined;

@@ -11,6 +11,9 @@ SUMMARY
     (the selected shape's form) and Results (the result panels).
 
 BASIC IDEA
+    Standard unnamed-shape labels may carry display metadata. Their original
+    names and ids still control selection and recovery after a Turtle apply.
+
     Fetch failures retain their original cause. Display metadata follows the UI
     locale at render time, with escaped original details kept separately.
 
@@ -60,7 +63,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { renderServerError } from "../i18n/serverMessage";
+import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { getShapes } from "../api";
@@ -298,7 +301,7 @@ export default function ShapesView({
                       chooseTab("shape");
                     }}
                   >
-                    <span className="shapes-row-name">{shape.name}</span>
+                    <span className="shapes-row-name">{validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : shape.name}</span>
                     <span className="shapes-row-sentence">{rowSentence(shape, locale)}</span>
                     <span className={`shapes-row-result result-dot-${state ?? "none"}`}>
                       <span className="result-dot" aria-hidden="true" />

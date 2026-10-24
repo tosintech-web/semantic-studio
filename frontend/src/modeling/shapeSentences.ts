@@ -13,6 +13,9 @@ SUMMARY
     checks the rule editor makes before Add is allowed.
 
 BASIC IDEA
+    Count/length drafts must be exact browser integers; larger valid RDF counts
+    remain editable as Turtle instead of silently rounding through Number.
+
     Result names use validated display metadata when available; original names
     remain the compatibility fallback and identity never depends on translation.
 
@@ -354,6 +357,7 @@ export function ruleProblem(rule: ShapeRule, locale: UiLocale = "en"): string | 
   const { minCount: min, maxCount: max, minLength: lo, maxLength: hi } = rule;
   for (const [n, what] of [[min, "number"], [max, "number"], [lo, "length"], [hi, "length"]] as const) {
     if (n !== undefined && (!Number.isInteger(n) || n < 0)) return t(`shapeWords.problem.${what}`);
+    if (n !== undefined && !Number.isSafeInteger(n)) return t("shapeWords.problem.precision", { limit: Number.MAX_SAFE_INTEGER });
   }
   if (min !== undefined && max !== undefined && min > max) return t("shapeWords.problem.counts", { low: min, high: max });
   if (lo !== undefined && hi !== undefined && lo > hi) return t("shapeWords.problem.lengths");
