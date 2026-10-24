@@ -24,7 +24,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ImportRow, ImportsListing } from "../types";
 import ImportsPanel, { statusText, summaryText } from "./ImportsPanel";

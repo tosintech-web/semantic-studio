@@ -29,19 +29,18 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-const plural = (n: number, one: string, many: string) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+import type { Translator } from "./i18n/types";
+import { englishTranslator } from "./i18n/format";
 
-export function homeStatus(projects: number, ontologies: number): string {
-  const parts: string[] = [];
-  if (projects > 0) parts.push(plural(projects, "project", "projects"));
-  if (ontologies > 0) parts.push(`${plural(ontologies, "ontology", "ontologies")} in the library`);
-  return parts.length ? parts.join(" · ") : "Load an ontology or start a project to begin.";
+export function homeStatus(projects: number, ontologies: number, t: Translator = englishTranslator): string {
+  if (projects > 0 && ontologies > 0) return t(`status.both.${projects === 1 ? "one" : "many"}_${ontologies === 1 ? "one" : "many"}`, { projects, ontologies });
+  if (projects > 0) return t(`status.projects.${projects === 1 ? "one" : "many"}`, { count: projects });
+  if (ontologies > 0) return t(`status.library.${ontologies === 1 ? "one" : "many"}`, { count: ontologies });
+  return t("status.empty");
 }
 
-/** "142 statements". A person reads *statements*; *triples* is a word for
- *  the code, which keeps it (`summary.triples`). */
-export function statementCount(n: number): string {
-  return plural(n, "statement", "statements");
+export function statementCount(n: number, t: Translator = englishTranslator): string {
+  return t(`status.statements.${n === 1 ? "one" : "many"}`, { count: n });
 }
 
 /** The parser names store.py's EXTENSION_FORMATS and SNIFF_ORDER use. */

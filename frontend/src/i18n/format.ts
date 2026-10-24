@@ -14,7 +14,7 @@ EXPECTED OUTPUT
 
 import { en } from "./en";
 import { ja } from "./ja";
-import type { Primitive, UiLocale } from "./types";
+import type { Primitive, Translator, UiLocale } from "./types";
 
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 const COMMON = { ja: "操作を完了できませんでした。詳細を確認してください。", en: "The operation could not be completed. Check the details." };
@@ -47,3 +47,6 @@ export function formatDateTime(locale: UiLocale, iso: string): string {
   if (!Number.isFinite(date.getTime())) return translate(locale, "common.notSet");
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
+
+/** Default for legacy pure-function callers; UI consumers pass their context t. */
+export const englishTranslator = ((code, args) => translate("en", code, args)) as Translator;

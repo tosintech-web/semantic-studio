@@ -34,6 +34,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { Translator } from "./i18n/types";
+import { englishTranslator } from "./i18n/format";
+
 /** A megabyte as the server's caps count one (1024 × 1024 bytes). */
 export const MB = 1024 * 1024;
 /** How fast a file is read, for the expected time: 2.5 MB a second. */
@@ -70,10 +73,6 @@ export function sizeWords(bytes: number): string {
   return `${amount(bytes)} ${unit(bytes)}`;
 }
 
-function soFar(elapsed: number): string {
-  return `${elapsed} ${elapsed === 1 ? "second" : "seconds"} so far`;
-}
-
 /** Past the expected time: the step reads *Still reading*. */
 export function stillReading(step: LoadStep): boolean {
   if (step.kind !== "reading") return false;
@@ -82,31 +81,20 @@ export function stillReading(step: LoadStep): boolean {
 }
 
 /** The sentence under the control the load started from. */
-export function stepSentence(step: LoadStep): string {
-  switch (step.kind) {
-    case "sending":
-      return `Sending ${step.name}: ${amount(step.sent, step.total)} of ${sizeWords(step.total)}.`;
-    case "downloading":
-      return `Downloading and reading: ${soFar(step.elapsed)}.`;
-    case "reading": {
-      if (stillReading(step)) return `Still reading: ${soFar(step.elapsed)}.`;
-      const reading = `Reading ${step.name} (${sizeWords(step.size)}): ${soFar(step.elapsed)}.`;
-      const expected = expectedSeconds(step.size);
-      return expected === null ? reading : `${reading} Files this size often take about ${expected} seconds.`;
-    }
-  }
+export function stepSentence(step: LoadStep, t: Translator = englishTranslator): string {
+  if (step.kind === "sending") return t("load.sending", { name: step.name, sent: amount(step.sent, step.total), total: amount(step.total), unit: unit(step.total) });
+  const suffix = step.elapsed === 1 ? "one" : "many";
+  if (step.kind === "downloading") return t(`load.downloading.${suffix}`, { elapsed: step.elapsed });
+  if (stillReading(step)) return t(`load.still.${suffix}`, { elapsed: step.elapsed });
+  const expected = expectedSeconds(step.size);
+  const args = { name: step.name, size: sizeWords(step.size), elapsed: step.elapsed };
+  return expected === null ? t(`load.reading.${suffix}`, args) : t(`load.expected.${suffix}`, { ...args, expected });
 }
 
-/** What the live region says: the step alone, never the seconds. */
-export function stepAnnouncement(step: LoadStep): string {
-  switch (step.kind) {
-    case "sending":
-      return `Sending ${step.name}`;
-    case "downloading":
-      return "Downloading and reading";
-    case "reading":
-      return stillReading(step) ? `Still reading ${step.name}` : `Reading ${step.name}`;
-  }
+export function stepAnnouncement(step: LoadStep, t: Translator = englishTranslator): string {
+  if (step.kind === "downloading") return t("load.announce.downloading");
+  if (step.kind === "sending") return t("load.announce.sending", { name: step.name });
+  return t(stillReading(step) ? "load.announce.still" : "load.announce.reading", { name: step.name });
 }
 
 /** The two endings of a Cancel, from the server's answer (5.3). */

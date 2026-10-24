@@ -43,6 +43,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useRef } from "react";
 import { linkTarget } from "../links";
 
@@ -89,6 +90,7 @@ interface Props {
 }
 
 export default function AboutPanel({ onClose }: Props) {
+  const { t } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -160,7 +162,7 @@ export default function AboutPanel({ onClose }: Props) {
         aria-modal="true"
         aria-labelledby="about-panel-heading"
       >
-        <button className="icon-btn about-close" onClick={onClose} aria-label="Close About">
+        <button className="icon-btn about-close" onClick={onClose} aria-label={t("about.close")}>
           ✕
         </button>
 
@@ -169,22 +171,23 @@ export default function AboutPanel({ onClose }: Props) {
           <h2 id="about-panel-heading" className="about-name" ref={headingRef} tabIndex={-1}>
             {ABOUT.name}
           </h2>
-          <p className="about-purpose">{ABOUT.purpose}</p>
-          <p className="about-description">{ABOUT.description}</p>
+          <p className="about-purpose">{t("about.purpose")}</p>
+          <p className="about-description">{t("about.description")}</p>
         </div>
 
         <hr className="about-rule" />
 
         <div className="about-block">
-          <p>Unofficial modified version</p>
+          <p>{t("about.modified")}</p>
           <a className="about-link" href={linkTarget("https://github.com/tosintech-web/semantic-studio")} target="_blank" rel="noreferrer">
-            Modified version source and issues →
+            {t("about.source")}
           </a>
-          <p>Data and dependencies retain their own licences.</p>
+          <a className="about-link" href={linkTarget("https://github.com/tosintech-web/semantic-studio/issues")} target="_blank" rel="noreferrer">{t("about.issues")}</a>
+          <p>{t("about.scope")}</p>
           <a className="about-link" href={linkTarget("https://github.com/tosintech-web/semantic-studio/blob/main/THIRD_PARTY_NOTICES.md")} target="_blank" rel="noreferrer">
-            Third-party notices →
+            {t("about.notices")}
           </a>
-          <p className="about-author">{ABOUT.author}</p>
+          <p className="about-author">{t("about.author", { name: "Imran Khan" })}</p>
           {/* rel="noreferrer" implies noopener, which is what stops the opened
               page reaching back through window.opener. Same pattern as the IRI
               link in DetailPanel. */}
@@ -194,7 +197,7 @@ export default function AboutPanel({ onClose }: Props) {
             target="_blank"
             rel="noreferrer"
           >
-            {ABOUT.repositoryLabel}
+            {t("about.upstream")}
           </a>
         </div>
 
@@ -208,8 +211,8 @@ export default function AboutPanel({ onClose }: Props) {
         <hr className="about-rule" />
 
         <div className="about-block about-privacy">
-          <p>{ABOUT.privacy}</p>
-          <p>{ABOUT.privacyDetail}</p>
+          <p>{t("about.privacy")}</p>
+          <p>{t("about.privacyDetail")}</p>
         </div>
       </div>
     </>

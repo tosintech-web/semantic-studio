@@ -39,7 +39,7 @@ describe("message formatting", () => {
   it("catalogs have matching keys and placeholders", () => {
     expect(Object.keys(ja).sort()).toEqual(Object.keys(en).sort());
     for (const code of Object.keys(en) as (keyof typeof en)[]) {
-      const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort();
+      const placeholders = (s: string) => [...new Set([...s.matchAll(/\{(\w+)\}/g)].map(m => m[1]))].sort();
       expect(placeholders(ja[code])).toEqual(placeholders(en[code]));
     }
   });

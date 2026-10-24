@@ -26,7 +26,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApprovalRequest } from "../types";
 import NetworkApprovalDialog, { SERVICE_NOTHING_ELSE, WHY_EXPLAINED } from "./NetworkApprovalDialog";
@@ -205,4 +207,12 @@ describe("NetworkApprovalDialog", () => {
       expect(screen.queryByRole("textbox")).toBeNull();
     });
   });
+});
+it("describes the approval decision in Japanese and preserves the destination URL", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1"); const onAnswer = vi.fn();
+  render(<I18nProvider><NetworkApprovalDialog requests={[REQUEST]} onAnswer={onAnswer} /></I18nProvider>);
+  expect(screen.getByRole("dialog", { name: "json-ld.orgへの接続を許可しますか？" })).toBeTruthy();
+  expect(screen.getByText(REQUEST.url)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "許可しない" }));
+  expect(onAnswer).toHaveBeenCalledWith(false, true);
 });

@@ -42,7 +42,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { Profiler, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

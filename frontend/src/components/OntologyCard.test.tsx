@@ -33,7 +33,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import OntologyCard from "./OntologyCard";
 import type { CardSketch, OntologySummary } from "../types";

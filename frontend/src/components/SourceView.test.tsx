@@ -36,7 +36,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SourceView from "./SourceView";
 import { findTargetLine, targetMissingMessage } from "../sourceTarget";

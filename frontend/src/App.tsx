@@ -1109,7 +1109,7 @@ export default function App() {
     } finally {
       setRemovingId(null);
     }
-    if (!window.confirm(removalPrompt(name, count, names))) return;
+    if (!window.confirm(removalPrompt(name, count, names, t))) return;
     try {
       // The count comes back from the delete rather than being reused from
       // above: another tab may have saved one in between, and what was actually
@@ -1121,7 +1121,7 @@ export default function App() {
       if (id === activeId) setActiveId(null);
       // `?? 0` guards a server that predates the field: without it the message
       // would read "and undefined saved queries".
-      setNotice(removalConfirmation(name, result.deletedQueries ?? 0));
+      setNotice(removalConfirmation(name, result.deletedQueries ?? 0, t));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -1869,7 +1869,7 @@ export default function App() {
               title="Your library, the catalogue and the file routes"
             >
               <IconHome />
-              <span>Home</span>
+              <span>{t("nav.home")}</span>
             </button>
             {/* Load stays enabled with no ontology open: it is the way out of
                 an empty library, so disabling it would be a dead end. */}
@@ -1894,7 +1894,7 @@ export default function App() {
               title={activeId ? "Read the ontology file itself" : NO_ONTOLOGY_TITLE}
             >
               <IconView />
-              <span>View</span>
+              <span>{t("nav.view")}</span>
             </button>
             <button
               role="tab"
@@ -1904,7 +1904,7 @@ export default function App() {
               title={activeId ? "Browse the ontology and inspect entities" : NO_ONTOLOGY_TITLE}
             >
               <IconExplore />
-              <span>Explore</span>
+              <span>{t("nav.explore")}</span>
             </button>
             <button role="tab" aria-selected={tabSelected("entities")}
               className={tabSelected("entities") ? "nav-item active" : "nav-item"}
@@ -1928,7 +1928,7 @@ export default function App() {
               }
             >
               <IconEdit />
-              <span>Edit</span>
+              <span>{t("nav.edit")}</span>
             </button>
             <button
               role="tab"
@@ -1938,7 +1938,7 @@ export default function App() {
               title={activeId ? "Build a SPARQL query by clicking the graph" : NO_ONTOLOGY_TITLE}
             >
               <IconQuery />
-              <span>Query</span>
+              <span>{t("nav.query")}</span>
             </button>
             {/* Shapes is for projects only (shacl-authoring 5.1): a library
                 ontology has no shapes.ttl and nothing to validate. */}
@@ -1951,7 +1951,7 @@ export default function App() {
                 title="SHACL shapes: rules for good data, and validation"
               >
                 <IconShapes />
-                <span>Shapes</span>
+                <span>{t("nav.shapes")}</span>
               </button>
             )}
           </nav>
@@ -2020,7 +2020,7 @@ export default function App() {
               >
                 {ontologies.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.name} ({statementCount(o.triples)})
+                    {o.name} ({statementCount(o.triples, t)})
                   </option>
                 ))}
               </select>
@@ -2470,7 +2470,7 @@ export default function App() {
         {active ? (
           <>
             <span>{active.name}</span>
-            <span>{statementCount(active.triples)}</span>
+            <span>{statementCount(active.triples, t)}</span>
             {/* Under a budget these read "2,000 of 18,717". The status bar
                 keeps saying so after the notice is dismissed, so the fact that
                 the view is partial is never fully hidden. */}
@@ -2485,7 +2485,7 @@ export default function App() {
             )}
           </>
         ) : (
-          <span className="dim">{homeStatus(projects.length, ontologies.length)}</span>
+          <span className="dim">{homeStatus(projects.length, ontologies.length, t)}</span>
         )}
       </footer>
 

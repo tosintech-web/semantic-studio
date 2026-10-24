@@ -62,7 +62,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { I18nProvider } from "./i18n/I18nProvider";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { renderEn as render } from "./testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { ApiError } from "./api";
@@ -3976,4 +3978,11 @@ it("keeps the selected entity and refreshes the project list after Undo", async 
   expect(getEntities.mock.calls.length).toBe(calls + 1);
   expect(screen.getByRole("heading", { name: "Bond" })).toBeTruthy();
   expect(screen.getByRole("row", { name: /Bond/ }).getAttribute("aria-selected")).toBe("true");
+});
+it("names all main navigation jobs in Japanese and changes them with UI language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  for (const name of ["ホーム", "ソース", "探索", "項目一覧", "編集", "検索クエリ"]) expect(screen.getByRole("tab", { name })).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("tab", { name: "Home" })).toBeTruthy(); expect(screen.getByRole("tab", { name: "Entities" })).toBeTruthy();
 });

@@ -34,7 +34,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import GraphNotice from "./GraphNotice";
 import type { VizGraph } from "../types";

@@ -40,7 +40,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CatalogueList from "./CatalogueList";
 import LoadDialog from "./LoadDialog";

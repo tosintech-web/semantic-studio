@@ -34,7 +34,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeScreen, { CARD_LAYOUT_MAX, type HomeProjects } from "./HomeScreen";
 import { CATALOGUE } from "../catalogue";

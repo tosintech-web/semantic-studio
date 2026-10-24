@@ -61,6 +61,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import { describeKindCounts } from "../explore/suggestions";
 import { CARD_MINIATURE, ROW_MINIATURE, compositionSegments, layoutSketch } from "../home/miniature";
@@ -118,6 +119,7 @@ function OntologyCard({
   onRemove,
   onStartProject,
 }: Props) {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const headingId = useId();
   const menuId = useId();
@@ -353,7 +355,7 @@ function OntologyCard({
         {/* The two facts, and Read-only, every one of them text. Counts are the
             whole file's (summary.triples), never what a canvas drew. */}
         <ul className="onto-chips">
-          <li className="chip-metric">{statementCount(summary.triples)}</li>
+          <li className="chip-metric">{statementCount(summary.triples, t)}</li>
           {example ? (
             <li className="chip-state">Example</li>
           ) : (

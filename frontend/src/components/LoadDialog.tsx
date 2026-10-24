@@ -77,6 +77,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
@@ -177,6 +178,7 @@ export default function LoadDialog({
   onExamplesRestored,
   onLibraryChanged,
 }: Props) {
+  const { t: ui } = useI18n();
   const [tab, setTab] = useState<LoadTab>(initialTab === "data" && !project ? "suggested" : initialTab);
   const [wizard, setWizard] = useState<WizardStart | null>(startImport && project ? { kind: "new" } : null);
   // The wizard closed: the Data section takes focus back (X4).
@@ -262,7 +264,7 @@ export default function LoadDialog({
           // only when the words, the bar's whole percent or the step change
           // (PR #65 review).
           const shown = (s: number, t: number) =>
-            `${stepSentence({ kind: "sending", name, sent: s, total: t })}|${t > 0 ? Math.round((s / t) * 100) : 0}`;
+            `${stepSentence({ kind: "sending", name, sent: s, total: t }, ui)}|${t > 0 ? Math.round((s / t) * 100) : 0}`;
           const before = shown(fresh.sent, fresh.total);
           const wasSending = fresh.sending;
           Object.assign(fresh, { sent, total, sending: sent < total });
@@ -363,7 +365,7 @@ export default function LoadDialog({
         step.kind === "sending" ? (step.total > 0 ? Math.min(100, Math.round((step.sent / step.total) * 100)) : 0) : null;
       return (
         <div className="load-status">
-          <p className="load-step">{stepSentence(step)}</p>
+          <p className="load-step">{stepSentence(step, ui)}</p>
           {share !== null ? (
             <div
               className="load-bar"
@@ -395,7 +397,7 @@ export default function LoadDialog({
     }
     return null;
   };
-  const announcement = step ? stepAnnouncement(step) : (ended?.text ?? "");
+  const announcement = step ? stepAnnouncement(step, ui) : (ended?.text ?? "");
   const suggestedOrigin =
     run?.origin.tab === "suggested" ? run.origin : ended?.origin.tab === "suggested" ? ended.origin : null;
   // The Suggested tab, where focus goes once the examples are back: the
