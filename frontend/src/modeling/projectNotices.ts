@@ -5,7 +5,7 @@ FILE: frontend/src/modeling/projectNotices.ts
 SUMMARY
     Project announcements rendered in the current UI language from operation facts.
 BASIC IDEA
-    Keep finite message descriptors or a small validation/reasoning summary.
+    Keep finite descriptors, selected rule labels, reuse facts or small summaries.
     Reuse the panels' formatters and retain English text for legacy callers.
     Command history labels use additive server descriptors; each notice also
     keeps the action and save-state facts needed by its whole sentence.
@@ -18,6 +18,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { givenAnnouncement, sharedAnnouncement, planAlready } from "./sentences";
+import { narrativeSentence, type RuleNarrative } from "./ruleSentences";
+import type { WireMessage } from "../i18n/server-contracts";
 import type { MessageId, Translator, UiLocale } from "../i18n/types";
 import { renderUiMessage, type UiMessageFor } from "../i18n/uiMessage";
 import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
@@ -35,7 +38,19 @@ export type ProjectNotice = UiMessageFor<
   | Extract<MessageId, `projectNotice.${string}`>
 >;
 
+export type ReuseFacts =
+  | { mode: "given"; name: string; cls: string }
+  | { mode: "shared"; name: string; classes: string[] }
+  | { mode: "subclass"; name: string; cls: string; parent: string }
+  | { mode: "already"; name: string; cls: string; via: string };
+export interface NoticeWarning { text: string; uiMessage?: unknown }
+type Operation = Pick<ChangeResult, "label" | "uiMessage">;
+export type ProjectNoticeInput = string | ProjectNotice | ProjectNoticeDetail;
 export type ProjectNoticeDetail =
+  | { kind: "rule"; action: "added" | "changed" | "removed"; narrative: RuleNarrative | null; operation: Operation }
+  | { kind: "ruleCheck"; operation: Operation }
+  | { kind: "reuse"; facts: ReuseFacts }
+  | { kind: "warnings"; warnings: NoticeWarning[] }
   | { kind: "change"; label: string; uiMessage: ChangeResult["uiMessage"]; operation: "applied" | "undo" | "redo"; status: "saved" | "unsaved" | "saving" }
   | { kind: "validation"; result: ValidationSummaryInput }
   | { kind: "reasoning"; result: ReasoningLineInput; stale: boolean };
@@ -45,6 +60,42 @@ export interface ProjectAnnouncement {
   id: number;
   uiMessage?: ProjectNotice;
   detail?: ProjectNoticeDetail;
+}
+
+/** Copy metadata at the boundary so later result mutation cannot alter a notice. */
+function captureMessage(value: unknown): WireMessage | undefined {
+  if (!validWireMessage(value)) return undefined;
+  return { code: value.code, args: Object.fromEntries(Object.entries(value.args).map(([key, arg]) => [key,
+    Array.isArray(arg) ? arg.map(part => Object.prototype.hasOwnProperty.call(part, "text")
+      ? { text: (part as { text: string }).text } : { code: (part as { code: string }).code, args: {} }) : arg,
+  ])) } as WireMessage;
+}
+function operationFacts(result: Operation): Operation {
+  return { label: result.label, uiMessage: captureMessage(result.uiMessage) };
+}
+export function ruleNotice(action: "added" | "changed" | "removed", narrative: RuleNarrative | null, result: Operation): ProjectNoticeDetail {
+  const facts = narrative?.type === "restriction" ? { ...narrative, parts: { ...narrative.parts } } : narrative && { ...narrative };
+  return { kind: "rule", action, narrative: facts, operation: operationFacts(result) };
+}
+export function ruleCheckNotice(result: Operation): ProjectNoticeDetail {
+  return { kind: "ruleCheck", operation: operationFacts(result) };
+}
+export function reuseNotice(facts: ReuseFacts): ProjectNoticeDetail {
+  return { kind: "reuse", facts: facts.mode === "shared" ? { ...facts, classes: [...facts.classes] } : { ...facts } };
+}
+export function warningNotice(warnings: NoticeWarning[]): ProjectNoticeDetail {
+  return { kind: "warnings", warnings: warnings.map(w => ({ text: w.text, uiMessage: captureMessage(w.uiMessage) })) };
+}
+
+/** Keep legacy text independent of the localized metadata's wording. */
+export function legacyNoticeText(detail: ProjectNoticeDetail): string | undefined {
+  if (detail.kind === "warnings") return `Warning: ${detail.warnings.map(w => w.text).join(" ")}`;
+  if (detail.kind === "ruleCheck") return `${detail.operation.label}. Validate checks it in your data.`;
+  if (detail.kind === "rule") {
+    const verb = { added: "Added", changed: "Changed", removed: "Removed" }[detail.action];
+    return `${verb}: ${detail.narrative ? narrativeSentence(detail.narrative) : "the rule"}. ${detail.operation.label}.`;
+  }
+  return undefined;
 }
 
 export function validationNotice(result: ValidationResult): ProjectNoticeDetail {
@@ -71,18 +122,46 @@ export function historyLabel(label: string | null | undefined, message: unknown,
   return validWireMessage(message) ? renderServerMessage(message, label ?? "", t) : label ?? "";
 }
 
-export function renderProjectAnnouncement(notice: ProjectAnnouncement, locale: UiLocale, t: Translator): string {
-  if (notice.detail?.kind === "change") {
-    const { label, uiMessage, operation, status } = notice.detail;
+export function renderProjectNoticeDetail(detail: ProjectNoticeDetail, locale: UiLocale, t: Translator): string {
+  if (detail.kind === "rule") return t(`projectNotice.rule.${detail.action}`, {
+    sentence: detail.narrative ? narrativeSentence(detail.narrative, locale) : t("projectNotice.ruleFallback"),
+    operation: historyLabel(detail.operation.label, detail.operation.uiMessage, t),
+  });
+  if (detail.kind === "ruleCheck") return t("projectNotice.ruleCheck", { operation: historyLabel(detail.operation.label, detail.operation.uiMessage, t) });
+  if (detail.kind === "reuse") {
+    const f = detail.facts;
+    if (f.mode === "given") return givenAnnouncement(f.name, f.cls, locale);
+    if (f.mode === "shared") return sharedAnnouncement(f.name, f.classes, locale);
+    if (f.mode === "already") return planAlready(f.name, f.cls, f.via, locale);
+    return t("projectNotice.reuseSubclass", { name: f.name, cls: f.cls, parent: f.parent });
+  }
+  if (detail.kind === "warnings") {
+    let unknown = 0;
+    const messages: string[] = [];
+    for (const warning of detail.warnings) {
+      if (validWireMessage(warning.uiMessage)) messages.push(renderServerMessage(warning.uiMessage, warning.text, t));
+      else if (locale === "en") messages.push(warning.text);
+      else unknown++;
+    }
+    if (unknown) messages.push(t("projectNotice.warningUnknown", { count: unknown }));
+    return t("projectNotice.warnings", { messages: messages.join(" ") });
+  }
+  if (detail.kind === "change") {
+    const { label, uiMessage, operation, status } = detail;
     return t(`projectNotice.changed.${operation}.${status}`, { label: historyLabel(label, uiMessage, t) });
   }
-  if (notice.detail?.kind === "validation") return validationSummary(notice.detail.result, locale);
-  if (notice.detail?.kind === "reasoning") {
-    const { result, stale } = notice.detail;
+  if (detail.kind === "validation") return validationSummary(detail.result, locale);
+  if (detail.kind === "reasoning") {
+    const { result, stale } = detail;
     const line = stale ? staleLine(result, locale) : finishedLine(result, locale);
     // Preserve the original English announcement punctuation; Japanese
     // templates already own their punctuation and must not acquire a dot.
     return locale === "en" && !line.endsWith(".") ? `${line}.` : line;
   }
+  return "";
+}
+
+export function renderProjectAnnouncement(notice: ProjectAnnouncement, locale: UiLocale, t: Translator): string {
+  if (notice.detail) return renderProjectNoticeDetail(notice.detail, locale, t);
   return notice.uiMessage ? renderUiMessage(notice.uiMessage, t) : notice.text;
 }

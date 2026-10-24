@@ -54,6 +54,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderProjectNoticeDetail, type ProjectNoticeDetail } from "../modeling/projectNotices";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useRef, useState } from "react";
 import { alreadyDefined } from "../api";
@@ -217,7 +218,7 @@ export default function EditStructure({
   warnings = [],
   rules,
 }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { busy, errors, run, clear } = runner;
   const [open, setOpen] = useState<Open>(null);
   // The button each form was opened from, to give focus back to.
@@ -229,7 +230,7 @@ export default function EditStructure({
   // under the list once the form has closed.
   const [reuse, setReuse] = useState<{ iri: string; label: string } | null>(null);
   const [existing, setExisting] = useState<AlreadyDefined | null>(null);
-  const [note, setNote] = useState<string | null>(null);
+  const [note, setNote] = useState<ProjectNoticeDetail | null>(null);
   const formBox = useRef<HTMLDivElement>(null);
   const lists = useRef<Record<string, HTMLHeadingElement | null>>({});
   const pid = useProjectSelector((s) => s.project?.id ?? null);
@@ -283,9 +284,9 @@ export default function EditStructure({
         cls={{ iri, label: name }}
         runner={runner}
         onDone={() => reused(which)}
-        onAlready={(sentence) => {
-          setNote(sentence);
-          projectStore.say(sentence);
+        onAlready={(_sentence, facts) => {
+          setNote(facts);
+          projectStore.say(facts);
           reused(which);
         }}
         onCancel={() => {
@@ -415,7 +416,7 @@ export default function EditStructure({
         ) : (
           <Links refs={model.attributes} empty={t("editStructure.noAttributes")} onSelect={onSelect} />
         )}
-        {note && <p className="detail-note">{note}</p>}
+        {note && <p className="detail-note">{renderProjectNoticeDetail(note, locale, t)}</p>}
         {open === "attribute" ? (
           <div ref={formBox}>
             <NewEntityForm

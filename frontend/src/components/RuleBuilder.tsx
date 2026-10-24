@@ -35,7 +35,7 @@ INPUTS / INPUT SOURCES (props)
     - initial: the state to open on (an edit, or a rule begun on the canvas).
     - replacing: the key of an existing rule being changed (Save, not Add).
     - busy, error: the command in flight and the server's refusal.
-    - onSubmit(command, sentence), onCancel.
+    - onSubmit(command, sentence, selected narrative facts), onCancel.
 
 EXPECTED OUTPUT
     - The builder; onSubmit with one command.
@@ -51,6 +51,8 @@ import {
   builderCommand,
   builderProblem,
   builderSentence,
+  builderNarrative,
+  type RuleNarrative,
   isCount,
   kindsFor,
   propertyKind,
@@ -68,7 +70,7 @@ interface Props {
   replacing?: RuleKey | null;
   busy: boolean;
   error?: string | null;
-  onSubmit: (command: { name: string; args: Record<string, unknown> }, sentence: string) => void;
+  onSubmit: (command: { name: string; args: Record<string, unknown> }, sentence: string, narrative: RuleNarrative) => void;
   onCancel: () => void;
 }
 
@@ -132,7 +134,7 @@ export default function RuleBuilder({
 
   const submit = () => {
     if (busy || !command) return;
-    onSubmit(command, sentence);
+    onSubmit(command, sentence, builderNarrative(name, state, choices));
   };
 
   return (

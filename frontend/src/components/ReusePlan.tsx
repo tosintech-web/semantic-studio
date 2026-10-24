@@ -37,7 +37,7 @@ INPUTS / INPUT SOURCES (props)
       null for the 5.4 Fix.
     - runner: the form's command runner.
     - onDone, onCancel: after a choice, or Cancel; onAlready: case B, with
-      its sentence.
+      its legacy sentence and selected facts for current-language display.
 
 EXPECTED OUTPUT
     - The plan's sentences and buttons; ShareDomain or AddSubClassOf.
@@ -50,7 +50,6 @@ import { planShare } from "../api";
 import {
   gainsSentence,
   giveParent,
-  givenAnnouncement,
   importedParentNote,
   makeKindOf,
   moveUpTo,
@@ -61,8 +60,8 @@ import {
   planRdfsParent,
   planSubclass,
   planUnion,
-  sharedAnnouncement,
 } from "../modeling/sentences";
+import { reuseNotice, type ProjectNoticeDetail } from "../modeling/projectNotices";
 import type { SharePlan } from "../types";
 import type { Runner } from "./EditParts";
 import EntityPicker from "./EntityPicker";
@@ -75,7 +74,7 @@ interface Props {
   runner: Runner;
   onDone: () => void;
   onCancel: () => void;
-  onAlready?: (sentence: string) => void;
+  onAlready?: (sentence: string, notice: ProjectNoticeDetail) => void;
 }
 
 export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDone, onCancel, onAlready }: Props) {
@@ -106,9 +105,9 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   already.current = onAlready;
   useEffect(() => {
     if (plan?.case === "B" && cls && already.current) {
-      already.current(planAlready(property.label, cls.label, plan.via?.label ?? cls.label));
+      already.current(planAlready(property.label, cls.label, plan.via?.label ?? cls.label), reuseNotice({ mode: "already", name: property.label, cls: cls.label, via: plan.via?.label ?? cls.label }));
     }
-  }, [plan, cls, property.label]);
+  }, [plan, cls?.iri, cls?.label, property.label]);
 
   // The first choice takes focus when the plan arrives (5.5).
   useEffect(() => {
@@ -128,7 +127,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   // covered by it and left out, so the server's list, not everyone.
   const united = plan?.union?.map((c) => c.label) ?? everyone;
 
-  const share = async (args: Record<string, unknown>, said: string) => {
+  const share = async (args: Record<string, unknown>, said: ProjectNoticeDetail) => {
     if (busy) return;
     const body = { property: property.iri, ...(cls ? { class: cls.iri } : {}), ...args };
     if (await run("reuse", "ShareDomain", body, () => said)) onDone();
@@ -176,13 +175,13 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
           exclude={plan.domain.classes.map((c) => c.iri).concat(cls ? [cls.iri] : [])}
           busy={busy}
           onCancel={() => setPicking(false)}
-          onPick={(parent) => void share({ how: "parent", parent }, sharedAnnouncement(name, everyone))}
+          onPick={(parent) => void share({ how: "parent", parent }, reuseNotice({ mode: "shared", name, classes: everyone }))}
         />
       ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (parentName.trim()) void share({ how: "parent", parentLabel: parentName.trim() }, sharedAnnouncement(name, everyone));
+            if (parentName.trim()) void share({ how: "parent", parentLabel: parentName.trim() }, reuseNotice({ mode: "shared", name, classes: everyone }));
           }}
         >
           <label htmlFor={`${id}-parent`} className="edit-field-label">
@@ -213,7 +212,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
       {plan.case === "A" && cls && (
         <>
           <p>{planNoClass(name, cls.label, locale)}</p>
-          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, givenAnnouncement(name, cls.label))}>
+          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, reuseNotice({ mode: "given", name, cls: cls.label }))}>
             {t("reusePlan.yes")}
           </button>
         </>
@@ -221,7 +220,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
       {plan.case === "C" && cls && (
         <>
           <p>{planMoveUp(name, cls.label, domain, locale)}</p>
-          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, givenAnnouncement(name, cls.label))}>
+          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, reuseNotice({ mode: "given", name, cls: cls.label }))}>
             {t("reusePlan.moveUp")}
           </button>
         </>
@@ -234,7 +233,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
             aria-disabled={busy}
             onClick={async () => {
               if (busy) return;
-              const said = `${cls.label} is now a kind of ${domain[0]}, and has ${name}.`;
+              const said = reuseNotice({ mode: "subclass", name, cls: cls.label, parent: domain[0] });
               if (await run("reuse", "AddSubClassOf", { child: cls.iri, parent: plan.domain.classes[0].iri }, () => said)) onDone();
             }}
           >
@@ -250,7 +249,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
               <code>{plan.turtle}</code>
             </pre>
           )}
-          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "union" }, sharedAnnouncement(name, united))}>
+          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "union" }, reuseNotice({ mode: "shared", name, classes: united }))}>
             {t("modelSentences.shareIt")}
           </button>
           {choices.parent && !parentOpen && (
@@ -273,7 +272,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
       {choices?.up.map((up) => (
         <div className="reuse-choice" key={up.iri}>
           <p className="detail-note">{gainsSentence(name, up.label, up.gains.map((g) => g.label), up.gainsTotal, locale)}</p>
-          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "up", parent: up.iri }, givenAnnouncement(name, up.label))}>
+          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "up", parent: up.iri }, reuseNotice({ mode: "given", name, cls: up.label }))}>
             {moveUpTo(name, up.label, locale)}
           </button>
         </div>

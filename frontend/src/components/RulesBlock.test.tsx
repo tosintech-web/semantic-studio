@@ -34,7 +34,10 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
-import { projectStore } from "../state/projectStore";
+import { useI18n } from "../i18n/I18nProvider";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { builderSentence, EMPTY_BUILDER, itemSentence } from "../modeling/ruleSentences";
+import { projectStore, useProjectStore } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleRestriction } from "../types";
 import { useRunner } from "./EditParts";
 import RulesBlock from "./RulesBlock";
@@ -383,5 +386,72 @@ it("rewords existing rules and capped choices while preserving the underlying ru
   expect(screen.getByText("Showing the first 1 of 500 relationships and attributes; write a rule on another in Turtle.")).toBeTruthy();
   expect(JSON.stringify(rules)).toBe(original);
   expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+function NoticeProbe() {
+  const snapshot = useProjectStore();
+  const { locale, t } = useI18n();
+  return <output data-testid="notice"><span key={snapshot.announcement.id}>{renderProjectAnnouncement(snapshot.announcement, locale, t)}</span></output>;
+}
+
+it.each(["add", "change", "remove"] as const)("retains %s rule facts through a pending command and later UI changes", async action => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const initial = rulesOf(action === "add" ? [] : [some()]);
+  initial.choices = { ...CHOICES, properties: { items: [...CHOICES.properties.items, { iri: EX + "Hidden", label: "HIDDEN-CHOICE-LABEL", kind: "relationship" }], total: 500 } };
+  let finish!: (value: unknown) => void;
+  runCommand.mockImplementationOnce(() => new Promise(done => { finish = done; }));
+  const words = { add: ["Added", "added_restriction", "Added a rule on has line to Order"], change: ["Changed", "changed_restriction", "Changed a rule on has line of Order"], remove: ["Removed", "removed_restriction", "Removed a rule on has line from Order"] }[action];
+  const state = { ...EMPTY_BUILDER, property: EX + "hasLine", kind: "atLeast" as const, n: "3" };
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><NoticeProbe /><Harness initial={initial} /></I18nProvider>); });
+  if (action === "remove") {
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^削除：/ })); });
+  } else {
+    fireEvent.click(screen.getByRole("button", { name: action === "add" ? "ルールを追加" : /^編集：/ }));
+    fireEvent.change(screen.getByRole("combobox", { name: "関係または属性" }), { target: { value: EX + "hasLine" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "成立する条件" }), { target: { value: "atLeast" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "件数（0〜1,000）" }), { target: { value: "3" } });
+    // Remove the optional qualifier so the exact draft is three unqualified values.
+    const qualifier = screen.getByRole("combobox", { name: /クラス|種類|値の型/ });
+    fireEvent.change(qualifier, { target: { value: "" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: action === "add" ? "追加" : "ルールを保存" })); });
+  }
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  await act(async () => { finish({ revision: 3, label: words[2], uiMessage: { code: `command.${words[1]}`, args: { property: "has line", name: "Order" } }, state: STATE }); });
+  const english = action === "remove" ? itemSentence("Order", some(), "en")! : builderSentence("Order", state, CHOICES, "en");
+  const japanese = action === "remove" ? itemSentence("Order", some(), "ja")! : builderSentence("Order", state, CHOICES, "ja");
+  expect(screen.getByTestId("notice").textContent).toBe(`${words[0]}: ${english}. ${words[2]}.`);
+  const notice = projectStore.getSnapshot().announcement;
+  const span = screen.getByTestId("notice").firstElementChild;
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  const operation = { add: "クラス「Order」へのhas lineに関する制約の追加", change: "クラス「Order」のhas lineに関する制約の変更", remove: "クラス「Order」からのhas lineに関する制約の削除" }[action];
+  const prefix = { add: "ルールを追加しました", change: "ルールを変更しました", remove: "ルールを削除しました" }[action];
+  expect(screen.getByTestId("notice").textContent).toBe(`${prefix}：${japanese}（${operation}）`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(screen.getByTestId("notice").firstElementChild).toBe(span);
+  expect(JSON.stringify(notice)).not.toContain("HIDDEN-CHOICE-LABEL");
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each(["known", "unknown", "newline"] as const)("keeps a %s warning as facts and never reannounces on a UI-only change", async mode => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><NoticeProbe /><Harness initial={rulesOf([])} /></I18nProvider>); });
+  const warning = { text: mode === "newline" ? "Original <b>{name}\nsecond line" : "Original <b>{name} warning",
+    ...(mode === "known" ? { uiMessage: { code: "validation.min_count", args: { name: "対象 <img>{name}", count: 2 } } } : {}),
+  };
+  await refetch(rulesOf([], { warnings: [warning] }));
+  const notice = projectStore.getSnapshot().announcement;
+  expect(screen.getByTestId("notice").textContent).toBe(mode === "known" ? "注意：「対象 <img>{name}」には2件以上の値が必要です。" : "注意：1件の注意事項があります。詳細を確認してください。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByTestId("notice").textContent).toBe(mode === "known" ? "Warning: 対象 <img>{name} needs at least 2 values." : `Warning: ${warning.text}`);
+  expect(notice.text).toBe(`Warning: ${warning.text}`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  await refetch(rulesOf([], { warnings: [{ ...warning }] }));
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(runCommand).not.toHaveBeenCalled();
+  expect(screen.getByTestId("notice").querySelector("b,img")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

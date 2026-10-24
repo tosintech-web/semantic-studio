@@ -111,7 +111,7 @@ import {
   updateProject,
   validateProject,
 } from "../api";
-import { reasoningNotice, renderProjectAnnouncement, validationNotice, type ProjectAnnouncement, type ProjectNotice, type ProjectNoticeDetail } from "../modeling/projectNotices";
+import { legacyNoticeText, type ProjectNoticeInput, reasoningNotice, renderProjectAnnouncement, validationNotice, type ProjectAnnouncement, type ProjectNotice, type ProjectNoticeDetail } from "../modeling/projectNotices";
 export type { ProjectNotice } from "../modeling/projectNotices";
 import { failureReason } from "../networkWords";
 import type { ReasoningNow } from "../reasoning/reasonSentences";
@@ -403,8 +403,13 @@ function announce(message: string | ProjectNotice, legacyText?: string): void {
 
 function announceDetail(detail: ProjectNoticeDetail, legacyText?: string): void {
   const announcement: ProjectAnnouncement = { text: "", id: snapshot.announcement.id + 1, detail };
-  announcement.text = legacyText ?? renderProjectAnnouncement(announcement, "en", englishTranslator);
+  announcement.text = legacyText ?? legacyNoticeText(detail) ?? renderProjectAnnouncement(announcement, "en", englishTranslator);
   set({ announcement });
+}
+
+function announceInput(message: ProjectNoticeInput): void {
+  if (typeof message !== "string" && "kind" in message) announceDetail(message);
+  else announce(message);
 }
 
 function withDocument(next: ProjectDocumentState): ProjectDocumentState[] {
@@ -429,8 +434,8 @@ export const projectStore = {
 
   /** Say something in the project's polite live region: a warning of the
    *  modeling checks that a change has just brought (relationships 5.9). */
-  say(text: string): void {
-    announce(text);
+  say(text: ProjectNoticeInput): void {
+    announceInput(text);
   },
 
   /** Open a project and make it current. Returns the model's ontology id. */
@@ -546,7 +551,7 @@ export const projectStore = {
   async command(
     name: string,
     args: Record<string, unknown>,
-    announcement?: (result: ChangeResult) => string,
+    announcement?: (result: ChangeResult) => ProjectNoticeInput,
     doc?: ProjectDocName,
   ): Promise<ChangeResult> {
     const project = requireProject();
@@ -560,7 +565,7 @@ export const projectStore = {
     }
     if (announcement) {
       set({ documents: withDocument(result.state) });
-      announce(announcement(result));
+      announceInput(announcement(result));
     } else {
       afterChange(result, "applied");
     }

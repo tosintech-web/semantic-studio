@@ -15,6 +15,14 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "projectNotice.rule.added": "Added: {sentence}. {operation}.",
+  "projectNotice.rule.changed": "Changed: {sentence}. {operation}.",
+  "projectNotice.rule.removed": "Removed: {sentence}. {operation}.",
+  "projectNotice.ruleFallback": "the rule",
+  "projectNotice.ruleCheck": "{operation}. Validate checks it in your data.",
+  "projectNotice.reuseSubclass": "{cls} is now a kind of {parent}, and has {name}.",
+  "projectNotice.warnings": "Warning: {messages}",
+  "projectNotice.warningUnknown": "There are {count} warnings. Check the details.",
   "dataWizard.step": "Step {step} of 4: {title}",
   "dataWizard.step.file": "the file",
   "dataWizard.step.row": "what a row is",

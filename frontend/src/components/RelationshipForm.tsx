@@ -10,6 +10,7 @@ SUMMARY
     characteristics each with an example in the relationship's own names,
     its more general relationship, and pointers to what it cannot say. Also
     PropertyHead, the sentence at the top of both property forms, and
+    Warning announcements retain whole raw records and translate at render time.
     Warnings, the 5.9 warnings shown under the block each concerns. The
     Pointers block links to the start class's rules (axioms 5.9): it opens
     the class's sentence builder with this relationship and its end.
@@ -57,6 +58,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { warningNotice, type NoticeWarning } from "../modeling/projectNotices";
 import { useI18n } from "../i18n/I18nProvider";
 import { translateParts } from "../i18n/parts";
 import { useEffect, useId, useRef, useState } from "react";
@@ -91,18 +93,17 @@ export function datatypeOf(range: Ref | null): string | null {
 /** Say each warning a change brings, once, in the project's live region.
  *  Those there when the entity is opened are not: they are read with the
  *  form. Keyed by entity, so moving to another does not announce its own. */
-export function useWarningAnnouncer(iri: string, warnings: { text: string }[]) {
+export function useWarningAnnouncer(iri: string, warnings: NoticeWarning[]) {
   const seen = useRef<{ iri: string; texts: Set<string> } | null>(null);
-  const texts = warnings.map((w) => w.text).join("\n");
   useEffect(() => {
-    const now = new Set(texts ? texts.split("\n") : []);
+    const now = new Set(warnings.map(w => w.text));
     const before = seen.current;
     if (before && before.iri === iri) {
-      const fresh = [...now].filter((t) => !before.texts.has(t));
-      if (fresh.length) projectStore.say(`Warning: ${fresh.join(" ")}`);
+      const fresh = warnings.filter(w => !before.texts.has(w.text));
+      if (fresh.length) projectStore.say(warningNotice([...new Map(fresh.map(w => [w.text, w])).values()]));
     }
     seen.current = { iri, texts: now };
-  }, [iri, texts]);
+  }, [iri, warnings]);
 }
 
 /** The sentence at the top of a property's form; its warnings are said as

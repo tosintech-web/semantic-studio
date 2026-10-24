@@ -16,6 +16,14 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "projectNotice.rule.added": { sentence: string; operation: string };
+  "projectNotice.rule.changed": { sentence: string; operation: string };
+  "projectNotice.rule.removed": { sentence: string; operation: string };
+  "projectNotice.ruleFallback": undefined;
+  "projectNotice.ruleCheck": { operation: string };
+  "projectNotice.reuseSubclass": { name: string; cls: string; parent: string };
+  "projectNotice.warnings": { messages: string };
+  "projectNotice.warningUnknown": { count: number };
   "projectNotice.changed.applied.saved": { label: string };
   "projectNotice.changed.applied.unsaved": { label: string };
   "projectNotice.changed.applied.saving": { label: string };

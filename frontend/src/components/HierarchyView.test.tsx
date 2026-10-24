@@ -1320,13 +1320,13 @@ it("keeps outline expansion, filter and row focus across UI locale changes witho
   try {
     await screen.findByRole("button", { name: "クラス、2件" });
     const alpha = itemByLabel("Alpha")!;
-    alpha.focus();
+    await act(async () => alpha.focus());
     fireEvent.keyDown(alpha, { key: "ArrowRight" });
     const beta = itemByLabel("Beta")!;
     expect(beta).toBeTruthy();
     const filter = screen.getByRole("searchbox", { name: "ツリーを名前で絞り込み" });
     fireEvent.change(filter, { target: { value: "Bet" } });
-    beta.focus();
+    await act(async () => beta.focus());
     fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
     expect(screen.getByRole("searchbox", { name: "Filter the outline by name" })).toBe(filter);
     expect((filter as HTMLInputElement).value).toBe("Bet");

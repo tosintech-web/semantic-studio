@@ -2598,3 +2598,12 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `command.added_example_value` | property, subject | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
 | `command.removed_example_value` | property, subject | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
 | `command.applied_turtle` | — | `backend/app/editing.py` | 条件付き編集操作 | 12 | 英語labelを保持、操作種類と構造化した元の値から表示 |
+
+| `projectNotice.rule.added` | operation, sentence | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+| `projectNotice.rule.changed` | operation, sentence | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+| `projectNotice.rule.removed` | operation, sentence | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+| `projectNotice.ruleFallback` | — | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+| `projectNotice.ruleCheck` | operation | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+| `projectNotice.reuseSubclass` | cls, name, parent | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+| `projectNotice.warnings` | messages | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |
+| `projectNotice.warningUnknown` | count | `frontend/src/modeling/projectNotices.ts` | 編集・警告の通知 | 12 | 選択対象の事実から現在のUI言語で表示 |

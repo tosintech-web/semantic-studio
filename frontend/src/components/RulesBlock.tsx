@@ -40,7 +40,7 @@ INPUTS / INPUT SOURCES (props)
     - onSelect: select another entity (a class named in a rule).
 
 EXPECTED OUTPUT
-    - Commands through the runners; the block's markup.
+    - Commands through the runners; current-locale notices from selected rule facts.
 ================================================================================
 */
 
@@ -49,6 +49,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   EMPTY_BUILDER,
   itemKey,
+  itemNarrative,
   itemSentence,
   openWorldNote,
   partsOf,
@@ -56,6 +57,7 @@ import {
   stateOf,
   type BuilderState,
 } from "../modeling/ruleSentences";
+import { ruleNotice, ruleCheckNotice } from "../modeling/projectNotices";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleKey, RuleRestriction } from "../types";
 import { useRunner, type Runner } from "./EditParts";
@@ -140,8 +142,8 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
     const key = itemKey(item);
     const next = items.slice(index + 1).find((i) => itemKey(i) !== key) ?? items.slice(0, index).reverse()[0];
     pending.current = { gone: key, next: next ? itemKey(next) : "add" };
-    const sentence = itemSentence(name, item) ?? "the rule";
-    const done = await run(`rule:${key}`, command.name, command.args, (r) => `Removed: ${sentence}. ${r.label}.`, say);
+    const narrative = itemNarrative(name, item);
+    const done = await run(`rule:${key}`, command.name, command.args, (r) => ruleNotice("removed", narrative, r), say);
     if (!done) pending.current = null;
   };
 
@@ -152,7 +154,7 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
       `check:${key}`,
       "CheckInData",
       { class: iri, restriction: item.key },
-      (r) => `${r.label}. Validate checks it in your data.`,
+      (r) => ruleCheckNotice(r),
       say,
     );
   };
@@ -278,8 +280,8 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
                     busy={busy}
                     error={errors.rule || null}
                     onCancel={() => close(key)}
-                    onSubmit={async (command, said) => {
-                      const result = await run("rule", command.name, command.args, (r) => `Changed: ${said}. ${r.label}.`, say);
+                    onSubmit={async (command, _said, narrative) => {
+                      const result = await run("rule", command.name, command.args, (r) => ruleNotice("changed", narrative, r), say);
                       if (result) close("add");
                     }}
                   />
@@ -299,8 +301,8 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
           busy={busy}
           error={errors.rule || null}
           onCancel={() => close("add")}
-          onSubmit={async (command, said) => {
-            const result = await run("rule", command.name, command.args, (r) => `Added: ${said}. ${r.label}.`, say);
+          onSubmit={async (command, _said, narrative) => {
+            const result = await run("rule", command.name, command.args, (r) => ruleNotice("added", narrative, r), say);
             if (result) close("add");
           }}
         />

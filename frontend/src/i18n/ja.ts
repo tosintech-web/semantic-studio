@@ -15,6 +15,14 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "projectNotice.rule.added": "ルールを追加しました：{sentence}（{operation}）",
+  "projectNotice.rule.changed": "ルールを変更しました：{sentence}（{operation}）",
+  "projectNotice.rule.removed": "ルールを削除しました：{sentence}（{operation}）",
+  "projectNotice.ruleFallback": "ルール",
+  "projectNotice.ruleCheck": "{operation}。検証を実行するとデータに対して確認できます。",
+  "projectNotice.reuseSubclass": "{cls}は{parent}の下位クラスとなり、「{name}」を持つようになりました。",
+  "projectNotice.warnings": "注意：{messages}",
+  "projectNotice.warningUnknown": "{count}件の注意事項があります。詳細を確認してください。",
   "dataWizard.step": "手順{step}/4：{title}",
   "dataWizard.step.file": "ファイル",
   "dataWizard.step.row": "行が表すもの",

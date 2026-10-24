@@ -50,6 +50,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { useI18n } from "../i18n/I18nProvider";
 import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
 import { projectStore } from "../state/projectStore";
+import type { ProjectNoticeInput } from "../modeling/projectNotices";
 import type { ChangeResult, ProjectDocName } from "../types";
 
 /** Run one command for one field: its busy flag and its refusal. */
@@ -60,7 +61,7 @@ export interface Runner {
     field: string,
     command: string,
     args: Record<string, unknown>,
-    announcement?: (result: ChangeResult) => string,
+    announcement?: (result: ChangeResult) => ProjectNoticeInput,
     /** Told the server's sentence when the command is refused, to say it in
      *  the live region as well (axioms 5.9), and the error itself, for a
      *  refusal that carries more than words (attribute-reuse 5.1's 409). */
@@ -91,7 +92,7 @@ export function useRunner(doc?: ProjectDocName): Runner {
       field: string,
       command: string,
       args: Record<string, unknown>,
-      announcement?: (result: ChangeResult) => string,
+      announcement?: (result: ChangeResult) => ProjectNoticeInput,
       refused?: (message: string, error: unknown) => void,
     ) => {
       if (inFlight.current) return null;

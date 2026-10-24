@@ -20,7 +20,7 @@ BASIC IDEA
 
     The server reads a rule out of the graph into its parts with labels
     (axioms.py); everything a learner reads is built here, from those parts,
-    so the form, the canvas and the builder say a rule the same way and are
+    so the form, canvas, builder and retained notice say a rule the same way and are
     tested without drawing anything. A name is used exactly as written;
     nothing here reads ontology text as markup or as a pattern. The article
     is sentences.ts's, the one rule every sentence shares (X-12), and the
@@ -155,11 +155,26 @@ export function equivalentSentence(cls: string, other: string, locale: UiLocale 
 
 /** Any item of the Rules block as its sentence; Turtle outside 5.8 is its
  *  own text and has none. */
-export function itemSentence(cls: string, item: RuleItem, locale: UiLocale = "en"): string | null {
-  if (item.type === "restriction") return restrictionSentence(cls, partsOf(item), locale);
-  if (item.type === "disjoint") return disjointSentence(cls, item.other.label, locale);
-  if (item.type === "equivalent") return equivalentSentence(cls, item.other.label, locale);
+export type RuleNarrative =
+  | { type: "restriction"; cls: string; parts: RuleParts }
+  | { type: "disjoint" | "equivalent"; cls: string; other: string | null };
+
+/** Capture selected labels only: notices outlive the form and its choices. */
+export function itemNarrative(cls: string, item: RuleItem): RuleNarrative | null {
+  if (item.type === "restriction") return { type: "restriction", cls, parts: partsOf(item) };
+  if (item.type === "disjoint" || item.type === "equivalent") return { type: item.type, cls, other: item.other.label };
   return null;
+}
+
+export function narrativeSentence(facts: RuleNarrative, locale: UiLocale = "en"): string {
+  if (facts.type === "restriction") return restrictionSentence(facts.cls, facts.parts, locale);
+  if (facts.type === "equivalent") return equivalentSentence(facts.cls, facts.other ?? BLANK, locale);
+  return facts.other ? disjointSentence(facts.cls, facts.other, locale) : tFor(locale)("ruleSentence.disjointBlank", { cls: facts.cls });
+}
+
+export function itemSentence(cls: string, item: RuleItem, locale: UiLocale = "en"): string | null {
+  const facts = itemNarrative(cls, item);
+  return facts ? narrativeSentence(facts, locale) : null;
 }
 
 /** A rule line's label on the canvas (5.9): the sentence's short form. */
@@ -286,15 +301,10 @@ function parsedN(state: BuilderState): number | null {
 
 /** The builder's sentence so far, with "…" in each blank still empty: the
  *  group's name and what Add announces (Section 6, Accessibility). */
-export function builderSentence(cls: string, state: BuilderState, choices: RuleChoices | null, locale: UiLocale = "en"): string {
+export function builderNarrative(cls: string, state: BuilderState, choices: RuleChoices | null): RuleNarrative {
   const label = (list: RuleRef[] | undefined, iri: string | null) => find(list, iri)?.label ?? null;
-  if (state.type === "disjoint") {
-    const other = label(choices?.classes.items, state.other);
-    return other ? disjointSentence(cls, other, locale) : tFor(locale)("ruleSentence.disjointBlank", { cls });
-  }
-  if (state.type === "equivalent") {
-    const other = label(choices?.classes.items, state.other);
-    return equivalentSentence(cls, other ?? BLANK, locale);
+  if (state.type === "disjoint" || state.type === "equivalent") {
+    return { type: state.type, cls, other: label(choices?.classes.items, state.other) };
   }
   const attribute = propertyKind(state, choices) === "attribute";
   let filler: string | null = null;
@@ -303,14 +313,18 @@ export function builderSentence(cls: string, state: BuilderState, choices: RuleC
   } else if (state.filler) {
     filler = attribute ? (find(VALUE_TYPES, state.filler)?.label ?? state.filler) : label(choices?.classes.items, state.filler);
   }
-  return restrictionSentence(cls, {
+  return { type: "restriction", cls, parts: {
     form: state.type,
     kind: state.kind,
     property: label(choices?.properties.items, state.property),
     filler,
     n: isCount(state.kind) ? parsedN(state) : null,
     with: state.type === "defines" ? label(choices?.classes.items, state.with) : null,
-  }, locale);
+  } };
+}
+
+export function builderSentence(cls: string, state: BuilderState, choices: RuleChoices | null, locale: UiLocale = "en"): string {
+  return narrativeSentence(builderNarrative(cls, state, choices), locale);
 }
 
 /** What stops Add, in words, or null when the rule can be written. The
