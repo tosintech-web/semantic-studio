@@ -10,7 +10,8 @@ SUMMARY
     (D-082, D-083). This is the only module that mutates a project document's
     graph; test_no_direct_mutation.py holds the rest of the code to that.
 
-    Value refusals also carry validated display facts without altering RDF checks.
+    Value and fixed command refusals carry validated display facts while
+    retaining their original exception types, text and RDF checks.
 
 BASIC IDEA
     A document, once its project is opened, is an Ontology registered in the
@@ -712,7 +713,10 @@ class Context:
             return self.iri(args["iri"])
         local = local_name_from(label, lower_first)
         if not local:
-            raise CommandError("An IRI cannot be made from that name; give the IRI as well.")
+            raise CommandError(
+                'An IRI cannot be made from that name; give the IRI as well.',
+                ui_message=make_message("editing.refusal.explicit_iri_required"),
+            )
         return URIRef(self.base + local)
 
     def primary_label(self, args: dict, key: str = "label") -> str:
@@ -802,7 +806,10 @@ def _definition(ctx: Context, iri: URIRef, a: dict) -> list:
     if text is None:
         return []
     if not isinstance(text, str):
-        raise CommandError("A definition is text.")
+        raise CommandError(
+            'A definition is text.',
+            ui_message=make_message("editing.refusal.definition_text"),
+        )
     return [(iri, SKOS.definition, Literal(text.strip(), lang=ctx.primary))] if text.strip() else []
 
 
@@ -1045,7 +1052,10 @@ def cmd_replace_annotation(ctx: Context, a: dict) -> Change:
 def cmd_create_annotation_property(ctx: Context, a: dict) -> Change:
     label = a.get("label")
     if not a.get("iri") and not (isinstance(label, str) and label.strip()):
-        raise CommandError("A new annotation property needs a name or an IRI.")
+        raise CommandError(
+            'A new annotation property needs a name or an IRI.',
+            ui_message=make_message("editing.refusal.annotation_identity_required"),
+        )
     iri = ctx.minted(a, (label or "").strip(), lower_first=True)
     ctx.require_new(iri)
     adds = [(iri, RDF.type, OWL.AnnotationProperty)]
@@ -1195,7 +1205,10 @@ def cmd_set_ends(ctx: Context, a: dict) -> Change:
     E-7 note, relationships R6). Either may be left out; each replaces."""
     prop = _relationship(ctx, a)
     if not a.get("domain") and not a.get("range"):
-        raise CommandError("Say which end to set: a domain, a range, or both.")
+        raise CommandError(
+            'Say which end to set: a domain, a range, or both.',
+            ui_message=make_message("editing.refusal.ends_required"),
+        )
     adds, removes, parts = [], [], []
     end_names: dict[str, str] = {}
     for key, predicate, word in (("domain", RDFS.domain, "from"), ("range", RDFS.range, "to")):
@@ -1273,7 +1286,10 @@ def share_plan(ctx: Context, a: dict) -> dict:
     """ShareDomain's dry run: the case of 5.2 and what it offers, decided
     here alone so the form and the canvas say the same thing."""
     if ctx.doc != "model":
-        raise CommandError("Attributes and relationships live in model.ttl; share them there.")
+        raise CommandError(
+            'Attributes and relationships live in model.ttl; share them there.',
+            ui_message=make_message("editing.refusal.share_model_document"),
+        )
     prop = _property(ctx, a)
     if a.get("class") is None:
         return _separate_plan(ctx, prop)
@@ -1553,7 +1569,10 @@ def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
         raise CommandError(f"The characteristic is one of {offered}.")
     on = a.get("on")
     if not isinstance(on, bool):
-        raise CommandError("Say whether the characteristic is on or off.")
+        raise CommandError(
+            'Say whether the characteristic is on or off.',
+            ui_message=make_message("editing.refusal.characteristic_switch_required"),
+        )
     if (prop, RDF.type, OWL.DatatypeProperty) in ctx.graph and name != "functional":
         raise CommandError(
             f'{ctx.name(prop)} is an attribute; an attribute can only be "one value only". '
@@ -1825,7 +1844,10 @@ def cmd_rename_iri(ctx: Context, a: dict) -> Change:
     if not ctx.mentioned(old):
         raise CommandError(f"There is no {ctx.short(old)} in this document to rename.")
     if old == new:
-        raise CommandError("The new IRI is the same as the old one.")
+        raise CommandError(
+            'The new IRI is the same as the old one.',
+            ui_message=make_message("editing.refusal.unchanged_iri"),
+        )
     ctx.require_new(new)
     swap = lambda term: new if term == old else term  # noqa: E731
     touched = set(ctx.graph.triples((old, None, None)))
@@ -1928,7 +1950,10 @@ def delete_plan(ctx: Context, a: dict) -> tuple[Change, dict]:
         raise CommandError(f"There is no {ctx.short(iri)} in this document to delete.")
     strategy = a.get("strategy") or "reparent"
     if strategy not in ("reparent", "orphan"):
-        raise CommandError("The strategy is reparent (children move up) or orphan.")
+        raise CommandError(
+            'The strategy is reparent (children move up) or orphan.',
+            ui_message=make_message("editing.refusal.delete_strategy"),
+        )
     g = ctx.graph
     kind = ctx.kind(iri)
 
@@ -2027,7 +2052,10 @@ def cmd_delete_entity(ctx: Context, a: dict) -> Change:
 
 def _model_doc(ctx: Context) -> None:
     if ctx.doc != "model":
-        raise CommandError("Examples live in model.ttl; run example commands on the model document.")
+        raise CommandError(
+            'Examples live in model.ttl; run example commands on the model document.',
+            ui_message=make_message("editing.refusal.examples_model_document"),
+        )
 
 
 def _class_graph(ctx: Context) -> Graph:
@@ -2193,7 +2221,10 @@ def _stored_value(ctx: Context, spec):
     relationship -- written in Turtle -- is what a shape exists to flag, and
     the form must be able to take it away (found in review)."""
     if not isinstance(spec, dict) or not isinstance(spec.get("value"), str):
-        raise CommandError("A value needs its kind and its text.")
+        raise CommandError(
+            'A value needs its kind and its text.',
+            ui_message=make_message("editing.refusal.value_kind_and_text_required"),
+        )
     raw, kind = spec["value"], spec.get("kind")
     if kind == "link":
         return ctx.iri(raw, "value")
@@ -2229,7 +2260,10 @@ class NoSuchRule(CommandError):
 
 def _rules_doc(ctx: Context) -> None:
     if ctx.doc != "model":
-        raise CommandError("A class's rules live in model.ttl; run rule commands on the model document.")
+        raise CommandError(
+            "A class's rules live in model.ttl; run rule commands on the model document.",
+            ui_message=make_message("editing.refusal.rules_model_document"),
+        )
 
 
 def _own_class(ctx: Context, a: dict, key: str = "class") -> URIRef:
@@ -2276,15 +2310,24 @@ def _rule_value(ctx: Context, value, attribute: bool):
     if not attribute:
         spec = value if isinstance(value, dict) else {"kind": "link", "value": value}
         if spec.get("kind") != "link":
-            raise CommandError("A relationship's value is a thing, by its IRI.")
+            raise CommandError(
+                "A relationship's value is a thing, by its IRI.",
+                ui_message=make_message("editing.refusal.relationship_value_iri"),
+            )
         thing = ctx.iri(spec.get("value"), "thing")
         ctx.require(thing, "thing")
         return thing
     if not isinstance(value, dict):
-        raise CommandError("An attribute's value is text or a typed value.")
+        raise CommandError(
+            "An attribute's value is text or a typed value.",
+            ui_message=make_message("editing.refusal.attribute_value_kind"),
+        )
     term = parse_value(value, ctx.primary, lambda v: ctx.iri(v, "link"))
     if not isinstance(term, Literal):
-        raise CommandError("An attribute's value is text or a typed value, not a link.")
+        raise CommandError(
+            "An attribute's value is text or a typed value, not a link.",
+            ui_message=make_message("editing.refusal.attribute_value_no_link"),
+        )
     return Literal(str(term)) if term.datatype == XSD.string else term
 
 
@@ -2293,11 +2336,17 @@ def _restriction_args(ctx: Context, a: dict) -> axioms.Content:
     what the rule says, checked one by one, each refusal a sentence."""
     form = a.get("form") or "every"
     if form not in axioms.FORMS:
-        raise CommandError('The form is "every" or "defines".')
+        raise CommandError(
+            'The form is "every" or "defines".',
+            ui_message=make_message("editing.refusal.rule_form"),
+        )
     prop, attribute = _rule_property(ctx, a.get("property"))
     kind = a.get("kind")
     if kind not in axioms.KINDS:
-        raise CommandError("The kind is some, only, exactly, atLeast, atMost or value.")
+        raise CommandError(
+            'The kind is some, only, exactly, atLeast, atMost or value.',
+            ui_message=make_message("editing.refusal.rule_kind"),
+        )
     if attribute and kind not in axioms.ATTRIBUTE_KINDS:
         raise CommandError(
             f"{_rule_name(ctx, prop)} is an attribute; an attribute takes exactly, at least, at most or a value."
@@ -2305,17 +2354,29 @@ def _restriction_args(ctx: Context, a: dict) -> axioms.Content:
     n = a.get("n")
     if kind in axioms.COUNT_KINDS:
         if isinstance(n, bool) or not isinstance(n, int) or not 0 <= n <= axioms.MAX_N:
-            raise CommandError("A number of 0 to 1,000.")
+            raise CommandError(
+                'A number of 0 to 1,000.',
+                ui_message=make_message("editing.refusal.rule_count_range"),
+            )
     elif n is not None:
-        raise CommandError("Only exactly, at least and at most take a number.")
+        raise CommandError(
+            'Only exactly, at least and at most take a number.',
+            ui_message=make_message("editing.refusal.rule_count_condition"),
+        )
     filler = a.get("filler")
     if kind == "value":
         if filler in (None, ""):
-            raise CommandError("Choose the value.")
+            raise CommandError(
+                'Choose the value.',
+                ui_message=make_message("editing.refusal.rule_value_required"),
+            )
         term = _rule_value(ctx, filler, attribute)
     elif filler in (None, ""):
         if kind in ("some", "only"):
-            raise CommandError("Choose the class it points to.")
+            raise CommandError(
+                'Choose the class it points to.',
+                ui_message=make_message("editing.refusal.rule_target_class_required"),
+            )
         term = None
     elif attribute:
         term = ctx.iri(filler, "type of value")
@@ -2326,7 +2387,10 @@ def _restriction_args(ctx: Context, a: dict) -> axioms.Content:
     with_ = None
     if a.get("with"):
         if form != "defines":
-            raise CommandError('Only the defining form ("is exactly") names a class with the rule.')
+            raise CommandError(
+                'Only the defining form ("is exactly") names a class with the rule.',
+                ui_message=make_message("editing.refusal.rule_defining_class"),
+            )
         with_ = _rule_class(ctx, a["with"], "class")
     return axioms.Content(form, prop, kind, term, n if kind in axioms.COUNT_KINDS else None, with_)
 
@@ -2335,7 +2399,10 @@ def _restriction_key(ctx: Context, value) -> axioms.Content:
     """The key a command names an existing restriction by, read as loosely
     as the graph allows: what Turtle wrote is matched, not judged."""
     if not isinstance(value, dict):
-        raise CommandError("Name the rule by what it says: form, property, kind, filler and n.")
+        raise CommandError(
+            'Name the rule by what it says: form, property, kind, filler and n.',
+            ui_message=make_message("editing.refusal.rule_identity_required"),
+        )
     form = value.get("form") or "every"
     prop = ctx.iri(value.get("property"), "property")
     kind = value.get("kind")
@@ -2438,7 +2505,10 @@ def cmd_replace_restriction(ctx: Context, a: dict) -> Change:
     content = _restriction_args(ctx, a)
     old = next(c for p, n, c in axioms.contents(ctx.graph, cls) if n == node)
     if old.same(content):
-        raise CommandError("That would change nothing.")
+        raise CommandError(
+            'That would change nothing.',
+            ui_message=make_message("editing.refusal.no_change"),
+        )
     _check_restriction(ctx, cls, content, ignoring=node)
     return _change(
         ctx.graph,
@@ -2564,7 +2634,10 @@ _COUNTS = ("minCount", "maxCount", "minLength", "maxLength")
 
 def _shapes_ctx(ctx: Context) -> None:
     if ctx.doc != "shapes":
-        raise CommandError("Shapes live in shapes.ttl; run shape commands on the shapes document.")
+        raise CommandError(
+            'Shapes live in shapes.ttl; run shape commands on the shapes document.',
+            ui_message=make_message("editing.refusal.shapes_document"),
+        )
 
 
 def _model_name(ctx: Context, iri) -> str:
@@ -2593,7 +2666,10 @@ def _shape(ctx: Context, a: dict, editable: bool = True):
     _shapes_ctx(ctx)
     node = shapes_form.find_shape(ctx.graph, a.get("shape"))
     if node is None:
-        raise CommandError("There is no such shape in shapes.ttl.")
+        raise CommandError(
+            'There is no such shape in shapes.ttl.',
+            ui_message=make_message("editing.refusal.shape_missing"),
+        )
     if editable:
         shape = shapes_form.read_shape(ctx.graph, node, ctx.model, lambda i: _model_name(ctx, i), ctx.languages)
         if not shape["editable"]:
@@ -2633,7 +2709,10 @@ def _rule_path(ctx: Context, value) -> tuple:
     if isinstance(value, str):
         value = [value]
     if not isinstance(value, list) or not value or not all(isinstance(v, str) for v in value):
-        raise CommandError("A rule needs the attribute or relationship it is about.")
+        raise CommandError(
+            'A rule needs the attribute or relationship it is about.',
+            ui_message=make_message("editing.refusal.rule_path_required"),
+        )
     return tuple(ctx.iri(v, "path") for v in value)
 
 
@@ -2670,7 +2749,10 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
     """One rule as SHACL (5.3): one property shape on the path with every
     kind chosen, and one more per language required (shapes_form)."""
     if not isinstance(rule, dict):
-        raise CommandError("A rule is an object: the path and what is checked on it.")
+        raise CommandError(
+            'A rule is an object: the path and what is checked on it.',
+            ui_message=make_message("editing.refusal.rule_object_required"),
+        )
     path = _rule_path(ctx, rule.get("path"))
     prop = BNode()
     path_node, triples = _path_node(path)
@@ -2683,7 +2765,10 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
             f"{words['maxCount']} {counts['maxCount']}; the rule could never be met."
         )
     if "minLength" in counts and "maxLength" in counts and counts["minLength"] > counts["maxLength"]:
-        raise CommandError("The shortest length is longer than the longest; the rule could never be met.")
+        raise CommandError(
+            'The shortest length is longer than the longest; the rule could never be met.',
+            ui_message=make_message("editing.refusal.length_bounds_conflict"),
+        )
     for key in _COUNTS:
         if key in counts:
             body.append((prop, SH[key], Literal(counts[key], datatype=XSD.integer)))
@@ -2700,7 +2785,10 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
     if rule.get("pattern"):
         pattern = rule["pattern"]
         if not isinstance(pattern, str):
-            raise CommandError("A pattern is a regular expression.")
+            raise CommandError(
+                'A pattern is a regular expression.',
+                ui_message=make_message("editing.refusal.pattern_text"),
+            )
         try:
             re.compile(pattern)
         except re.error as exc:
@@ -2711,9 +2799,15 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
     if low is not None and high is not None:
         try:
             if low.toPython() > high.toPython():
-                raise CommandError("The minimum is above the maximum; the rule could never be met.")
+                raise CommandError(
+                    'The minimum is above the maximum; the rule could never be met.',
+                    ui_message=make_message("editing.refusal.value_bounds_conflict"),
+                )
         except TypeError:
-            raise CommandError("The minimum and the maximum must be the same kind of value.") from None
+            raise CommandError(
+                'The minimum and the maximum must be the same kind of value.',
+                ui_message=make_message("editing.refusal.value_bounds_kind"),
+            ) from None
     if low is not None:
         body.append((prop, SH.minInclusive, low))
     if high is not None:
@@ -2721,7 +2815,10 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
     if rule.get("in") is not None:
         values = rule["in"]
         if not isinstance(values, list) or not values:
-            raise CommandError("List at least one allowed value.")
+            raise CommandError(
+                'List at least one allowed value.',
+                ui_message=make_message("editing.refusal.allowed_values_required"),
+            )
         terms = [parse_value(v, ctx.primary, lambda raw: ctx.iri(raw, "value")) for v in values]
         # sh:in compares terms exactly, and rdflib keeps Turtle's "active"
         # apart from "active"^^xsd:string though RDF 1.1 makes them one
@@ -2750,7 +2847,10 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
             if severity is not None:
                 extra.append((q, SH.severity, severity))
     if len(body) == 1 + len(triples) and not extra:
-        raise CommandError("A rule needs at least one thing to check.")
+        raise CommandError(
+            'A rule needs at least one thing to check.',
+            ui_message=make_message("editing.refusal.rule_check_required"),
+        )
     if len(body) > 1 + len(triples):
         body.append((node, SH.property, prop))
         if severity is not None:
@@ -2794,7 +2894,10 @@ def cmd_create_shape(ctx: Context, a: dict) -> Change:
     _shapes_ctx(ctx)
     preset = a.get("preset")
     if preset not in (None, "modelCheck"):
-        raise CommandError("The preset is modelCheck, or none.")
+        raise CommandError(
+            'The preset is modelCheck, or none.',
+            ui_message=make_message("editing.refusal.shape_preset"),
+        )
     taxonomy = ctx.manifest.get("kind") == "taxonomy"
     if preset == "modelCheck":
         target = SKOS.Concept if taxonomy else OWL.Class
@@ -2804,7 +2907,10 @@ def cmd_create_shape(ctx: Context, a: dict) -> Change:
             raise CommandError(f"There is no class {ctx.short(target)} in the model or its imports.")
     name = a.get("name")
     if name is not None and (not isinstance(name, str) or not name.strip()):
-        raise CommandError("A shape's name cannot be empty.")
+        raise CommandError(
+            "A shape's name cannot be empty.",
+            ui_message=make_message("editing.refusal.shape_name_required"),
+        )
     if name is None:
         name = ("Check my model" if preset else
                 "Concept rules" if target == SKOS.Concept else f"{_model_name(ctx, target)} rules")
@@ -2856,7 +2962,10 @@ def cmd_set_shape_name(ctx: Context, a: dict) -> Change:
     node = _shape(ctx, a)
     value = a.get("value")
     if not isinstance(value, str) or not value.strip():
-        raise CommandError("A shape's name cannot be empty.")
+        raise CommandError(
+            "A shape's name cannot be empty.",
+            ui_message=make_message("editing.refusal.shape_name_required"),
+        )
     old = [(node, RDFS.label, o) for o in ctx.graph.objects(node, RDFS.label)]
     return _change(
         ctx.graph,
@@ -2873,7 +2982,10 @@ def cmd_set_shape_severity(ctx: Context, a: dict) -> Change:
     node = _shape(ctx, a)
     severity = a.get("severity")
     if severity not in SEVERITY_TERMS:
-        raise CommandError("The severity is violation (a problem) or warning.")
+        raise CommandError(
+            'The severity is violation (a problem) or warning.',
+            ui_message=make_message("editing.refusal.shape_severity"),
+        )
     props = list(ctx.graph.objects(node, SH.property))
     removes = [(s, SH.severity, o) for s in (node, *props) for o in ctx.graph.objects(s, SH.severity)]
     adds = [] if severity == "violation" else [(s, SH.severity, SH.Warning) for s in (node, *props)]
@@ -2891,7 +3003,10 @@ def cmd_set_shape_message(ctx: Context, a: dict) -> Change:
     node = _shape(ctx, a)
     value = a.get("value")
     if value is not None and not isinstance(value, str):
-        raise CommandError("A message is text.")
+        raise CommandError(
+            'A message is text.',
+            ui_message=make_message("editing.refusal.shape_message_text"),
+        )
     old = [(node, SH.message, o) for o in ctx.graph.objects(node, SH.message)]
     if not value or not value.strip():
         if not old:
@@ -2927,7 +3042,10 @@ def cmd_add_rule(ctx: Context, a: dict) -> Change:
     node = _shape(ctx, a)
     rule = a.get("rule")
     if not isinstance(rule, dict):
-        raise CommandError("A rule is an object: the path and what is checked on it.")
+        raise CommandError(
+            'A rule is an object: the path and what is checked on it.',
+            ui_message=make_message("editing.refusal.rule_object_required"),
+        )
     path = _rule_path(ctx, rule.get("path"))
     existing = _read_rules(ctx, node).get(path)
     removes: list = []
@@ -3422,7 +3540,10 @@ class EditingService:
         if handler is None:
             raise CommandError(f"There is no command called {name}.")
         if not isinstance(args, dict):
-            raise CommandError("A command's arguments are an object.")
+            raise CommandError(
+                "A command's arguments are an object.",
+                ui_message=make_message("editing.refusal.command_arguments_object"),
+            )
         if doc == "shapes" and name in SHAPE_COMMANDS and pid in self._open and "shapes" not in self._open[pid]:
             self._first_shapes_command(pid, handler, args, dry_run)
         document = self.document(pid, doc)
@@ -3441,11 +3562,17 @@ class EditingService:
                 return {"dryRun": True, "plan": share_plan(ctx, args), "revision": document.ontology.revision}
             else:
                 if dry_run:
-                    raise CommandError("Only DeleteEntity and ShareDomain have a dry run.")
+                    raise CommandError(
+                        'Only DeleteEntity and ShareDomain have a dry run.',
+                        ui_message=make_message("editing.refusal.dry_run_unavailable"),
+                    )
                 change = handler(ctx, args)
                 impact = None
             if not change.added and not change.removed:
-                raise CommandError("That would change nothing.")
+                raise CommandError(
+                    'That would change nothing.',
+                    ui_message=make_message("editing.refusal.no_change"),
+                )
             before = document.editor_state()
             self._apply(document, change, origin="command")
             self._push(document, change, before)
@@ -3472,7 +3599,10 @@ class EditingService:
         file behind, and the file is made under the service lock, so two
         first commands at once make it once (both found in review)."""
         if dry_run:
-            raise CommandError("Only DeleteEntity and ShareDomain have a dry run.")
+            raise CommandError(
+                'Only DeleteEntity and ShareDomain have a dry run.',
+                ui_message=make_message("editing.refusal.dry_run_unavailable"),
+            )
         model_doc = self._open[pid]["model"]
         manifest = self.projects.manifest(pid)
         with model_doc.lock:
@@ -3550,7 +3680,10 @@ class EditingService:
         document = self.document(pid, doc)
         with document.lock:
             if not document.undo:
-                raise CommandError("There is nothing to undo.")
+                raise CommandError(
+                    'There is nothing to undo.',
+                    ui_message=make_message("editing.refusal.undo_unavailable"),
+                )
             step = document.undo.pop()
             self._apply(document, Change(step.label, step.removed, step.added), origin="undo")
             document.last_text, document.visual_since_save = step.before
@@ -3567,7 +3700,10 @@ class EditingService:
         document = self.document(pid, doc)
         with document.lock:
             if not document.redo:
-                raise CommandError("There is nothing to redo.")
+                raise CommandError(
+                    'There is nothing to redo.',
+                    ui_message=make_message("editing.refusal.redo_unavailable"),
+                )
             step = document.redo.pop()
             self._apply(document, Change(step.label, step.added, step.removed), origin="redo")
             document.last_text, document.visual_since_save = step.after
@@ -3692,7 +3828,10 @@ class EditingService:
             self.projects.folder(pid)
             raise NotOpen(pid)
         if action not in ("recover", "discard"):
-            raise CommandError("Choose recover or discard.")
+            raise CommandError(
+                'Choose recover or discard.',
+                ui_message=make_message("editing.refusal.recovery_choice"),
+            )
         for document in documents.values():
             draft, sidecar = _draft_paths(document)
             if not draft.exists():

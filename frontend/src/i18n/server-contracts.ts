@@ -257,6 +257,48 @@ export const SERVER_CONTRACTS = {
     "characteristic": "parts",
     "name": "string"
   },
+  "editing.refusal.allowed_values_required": {},
+  "editing.refusal.annotation_identity_required": {},
+  "editing.refusal.attribute_value_kind": {},
+  "editing.refusal.attribute_value_no_link": {},
+  "editing.refusal.characteristic_switch_required": {},
+  "editing.refusal.command_arguments_object": {},
+  "editing.refusal.definition_text": {},
+  "editing.refusal.delete_strategy": {},
+  "editing.refusal.dry_run_unavailable": {},
+  "editing.refusal.ends_required": {},
+  "editing.refusal.examples_model_document": {},
+  "editing.refusal.explicit_iri_required": {},
+  "editing.refusal.length_bounds_conflict": {},
+  "editing.refusal.no_change": {},
+  "editing.refusal.pattern_text": {},
+  "editing.refusal.recovery_choice": {},
+  "editing.refusal.redo_unavailable": {},
+  "editing.refusal.relationship_value_iri": {},
+  "editing.refusal.rule_check_required": {},
+  "editing.refusal.rule_count_condition": {},
+  "editing.refusal.rule_count_range": {},
+  "editing.refusal.rule_defining_class": {},
+  "editing.refusal.rule_form": {},
+  "editing.refusal.rule_identity_required": {},
+  "editing.refusal.rule_kind": {},
+  "editing.refusal.rule_object_required": {},
+  "editing.refusal.rule_path_required": {},
+  "editing.refusal.rule_target_class_required": {},
+  "editing.refusal.rule_value_required": {},
+  "editing.refusal.rules_model_document": {},
+  "editing.refusal.shape_message_text": {},
+  "editing.refusal.shape_missing": {},
+  "editing.refusal.shape_name_required": {},
+  "editing.refusal.shape_preset": {},
+  "editing.refusal.shape_severity": {},
+  "editing.refusal.shapes_document": {},
+  "editing.refusal.share_model_document": {},
+  "editing.refusal.unchanged_iri": {},
+  "editing.refusal.undo_unavailable": {},
+  "editing.refusal.value_bounds_conflict": {},
+  "editing.refusal.value_bounds_kind": {},
+  "editing.refusal.value_kind_and_text_required": {},
   "editing.value.datatype_required": {},
   "editing.value.empty_text": {},
   "editing.value.invalid_boolean": {
@@ -425,6 +467,48 @@ export interface ServerMessageArgs {
   "command.shared_parent": { "names": string; "property": string };
   "command.swapped_ends": { "name": string };
   "command.unmarked_characteristic": { "characteristic": string; "name": string };
+  "editing.refusal.allowed_values_required": undefined;
+  "editing.refusal.annotation_identity_required": undefined;
+  "editing.refusal.attribute_value_kind": undefined;
+  "editing.refusal.attribute_value_no_link": undefined;
+  "editing.refusal.characteristic_switch_required": undefined;
+  "editing.refusal.command_arguments_object": undefined;
+  "editing.refusal.definition_text": undefined;
+  "editing.refusal.delete_strategy": undefined;
+  "editing.refusal.dry_run_unavailable": undefined;
+  "editing.refusal.ends_required": undefined;
+  "editing.refusal.examples_model_document": undefined;
+  "editing.refusal.explicit_iri_required": undefined;
+  "editing.refusal.length_bounds_conflict": undefined;
+  "editing.refusal.no_change": undefined;
+  "editing.refusal.pattern_text": undefined;
+  "editing.refusal.recovery_choice": undefined;
+  "editing.refusal.redo_unavailable": undefined;
+  "editing.refusal.relationship_value_iri": undefined;
+  "editing.refusal.rule_check_required": undefined;
+  "editing.refusal.rule_count_condition": undefined;
+  "editing.refusal.rule_count_range": undefined;
+  "editing.refusal.rule_defining_class": undefined;
+  "editing.refusal.rule_form": undefined;
+  "editing.refusal.rule_identity_required": undefined;
+  "editing.refusal.rule_kind": undefined;
+  "editing.refusal.rule_object_required": undefined;
+  "editing.refusal.rule_path_required": undefined;
+  "editing.refusal.rule_target_class_required": undefined;
+  "editing.refusal.rule_value_required": undefined;
+  "editing.refusal.rules_model_document": undefined;
+  "editing.refusal.shape_message_text": undefined;
+  "editing.refusal.shape_missing": undefined;
+  "editing.refusal.shape_name_required": undefined;
+  "editing.refusal.shape_preset": undefined;
+  "editing.refusal.shape_severity": undefined;
+  "editing.refusal.shapes_document": undefined;
+  "editing.refusal.share_model_document": undefined;
+  "editing.refusal.unchanged_iri": undefined;
+  "editing.refusal.undo_unavailable": undefined;
+  "editing.refusal.value_bounds_conflict": undefined;
+  "editing.refusal.value_bounds_kind": undefined;
+  "editing.refusal.value_kind_and_text_required": undefined;
   "editing.value.datatype_required": undefined;
   "editing.value.empty_text": undefined;
   "editing.value.invalid_boolean": { "value": string };

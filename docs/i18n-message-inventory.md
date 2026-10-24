@@ -2630,3 +2630,46 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 
 | `projectNotice.relationshipCompleted` | from, name, to | `frontend/src/modeling/projectNotices.ts` | キャンバス・削除の通知 | 12 | 最小限の操作情報から現在のUI言語で表示 |
 | `projectNotice.undoAvailable` | operation | `frontend/src/modeling/projectNotices.ts` | キャンバス・削除の通知 | 12 | 最小限の操作情報から現在のUI言語で表示 |
+
+| `editing.refusal.definition_text` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.annotation_identity_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.ends_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.share_model_document` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.characteristic_switch_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.unchanged_iri` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.delete_strategy` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.examples_model_document` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.value_kind_and_text_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rules_model_document` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.attribute_value_kind` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.attribute_value_no_link` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_form` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_kind` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_identity_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.no_change` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.shapes_document` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.shape_missing` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_path_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_object_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.length_bounds_conflict` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_check_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.shape_preset` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.shape_name_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.shape_severity` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.shape_message_text` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.explicit_iri_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.relationship_value_iri` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_count_range` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_count_condition` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_value_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_defining_class` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.pattern_text` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.allowed_values_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.command_arguments_object` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.dry_run_unavailable` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.recovery_choice` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.rule_target_class_required` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.value_bounds_conflict` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.value_bounds_kind` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.undo_unavailable` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
+| `editing.refusal.redo_unavailable` | — | `backend/app/editing.py` | 編集・ルール・履歴の固定拒否 | 12 | 元の本文・判定を保持、固定生成箇所をAST検査 |
