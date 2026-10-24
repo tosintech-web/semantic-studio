@@ -15,6 +15,11 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "sentence.parent": "{child} is a more specific kind of {parent}",
+  "sentence.link.subClassOf": "{from} is a kind of {to}",
+  "sentence.link.broader": "{from} is narrower than {to}",
+  "sentence.link.related": "{from} is related to {to}",
+
   "results.title": "RESULTS",
   "results.page": "page {page} of {pages}",
   "results.capHint": "The server caps result rows",

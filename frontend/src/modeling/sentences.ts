@@ -57,6 +57,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { englishTranslator } from "../i18n/format";
+import type { Translator } from "../i18n/types";
+
 // Letters whose names start with a vowel sound: "an F", "an H", "an X".
 const VOWEL_NAMED_LETTERS = "AEFHILMNORSX";
 // A vowel letter sounded as a consonant, and a silent h.
@@ -151,9 +154,8 @@ export function relationshipSentence(from: string, name: string, to: string): st
 
 /** The link a line would make, or has made, as the relate menu and the link
  *  panel read it. */
-export function linkSentence(kind: "subClassOf" | "broader" | "related", from: string, to: string): string {
-  if (kind === "related") return `${from} is related to ${to}`;
-  return kind === "subClassOf" ? `${from} is a kind of ${to}` : `${from} is narrower than ${to}`;
+export function linkSentence(kind: "subClassOf" | "broader" | "related", from: string, to: string, t: Translator = englishTranslator): string {
+  return t(`sentence.link.${kind}`, { from, to });
 }
 
 /** An existing relationship the line would complete. */
@@ -297,8 +299,8 @@ export function characteristicExample(
 }
 
 /** *works for is a more specific kind of member of* (5.6). */
-export function parentSentence(child: string, parent: string): string {
-  return `${child} is a more specific kind of ${parent}`;
+export function parentSentence(child: string, parent: string, t: Translator = englishTranslator): string {
+  return t("sentence.parent", { child, parent });
 }
 
 /** Why one start and one end, with the relationship's own names (5.6):

@@ -25,6 +25,8 @@ EXPECTED OUTPUT
 */
 
 import { describe, expect, it } from "vitest";
+import { translate } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import TABLE from "./sentences.table.json";
 import * as S from "./sentences";
 import {
@@ -251,4 +253,13 @@ describe("a domain in words (attribute-reuse 5.3)", () => {
     expect(S.domainWords("union", ["Employee", "Intern", "Manager"])).toBe("Employee, Intern or Manager");
     expect(S.domainWords("separate", ["Employee", "Manager"])).toBe("Employee and Manager");
   });
+});
+
+it("writes hierarchical and related links as Japanese whole sentences without English grammar", () => {
+  const ja = ((key, args) => translate("ja", key, args)) as Translator;
+  expect(S.parentSentence("犬", "Animal", ja)).toBe("Animalより具体的な種類が犬です");
+  expect(S.linkSentence("subClassOf", "<b>犬</b>", "Animal", ja)).toBe("<b>犬</b>はAnimalの一種です");
+  expect(S.linkSentence("broader", "犬", "動物", ja)).toBe("犬は動物より狭い概念です");
+  expect(S.linkSentence("related", "犬", "人", ja)).toBe("犬は人に関連しています");
+  expect(S.parentSentence("Employee", "Person")).toBe("Employee is a more specific kind of Person");
 });

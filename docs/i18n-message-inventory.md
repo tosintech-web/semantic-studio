@@ -74,6 +74,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/SparqlPreview.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/NothingSelected.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/types.ts` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
+| `frontend/src/i18n/parts.ts` | リンク付き翻訳テンプレートの組み立て | 11 | 共通機構を実装、説明画面への接続待ち |
 | `frontend/src/components/SearchBox.tsx` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
 | `frontend/src/modeling/sentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/modeling/ruleSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -676,8 +677,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.language` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.apply` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.invalidLanguage` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/DictionaryLanguageSelect.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.error` | — | `frontend/src/i18n/serverMessage.ts`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.notSet` | — | `frontend/src/i18n/format.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.error` | — | `frontend/src/i18n/serverMessage.ts`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/EntityList.tsx`<br>`frontend/src/components/TurtleEditor.tsx` <br>`frontend/src/i18n/parts.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.notSet` | — | `frontend/src/i18n/format.ts` <br>`frontend/src/i18n/parts.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.title` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.description` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.reload` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -719,6 +720,10 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `results.services` | hosts | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
 | `results.serviceCap` | count, host | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
 | `results.serviceSkipped` | error, host | `frontend/src/components/ResultsTable.tsx` | クエリ結果・操作・通知 | 11 | カタログ・画面接続済み |
+| `sentence.parent` | child, parent | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `sentence.link.subClassOf` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `sentence.link.broader` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `sentence.link.related` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
 
 ## 対象外・生成元待ち
 
@@ -743,3 +748,5 @@ Task 10の補足：`ConfirmDialog`自身は表示文を持たず、呼び出し�
 `coverage.test.ts`はTypeScriptの構文木から使用箇所を読む。任意の未翻訳文言の不在や、画面上の収まり・読み上げの品質まで保証するものではない。
 
 `types.ts`の`KIND_LABELS`は従来の呼び出し元向けの英語互換表。UIの種類名は現在の翻訳関数を渡し、色は引き続き`theme/kinds.ts`の定義を使う。
+
+`i18n/parts.ts`はカタログのテンプレートを先に分割してから値を挿入する。翻訳後の文章や名称・IRIからリンクを探さない。リンク参照は既存の`{iri, label}`を保持し、日英の語順が異なっても同じ参照先へ移動する。

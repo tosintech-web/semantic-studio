@@ -19,13 +19,19 @@ import type { Primitive, Translator, UiLocale } from "./types";
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 const COMMON = { ja: "操作を完了できませんでした。詳細を確認してください。", en: "The operation could not be completed. Check the details." };
 
-// The runtime boundary accepts unknown server codes. The consumer's t() is
-// narrower: MessageArgs enforces the right arguments before the code ships.
-export function translate(locale: UiLocale, code: string, args: Record<string, Primitive> = {}): string {
+/** Catalog-owned syntax for linked-message rendering; inserted values never
+ * enter this lookup or become a template of their own. */
+export function messageTemplate(locale: UiLocale, code: string): string {
   const catalog = locale === "ja" ? ja : en;
   const local = own(catalog, code) ? catalog[code as keyof typeof catalog] : undefined;
   const english = own(en, code) ? en[code as keyof typeof en] : undefined;
-  const template = typeof local === "string" ? local : typeof english === "string" ? english : COMMON[locale];
+  return typeof local === "string" ? local : typeof english === "string" ? english : COMMON[locale];
+}
+
+// The runtime boundary accepts unknown server codes. The consumer's t() is
+// narrower: MessageArgs enforces the right arguments before the code ships.
+export function translate(locale: UiLocale, code: string, args: Record<string, Primitive> = {}): string {
+  const template = messageTemplate(locale, code);
   let valid = true;
   const rendered = template.replace(/\{(\w+)\}/g, (_placeholder, key: string) => {
     if (!own(args, key) || (args[key] !== null && !["string", "number", "boolean"].includes(typeof args[key]))) {

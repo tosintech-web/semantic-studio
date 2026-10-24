@@ -15,6 +15,11 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "sentence.parent": "{parent}より具体的な種類が{child}です",
+  "sentence.link.subClassOf": "{from}は{to}の一種です",
+  "sentence.link.broader": "{from}は{to}より狭い概念です",
+  "sentence.link.related": "{from}は{to}に関連しています",
+
   "results.title": "検索結果",
   "results.page": "{pages}ページ中{page}ページ目",
   "results.capHint": "サーバーは結果の行数に上限を設けています",

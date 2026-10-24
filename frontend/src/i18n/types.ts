@@ -16,6 +16,11 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "sentence.parent": { child: string; parent: string };
+  "sentence.link.subClassOf": { from: string; to: string };
+  "sentence.link.broader": { from: string; to: string };
+  "sentence.link.related": { from: string; to: string };
+
   "results.title": undefined;
   "results.page": { page: number; pages: number };
   "results.capHint": undefined;
