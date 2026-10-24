@@ -54,7 +54,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/CreateForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/NewEntityForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/RelationshipForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/AttributeForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/AttributeForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行（共有クラス・警告の生成元は別途移行） |
 | `frontend/src/components/AnnotationAdder.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/ConceptRelations.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/SharedDomain.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -76,7 +76,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/types.ts` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
 | `frontend/src/i18n/parts.ts` | リンク付き翻訳テンプレートの組み立て | 11 | 説明画面に接続済み、最終ブラウザ確認待ち |
 | `frontend/src/components/SearchBox.tsx` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
-| `frontend/src/modeling/sentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/modeling/sentences.ts` | 探索・編集・クエリ・説明文 | 11 | 共通文法関数を移行、呼び出し元への接続は進行中 |
 | `frontend/src/modeling/ruleSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/explain/explainSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/explain/glossary.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
@@ -93,6 +93,8 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/canvas/CanvasAids.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/GraphView.tsx` | 探索グラフの共通操作・ズーム・出力案内 | 11 | 操作を移行、ルールラベル生成元は別途移行 |
 | `frontend/src/components/SideTabs.tsx` | 編集・推論の共通タブ表示 | 11 | 既定表示を移行、カスタム表示の生成元は別途移行 |
+
+| `frontend/src/modeling/entity.ts` | 所属クラスの表示用結合 | 11 | 表示言語引数を追加、呼び出し元への接続は進行中 |
 
 ## 登録済みメッセージ
 
@@ -648,7 +650,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1054,6 +1056,72 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `sideTabs.label` | — | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
 | `sideTabs.badgeNew` | count | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
 | `sideTabs.badgeLabel` | name, spoken | `frontend/src/components/SideTabs.tsx` | グラフ操作・共通タブの案内 | 11 | カタログ・画面接続済み |
+| `modelSentences.relation` | from, name, to | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.existing` | from, name, to | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.created` | from, name, to | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.noStart` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.noEnd` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.something` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.thing` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.it` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.noClass` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.importedOntology` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.characteristic.functional` | from, name, to | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.characteristic.inverseFunctional` | from, name, to | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.characteristic.symmetric` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.characteristic.transitive` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.characteristic.asymmetric` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.characteristic.irreflexive` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.characteristic.reflexive` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.oneStart.known` | from, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.oneStart.missing` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.attribute.typed` | domain, name, type | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.attribute.untyped` | domain, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.oneValue` | domain, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.oneValueEmpty` | domain | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.topConcept` | scheme | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.join.separator` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.join.and` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.join.or` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.paragraphJoin` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.suggestion.attributeTyped` | domain, name, type | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.suggestion.attribute` | domain, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.suggestion.relationship` | domain, end, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.already` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.use` | cls | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.matches.attribute.one` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.matches.attribute.many` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.matches.relationship.one` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.matches.relationship.many` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.whoever.attribute` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.whoever.relationship` | name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.noClass` | cls, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.already` | cls, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.alreadyVia` | articleClass, cls, name, via | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.move` | cls, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.keep` | articleChild, child, parent | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.subclass` | articleDomain, cls, domain, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.makeKind` | cls, domain | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.union` | classes, either, name, whoever | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.shareIt` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.orParent` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.plan.rdfsParent` | classes, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.parentQuestion` | classes | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.giveParent` | classes | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.importedParent` | cls, source | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.move` | name, parent | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.gains.none` | name, parent | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.gains.one` | articleGain, gain, name, parent | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.gains.many` | gains, name, parent | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.more` | count | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.shared` | classes, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.given` | cls, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.removed` | cls, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.domain.union` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.domain.separate` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.reasonerNote` | — | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.shareEntry` | from, name, to, verb | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
+| `modelSentences.memberDelete` | member, name | `frontend/src/modeling/sentences.ts` | 関係文・特性例・属性・共有の案内 | 11 | 共通関数を接続、フォームの移行は進行中 |
 
 ## 対象外・生成元待ち
 
@@ -1094,3 +1162,21 @@ OWL特性・SKOS対応関係の選択肢は`characteristicChoices(t)`／`mapping
 DetailPanelのルール本文（ruleSentences）とデータ出典ラベル（dataSentences）は、生成元の移行で接続する。探索の順位付けはグラフが変わった時だけ再計算し、UI言語の変更では文言の要約のみ更新する。
 
 GraphViewのルール由来ラベルはruleSentencesの移行で接続する。SideTabsの呼び出し元が渡すカスタム名・バッジは、その生成元で翻訳を組み立てる。既定の編集タブと数値バッジのみをここで生成し、IDや選択状態は翻訳しない。
+
+modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en）で、文章全体をカタログから選ぶ。英語の冠詞・動詞変形・大文字化は共通モジュールの英語ポリシーだけで行い、他言語では入力の名称を保持する。冠詞付きの表示用引数や結合済みリストは描画時だけに作る値であり、保存する通知の生データにしない。長期保持する通知は生成元で生の名称・配列を保持し、表示時に組み立てる。
+
+| `attributeForm.belongs` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.clearClass` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.clear` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.noClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.classLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.changeClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.chooseClass` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.changeClassLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.chooseClassLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.valueType` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.setType` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.changeType` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.changeTypeLabel` | name | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.howMany` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |
+| `attributeForm.oneValue` | — | `frontend/src/components/AttributeForm.tsx` | 属性編集フォーム | 11 | 画面所有文言を移行済み |

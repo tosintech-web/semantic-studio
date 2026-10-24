@@ -23,7 +23,7 @@ EXPECTED OUTPUT
 
 import { describe, expect, it } from "vitest";
 import type { NodeDetails, TermRef } from "../types";
-import { entityModel, P } from "./entity";
+import { domainLabel, entityModel, P } from "./entity";
 
 const EX = "http://example.org/shop#";
 const uri = (value: string, kind?: string, label?: string): TermRef => ({
@@ -234,5 +234,22 @@ describe("entityModel, relationships Stage B", () => {
     ]);
     expect(model.topOf.map((r) => r.iri)).toEqual([EX + "Fruits", EX + "Plants"]);
     expect(model.annotations).toEqual([]);
+  });
+});
+
+
+describe("domain label UI language", () => {
+  it("joins raw class labels for the current UI language without changing the model", () => {
+    const model = entityModel(details([]), "en", []);
+    model.domainReading = { form: "union", classes: [
+      { iri: EX + "Employee", label: "Employee" }, { iri: EX + "Team", label: "<b>Team</b>" },
+    ] };
+    const original = JSON.stringify(model);
+    expect(domainLabel(model, "ja")).toBe("Employeeまたは<b>Team</b>");
+    expect(domainLabel(model)).toBe("Employee or <b>Team</b>");
+    model.domainReading.form = "separate";
+    expect(domainLabel(model, "ja")).toBe("Employee、<b>Team</b>");
+    model.domainReading.form = "union";
+    expect(JSON.stringify(model)).toBe(original);
   });
 });

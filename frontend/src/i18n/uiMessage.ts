@@ -13,9 +13,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 import type { MessageArgs, MessageId, Primitive, Translator } from "./types";
-export type UiMessage = { [K in MessageId]: { code: K; args: MessageArgs[K] extends undefined ? Record<string, never> : MessageArgs[K] } }[MessageId];
-export function makeUiMessage<K extends MessageId>(code: K, ...args: MessageArgs[K] extends undefined ? [] : [MessageArgs[K]]): UiMessage {
-  return { code, args: args[0] ?? {} } as UiMessage;
+export type UiMessageFor<C extends MessageId> = { [K in C]: { code: K; args: MessageArgs[K] extends undefined ? Record<string, never> : MessageArgs[K] } }[C];
+export type UiMessage = UiMessageFor<MessageId>;
+export function makeUiMessage<K extends MessageId>(code: K, ...args: MessageArgs[K] extends undefined ? [] : [MessageArgs[K]]): UiMessageFor<K> {
+  // Keep each producer narrow; only state/render boundaries need the whole union.
+  return { code, args: args[0] ?? {} } as UiMessageFor<K>;
 }
 export function renderUiMessage(message: UiMessage, t: Translator): string {
   const render = t as unknown as (code: MessageId, args: Record<string, Primitive>) => string;

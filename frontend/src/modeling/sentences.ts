@@ -57,8 +57,14 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { englishTranslator } from "../i18n/format";
-import type { MessageId, Translator } from "../i18n/types";
+import { englishTranslator, translate } from "../i18n/format";
+import type { MessageId, Translator, UiLocale } from "../i18n/types";
+
+// Grammar belongs here, not in form components. Other UI languages receive
+// untouched names, never the English a/an or verb transformation.
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
+const articleName = (name: string, locale: UiLocale): string => locale === "en" ? a(name) : name;
+const verbName = (name: string, locale: UiLocale): string => locale === "en" ? verb(name) : name;
 
 // Letters whose names start with a vowel sound: "an F", "an H", "an X".
 const VOWEL_NAMED_LETTERS = "AEFHILMNORSX";
@@ -146,10 +152,8 @@ export function mustVerb(label: string): string {
 /** A new relationship read as it is named: *A Person works for an
  *  Organization.* With no name yet, the gap is shown, so the sentence has
  *  its shape before the first key. */
-export function relationshipSentence(from: string, name: string, to: string): string {
-  const said = name.trim() || "…";
-  const first = article(from);
-  return `${first[0].toUpperCase()}${first.slice(1)} ${from} ${said} ${article(to)} ${to}.`;
+export function relationshipSentence(from: string, name: string, to: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.relation", { from: capital(articleName(from, locale), locale), name: name.trim() || "…", to: articleName(to, locale) });
 }
 
 /** The link a line would make, or has made, as the relate menu and the link
@@ -159,13 +163,13 @@ export function linkSentence(kind: "subClassOf" | "broader" | "related", from: s
 }
 
 /** An existing relationship the line would complete. */
-export function existingSentence(from: string, name: string, to: string): string {
-  return `${from} ${name} ${to} (existing relationship)`;
+export function existingSentence(from: string, name: string, to: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.existing", { from, name, to });
 }
 
 /** What the live region says once a relationship is made (5.2). */
-export function createdAnnouncement(name: string, from: string, to: string): string {
-  return `Created relationship ${name}, from ${from} to ${to}.`;
+export function createdAnnouncement(name: string, from: string, to: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.created", { name, from, to });
 }
 
 /** An attribute's datatype as a word, for *name (Person, text)*: the seven
@@ -230,24 +234,25 @@ export function otherKindReason(kind: "ontology" | "taxonomy" | null, entityKind
 // Stage B: the relationship and attribute forms (5.6, 5.7), concepts (5.8)
 // ---------------------------------------------------------------------------
 
-function capital(text: string): string {
-  return text ? `${text[0].toUpperCase()}${text.slice(1)}` : text;
+function capital(text: string, locale: UiLocale = "en"): string {
+  return locale === "en" && text ? `${text[0].toUpperCase()}${text.slice(1)}` : text;
 }
 
 /** *a Person*, or what stands in for an end not set yet. */
-function end(name: string | null, missing: string): string {
-  return name ? a(name) : missing;
+function end(name: string | null, missing: string, locale: UiLocale = "en"): string {
+  return name ? articleName(name, locale) : missing;
 }
 
 /** The Sentence block (5.6): what the blocks below say, read back. */
-export function formSentence(from: string | null, name: string, to: string | null): string {
-  return `${capital(end(from, "(no start yet)"))} ${name.trim() || "…"} ${end(to, "(no end yet)")}.`;
+export function formSentence(from: string | null, name: string, to: string | null, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  return t("modelSentences.relation", { from: capital(end(from, t("modelSentences.noStart"), locale), locale), name: name.trim() || "…", to: end(to, t("modelSentences.noEnd"), locale) });
 }
 
 /** The other way round read as a sentence: *An Organization employs a
  *  Person.* Its start is this relationship's end. */
-export function inverseSentence(inverse: string, from: string | null, to: string | null): string {
-  return formSentence(to, inverse, from);
+export function inverseSentence(inverse: string, from: string | null, to: string | null, locale: UiLocale = "en"): string {
+  return formSentence(to, inverse, from, locale);
 }
 
 export type Characteristic =
@@ -279,29 +284,12 @@ export const CHARACTERISTICS = characteristicChoices();
 
 /** Each characteristic's example, written from the relationship's own
  *  names (5.6). An end not set yet reads as *something* or *thing*. */
-export function characteristicExample(
-  id: Characteristic,
-  name: string,
-  from: string | null,
-  to: string | null,
-): string {
+export function characteristicExample(id: Characteristic, name: string, from: string | null, to: string | null, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
   const said = name.trim() || "…";
-  switch (id) {
-    case "functional":
-      return `${capital(end(from, "something"))} ${said} at most one ${to ?? "thing"}.`;
-    case "inverseFunctional":
-      return `${capital(end(to, "something"))} is linked by ${said} to at most one ${from ?? "thing"}.`;
-    case "symmetric":
-      return `If A ${said} B, then B ${said} A.`;
-    case "transitive":
-      return `If A ${said} B and B ${said} C, then A ${said} C.`;
-    case "asymmetric":
-      return `If A ${said} B, then B never ${said} A.`;
-    case "irreflexive":
-      return `Nothing ${said} itself.`;
-    case "reflexive":
-      return `Everything ${said} itself.`;
-  }
+  if (id === "functional") return t("modelSentences.characteristic.functional", { from: capital(end(from, t("modelSentences.something"), locale), locale), name: said, to: to ?? t("modelSentences.thing") });
+  if (id === "inverseFunctional") return t("modelSentences.characteristic.inverseFunctional", { from: from ?? t("modelSentences.thing"), name: said, to: capital(end(to, t("modelSentences.something"), locale), locale) });
+  return t(`modelSentences.characteristic.${id}`, { name: said });
 }
 
 /** *works for is a more specific kind of member of* (5.6). */
@@ -312,34 +300,35 @@ export function parentSentence(child: string, parent: string, t: Translator = en
 /** Why one start and one end, with the relationship's own names (5.6):
  *  *To use "works for" from Robot too, make Person and Robot kinds of a
  *  common class ...* -- the other class is the learner's to think of. */
-export function oneStartOneEnd(name: string, from: string | null): string {
-  const start = from ? `${from} and that class` : "both classes";
-  return (
-    `A relationship here has one start and one end. To use "${name.trim() || "it"}" from another class too, ` +
-    `make ${start} kinds of a common class, such as Agent, and start the relationship there, ` +
-    "or create a second relationship."
-  );
+export function oneStartOneEnd(name: string, from: string | null, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const said = name.trim() || t("modelSentences.it");
+  return from ? t("modelSentences.oneStart.known", { name: said, from }) : t("modelSentences.oneStart.missing", { name: said });
 }
 
 /** A type of value after *as*: *a date*, *a whole number*, but *text* and
  *  *yes or no*, which take none; a type without a word is its name. */
-export function asType(datatype: string): string {
-  const word = typeWord(datatype);
-  if (!Object.prototype.hasOwnProperty.call(TYPE_CODES, datatype) || word === "text" || word === "yes or no") return word;
+export function asType(datatype: string, locale: UiLocale = "en"): string {
+  const word = typeWord(datatype, tFor(locale));
+  if (locale !== "en" || !Object.prototype.hasOwnProperty.call(TYPE_CODES, datatype) || word === "text" || word === "yes or no") return word;
   return a(word);
 }
 
 /** The attribute's sentence (5.7): *A Person has a name, as text.*, *A
  *  Person has a birth date, as a date.* */
-export function attributeSentence(domain: string | null, name: string, datatype: string | null): string {
-  const has = `${capital(end(domain, "something"))} has ${end(name.trim() || "…", "a value")}`;
-  return datatype ? `${has}, as ${asType(datatype)}.` : `${has}.`;
+export function attributeSentence(domain: string | null, name: string, datatype: string | null, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const start = capital(end(domain, t("modelSentences.something"), locale), locale);
+  const said = articleName(name.trim() || "…", locale);
+  return datatype ? t("modelSentences.attribute.typed", { domain: start, name: said, type: asType(datatype, locale) }) : t("modelSentences.attribute.untyped", { domain: start, name: said });
 }
 
 /** *One value only* read with the attribute's names: *A Person has at most
  *  one name.* */
-export function oneValueExample(domain: string | null, name: string): string {
-  return `${capital(end(domain, "something"))} has at most one ${name.trim() || "value"}.`;
+export function oneValueExample(domain: string | null, name: string, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const start = capital(end(domain, t("modelSentences.something"), locale), locale);
+  return name.trim() ? t("modelSentences.oneValue", { domain: start, name: name.trim() }) : t("modelSentences.oneValueEmpty", { domain: start });
 }
 
 /** The five mapping kinds (5.8), each explained in one sentence. */
@@ -351,8 +340,8 @@ export function mappingChoices(t: Translator = englishTranslator): { id: string;
 export const MAPPINGS = mappingChoices();
 
 /** *Top concept of Fruits* (5.8). */
-export function topConceptSentence(scheme: string): string {
-  return `Top concept of ${scheme}`;
+export function topConceptSentence(scheme: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.topConcept", { scheme });
 }
 
 // ---------------------------------------------------------------------------
@@ -362,141 +351,142 @@ export function topConceptSentence(scheme: string): string {
 export type PropertyWord = "attribute" | "relationship";
 
 /** *Employee*, *Employee and Contractor*, *Employee, Contractor and Intern*. */
-export function namesList(names: string[], joiner: "and" | "or" = "and"): string {
+export function namesList(names: string[], joiner: "and" | "or" = "and", locale: UiLocale = "en"): string {
   if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} ${joiner} ${names[names.length - 1]}`;
+  const t = tFor(locale);
+  return names.slice(0, -1).join(t("modelSentences.join.separator")) + t(`modelSentences.join.${joiner}`) + names[names.length - 1];
 }
 
 /** A domain's classes in words (attribute-reuse 5.3): *Employee or
  *  Contractor* for a union, *Employee and Manager* for two domain lines,
  *  which mean both; the one rule the form, the tree's words and the
  *  suggestions share. */
-export function domainWords(form: "union" | "separate", names: string[]): string {
-  return namesList(names, form === "union" ? "or" : "and");
+export function domainWords(form: "union" | "separate", names: string[], locale: UiLocale = "en"): string {
+  return namesList(names, form === "union" ? "or" : "and", locale);
 }
 
 /** *an Employee or a Contractor*: each name with its article. */
-function either(names: string[]): string {
-  return namesList(names.map(a), "or");
+function either(names: string[], locale: UiLocale): string {
+  return namesList(names.map(name => articleName(name, locale)), "or", locale);
 }
 
 /** A suggestion under the name field (5.1): *hasName, an attribute of
  *  Employee (text).*, *reportsTo, from Employee to Manager.* The domain is
  *  the server's reading: *Employee or Contractor* when shared, *no class
  *  yet* when it has none. */
-export function suggestionLine(
-  kind: PropertyWord,
-  name: string,
-  domain: string | null,
-  end: string | null,
-): string {
-  const of = domain ?? "no class yet";
-  if (kind === "attribute") return `${name}, an attribute of ${of}${end ? ` (${typeWord(end)})` : ""}.`;
-  return `${name}, from ${of} to ${end ?? "no class yet"}.`;
+export function suggestionLine(kind: PropertyWord, name: string, domain: string | null, end: string | null, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const of = domain ?? t("modelSentences.noClass");
+  if (kind === "attribute") return end ? t("modelSentences.suggestion.attributeTyped", { name, domain: of, type: typeWord(end, t) }) : t("modelSentences.suggestion.attribute", { name, domain: of });
+  return t("modelSentences.suggestion.relationship", { name, domain: of, end: end ?? t("modelSentences.noClass") });
 }
 
 /** The suggestions' heading and each one's button. */
-export const ALREADY_HERE = "Already in this project";
-export function useOn(cls: string): string {
-  return `Use it on ${cls}`;
+export const ALREADY_HERE = englishTranslator("modelSentences.already");
+export function useOn(cls: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.use", { cls });
 }
 
 /** What the live region says once typing pauses: the count, never the list. */
-export function matchesSaid(count: number, kind: PropertyWord): string {
-  return count === 1 ? `1 existing ${kind} matches` : `${count} existing ${kind}s match`;
+export function matchesSaid(count: number, kind: PropertyWord, locale: UiLocale = "en"): string {
+  return tFor(locale)(`modelSentences.matches.${kind}.${count === 1 ? "one" : "many"}`, { count });
 }
 
 /** Who has a property, for *It means: whatever has a name ...*. */
-function whoever(kind: PropertyWord, name: string): string {
-  return kind === "relationship" ? `whatever ${verb(name)} something` : `whatever has ${name}`;
+function whoever(kind: PropertyWord, name: string, locale: UiLocale): string {
+  return tFor(locale)(`modelSentences.whoever.${kind}`, { name: kind === "relationship" ? verbName(name, locale) : name });
 }
 
 /** Case A (5.2): no class yet. */
-export function planNoClass(name: string, cls: string): string {
-  return `${name} belongs to no class yet. Make it ${cls}'s?`;
+export function planNoClass(name: string, cls: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.plan.noClass", { name, cls });
 }
 
 /** Case B: the class has it already, through the class named in `via`. */
-export function planAlready(name: string, cls: string, via: string): string {
-  return via === cls ? `${cls} already has ${name}.` : `${cls} already has ${name}, because ${a(cls)} is ${a(via)}.`;
+export function planAlready(name: string, cls: string, via: string, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  return via === cls ? t("modelSentences.plan.already", { name, cls }) : t("modelSentences.plan.alreadyVia", { name, cls, articleClass: articleName(cls, locale), via: articleName(via, locale) });
 }
 
 /** Case C: the domain is a kind of the class, so the property moves up. */
-export function planMoveUp(name: string, cls: string, domain: string[]): string {
-  const kept = domain.map((d) => `Every ${d} keeps it, because ${a(d)} is ${a(cls)}.`).join(" ");
-  return `${name} moves up to ${cls}. ${kept}`;
+export function planMoveUp(name: string, cls: string, domain: string[], locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const join = t("modelSentences.paragraphJoin");
+  const kept = domain.map(child => t("modelSentences.plan.keep", { child, articleChild: articleName(child, locale), parent: articleName(cls, locale) })).join(join);
+  return t("modelSentences.plan.move", { name, cls }) + join + kept;
 }
 
 /** Case D, the first choice: the plain question, then what it does. */
-export function planSubclass(name: string, cls: string, domain: string): string {
-  return `Is every ${cls} ${a(domain)}? Then make ${cls} a kind of ${domain}, and it gets ${name} through ${domain}.`;
+export function planSubclass(name: string, cls: string, domain: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.plan.subclass", { name, cls, domain, articleDomain: articleName(domain, locale) });
 }
-export function makeKindOf(cls: string, domain: string): string {
-  return `Make ${cls} a kind of ${domain}`;
+export function makeKindOf(cls: string, domain: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.makeKind", { cls, domain });
 }
 
 /** Case D, the union, for OWL classes: what it means in one sentence. */
-export function planUnion(kind: PropertyWord, name: string, classes: string[]): string {
-  return `Share ${name} between ${namesList(classes)}. It means: ${whoever(kind, name)} is ${either(classes)}.`;
+export function planUnion(kind: PropertyWord, name: string, classes: string[], locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.plan.union", { name, classes: namesList(classes, "and", locale), whoever: whoever(kind, name, locale), either: either(classes, locale) });
 }
-export const SHARE_IT = "Share it";
-export const OR_PARENT = "Or give them a shared parent, which the reasoner can use";
+export const SHARE_IT = englishTranslator("modelSentences.shareIt");
+export const OR_PARENT = englishTranslator("modelSentences.orParent");
 
 /** Case D with an RDFS class: a shared parent is the only way. */
-export function planRdfsParent(name: string, classes: string[]): string {
-  return `RDFS has no way to say "either". Give ${namesList(classes)} a shared parent, and ${name} belongs to it:`;
+export function planRdfsParent(name: string, classes: string[], locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.plan.rdfsParent", { name, classes: namesList(classes, "and", locale) });
 }
 
 /** The shared parent's name field and its button. */
-export function parentQuestion(classes: string[]): string {
-  return `What is every ${namesList(classes)}? For example, Worker`;
+export function parentQuestion(classes: string[], locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.parentQuestion", { classes: namesList(classes, "and", locale) });
 }
-export function giveParent(classes: string[]): string {
-  return `Give ${namesList(classes)} this parent`;
+export function giveParent(classes: string[], locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.giveParent", { classes: namesList(classes, "and", locale) });
 }
 
 /** Why no shared parent is offered: a class is another ontology's. */
-export function importedParentNote(cls: string, from: string | null): string {
-  return `${cls} comes from ${from ?? "an imported ontology"}, so it cannot be given a new parent here.`;
+export function importedParentNote(cls: string, from: string | null, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  return t("modelSentences.importedParent", { cls, source: from ?? t("modelSentences.importedOntology") });
 }
 
 /** A parent the classes already share: the button, and who else gains. */
-export function moveUpTo(name: string, parent: string): string {
-  return `Move ${name} up to ${parent}`;
+export function moveUpTo(name: string, parent: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.move", { name, parent });
 }
-export function gainsSentence(name: string, parent: string, gains: string[], total: number): string {
-  if (total === 0) return `Nothing else gets ${name}: only these classes are kinds of ${parent}.`;
-  if (total === 1) return `Every ${gains[0]} gets ${name} too, because ${a(gains[0])} is ${a(parent)}.`;
-  const shown = total > gains.length ? [...gains, `${total - gains.length} more`] : gains;
-  return `${namesList(shown)} get ${name} too, because each is ${a(parent)}.`;
+export function gainsSentence(name: string, parent: string, gains: string[], total: number, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  if (total === 0) return t("modelSentences.gains.none", { name, parent });
+  if (total === 1) return t("modelSentences.gains.one", { name, gain: gains[0], articleGain: articleName(gains[0], locale), parent: articleName(parent, locale) });
+  const shown = total > gains.length ? [...gains, t("modelSentences.more", { count: total - gains.length })] : gains;
+  return t("modelSentences.gains.many", { gains: namesList(shown, "and", locale), name, parent: articleName(parent, locale) });
 }
 
 /** The live region once a choice is made. */
-export function sharedAnnouncement(name: string, classes: string[]): string {
-  return `${name} is now shared by ${namesList(classes)}.`;
+export function sharedAnnouncement(name: string, classes: string[], locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.shared", { name, classes: namesList(classes, "and", locale) });
 }
-export function givenAnnouncement(name: string, cls: string): string {
-  return `${name} now belongs to ${cls}.`;
+export function givenAnnouncement(name: string, cls: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.given", { name, cls });
 }
-export function removedAnnouncement(name: string, cls: string): string {
-  return `${cls} no longer has ${name}.`;
+export function removedAnnouncement(name: string, cls: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.removed", { name, cls });
 }
 
 /** *Belongs to* for a shared domain: what the list means. */
-export function domainListNote(form: "union" | "separate"): string {
-  return form === "union" ? "Any one of these classes:" : "All of these classes at once (see the warning):";
+export function domainListNote(form: "union" | "separate", locale: UiLocale = "en"): string {
+  return tFor(locale)(`modelSentences.domain.${form}`);
 }
 
 /** Said where a shared domain is shown (Section 7, 5.0 row 6). */
-export const REASONER_NOTE =
-  "The reasoner here follows OWL 2 RL, which draws no conclusion from a shared class list.";
+export const REASONER_NOTE = englishTranslator("modelSentences.reasonerNote");
 
 /** The canvas relate menu's entry (5.1): share an existing relationship. */
-export function shareEntry(name: string, from: string, to: string): string {
-  return `Share ${name}: ${a(from)} ${verb(name)} ${a(to)} too.`;
+export function shareEntry(name: string, from: string, to: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.shareEntry", { name, from: articleName(from, locale), verb: verbName(name, locale), to: articleName(to, locale) });
 }
 
 /** Delete on one line of a shared relationship (5.3). */
-export function memberDeleteQuestion(member: string, name: string): string {
-  return `Remove ${member} from ${name}, or delete ${name}?`;
+export function memberDeleteQuestion(member: string, name: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("modelSentences.memberDelete", { member, name });
 }

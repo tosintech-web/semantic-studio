@@ -353,7 +353,7 @@ ImportsPanel,SourceView,TurtleEditor,GraphNotice,Legend}.tsx`、`loadWords.ts`�
 EntityPicker,EditSection,EditStructure,EditParts,CreateForm,NewEntityForm,RelationshipForm,AttributeForm,
 AnnotationAdder,ConceptRelations,SharedDomain,ReusePlan,DeleteDialog,LinkPanel,ExampleForm,
 QueryPanel,QueryStart,ResultsTable,ResultPanels,PathBar,ClassPropsMenu,PredicateMenu,NextSteps,
-SparqlEditor,SparqlPreview,NothingSelected}.tsx`、`canvas/`、`modeling/sentences.ts`、
+SparqlEditor,SparqlPreview,NothingSelected}.tsx`、`canvas/`、`modeling/sentences.ts`、`modeling/entity.ts`（所属クラスの表示用結合）、
 `modeling/ruleSentences.ts`、`explain/explainSentences.ts`、`explain/glossary.ts`、`sparql/starters.ts`、対応テスト。
 種類の表示関数は `types.ts` を変更するが、色の定義を翻訳カタログへコピーしない。
 

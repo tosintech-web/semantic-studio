@@ -291,3 +291,57 @@ describe("model words in the current UI language", () => {
     expect(S.MAPPINGS[0].means).toBe("The same concept, and it can be used in place of this one.");
   });
 });
+
+describe("Japanese modeling grammar and reuse guidance", () => {
+  const cases: [string, () => string, string][] = [
+    ["relationship", () => S.relationshipSentence("犬", "hasOwner", "Person", "ja"), "犬は「hasOwner」という関連でPersonに結び付きます。"],
+    ["form", () => S.formSentence("XML file", "part of", "University", "ja"), "XML fileは「part of」という関連でUniversityに結び付きます。"],
+    ["missing ends", () => S.formSentence(null, "", null, "ja"), "（始点は未設定）は「…」という関連で（終点は未設定）に結び付きます。"],
+    ["inverse", () => S.inverseSentence("employs", "Person", "Organization", "ja"), "Organizationは「employs」という関連でPersonに結び付きます。"],
+    ["existing", () => S.existingSentence("犬", "hasOwner", "人", "ja"), "犬から人への「hasOwner」（既存の関連）"],
+    ["created", () => S.createdAnnouncement("hasOwner", "犬", "人", "ja"), "犬から人への関連「hasOwner」を作成しました。"],
+    ["datatype", () => S.asType("xsd:date", "ja"), "日付"],
+    ["attribute", () => S.attributeSentence("犬", "名前", "xsd:string", "ja"), "犬には「名前」というテキストの値があります。"],
+    ["untyped", () => S.attributeSentence("犬", "名前", null, "ja"), "犬には「名前」という値があります。"],
+    ["single value", () => S.oneValueExample("犬", "名前", "ja"), "犬が持つ「名前」の値は最大一つです。"],
+    ["functional", () => S.characteristicExample("functional", "hasOwner", "犬", "人", "ja"), "犬が「hasOwner」で結び付く人は最大一つです。"],
+    ["inverse functional", () => S.characteristicExample("inverseFunctional", "hasOwner", "犬", "人", "ja"), "人に「hasOwner」で結び付く犬は最大一つです。"],
+    ["symmetric", () => S.characteristicExample("symmetric", "友人", null, null, "ja"), "Aが「友人」でBと結び付くなら、Bも「友人」でAと結び付きます。"],
+    ["transitive", () => S.characteristicExample("transitive", "包含", null, null, "ja"), "Aが「包含」でB、Bが「包含」でCと結び付くなら、Aも「包含」でCと結び付きます。"],
+    ["asymmetric", () => S.characteristicExample("asymmetric", "包含", null, null, "ja"), "Aが「包含」でBと結び付くなら、BからAへ「包含」は成り立ちません。"],
+    ["irreflexive", () => S.characteristicExample("irreflexive", "包含", null, null, "ja"), "どの対象も「包含」で自分自身とは結び付きません。"],
+    ["reflexive", () => S.characteristicExample("reflexive", "包含", null, null, "ja"), "すべての対象が「包含」で自分自身と結び付きます。"],
+    ["top concept", () => S.topConceptSentence("動物", "ja"), "動物の最上位概念"],
+    ["list and", () => S.namesList(["犬", "猫", "鳥"], "and", "ja"), "犬、猫、鳥"],
+    ["list or", () => S.domainWords("union", ["犬", "猫"], "ja"), "犬または猫"],
+    ["suggestion", () => S.suggestionLine("attribute", "名前", "犬", "xsd:string", "ja"), "名前：犬の属性（テキスト）。"],
+    ["relation suggestion", () => S.suggestionLine("relationship", "hasOwner", "犬", "人", "ja"), "hasOwner：犬から人への関連。"],
+    ["use", () => S.useOn("犬", "ja"), "犬で利用する"],
+    ["matches", () => S.matchesSaid(2, "relationship", "ja"), "既存の関連が2件一致しました"],
+    ["no class", () => S.planNoClass("名前", "犬", "ja"), "「名前」はまだどのクラスにも属していません。犬の属性・関連にしますか？"],
+    ["already", () => S.planAlready("名前", "犬", "犬", "ja"), "犬はすでに「名前」を持っています。"],
+    ["inherited", () => S.planAlready("名前", "犬", "動物", "ja"), "犬はすでに「名前」を持っています。犬は動物の一種です。"],
+    ["move", () => S.planMoveUp("名前", "動物", ["犬"], "ja"), "「名前」を動物に移します。犬は引き続き利用できます。犬は動物の一種だからです。"],
+    ["subclass", () => S.planSubclass("名前", "犬", "動物", "ja"), "犬はすべて動物の一種ですか？犬を動物の下位クラスにすると、動物を通じて「名前」を利用できます。"],
+    ["make kind", () => S.makeKindOf("犬", "動物", "ja"), "犬を動物の下位クラスにする"],
+    ["union", () => S.planUnion("attribute", "名前", ["犬", "猫"], "ja"), "「名前」を犬、猫で共有します。意味：「名前」の値を持つ対象は犬または猫のいずれかです。"],
+    ["parent question", () => S.parentQuestion(["犬", "猫"], "ja"), "犬、猫に共通する種類は何ですか？例：Worker"],
+    ["give parent", () => S.giveParent(["犬", "猫"], "ja"), "犬、猫にこの上位クラスを設定"],
+    ["imported", () => S.importedParentNote("犬", "辞書A", "ja"), "犬は辞書Aの項目のため、ここでは新しい上位クラスを設定できません。"],
+    ["move button", () => S.moveUpTo("名前", "動物", "ja"), "「名前」を動物に移す"],
+    ["no gains", () => S.gainsSentence("名前", "動物", [], 0, "ja"), "ほかに「名前」を利用できるクラスはありません。動物の下位クラスはこれらだけです。"],
+    ["gains", () => S.gainsSentence("名前", "動物", ["鳥"], 1, "ja"), "鳥も「名前」を利用できます。鳥は動物の一種だからです。"],
+    ["many gains", () => S.gainsSentence("名前", "動物", ["鳥", "魚"], 4, "ja"), "鳥、魚、ほか2件も「名前」を利用できます。それぞれが動物の一種だからです。"],
+    ["shared", () => S.sharedAnnouncement("名前", ["犬", "猫"], "ja"), "「名前」を犬、猫で共有しました。"],
+    ["given", () => S.givenAnnouncement("名前", "犬", "ja"), "「名前」は犬に属するようになりました。"],
+    ["removed", () => S.removedAnnouncement("名前", "犬", "ja"), "犬から「名前」を外しました。"],
+    ["domain union", () => S.domainListNote("union", "ja"), "これらのクラスのいずれか："],
+    ["domain separate", () => S.domainListNote("separate", "ja"), "これらのクラスすべてに同時に該当（注意事項を参照）："],
+    ["share menu", () => S.shareEntry("part of", "Engine", "Unit", "ja"), "「part of」を共有：Engineも「part of」でUnitに結び付きます。"],
+    ["delete question", () => S.memberDeleteQuestion("犬", "hasOwner", "ja"), "犬を「hasOwner」から外しますか？それとも「hasOwner」を削除しますか？"],
+  ];
+  it.each(cases)("%s", (_case, render, expected) => expect(render()).toBe(expected));
+  it("keeps hostile-looking names intact and never applies the English verb rule in Japanese", () => {
+    expect(S.shareEntry("located in", "<b>犬</b>{name}", "XML file", "ja")).toBe("「located in」を共有：<b>犬</b>{name}も「located in」でXML fileに結び付きます。");
+  });
+});
