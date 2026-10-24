@@ -38,6 +38,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import type { UiLocale } from "../i18n/types";
 import type { CanvasNode } from "../types";
 import { EDGES, KINDS, type KindTokens, type Theme } from "../theme/kinds";
 
@@ -89,21 +91,12 @@ export function boxKind(node: Pick<CanvasNode, "kind" | "classType">): BoxKind {
   return node.classType === "rdfs" ? "rdfs" : "owl";
 }
 
-const WORDS: Record<BoxKind, string> = {
-  owl: "OWL class",
-  rdfs: "RDFS class",
-  concept: "concept",
-  scheme: "scheme",
-  example: "example",
-  attribute: "attribute",
-};
-
 /** The kind in words, as a box's header shows it (in capitals, by CSS) and
  *  its accessible name says it: *Person, OWL class*. An imported box names
  *  its import instead: *imported · FOAF*. */
-export function kindWord(node: Pick<CanvasNode, "kind" | "classType" | "imported">): string {
-  if (node.imported) return node.imported === "outside" ? "outside this model" : `imported · ${node.imported}`;
-  return WORDS[boxKind(node)];
+export function kindWord(node: Pick<CanvasNode, "kind" | "classType" | "imported">, locale: UiLocale = "en"): string {
+  if (node.imported) return node.imported === "outside" ? translate(locale, "canvasKind.outside") : translate(locale, "canvasKind.imported", { name: node.imported });
+  return translate(locale, `canvasKind.${boxKind(node)}`);
 }
 
 /** The WCAG 2 contrast ratio of two #rrggbb colours. */

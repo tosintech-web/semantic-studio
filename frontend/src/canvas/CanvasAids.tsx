@@ -33,18 +33,10 @@ EXPECTED OUTPUT
 */
 
 import { useState } from "react";
+import { useI18n } from "../i18n/I18nProvider";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 export type LegendLine = "kindof" | "relationship" | "broader" | "related" | "inferred" | "rule";
-
-const WORDS: Record<LegendLine, string> = {
-  kindof: "kind of",
-  relationship: "relationship",
-  broader: "broader",
-  related: "related",
-  inferred: "inferred",
-  rule: "rule",
-};
 
 /** Where each sample's ends are drawn: the canvas's own markers. */
 const MARKERS: Record<LegendLine, { start?: string; end?: string }> = {
@@ -57,10 +49,11 @@ const MARKERS: Record<LegendLine, { start?: string; end?: string }> = {
 };
 
 export function Legend({ lines }: { lines: LegendLine[] }) {
+  const { t } = useI18n();
   const [help, setHelp] = useState(false);
   return (
     <div className="canvas-legend nodrag nopan">
-      <ul aria-label="What the lines mean">
+      <ul aria-label={t("canvasAid.lines")}>
         {lines.map((line) => (
           <li key={line}>
             <svg width="46" height="14" aria-hidden="true">
@@ -71,38 +64,27 @@ export function Legend({ lines }: { lines: LegendLine[] }) {
                 markerEnd={MARKERS[line].end}
               />
             </svg>
-            {WORDS[line]}
+            {t(`canvasAid.line.${line}`)}
           </li>
         ))}
       </ul>
-      <button type="button" className="canvas-help-button" aria-haspopup="dialog" aria-label="Keyboard help" onClick={() => setHelp(true)}>
+      <button type="button" className="canvas-help-button" aria-haspopup="dialog" aria-label={t("canvasAid.help")} onClick={() => setHelp(true)}>
         ?
       </button>
       {help && (
         <ConfirmDialog
-          title="Keyboard and lines"
+          title={t("canvasAid.helpTitle")}
           escape="close"
-          actions={[{ id: "close", label: "Close", primary: true }]}
+          actions={[{ id: "close", label: t("canvasAid.close"), primary: true }]}
           onAnswer={() => setHelp(false)}
         >
           <ul className="canvas-help-keys">
-            <li>
-              <kbd>Shift</kbd>+<kbd>F10</kbd> on an outline row opens its actions.
-            </li>
-            <li>
-              <kbd>Enter</kbd> in a new box creates it; <kbd>Esc</kbd> cancels it.
-            </li>
-            <li>
-              <kbd>Enter</kbd> on a selected box renames it; <kbd>Delete</kbd> deletes it.
-            </li>
-            <li>
-              The arrow keys move the selected box; <kbd>+</kbd> and <kbd>-</kbd> zoom.
-            </li>
+            <li>{t("canvasAid.key.outline")}</li>
+            <li>{t("canvasAid.key.create")}</li>
+            <li>{t("canvasAid.key.edit")}</li>
+            <li>{t("canvasAid.key.move")}</li>
           </ul>
-          <p>
-            A solid line is stated in your model. A dashed line is inferred: reasoning concluded it, and it is not saved
-            in your file.
-          </p>
+          <p>{t("canvasAid.explanation")}</p>
         </ConfirmDialog>
       )}
     </div>
@@ -121,20 +103,16 @@ function tipDismissed(): boolean {
 }
 
 export function TipCard({ word }: { word: "Class" | "Concept" }) {
+  const { t } = useI18n();
   const [shown, setShown] = useState(() => !tipDismissed());
   if (!shown) return null;
-  const kindOf = word === "Class" ? "a kind of it" : "narrower than it";
   return (
     <section className="canvas-tip nodrag nopan" aria-labelledby="canvas-tip-title">
-      <h3 id="canvas-tip-title">Three drags</h3>
+      <h3 id="canvas-tip-title">{t("canvasAid.tip.title")}</h3>
       <ul>
-        <li>
-          Drag <strong>{word}</strong> onto the canvas to add one.
-        </li>
-        <li>
-          Drop it on a box to make {kindOf}.
-        </li>
-        <li>Drag from a box's edge to another box to relate them.</li>
+        <li>{t(word === "Class" ? "canvasAid.tip.addClass" : "canvasAid.tip.addConcept")}</li>
+        <li>{t(word === "Class" ? "canvasAid.tip.dropClass" : "canvasAid.tip.dropConcept")}</li>
+        <li>{t("canvasAid.tip.relate")}</li>
       </ul>
       <button
         type="button"
@@ -151,7 +129,7 @@ export function TipCard({ word }: { word: "Class" | "Concept" }) {
           canvas?.focus();
         }}
       >
-        Got it
+        {t("canvasAid.tip.dismiss")}
       </button>
     </section>
   );

@@ -572,6 +572,25 @@ function crewed(items = CREWED_RULES, rules = true): NodeDetails {
 }
 
 describe("DetailPanel: a class's rules (explore-rules 5.3, AC-3, AC-4)", () => {
+  it("switches rule sentences without changing the loaded rule or Turtle", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    const details = crewed();
+    const original = JSON.stringify(details);
+    getNodeDetails.mockResolvedValue(details);
+    await act(async () => {
+      render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
+    });
+    expect(document.querySelector(".rule-sentence")?.textContent).toBe("すべてのCrewed missionは「crew member」の値を1件以上持ちます（Astronautに該当する値）");
+    const calls = getNodeDetails.mock.calls.length;
+    const turtle = document.querySelector(".rule-turtle");
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(document.querySelector(".rule-sentence")?.textContent).toBe("Every Crewed mission has at least one crew member that is an Astronaut");
+    expect(document.querySelector(".rule-turtle")).toBe(turtle);
+    expect(getNodeDetails).toHaveBeenCalledTimes(calls);
+    expect(JSON.stringify(details)).toBe(original);
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+  });
+
   it("shows the rules under Rules, one sentence each, a Turtle item read-only", async () => {
     await renderPanel(crewed());
     const heading = screen.getByRole("heading", { level: 3, name: "Rules" });

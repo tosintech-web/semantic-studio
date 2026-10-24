@@ -381,7 +381,7 @@ export default function DetailPanel({
               <h3>{t("detail.rules")}</h3>
               <ul className="detail-rules">
                 {details.rules.items.map((item, index) => {
-                  const sentence = itemSentence(details.label, item);
+                  const sentence = itemSentence(details.label, item, locale);
                   return (
                     // The same rule written twice is two items with one key.
                     <li key={`${itemKey(item)}|${index}`} className="rule-item">

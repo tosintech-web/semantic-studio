@@ -13,6 +13,11 @@ SUMMARY
     far, the problem that stops Add, and the one command Add sends.
 
 BASIC IDEA
+    Whole catalogs provide rule prose, choices and help in the requested UI
+    locale. English alone applies articles, plurals and has-noun wording;
+    other locales preserve original names. Commands and RDF values remain
+    locale-independent; compatibility exports retain English defaults.
+
     The server reads a rule out of the graph into its parts with labels
     (axioms.py); everything a learner reads is built here, from those parts,
     so the form, the canvas and the builder say a rule the same way and are
@@ -38,6 +43,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
 import type { AnnotationValue, RuleChoices, RuleForm, RuleItem, RuleKey, RuleKind, RuleRef, RuleRestriction } from "../types";
 import { a } from "./sentences";
 import { plural } from "./shapeSentences";
@@ -45,21 +52,17 @@ import { plural } from "./shapeSentences";
 const XSD = "http://www.w3.org/2001/XMLSchema#";
 
 const BLANK = "…";
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
+const articleName = (name: string, locale: UiLocale) => locale === "en" ? a(name) : name;
 
 function capital(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** 1 is *one*, as 5.8 writes *at least one*; any other number is digits. */
-export function countWord(n: number): string {
-  return n === 1 ? "one" : String(n);
+export function countWord(n: number, locale: UiLocale = "en"): string {
+  return n === 1 ? tFor(locale)("ruleSentence.countOne") : String(n);
 }
-
-const QUANTITY: Record<"exactly" | "atLeast" | "atMost", string> = {
-  exactly: "exactly",
-  atLeast: "at least",
-  atMost: "at most",
-};
 
 export function isCount(kind: RuleKind | null): kind is "exactly" | "atLeast" | "atMost" {
   return kind === "exactly" || kind === "atLeast" || kind === "atMost";
@@ -104,76 +107,72 @@ export function partsOf(item: RuleRestriction): RuleParts {
 
 /** *that is an Order line* / *that are Order lines*, by the number. */
 function thatIs(filler: string, n: number): string {
-  return n === 1 ? `that is ${a(filler)}` : `that are ${plural(filler)}`;
+  return n === 1 ? tFor("en")("ruleSentence.that.one", { filler: a(filler) }) : tFor("en")("ruleSentence.that.many", { filler: plural(filler) });
 }
 
 /** The sentence of a restriction (5.8). Blanks not yet filled read "…",
  *  so the builder's sentence reads as its pickers fill. */
-export function restrictionSentence(cls: string, parts: RuleParts): string {
+export function restrictionSentence(cls: string, parts: RuleParts, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
   const p = parts.property ?? BLANK;
   const f = parts.filler;
   const kind = parts.kind;
   if (parts.form === "defines") {
-    const head = `${capital(a(cls))} is exactly ${parts.with ? a(parts.with) : "something"} that`;
-    return `${head} ${definingPhrase(p, kind, f, parts.n)}`;
+    const phrase = definingPhrase(p, kind, f, parts.n, locale);
+    const saidClass = locale === "en" ? capital(a(cls)) : cls;
+    return parts.with ? t("ruleSentence.defines.named", { cls: saidClass, with: articleName(parts.with, locale), phrase }) : t("ruleSentence.defines.any", { cls: saidClass, phrase });
   }
-  // A relationship named *has X* is read without its *has* in a count, so
-  // *has at most 2 has line* reads *has at most 2 lines* (T-21).
-  const counted = parts.property ? hasNoun(parts.property) : null;
-  if (kind === "some") return `Every ${cls} has at least one ${counted ?? p} that is ${f ? a(f) : BLANK}`;
-  if (kind === "only") return `Every ${cls}'s ${p} can only be ${f ? plural(f) : BLANK}`;
-  if (kind === "value") return `Every ${cls} has ${p} ${f ?? BLANK}`;
+  const counted = locale === "en" && parts.property ? hasNoun(parts.property) : null;
+  if (kind === "some") return t("ruleSentence.every.some", { cls, property: counted ?? p, filler: f ? articleName(f, locale) : BLANK });
+  if (kind === "only") return t("ruleSentence.every.only", { cls, property: p, filler: f ? locale === "en" ? plural(f) : f : BLANK });
+  if (kind === "value") return t("ruleSentence.every.value", { cls, property: p, filler: f ?? BLANK });
   if (isCount(kind)) {
     const n = parts.n;
-    const count = n === null ? BLANK : countWord(n);
-    const tail = f ? ` ${n === null ? `that are ${plural(f)}` : thatIs(f, n)}` : "";
-    const what = counted ? (n === 1 ? counted : plural(counted)) : p;
-    return `Every ${cls} has ${QUANTITY[kind]} ${count} ${what}${tail}`;
+    const count = n === null ? BLANK : countWord(n, locale);
+    const tail = f ? t("ruleSentence.qualified", { filler: locale === "en" ? thatIs(f, n ?? 2) : f }) : "";
+    const property = counted ? n === 1 ? counted : plural(counted) : p;
+    return t(`ruleSentence.every.${kind}`, { cls, count, property, tail });
   }
-  return `Every ${cls} ${BLANK}`;
+  return t("ruleSentence.blank", { cls });
 }
 
-function definingPhrase(p: string, kind: RuleKind | null, f: string | null, n: number | null): string {
-  if (kind === "some") return `${p} at least one ${f ?? BLANK}`;
-  if (kind === "only") return `${p} only ${f ? plural(f) : BLANK}`;
-  if (kind === "value") return `${p} ${f ?? BLANK}`;
-  if (isCount(kind)) {
-    const count = n === null ? BLANK : countWord(n);
-    const what = f ? ` ${n === 1 ? f : plural(f)}` : "";
-    return `${p} ${QUANTITY[kind]} ${count}${what}`;
-  }
-  return `${p} ${BLANK}`;
+function definingPhrase(p: string, kind: RuleKind | null, f: string | null, n: number | null, locale: UiLocale): string {
+  const t = tFor(locale);
+  if (kind === "some") return t("ruleSentence.define.some", { property: p, filler: f ?? BLANK });
+  if (kind === "only") return t("ruleSentence.define.only", { property: p, filler: f ? locale === "en" ? plural(f) : f : BLANK });
+  if (kind === "value") return t("ruleSentence.define.value", { property: p, filler: f ?? BLANK });
+  if (isCount(kind)) return t(`ruleSentence.define.${kind}`, { property: p, count: n === null ? BLANK : countWord(n, locale), what: f ? t("ruleSentence.countWhat", { filler: locale === "en" && n !== 1 ? plural(f) : f }) : t("ruleSentence.values") });
+  return t("ruleSentence.define.blank", { property: p });
 }
 
-export function disjointSentence(cls: string, other: string): string {
-  return `No ${cls} is ${a(other)}`;
+export function disjointSentence(cls: string, other: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("ruleSentence.disjoint", { cls, other: articleName(other, locale) });
 }
 
-export function equivalentSentence(cls: string, other: string): string {
-  return `${cls} and ${other} mean the same thing`;
+export function equivalentSentence(cls: string, other: string, locale: UiLocale = "en"): string {
+  return tFor(locale)("ruleSentence.equivalent", { cls, other });
 }
 
 /** Any item of the Rules block as its sentence; Turtle outside 5.8 is its
  *  own text and has none. */
-export function itemSentence(cls: string, item: RuleItem): string | null {
-  if (item.type === "restriction") return restrictionSentence(cls, partsOf(item));
-  if (item.type === "disjoint") return disjointSentence(cls, item.other.label);
-  if (item.type === "equivalent") return equivalentSentence(cls, item.other.label);
+export function itemSentence(cls: string, item: RuleItem, locale: UiLocale = "en"): string | null {
+  if (item.type === "restriction") return restrictionSentence(cls, partsOf(item), locale);
+  if (item.type === "disjoint") return disjointSentence(cls, item.other.label, locale);
+  if (item.type === "equivalent") return equivalentSentence(cls, item.other.label, locale);
   return null;
 }
 
 /** A rule line's label on the canvas (5.9): the sentence's short form. */
-export function shortLabel(rule: { form: RuleForm; kind: RuleKind; n: number | null; propertyLabel: string }): string {
-  if (rule.form === "defines") return "defines";
-  if (rule.kind === "some") return `at least 1 · ${rule.propertyLabel}`;
-  if (rule.kind === "only") return `only · ${rule.propertyLabel}`;
-  if (rule.kind === "value") return `value · ${rule.propertyLabel}`;
-  return `${QUANTITY[rule.kind]} ${rule.n ?? 0} · ${rule.propertyLabel}`;
+export function shortLabel(rule: { form: RuleForm; kind: RuleKind; n: number | null; propertyLabel: string }, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  if (rule.form === "defines") return t("ruleSentence.short.defines");
+  if (rule.kind === "some" || rule.kind === "only" || rule.kind === "value") return t(`ruleSentence.short.${rule.kind}`, { property: rule.propertyLabel });
+  return t(`ruleSentence.short.${rule.kind}`, { count: rule.n ?? 0, property: rule.propertyLabel });
 }
 
 /** A box's count of the rules the canvas does not draw (5.9). */
-export function moreRulesText(n: number): string {
-  return `${n} more ${n === 1 ? "rule" : "rules"} in the form`;
+export function moreRulesText(n: number, locale: UiLocale = "en"): string {
+  return tFor(locale)(n === 1 ? "ruleSentence.more.one" : "ruleSentence.more.many", { count: n });
 }
 
 /** *has line* read as the thing it links to, *line*; null for any other
@@ -189,35 +188,19 @@ function thing(property: string): string {
 
 /** The open-world note under a restriction (Q3, Section 7): what the rule
  *  does not do, with the case that is not an error. */
-export function openWorldNote(cls: string, parts: RuleParts): string {
-  const head = `This describes every ${cls}. It does not check your data:`;
-  const t = parts.property ? thing(parts.property) : BLANK;
+export function openWorldNote(cls: string, parts: RuleParts, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const articleClass = articleName(cls, locale);
+  if (parts.form === "defines") return t("ruleSentence.world.defines", { articleClass });
+  const property = parts.property ? locale === "en" ? thing(parts.property) : parts.property : BLANK;
   const n = parts.n ?? 0;
-  let example: string;
-  if (parts.form === "defines") {
-    example = `a thing that fits the description is not made ${a(cls)} in your file.`;
-    return `This defines ${a(cls)}. It does not check your data: ${example}`;
-  }
   switch (parts.kind) {
-    case "some":
-      example = `${a(cls)} with no ${t} is not an error here.`;
-      break;
-    case "atLeast":
-      example = `${a(cls)} with fewer than ${n} ${n === 1 ? t : plural(t)} is not an error here.`;
-      break;
-    case "only":
-      example = `${a(cls)} with ${a(t)} that is not ${parts.filler ? a(parts.filler) : BLANK} is not an error here.`;
-      break;
-    case "atMost":
-      example = `${a(cls)} with more than ${n} ${n === 1 ? t : plural(t)} is not an error here.`;
-      break;
-    case "exactly":
-      example = `${a(cls)} with another number of ${plural(t)} is not an error here.`;
-      break;
-    default:
-      example = `${a(cls)} without that ${t} is not an error here.`;
+    case "some": return t("ruleSentence.world.some", { cls, articleClass, property });
+    case "atLeast": case "atMost": return t(`ruleSentence.world.${parts.kind}`, { cls, articleClass, count: n, property: locale === "en" && n !== 1 ? plural(property) : property });
+    case "only": return t("ruleSentence.world.only", { cls, articleClass, property: articleName(property, locale), filler: parts.filler ? articleName(parts.filler, locale) : BLANK });
+    case "exactly": return t("ruleSentence.world.exactly", { cls, articleClass, property: locale === "en" ? plural(property) : property });
+    default: return t("ruleSentence.world.default", { cls, articleClass, property });
   }
-  return `${head} ${example}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -257,25 +240,21 @@ export const EMPTY_BUILDER: BuilderState = {
   other: null,
 };
 
-export const RULE_TYPES: { id: RuleType; words: (cls: string) => string }[] = [
-  { id: "every", words: (cls) => `Every ${cls} …` },
-  { id: "defines", words: (cls) => `${capital(a(cls))} is exactly …` },
-  { id: "disjoint", words: (cls) => `No ${cls} is …` },
-  { id: "equivalent", words: (cls) => `${cls} means the same as …` },
-];
+export function ruleTypeChoices(locale: UiLocale = "en"): { id: RuleType; words: (cls: string) => string }[] {
+  const t = tFor(locale);
+  return ["every", "defines", "disjoint", "equivalent"].map(type => {
+    const id = type as RuleType;
+    return { id, words: cls => t(`ruleSentence.type.${id}`, { cls: id === "defines" && locale === "en" ? capital(a(cls)) : cls }) };
+  });
+}
+export const RULE_TYPES = ruleTypeChoices();
 
 /** The kinds a property is offered (5.8): an attribute takes a count or a
  *  value; a relationship any of the six. */
-export function kindsFor(propertyKind: "relationship" | "attribute" | null | undefined): { id: RuleKind; words: string }[] {
-  const all: { id: RuleKind; words: string }[] = [
-    { id: "some", words: "has at least one … that is a" },
-    { id: "only", words: "can only be" },
-    { id: "exactly", words: "has exactly" },
-    { id: "atLeast", words: "has at least" },
-    { id: "atMost", words: "has at most" },
-    { id: "value", words: "has the value" },
-  ];
-  return propertyKind === "attribute" ? all.filter((k) => k.id !== "some" && k.id !== "only") : all;
+export function kindsFor(propertyKind: "relationship" | "attribute" | null | undefined, locale: UiLocale = "en"): { id: RuleKind; words: string }[] {
+  const t = tFor(locale);
+  const ids: RuleKind[] = ["some", "only", "exactly", "atLeast", "atMost", "value"];
+  return ids.filter(id => propertyKind !== "attribute" || id !== "some" && id !== "only").map(id => ({ id, words: t(`ruleSentence.kind.${id}`) }));
 }
 
 /** The seven types of value E-6 offers, as an attribute's count may name one. */
@@ -307,15 +286,15 @@ function parsedN(state: BuilderState): number | null {
 
 /** The builder's sentence so far, with "…" in each blank still empty: the
  *  group's name and what Add announces (Section 6, Accessibility). */
-export function builderSentence(cls: string, state: BuilderState, choices: RuleChoices | null): string {
+export function builderSentence(cls: string, state: BuilderState, choices: RuleChoices | null, locale: UiLocale = "en"): string {
   const label = (list: RuleRef[] | undefined, iri: string | null) => find(list, iri)?.label ?? null;
   if (state.type === "disjoint") {
     const other = label(choices?.classes.items, state.other);
-    return other ? disjointSentence(cls, other) : `No ${cls} is ${BLANK}`;
+    return other ? disjointSentence(cls, other, locale) : tFor(locale)("ruleSentence.disjointBlank", { cls });
   }
   if (state.type === "equivalent") {
     const other = label(choices?.classes.items, state.other);
-    return equivalentSentence(cls, other ?? BLANK);
+    return equivalentSentence(cls, other ?? BLANK, locale);
   }
   const attribute = propertyKind(state, choices) === "attribute";
   let filler: string | null = null;
@@ -331,24 +310,24 @@ export function builderSentence(cls: string, state: BuilderState, choices: RuleC
     filler,
     n: isCount(state.kind) ? parsedN(state) : null,
     with: state.type === "defines" ? label(choices?.classes.items, state.with) : null,
-  });
+  }, locale);
 }
 
 /** What stops Add, in words, or null when the rule can be written. The
  *  server checks again and has the last word (5.10). */
-export function builderProblem(state: BuilderState, choices: RuleChoices | null): string | null {
+export function builderProblem(state: BuilderState, choices: RuleChoices | null, locale: UiLocale = "en"): string | null {
   if (state.type === "disjoint" || state.type === "equivalent") {
-    return state.other ? null : "Choose the other class.";
+    return state.other ? null : tFor(locale)("ruleSentence.problem.other");
   }
-  if (!state.property) return "Choose the relationship or attribute.";
-  if (!state.kind) return "Choose what is true of it.";
+  if (!state.property) return tFor(locale)("ruleSentence.problem.property");
+  if (!state.kind) return tFor(locale)("ruleSentence.problem.kind");
   const attribute = propertyKind(state, choices) === "attribute";
   if (attribute && (state.kind === "some" || state.kind === "only")) {
-    return "An attribute takes exactly, at least, at most or a value.";
+    return tFor(locale)("ruleSentence.problem.attribute");
   }
-  if (isCount(state.kind) && parsedN(state) === null) return "A number of 0 to 1,000.";
-  if ((state.kind === "some" || state.kind === "only") && !state.filler) return "Choose the class it points to.";
-  if (state.kind === "value" && (attribute ? !state.value.trim() : !state.filler)) return "Choose the value.";
+  if (isCount(state.kind) && parsedN(state) === null) return tFor(locale)("ruleSentence.problem.number");
+  if ((state.kind === "some" || state.kind === "only") && !state.filler) return tFor(locale)("ruleSentence.problem.target");
+  if (state.kind === "value" && (attribute ? !state.value.trim() : !state.filler)) return tFor(locale)("ruleSentence.problem.value");
   return null;
 }
 

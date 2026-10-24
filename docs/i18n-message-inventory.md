@@ -77,7 +77,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/i18n/parts.ts` | リンク付き翻訳テンプレートの組み立て | 11 | 説明画面に接続済み、最終ブラウザ確認待ち |
 | `frontend/src/components/SearchBox.tsx` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
 | `frontend/src/modeling/sentences.ts` | 探索・編集・クエリ・説明文 | 11 | 共通文法関数を移行、呼び出し元への接続は進行中 |
-| `frontend/src/modeling/ruleSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/modeling/ruleSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 共通の文章・選択肢・検証文を移行、呼び出し元への接続は継続 |
 | `frontend/src/explain/explainSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/explain/glossary.ts` | 探索・編集・クエリ・説明文 | 11 | 所有文言を移行済み、最終ブラウザ確認待ち |
 | `frontend/src/sparql/starters.ts` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
@@ -90,7 +90,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/canvas/ModelCanvas.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/ConceptNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/ClassNode.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/canvas/CanvasAids.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/canvas/CanvasAids.tsx` | 凡例・キーボードヘルプ・初回案内 | 11 | 画面所有文言を移行、開閉状態とdismissフラグを保持（実ブラウザ確認はTask 13） |
 | `frontend/src/components/GraphView.tsx` | 探索グラフの共通操作・ズーム・出力案内 | 11 | 操作を移行、ルールラベル生成元は別途移行 |
 | `frontend/src/components/SideTabs.tsx` | 編集・推論の共通タブ表示 | 11 | 既定表示を移行、カスタム表示の生成元は別途移行 |
 
@@ -1713,3 +1713,119 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `queryDescription.filter.contains` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
 | `queryDescription.filter.startsWith` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
 | `queryDescription.filter.lang` | label, value | `frontend/src/sparql/describe.ts` | クエリの説明文 | 11 | 現在のUI言語で生成（QueryStateは変更しない） |
+
+| `ruleSentence.countOne` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.something` | — | `frontend/src/components/RulesBlock.tsx` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.values` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.qualified` | filler | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.countWhat` | filler | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.blank` | cls | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.every.some` | cls, filler, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.every.only` | cls, filler, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.every.value` | cls, filler, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.defines.named` | cls, phrase, with | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.defines.any` | cls, phrase | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.define.some` | filler, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.define.only` | filler, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.define.value` | filler, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.define.blank` | property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.disjoint` | cls, other | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.disjointBlank` | cls | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.equivalent` | cls, other | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.short.defines` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.short.some` | property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.short.only` | property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.short.value` | property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.more.one` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.more.many` | count | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.world.defines` | articleClass | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.world.some` | articleClass, cls, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.world.only` | articleClass, cls, filler, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.world.exactly` | articleClass, cls, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.world.default` | articleClass, cls, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.type.every` | cls | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.type.defines` | cls | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.type.disjoint` | cls | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.type.equivalent` | cls | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.kind.some` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.kind.only` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.kind.exactly` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.kind.atLeast` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.kind.atMost` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.kind.value` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.problem.other` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.problem.property` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.problem.kind` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.problem.attribute` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.problem.number` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.problem.target` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.problem.value` | — | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.that.one` | filler | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.that.many` | filler | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.every.exactly` | cls, count, property, tail | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.define.exactly` | count, property, what | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.short.exactly` | count, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.every.atLeast` | cls, count, property, tail | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.define.atLeast` | count, property, what | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.short.atLeast` | count, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.every.atMost` | cls, count, property, tail | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.define.atMost` | count, property, what | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.short.atMost` | count, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.world.atLeast` | articleClass, cls, count, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+| `ruleSentence.world.atMost` | articleClass, cls, count, property | `frontend/src/components/RulesBlock.tsx`<br>`frontend/src/modeling/ruleSentences.ts` | ルールの説明・選択肢 | 11 | 共通表示関数を移行、画面への接続は継続 |
+
+| `canvasAid.lines` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.line.kindof` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.line.relationship` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.line.broader` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.line.related` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.line.inferred` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.line.rule` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.help` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.helpTitle` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.close` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.key.outline` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.key.create` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.key.edit` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.key.move` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.explanation` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.tip.title` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.tip.addClass` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.tip.addConcept` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.tip.dropClass` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.tip.dropConcept` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.tip.relate` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+| `canvasAid.tip.dismiss` | — | `frontend/src/canvas/CanvasAids.tsx` | キャンバスの操作案内 | 11 | 移行済み |
+
+| `canvasKind.owl` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.rdfs` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.concept` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.scheme` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.example` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.attribute` | — | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.outside` | — | `frontend/src/canvas/kindColours.ts`<br>`frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasKind.imported` | name | `frontend/src/canvas/kindColours.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.mixed` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.otherConcept` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.otherClass` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.noEnds` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.self` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.imported` | name, source | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.alreadyNarrower` | from, to | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.relatedRefusal` | from, to | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.new` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.rule` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasRelate.used` | from, property, to | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.class` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.concept` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.parents.class` | parents | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.parents.concept` | parents | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.join` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.separator` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.children.class.one` | count | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.children.class.many` | count | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.children.concept.one` | count | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.children.concept.many` | count | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.outsideReadonly` | — | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.importedReadonly` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |
+| `canvasBox.never` | name | `frontend/src/canvas/relate.ts` | キャンバスの種類・関係・読み上げ | 11 | 共通表示関数を移行 |

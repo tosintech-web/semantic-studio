@@ -27,6 +27,8 @@ import { describe, expect, it } from "vitest";
 import type { RuleChoices, RuleRestriction } from "../types";
 import {
   EMPTY_BUILDER,
+  ruleTypeChoices,
+  kindsFor,
   builderCommand,
   builderProblem,
   builderSentence,
@@ -265,5 +267,46 @@ describe("the builder (5.9)", () => {
     expect(removeCommand(EX + "P", { type: "equivalent", other: ref("O", "O"), editable: true })!.name).toBe("RemoveEquivalentClass");
     expect(removeCommand(EX + "P", rule({ editable: false }))).toBeNull();
     expect(removeCommand(EX + "P", { type: "turtle", turtle: "x", editable: false })).toBeNull();
+  });
+});
+
+
+describe("Japanese rule prose", () => {
+  const expected = [
+    "すべてのOrderは「has line」でOrder lineに少なくとも1件結び付きます",
+    "すべてのOrderの「has line」の値はOrder lineだけです",
+    "すべてのOrderは「has line」の値をちょうど2件持ちます（Order lineに該当する値）",
+    "すべてのOrderは「has line」の値を1件以上持ちます（Order lineに該当する値）",
+    "すべてのOrderは「has line」の値を10件以下持ちます",
+    "すべてのPersonは「birth date」の値を1件以下持ちます",
+    "すべてのGold customerは「status」にgoldを持ちます",
+    "Managerは、Personのうち「manages」でEmployeeに少なくとも1件結び付く対象と同じ意味です",
+    "Managerは、「manages」でEmployeeに少なくとも1件結び付く対象と同じ意味です",
+  ];
+  it.each(ROWS.map((row, i) => [...row, expected[i]] as const))("describes %s without English name inflection", (_name, item, cls, _en, ja) => {
+    const original = JSON.stringify(item);
+    expect(itemSentence(cls, item, "ja")).toBe(ja);
+    expect(JSON.stringify(item)).toBe(original);
+  });
+  it("localizes pair rules, canvas labels and hidden-rule counts", () => {
+    expect(itemSentence("Person", { type: "disjoint", other: ref("Organization", "Organization"), editable: true }, "ja")).toBe("PersonはOrganizationとは重なりません");
+    expect(itemSentence("Client", { type: "equivalent", other: ref("Customer", "Customer"), editable: true }, "ja")).toBe("ClientとCustomerは同じ意味です");
+    expect(shortLabel({ form: "every", kind: "atLeast", n: 2, propertyLabel: "<b>has line</b>" }, "ja")).toBe("2件以上・<b>has line</b>");
+    expect(moreRulesText(2, "ja")).toBe("ほか2件のルールはフォームで確認できます");
+  });
+  it.each(["some", "only", "exactly", "atLeast", "atMost", "value"] as const)("keeps the open-world meaning for %s", kind => {
+    const text = openWorldNote("Order", partsOf(rule({ kind, n: 2 })), "ja");
+    expect(text).toContain("データの検証は行いません");
+    expect(text).toContain("Order");
+    expect(text).toContain("has line");
+  });
+  it("localizes builder choices and validation while leaving the command facts unchanged", () => {
+    expect(ruleTypeChoices("ja")[0].words("Person")).toBe("すべてのPersonは…");
+    expect(kindsFor("relationship", "ja")[0].words).toBe("少なくとも1件、次のクラスに結び付く");
+    expect(builderProblem(EMPTY_BUILDER, choices, "ja")).toBe("関係または属性を選択してください。");
+    const draft = { ...EMPTY_BUILDER, property: EX + "hasLine", kind: "some" as const, filler: EX + "OrderLine" };
+    const command = builderCommand(EX + "Order", draft, choices);
+    expect(builderSentence("Order", draft, choices, "ja")).toBe(expected[0]);
+    expect(builderCommand(EX + "Order", draft, choices)).toEqual(command);
   });
 });

@@ -246,3 +246,27 @@ describe("relateChoices, relationships Stage A", () => {
     expect("choices" in relateChoices({ ...view, kind: "taxonomy", edges: free }, "Status", "Paid")).toBe(true);
   });
 });
+
+it("generates Japanese choices from the same identifiers and preserves raw labels", () => {
+  const original = JSON.stringify(view);
+  const result = relateChoices(view, "Order", "Inv", "ja");
+  if ("refusal" in result) throw new Error(result.refusal);
+  expect(result.choices.find(choice => choice.kind === "subClassOf")?.label).toBe("OrderはInvoiceの一種です");
+  expect(result.choices.find(choice => choice.kind === "newRelationship")?.label).toBe("新しい関係…");
+  expect(result.choices.find(choice => choice.kind === "rule")?.label).toBe("すべてのOrderに少なくとも1件の…（ルール）");
+  const english = relateChoices(view, "Order", "Inv");
+  if ("refusal" in english) throw new Error(english.refusal);
+  expect(result.choices.map(({ label: _label, ...facts }) => facts)).toEqual(english.choices.map(({ label: _label, ...facts }) => facts));
+  const notes = relateChoices(view, "Item", "Doc", "ja");
+  expect("notes" in notes && notes.notes).toEqual(["「belongs to」はすでにInvoice ItemとInvoiceを結んでいます。新しい関係を作成してください。"]);
+  expect(relateChoices(view, "Agent", "Doc", "ja")).toEqual({ refusal: "AgentはFOAFの項目で、読み取り専用です。このモデルのボックスから線を引いてください。" });
+  expect(relateChoices(view, "Paid", "Status", "ja")).toEqual({ refusal: "PaidはすでにStatusの下位概念です。" });
+  expect(JSON.stringify(view)).toBe(original);
+});
+
+it("names the box and its hierarchy in Japanese without inflecting labels", () => {
+  expect(boxName(view, "Doc", "ja")).toBe("Document、OWLクラス、下位クラス2件");
+  expect(boxName(view, "Inv", "ja")).toBe("Invoice、OWLクラス、Documentの下位クラス");
+  expect(boxName(view, "Agent", "ja")).toBe("Agent、クラス、FOAFの項目（読み取り専用）");
+  expect(boxName(view, "Status", "ja")).toBe("Status、概念、下位概念1件");
+});

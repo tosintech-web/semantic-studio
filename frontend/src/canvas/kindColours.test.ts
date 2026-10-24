@@ -106,3 +106,11 @@ describe("kind colours (edit-page-rework 5.8)", () => {
     expect(kindWord({ kind: "class", imported: "outside" })).toBe("outside this model");
   });
 });
+
+it("translates the kind word while preserving palette identity and import names", () => {
+  expect(kindWord({ kind: "class" }, "ja")).toBe("OWLクラス");
+  expect(kindWord({ kind: "class", classType: "rdfs" }, "ja")).toBe("RDFSクラス");
+  expect(kindWord({ kind: "concept" }, "ja")).toBe("概念");
+  expect(kindWord({ kind: "class", imported: "FOAF {name}" }, "ja")).toBe("インポート · FOAF {name}");
+  expect(kindWord({ kind: "class", imported: "outside" }, "ja")).toBe("このモデルの外部");
+});
