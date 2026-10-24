@@ -14,6 +14,9 @@ SUMMARY
     and each row's last result as a word.
 
 BASIC IDEA
+    Rejected reads preserve their original details and display facts through UI
+    language changes without refetching or replacing retained content.
+
     api.ts is mocked and the real project store is opened on a fixed
     project, so every control goes through the commands the server would
     receive; each test asserts the command and its arguments.
@@ -48,6 +51,7 @@ vi.mock("../api", async (importOriginal) => ({
   searchNodes,
 }));
 
+import { ApiError } from "../api";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
@@ -822,5 +826,30 @@ it("rewords an unseen result badge without rerunning validation", async () => {
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(screen.getByRole("tab", { name: "Results, 3 problems" })).toBe(tab);
   expect(validateProject).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each(["list", "suggestions"])("keeps %s error facts and original details when UI language changes", async phase => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const error = new ApiError("Original <b>{cause}", 422, undefined,
+    { code: "model.invalid_value", args: { value: "<img>{value}", datatype: "xsd:integer" } });
+  if (phase === "list") getShapes.mockRejectedValueOnce(error);
+  else getShapeSuggestions.mockRejectedValueOnce(error);
+  await setup(phase === "list" ? [] : [PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  expect(screen.getByText('「<img>{value}」はxsd:integerの値として使用できません。')).toBeTruthy();
+  const pre = screen.getByText(error.message, { selector: "pre" });
+  const details = pre.closest("details")!;
+  details.open = true;
+  const summary = details.querySelector("summary")!;
+  summary.focus();
+  const listCalls = getShapes.mock.calls.length, suggestionCalls = getShapeSuggestions.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText('“<img>{value}” is not a valid xsd:integer value.')).toBeTruthy();
+  expect(screen.getByText(error.message, { selector: "pre" })).toBe(pre);
+  expect(details.open).toBe(true);
+  expect(document.activeElement).toBe(summary);
+  expect(getShapes).toHaveBeenCalledTimes(listCalls);
+  expect(getShapeSuggestions).toHaveBeenCalledTimes(suggestionCalls);
+  expect(document.querySelector(".shapes-view img, .shapes-view b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

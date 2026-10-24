@@ -11,6 +11,9 @@ SUMMARY
     (the selected shape's form) and Results (the result panels).
 
 BASIC IDEA
+    Fetch failures retain their original cause. Display metadata follows the UI
+    locale at render time, with escaped original details kept separately.
+
     Shared runner errors retain their original text in a keyboard-accessible disclosure.
     One shape at a time, as Imran asked (D-093). + opens a short chooser --
     *Rules for a class* in an ontology, *Rules for concepts* in a taxonomy,
@@ -57,6 +60,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { getShapes } from "../api";
@@ -100,7 +104,7 @@ export default function ShapesView({
   const shapesRevision = documents.find((d) => d.doc === "shapes")?.revision ?? null;
   const revisions = `${modelRevision}|${shapesRevision}`;
   const [listing, setListing] = useState<ShapesListing | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
+  const [listError, setListError] = useState<{ error: unknown } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [choosing, setChoosing] = useState<null | "menu" | "class">(null);
   const runner = useRunner("shapes");
@@ -116,7 +120,7 @@ export default function ShapesView({
         setListing(l);
         setListError(null);
       })
-      .catch((e: unknown) => live && setListError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setListError({ error: e }));
     return () => {
       live = false;
     };
@@ -274,7 +278,8 @@ export default function ShapesView({
           />
         )}
         {choosing === null && runner.errors.create && <p className="edit-error">{runner.errors.create}</p>}
-        {listError && <p className="edit-error">{listError}</p>}
+        {listError && <><p className="edit-error">{renderServerError(listError.error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{listError.error instanceof Error ? listError.error.message : String(listError.error)}</pre></details></>}
         {listing && shapes.length === 0 ? (
           <p className="detail-note">{t("shapesView.empty")}</p>
         ) : (

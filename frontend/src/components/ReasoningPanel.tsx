@@ -14,6 +14,9 @@ SUMMARY
     saying what the reasoner does and does not do.
 
 BASIC IDEA
+    Page-request failures keep the cause for current-language rendering and
+    escaped original details; already shown facts remain in place.
+
     The run and its result live in the project store (D-084); this reads
     them by selector and asks the store to act. Reason and Stop are one
     button whose name changes, so focus stays on it from start to end; the
@@ -408,7 +411,7 @@ function Problem({
 function usePages(projectId: string, group: ReasoningGroup, imports: boolean) {
   const [items, setItems] = useState<ReasoningFact[]>(group.items);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ error: unknown } | null>(null);
   // Where the last page began: the fact focus goes to when Show more leaves.
   const from = useRef(0);
   const more = () => {
@@ -421,7 +424,7 @@ function usePages(projectId: string, group: ReasoningGroup, imports: boolean) {
           return [...current, ...page.items];
         }),
       )
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e: unknown) => setError({ error: e }))
       .finally(() => setLoading(false));
   };
   return { items, more, loading, error, from };
@@ -438,6 +441,7 @@ function FactList({
   imports: boolean;
   onSelect: (iri: string) => void;
 }) {
+  const { t } = useI18n();
   const { items, more, loading, error, from } = usePages(projectId, group, imports);
   const listRef = useRef<HTMLUListElement>(null);
   // Set when the last Show more leaves holding focus; the first fact it
@@ -471,11 +475,10 @@ function FactList({
           }}
         />
       )}
-      {error && (
-        <p className="edit-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <>
+        <p className="edit-error" role="alert">{renderServerError(error.error, t)}</p>
+        <details><summary>{t("common.details")}</summary><pre>{error.error instanceof Error ? error.error.message : String(error.error)}</pre></details>
+      </>}
     </>
   );
 }

@@ -13,6 +13,9 @@ SUMMARY
     not, and Edit in Turtle.
 
 BASIC IDEA
+    Fetch failures retain their original cause. Display metadata follows the UI
+    locale at render time, with escaped original details kept separately.
+
     Shared runner errors retain their original text in a keyboard-accessible disclosure.
     Every control is one command on shapes.ttl through the shared runner
     (EditParts.useRunner, pointed at the shapes document), so every change
@@ -44,6 +47,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getShapeSuggestions } from "../api";
@@ -79,7 +83,7 @@ export default function ShapeForm({
   const runner = useRunner("shapes");
   const { busy, errors, run } = runner;
   const [suggestions, setSuggestions] = useState<ShapeSuggestions | null>(null);
-  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [suggestError, setSuggestError] = useState<{ error: unknown } | null>(null);
   // One editor at a time: "new", a rule's path key, or nothing.
   const [editing, setEditing] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -114,7 +118,7 @@ export default function ShapeForm({
         setSuggestions(s);
         setSuggestError(null);
       })
-      .catch((e: unknown) => live && setSuggestError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setSuggestError({ error: e }));
     return () => {
       live = false;
     };
@@ -300,7 +304,8 @@ export default function ShapeForm({
       </Block>
 
       <Block title={t("shapeForm.suggested")}>
-        {suggestError && <p className="edit-error">{suggestError}</p>}
+        {suggestError && <><p className="edit-error">{renderServerError(suggestError.error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{suggestError.error instanceof Error ? suggestError.error.message : String(suggestError.error)}</pre></details></>}
         {!target ? (
           // A shape written in Turtle with no target class (found in review):
           // there is nothing to suggest from until it has one.

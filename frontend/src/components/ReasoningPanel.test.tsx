@@ -15,6 +15,9 @@ SUMMARY
     own imports switch.
 
 BASIC IDEA
+    Rejected reads preserve their original details and display facts through UI
+    language changes without refetching or replacing retained content.
+
     The run lives in the project store, so the store is opened for real over
     a mocked api.ts, and the controls and the panel are rendered as App
     renders them. A run is a promise the test resolves when it chooses, so
@@ -621,5 +624,30 @@ it.each([["start", "Original <img>{diagnostic}"], ["stop", "Original <img>{diagn
   if (run) await run.answer(result());
   else { reasonProject.mockResolvedValueOnce(result()); await act(async () => { await projectStore.reason(false, false); }); }
   expect(projectStore.getSnapshot().reasoningErrorCause).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps a rejected result page's facts for current-language rendering and preserves its existing facts", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn<(iri: string) => void>();
+  const { container } = render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  const first = fact("alice", "Person", "Alice is a Person");
+  reasonProject.mockResolvedValueOnce(result({ problems: [], groups: [group("memberships", [first], 201)] }));
+  await press("推論");
+  const error = new ApiError("Page error <b>{cause}", 422, undefined,
+    { code: "model.invalid_value", args: { value: "<img>{value}", datatype: "xsd:integer" } });
+  getReasoningPage.mockRejectedValueOnce(error);
+  await press("続きを表示");
+  expect(screen.getByRole("alert").textContent).toBe('「<img>{value}」はxsd:integerの値として使用できません。');
+  expect(screen.getByText(error.message, { selector: "pre" })).toBeTruthy();
+  const factButton = screen.getByRole("button", { name: "Alice is a Person" });
+  const count = getReasoningPage.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("alert").textContent).toBe('“<img>{value}” is not a valid xsd:integer value.');
+  expect(screen.getByRole("button", { name: "Alice is a Person" })).toBe(factButton);
+  expect(getReasoningPage).toHaveBeenCalledTimes(count);
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  expect(container.querySelector(".reasoning img, .reasoning b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });
