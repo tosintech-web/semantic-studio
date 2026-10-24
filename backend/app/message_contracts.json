@@ -45,6 +45,92 @@
     },
     "command.created_annotation_property": {
       "name": "string"
+    },
+    "command.added_annotation": {
+      "property": "string",
+      "name": "string"
+    },
+    "command.removed_annotation": {
+      "property": "string",
+      "name": "string"
+    },
+    "command.changed_annotation": {
+      "property": "string",
+      "name": "string"
+    },
+    "command.added_subclass": {
+      "child": "string",
+      "parent": "string"
+    },
+    "command.removed_subclass": {
+      "child": "string",
+      "parent": "string"
+    },
+    "command.added_subproperty": {
+      "child": "string",
+      "parent": "string"
+    },
+    "command.removed_subproperty": {
+      "child": "string",
+      "parent": "string"
+    },
+    "command.added_broader": {
+      "concept": "string",
+      "broader": "string"
+    },
+    "command.removed_broader": {
+      "concept": "string",
+      "broader": "string"
+    },
+    "command.added_related": {
+      "concept": "string",
+      "related": "string"
+    },
+    "command.removed_related": {
+      "concept": "string",
+      "related": "string"
+    },
+    "command.renamed_iri": {
+      "old": "string",
+      "new": "string"
+    },
+    "command.swapped_ends": {
+      "name": "string"
+    },
+    "command.cleared_inverse": {
+      "name": "string"
+    },
+    "command.created_example": {
+      "name": "string",
+      "class_name": "string"
+    },
+    "command.added_restriction": {
+      "property": "string",
+      "name": "string"
+    },
+    "command.changed_restriction": {
+      "property": "string",
+      "name": "string"
+    },
+    "command.removed_restriction": {
+      "property": "string",
+      "name": "string"
+    },
+    "command.added_disjoint": {
+      "first": "string",
+      "second": "string"
+    },
+    "command.removed_disjoint": {
+      "first": "string",
+      "second": "string"
+    },
+    "command.added_equivalent": {
+      "first": "string",
+      "second": "string"
+    },
+    "command.removed_equivalent": {
+      "first": "string",
+      "second": "string"
     }
   }
 }

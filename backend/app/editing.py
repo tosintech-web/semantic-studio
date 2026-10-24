@@ -973,7 +973,12 @@ def cmd_add_annotation(ctx: Context, a: dict) -> Change:
     _check_pref_label(ctx, iri, prop, term)
     if (iri, prop, term) in ctx.graph:
         raise CommandError(f"{ctx.name(iri)} already has that {ctx.short(prop)}.")
-    return _change(ctx.graph, f"Added {ctx.short(prop)} to {ctx.name(iri)}", [(iri, prop, term)])
+    return _change(
+        ctx.graph,
+        f"Added {ctx.short(prop)} to {ctx.name(iri)}",
+        [(iri, prop, term)],
+        ui_message=make_message("command.added_annotation", property=ctx.short(prop), name=ctx.name(iri)),
+    )
 
 
 def _stored(ctx: Context, iri: URIRef, prop: URIRef, term):
@@ -997,7 +1002,12 @@ def cmd_remove_annotation(ctx: Context, a: dict) -> Change:
     term = _stored(ctx, iri, prop, term)
     if (iri, prop, term) not in ctx.graph:
         raise CommandError(f"{ctx.name(iri)} has no such {ctx.short(prop)} to remove.")
-    return _change(ctx.graph, f"Removed {ctx.short(prop)} from {ctx.name(iri)}", removes=[(iri, prop, term)])
+    return _change(
+        ctx.graph,
+        f"Removed {ctx.short(prop)} from {ctx.name(iri)}",
+        removes=[(iri, prop, term)],
+        ui_message=make_message("command.removed_annotation", property=ctx.short(prop), name=ctx.name(iri)),
+    )
 
 
 def cmd_replace_annotation(ctx: Context, a: dict) -> Change:
@@ -1009,7 +1019,11 @@ def cmd_replace_annotation(ctx: Context, a: dict) -> Change:
         raise CommandError(f"{ctx.name(iri)} has no such {ctx.short(prop)} to replace.")
     _check_pref_label(ctx, iri, prop, new, ignoring=old)
     return _change(
-        ctx.graph, f"Changed {ctx.short(prop)} of {ctx.name(iri)}", [(iri, prop, new)], [(iri, prop, old)]
+        ctx.graph,
+        f"Changed {ctx.short(prop)} of {ctx.name(iri)}",
+        [(iri, prop, new)],
+        [(iri, prop, old)],
+        ui_message=make_message("command.changed_annotation", property=ctx.short(prop), name=ctx.name(iri)),
     )
 
 
@@ -1052,8 +1066,10 @@ def cmd_add_subclass(ctx: Context, a: dict) -> Change:
     if (child, RDFS.subClassOf, parent) in ctx.graph:
         raise CommandError(f"{ctx.name(child)} is already a subclass of {ctx.name(parent)}.")
     return _change(
-        ctx.graph, f"Made {ctx.name(child)} a subclass of {ctx.name(parent)}",
+        ctx.graph,
+        f"Made {ctx.name(child)} a subclass of {ctx.name(parent)}",
         [(child, RDFS.subClassOf, parent)],
+        ui_message=make_message("command.added_subclass", child=ctx.name(child), parent=ctx.name(parent)),
     )
 
 
@@ -1062,8 +1078,10 @@ def cmd_remove_subclass(ctx: Context, a: dict) -> Change:
     if (child, RDFS.subClassOf, parent) not in ctx.graph:
         raise CommandError(f"{ctx.name(child)} is not a subclass of {ctx.name(parent)}.")
     return _change(
-        ctx.graph, f"Removed {ctx.name(child)} as a subclass of {ctx.name(parent)}",
+        ctx.graph,
+        f"Removed {ctx.name(child)} as a subclass of {ctx.name(parent)}",
         removes=[(child, RDFS.subClassOf, parent)],
+        ui_message=make_message("command.removed_subclass", child=ctx.name(child), parent=ctx.name(parent)),
     )
 
 
@@ -1132,7 +1150,13 @@ def cmd_swap_ends(ctx: Context, a: dict) -> Change:
         raise CommandError(f"{ctx.name(prop)} starts and ends at the same class, so swapping changes nothing.")
     removes = [(prop, RDFS.domain, d) for d in domains] + [(prop, RDFS.range, r) for r in ranges]
     adds = [(prop, RDFS.range, d) for d in domains] + [(prop, RDFS.domain, r) for r in ranges]
-    return _change(ctx.graph, f"Swapped the ends of {ctx.name(prop)}", adds, removes)
+    return _change(
+        ctx.graph,
+        f"Swapped the ends of {ctx.name(prop)}",
+        adds,
+        removes,
+        ui_message=make_message("command.swapped_ends", name=ctx.name(prop)),
+    )
 
 
 def cmd_set_ends(ctx: Context, a: dict) -> Change:
@@ -1411,7 +1435,12 @@ def cmd_clear_inverse(ctx: Context, a: dict) -> Change:
         removes = [t for t in removes if other in (t[0], t[2])]
     if not removes:
         raise CommandError(f"{ctx.name(prop)} has no other way round to remove.")
-    return _change(ctx.graph, f"Removed the other way round of {ctx.name(prop)}", removes=removes)
+    return _change(
+        ctx.graph,
+        f"Removed the other way round of {ctx.name(prop)}",
+        removes=removes,
+        ui_message=make_message("command.cleared_inverse", name=ctx.name(prop)),
+    )
 
 
 def cmd_set_characteristic(ctx: Context, a: dict) -> Change:
@@ -1478,8 +1507,10 @@ def cmd_add_subproperty(ctx: Context, a: dict) -> Change:
     if (child, RDFS.subPropertyOf, parent) in ctx.graph:
         raise CommandError(f"{ctx.name(child)} is already a more specific kind of {ctx.name(parent)}.")
     return _change(
-        ctx.graph, f"Made {ctx.name(child)} a more specific kind of {ctx.name(parent)}",
+        ctx.graph,
+        f"Made {ctx.name(child)} a more specific kind of {ctx.name(parent)}",
         [(child, RDFS.subPropertyOf, parent)],
+        ui_message=make_message("command.added_subproperty", child=ctx.name(child), parent=ctx.name(parent)),
     )
 
 
@@ -1489,8 +1520,10 @@ def cmd_remove_subproperty(ctx: Context, a: dict) -> Change:
     if (child, RDFS.subPropertyOf, parent) not in ctx.graph:
         raise CommandError(f"{ctx.name(child)} is not a more specific kind of {ctx.name(parent)}.")
     return _change(
-        ctx.graph, f"Removed {ctx.name(parent)} as more general than {ctx.name(child)}",
+        ctx.graph,
+        f"Removed {ctx.name(parent)} as more general than {ctx.name(child)}",
         removes=[(child, RDFS.subPropertyOf, parent)],
+        ui_message=make_message("command.removed_subproperty", child=ctx.name(child), parent=ctx.name(parent)),
     )
 
 
@@ -1547,8 +1580,11 @@ def cmd_add_broader(ctx: Context, a: dict) -> Change:
         raise CommandError(f"{ctx.name(concept)} is already narrower than {ctx.name(broader)}.")
     adds, removes = _top_delta(ctx.graph, concept, _broaders(ctx.graph, concept) | {broader})
     return _change(
-        ctx.graph, f"Made {ctx.name(concept)} narrower than {ctx.name(broader)}",
-        [(concept, SKOS.broader, broader), *adds], removes,
+        ctx.graph,
+        f"Made {ctx.name(concept)} narrower than {ctx.name(broader)}",
+        [(concept, SKOS.broader, broader), *adds],
+        removes,
+        ui_message=make_message("command.added_broader", concept=ctx.name(concept), broader=ctx.name(broader)),
     )
 
 
@@ -1559,7 +1595,11 @@ def cmd_remove_broader(ctx: Context, a: dict) -> Change:
         raise CommandError(f"{ctx.name(concept)} is not narrower than {ctx.name(broader)}.")
     adds, top_removes = _top_delta(ctx.graph, concept, _broaders(ctx.graph, concept) - {broader})
     return _change(
-        ctx.graph, f"Removed {ctx.name(broader)} as broader of {ctx.name(concept)}", adds, removes + top_removes
+        ctx.graph,
+        f"Removed {ctx.name(broader)} as broader of {ctx.name(concept)}",
+        adds,
+        removes + top_removes,
+        ui_message=make_message("command.removed_broader", concept=ctx.name(concept), broader=ctx.name(broader)),
     )
 
 
@@ -1582,7 +1622,12 @@ def cmd_add_related(ctx: Context, a: dict) -> Change:
     both = [(concept, SKOS.related, related), (related, SKOS.related, concept)]
     if all(t in ctx.graph for t in both):
         raise CommandError(f"{ctx.name(concept)} is already related to {ctx.name(related)}.")
-    return _change(ctx.graph, f"Related {ctx.name(concept)} to {ctx.name(related)}", both)
+    return _change(
+        ctx.graph,
+        f"Related {ctx.name(concept)} to {ctx.name(related)}",
+        both,
+        ui_message=make_message("command.added_related", concept=ctx.name(concept), related=ctx.name(related)),
+    )
 
 
 def cmd_remove_related(ctx: Context, a: dict) -> Change:
@@ -1590,7 +1635,12 @@ def cmd_remove_related(ctx: Context, a: dict) -> Change:
     both = [(concept, SKOS.related, related), (related, SKOS.related, concept)]
     if not any(t in ctx.graph for t in both):
         raise CommandError(f"{ctx.name(concept)} is not related to {ctx.name(related)}.")
-    return _change(ctx.graph, f"Removed {ctx.name(related)} as related to {ctx.name(concept)}", removes=both)
+    return _change(
+        ctx.graph,
+        f"Removed {ctx.name(related)} as related to {ctx.name(concept)}",
+        removes=both,
+        ui_message=make_message("command.removed_related", concept=ctx.name(concept), related=ctx.name(related)),
+    )
 
 
 MAPPINGS = {
@@ -1649,7 +1699,13 @@ def cmd_rename_iri(ctx: Context, a: dict) -> Change:
     touched |= set(ctx.graph.triples((None, old, None)))
     touched |= set(ctx.graph.triples((None, None, old)))
     adds = [(swap(s), swap(p), swap(o)) for s, p, o in touched]
-    change = _created(_change(ctx.graph, f"Renamed {ctx.short(old)} to {ctx.short(new)}", adds, touched), new)
+    change = _created(_change(
+        ctx.graph,
+        f"Renamed {ctx.short(old)} to {ctx.short(new)}",
+        adds,
+        touched,
+        ui_message=make_message("command.renamed_iri", old=ctx.short(old), new=ctx.short(new)),
+    ), new)
     change.renamed = (str(old), str(new))
     return change
 
@@ -1846,7 +1902,12 @@ def cmd_create_example(ctx: Context, a: dict) -> Change:
         (iri, RDFS.label, Literal(label, lang=ctx.primary)),
     ]
     return _created(
-        _change(ctx.graph, f"Created example {label} of {pick_label_in(_class_graph(ctx), cls, ctx.languages)[0]}", adds),
+        _change(
+            ctx.graph,
+            f"Created example {label} of {pick_label_in(_class_graph(ctx), cls, ctx.languages)[0]}",
+            adds,
+            ui_message=make_message("command.created_example", name=label, class_name=pick_label_in(_class_graph(ctx), cls, ctx.languages)[0]),
+        ),
         iri,
     )
 
@@ -2180,8 +2241,10 @@ def cmd_add_restriction(ctx: Context, a: dict) -> Change:
     content = _restriction_args(ctx, a)
     _check_restriction(ctx, cls, content)
     return _change(
-        ctx.graph, f"Added a rule on {_rule_name(ctx, content.property)} to {ctx.name(cls)}",
+        ctx.graph,
+        f"Added a rule on {_rule_name(ctx, content.property)} to {ctx.name(cls)}",
         _restriction_adds(ctx, cls, content),
+        ui_message=make_message("command.added_restriction", property=_rule_name(ctx, content.property), name=ctx.name(cls)),
     )
 
 
@@ -2198,8 +2261,11 @@ def cmd_replace_restriction(ctx: Context, a: dict) -> Change:
         raise CommandError("That would change nothing.")
     _check_restriction(ctx, cls, content, ignoring=node)
     return _change(
-        ctx.graph, f"Changed a rule on {_rule_name(ctx, content.property)} of {ctx.name(cls)}",
-        _restriction_adds(ctx, cls, content), _sweep(ctx, cls, predicate, node),
+        ctx.graph,
+        f"Changed a rule on {_rule_name(ctx, content.property)} of {ctx.name(cls)}",
+        _restriction_adds(ctx, cls, content),
+        _sweep(ctx, cls, predicate, node),
+        ui_message=make_message("command.changed_restriction", property=_rule_name(ctx, content.property), name=ctx.name(cls)),
     )
 
 
@@ -2209,8 +2275,10 @@ def cmd_remove_restriction(ctx: Context, a: dict) -> Change:
     key = _restriction_key(ctx, a.get("restriction"))
     predicate, node = _found(ctx, cls, key)
     return _change(
-        ctx.graph, f"Removed a rule on {_rule_name(ctx, key.property)} from {ctx.name(cls)}",
+        ctx.graph,
+        f"Removed a rule on {_rule_name(ctx, key.property)} from {ctx.name(cls)}",
         removes=_sweep(ctx, cls, predicate, node),
+        ui_message=make_message("command.removed_restriction", property=_rule_name(ctx, key.property), name=ctx.name(cls)),
     )
 
 
@@ -2237,8 +2305,10 @@ def cmd_add_disjoint_with(ctx: Context, a: dict) -> Change:
     if _pair_statements(ctx, first, second, OWL.disjointWith) or second in axioms.disjoint_with(ctx.graph, first):
         raise CommandError(f"{ctx.name(first)} and {_rule_name(ctx, second)} are already disjoint.")
     return _change(
-        ctx.graph, f"Made {ctx.name(first)} and {_rule_name(ctx, second)} disjoint",
+        ctx.graph,
+        f"Made {ctx.name(first)} and {_rule_name(ctx, second)} disjoint",
         [(first, OWL.disjointWith, second)],
+        ui_message=make_message("command.added_disjoint", first=ctx.name(first), second=_rule_name(ctx, second)),
     )
 
 
@@ -2257,7 +2327,10 @@ def cmd_remove_disjoint_with(ctx: Context, a: dict) -> Change:
             )
         raise CommandError(f"{ctx.name(first)} and {_rule_name(ctx, second)} are not disjoint in this document.")
     return _change(
-        ctx.graph, f"Removed the disjointness of {ctx.name(first)} and {_rule_name(ctx, second)}", removes=removes
+        ctx.graph,
+        f"Removed the disjointness of {ctx.name(first)} and {_rule_name(ctx, second)}",
+        removes=removes,
+        ui_message=make_message("command.removed_disjoint", first=ctx.name(first), second=_rule_name(ctx, second)),
     )
 
 
@@ -2267,8 +2340,10 @@ def cmd_add_equivalent_class(ctx: Context, a: dict) -> Change:
     if _pair_statements(ctx, first, second, OWL.equivalentClass):
         raise CommandError(f"{ctx.name(first)} and {_rule_name(ctx, second)} already mean the same thing.")
     return _change(
-        ctx.graph, f"Made {ctx.name(first)} and {_rule_name(ctx, second)} mean the same thing",
+        ctx.graph,
+        f"Made {ctx.name(first)} and {_rule_name(ctx, second)} mean the same thing",
         [(first, OWL.equivalentClass, second)],
+        ui_message=make_message("command.added_equivalent", first=ctx.name(first), second=_rule_name(ctx, second)),
     )
 
 
@@ -2282,8 +2357,10 @@ def cmd_remove_equivalent_class(ctx: Context, a: dict) -> Change:
             f"{ctx.name(first)} and {_rule_name(ctx, second)} do not mean the same thing in this document."
         )
     return _change(
-        ctx.graph, f"Removed that {ctx.name(first)} and {_rule_name(ctx, second)} mean the same thing",
+        ctx.graph,
+        f"Removed that {ctx.name(first)} and {_rule_name(ctx, second)} mean the same thing",
         removes=removes,
+        ui_message=make_message("command.removed_equivalent", first=ctx.name(first), second=_rule_name(ctx, second)),
     )
 
 

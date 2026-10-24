@@ -2508,3 +2508,25 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `projectNotice.changed.redo.saved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
 | `projectNotice.changed.redo.unsaved` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
 | `projectNotice.changed.redo.saving` | label | `frontend/src/modeling/projectNotices.ts` | 操作後の通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `command.added_annotation` | property, name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_annotation` | property, name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.changed_annotation` | property, name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.added_subclass` | child, parent | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_subclass` | child, parent | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.added_subproperty` | child, parent | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_subproperty` | child, parent | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.added_broader` | concept, broader | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_broader` | concept, broader | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.added_related` | concept, related | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_related` | concept, related | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.renamed_iri` | old, new | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.swapped_ends` | name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.cleared_inverse` | name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.created_example` | name, class_name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.added_restriction` | property, name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.changed_restriction` | property, name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_restriction` | property, name | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.added_disjoint` | first, second | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_disjoint` | first, second | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.added_equivalent` | first, second | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |
+| `command.removed_equivalent` | first, second | `backend/app/editing.py` | モデル編集操作・履歴 | 12 | 英語labelを保持、追加metadataで現在言語に表示 |

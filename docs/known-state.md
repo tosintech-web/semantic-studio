@@ -2466,3 +2466,17 @@ their original successful action label: generic error text would incorrectly
 claim the operation failed. Producer migration remains separate; metadata is
 never guessed from that English text. Neither the history data nor UI language
 changes the RDF delta, revision, save point or stored document.
+
+
+### Model operation descriptors use operands rather than English fragments (P1)
+
+Annotation add/remove/replace, subclass/subproperty hierarchy, broader/related
+concept links, IRI rename, swapping ends, clearing an inverse, creating an example,
+restriction add/replace/remove, disjointness and class equivalence carry explicit
+command descriptors. Each producer takes names from the same pre-change reading
+as its unchanged legacy label. It never splits that label to infer operands.
+The API regression uses distinct literal names and checks each through undo/redo
+against isomorphic RDF graphs. The UI tests preserve every literal operand in
+both locales and check Japanese hierarchy direction and annotation ownership.
+These are display-only additions; the RDF deltas and refusal algorithms stay
+unchanged. Conditional and composite operation labels remain a separate migration.

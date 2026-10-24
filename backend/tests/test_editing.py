@@ -1562,3 +1562,227 @@ def test_legacy_change_and_step_accept_positional_calls_without_metadata():
     step = editing.Step("Legacy step", [], [])
     assert change.label == "Legacy label" and step.label == "Legacy step"
     assert change.ui_message is None and step.ui_message is None
+
+
+# Distinct literal names catch swapped operands and accidental HTML/prose rewriting.
+META_A = "甲 <b>{a}</b>"
+META_B = "乙 {b}"
+META_CA = "狭い <i>{c}</i>"
+META_CB = "広い {d}"
+META_P = "関係P <img>{p}"
+META_Q = "関係Q {q}"
+META_VALUE = {"kind": "text", "value": "注釈 <b>1</b>", "lang": "en"}
+META_PAIR = {"class": "shop:MetaA", "property": "shop:metaP", "kind": "some", "filler": "shop:MetaB"}
+META_KEY = {"form": "every", "property": "shop:metaP", "kind": "some", "filler": "shop:MetaB", "n": None}
+
+
+MODEL_OPERATION_CASES = [
+    (
+        "AddAnnotation",
+        {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE},
+        "command.added_annotation",
+        {"property": "rdfs:comment", "name": META_A},
+        f"Added rdfs:comment to {META_A}",
+        None,
+    ),
+    (
+        "RemoveAnnotation",
+        {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE},
+        "command.removed_annotation",
+        {"property": "rdfs:comment", "name": META_A},
+        f"Removed rdfs:comment from {META_A}",
+        ("AddAnnotation", {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE}),
+    ),
+    (
+        "ReplaceAnnotation",
+        {"iri": "shop:MetaA", "property": "rdfs:comment", "oldValue": META_VALUE, "newValue": {**META_VALUE, "value": "次の値"}},
+        "command.changed_annotation",
+        {"property": "rdfs:comment", "name": META_A},
+        f"Changed rdfs:comment of {META_A}",
+        ("AddAnnotation", {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE}),
+    ),
+    (
+        "AddSubClassOf",
+        {"child": "shop:MetaA", "parent": "shop:MetaB"},
+        "command.added_subclass",
+        {"child": META_A, "parent": META_B},
+        f"Made {META_A} a subclass of {META_B}",
+        None,
+    ),
+    (
+        "RemoveSubClassOf",
+        {"child": "shop:MetaA", "parent": "shop:MetaB"},
+        "command.removed_subclass",
+        {"child": META_A, "parent": META_B},
+        f"Removed {META_A} as a subclass of {META_B}",
+        ("AddSubClassOf", {"child": "shop:MetaA", "parent": "shop:MetaB"}),
+    ),
+    (
+        "AddSubPropertyOf",
+        {"child": "shop:metaP", "parent": "shop:metaQ"},
+        "command.added_subproperty",
+        {"child": META_P, "parent": META_Q},
+        f"Made {META_P} a more specific kind of {META_Q}",
+        None,
+    ),
+    (
+        "RemoveSubPropertyOf",
+        {"child": "shop:metaP", "parent": "shop:metaQ"},
+        "command.removed_subproperty",
+        {"child": META_P, "parent": META_Q},
+        f"Removed {META_Q} as more general than {META_P}",
+        ("AddSubPropertyOf", {"child": "shop:metaP", "parent": "shop:metaQ"}),
+    ),
+    (
+        "AddBroader",
+        {"concept": "shop:MetaCA", "broader": "shop:MetaCB"},
+        "command.added_broader",
+        {"concept": META_CA, "broader": META_CB},
+        f"Made {META_CA} narrower than {META_CB}",
+        None,
+    ),
+    (
+        "RemoveBroader",
+        {"concept": "shop:MetaCA", "broader": "shop:MetaCB"},
+        "command.removed_broader",
+        {"concept": META_CA, "broader": META_CB},
+        f"Removed {META_CB} as broader of {META_CA}",
+        ("AddBroader", {"concept": "shop:MetaCA", "broader": "shop:MetaCB"}),
+    ),
+    (
+        "AddRelated",
+        {"concept": "shop:MetaCA", "related": "shop:MetaCB"},
+        "command.added_related",
+        {"concept": META_CA, "related": META_CB},
+        f"Related {META_CA} to {META_CB}",
+        None,
+    ),
+    (
+        "RemoveRelated",
+        {"concept": "shop:MetaCA", "related": "shop:MetaCB"},
+        "command.removed_related",
+        {"concept": META_CA, "related": META_CB},
+        f"Removed {META_CB} as related to {META_CA}",
+        ("AddRelated", {"concept": "shop:MetaCA", "related": "shop:MetaCB"}),
+    ),
+    (
+        "RenameIri",
+        {"old": "shop:MetaA", "new": "shop:MetaRenamed"},
+        "command.renamed_iri",
+        {"old": "shop:MetaA", "new": "shop:MetaRenamed"},
+        "Renamed shop:MetaA to shop:MetaRenamed",
+        None,
+    ),
+    (
+        "SwapEnds",
+        {"property": "shop:metaP"},
+        "command.swapped_ends",
+        {"name": META_P},
+        f"Swapped the ends of {META_P}",
+        None,
+    ),
+    (
+        "ClearInverse",
+        {"property": "shop:metaP"},
+        "command.cleared_inverse",
+        {"name": META_P},
+        f"Removed the other way round of {META_P}",
+        ("SetInverse", {"property": "shop:metaP", "inverse": "shop:metaQ"}),
+    ),
+    (
+        "CreateExample",
+        {"class": "shop:MetaA", "label": "例 <b>{value}</b>", "iri": "shop:metaExample"},
+        "command.created_example",
+        {"name": "例 <b>{value}</b>", "class_name": META_A},
+        f"Created example 例 <b>{{value}}</b> of {META_A}",
+        None,
+    ),
+    (
+        "AddRestriction",
+        META_PAIR,
+        "command.added_restriction",
+        {"property": META_P, "name": META_A},
+        f"Added a rule on {META_P} to {META_A}",
+        None,
+    ),
+    (
+        "ReplaceRestriction",
+        {**META_PAIR, "kind": "only", "restriction": META_KEY},
+        "command.changed_restriction",
+        {"property": META_P, "name": META_A},
+        f"Changed a rule on {META_P} of {META_A}",
+        ("AddRestriction", META_PAIR),
+    ),
+    (
+        "RemoveRestriction",
+        {"class": "shop:MetaA", "restriction": META_KEY},
+        "command.removed_restriction",
+        {"property": META_P, "name": META_A},
+        f"Removed a rule on {META_P} from {META_A}",
+        ("AddRestriction", META_PAIR),
+    ),
+    (
+        "AddDisjointWith",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.added_disjoint",
+        {"first": META_A, "second": META_B},
+        f"Made {META_A} and {META_B} disjoint",
+        None,
+    ),
+    (
+        "RemoveDisjointWith",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.removed_disjoint",
+        {"first": META_A, "second": META_B},
+        f"Removed the disjointness of {META_A} and {META_B}",
+        ("AddDisjointWith", {"a": "shop:MetaA", "b": "shop:MetaB"}),
+    ),
+    (
+        "AddEquivalentClass",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.added_equivalent",
+        {"first": META_A, "second": META_B},
+        f"Made {META_A} and {META_B} mean the same thing",
+        None,
+    ),
+    (
+        "RemoveEquivalentClass",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.removed_equivalent",
+        {"first": META_A, "second": META_B},
+        f"Removed that {META_A} and {META_B} mean the same thing",
+        ("AddEquivalentClass", {"a": "shop:MetaA", "b": "shop:MetaB"}),
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "command,args,code,facts,legacy,seed", MODEL_OPERATION_CASES,
+    ids=[case[0] for case in MODEL_OPERATION_CASES],
+)
+def test_model_operation_descriptors_keep_operands_and_rdf_through_history(pid, command, args, code, facts, legacy, seed):
+    for command_name, local, name, extra in [
+        ("CreateClass", "MetaA", META_A, {}), ("CreateClass", "MetaB", META_B, {}),
+        ("CreateConcept", "MetaCA", META_CA, {}), ("CreateConcept", "MetaCB", META_CB, {}),
+        ("CreateObjectProperty", "metaP", META_P, {"domain": "shop:MetaA", "range": "shop:MetaB"}),
+        ("CreateObjectProperty", "metaQ", META_Q, {"domain": "shop:MetaB", "range": "shop:MetaA"}),
+    ]:
+        field = "prefLabel" if command_name == "CreateConcept" else "label"
+        ok(pid, command_name, **{field: name, "iri": EX + local, **extra})
+    if seed:
+        ok(pid, seed[0], **seed[1])
+    before = graph_copy(pid)
+    result = ok(pid, command, **args)
+    after = graph_copy(pid)
+    wire = {"code": code, "args": facts}
+    assert result["label"] == legacy
+    assert result.get("uiMessage") == wire
+    assert result["state"].get("undoUiMessage") == wire
+    undone = undo(pid)
+    assert undone["label"] == legacy and undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, doc(pid).graph)
+    redone = redo(pid)
+    assert redone["label"] == legacy and redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert isomorphic(after, doc(pid).graph)
