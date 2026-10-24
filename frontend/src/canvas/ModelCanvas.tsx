@@ -86,6 +86,9 @@ BASIC IDEA
     (D-078). Delete on one line of a shared relationship asks whether to
     remove that class from it (UnshareDomain) or delete it.
 
+    The shared creation failure is rendered in the current UI language;
+    its original diagnostic remains available in native details.
+
 INPUTS / INPUT SOURCES (props)
     - projectId, doc, revision, language, primaryLanguage: the document, and
       the language names are shown and renamed in.
@@ -145,6 +148,7 @@ import { Legend, TipCard, type LegendLine } from "./CanvasAids";
 import type { LineKind } from "./kindColours";
 import { BOX_HEIGHT, freeSpot } from "./layered";
 import RelateMenu from "./RelateMenu";
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { translate } from "../i18n/format";
 import type { UiLocale } from "../i18n/types";
@@ -310,6 +314,7 @@ function Canvas(props: ModelCanvasProps) {
   const creating = useProjectSelector((s) => s.creating);
   const draftBusy = useProjectSelector((s) => s.creatingBusy);
   const draftError = useProjectSelector((s) => s.creatingError);
+  const draftFailure = useProjectSelector((s) => s.creatingErrorCause);
   const created = useProjectSelector((s) => s.created);
   const draft = creating && (creating.kind === "class" || creating.kind === "concept") ? creating : null;
   const [place, setPlace] = useState<DraftPlace | null>(null);
@@ -1177,7 +1182,8 @@ function Canvas(props: ModelCanvasProps) {
             <p className="canvas-draft-hint" id="canvas-draft-hint">
               {t("canvasUI.draftKeys")}
             </p>
-            {draftError && <p className="edit-error">{draftError}</p>}
+            {draftError && <p className="edit-error">{draftFailure ? t("create.failed", { reason: renderServerError(draftFailure.error, t) }) : draftError}</p>}
+            {draftFailure && <details><summary>{t("common.details")}</summary><pre>{draftFailure.error instanceof Error ? draftFailure.error.message : String(draftFailure.error)}</pre></details>}
           </div>
         )}
         {toast && (

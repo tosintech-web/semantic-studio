@@ -42,6 +42,9 @@ BASIC IDEA
     from their stored facts in the current UI locale; changing locale leaves
     the notice counter and the live-region DOM in place.
 
+    Retained operation descriptors are rendered in the active UI locale;
+    changing language keeps the live region and notification identity.
+
 INPUTS / INPUT SOURCES (props)
     - onSwitchDocument, onClose, onError: what App arbitrates.
     - onSaveCopy: download the current document as Turtle.
@@ -55,7 +58,7 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
-import { renderUiMessage } from "../i18n/uiMessage";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
 import { useEffect, useId, useRef, useState } from "react";
 import { addShapesDocument, getLanguageReport } from "../api";
 import { validLanguageTag } from "../projects/form";
@@ -106,7 +109,7 @@ export default function ProjectHeader({
   onTurtle,
   canvas = null,
 }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const state = useProjectStore();
   const project = state.project!;
   const current = activeDocument(state);
@@ -443,7 +446,7 @@ export default function ProjectHeader({
 
       <div className="visually-hidden" role="status" aria-live="polite">
         {/* Keyed on the counter, so "Undid: … " said twice is heard twice. */}
-        <span key={state.announcement.id}>{state.announcement.uiMessage ? renderUiMessage(state.announcement.uiMessage, t) : state.announcement.text}</span>
+        <span key={state.announcement.id}>{renderProjectAnnouncement(state.announcement, locale, t)}</span>
       </div>
     </div>
   );

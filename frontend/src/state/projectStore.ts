@@ -78,6 +78,10 @@ BASIC IDEA
     to the class's form, which opens the reuse plan once, as ruleDraft does
     for a rule.
 
+    Operation notices retain typed message arguments or summary counts and
+    render in the active UI locale. Original creation/reasoning failures stay
+    beside their legacy strings so language changes never replay a request.
+
 INPUTS / INPUT SOURCES
     - api.ts, for every project call.
 
@@ -89,8 +93,7 @@ EXPECTED OUTPUT
 
 import { useSyncExternalStore } from "react";
 import { englishTranslator } from "../i18n/format";
-import type { MessageId } from "../i18n/types";
-import { makeUiMessage, renderUiMessage, type UiMessageFor } from "../i18n/uiMessage";
+import { makeUiMessage, renderUiMessage } from "../i18n/uiMessage";
 import {
   ApiError,
   applyDocumentSource,
@@ -108,9 +111,10 @@ import {
   updateProject,
   validateProject,
 } from "../api";
-import { validationSummary } from "../modeling/shapeSentences";
+import { reasoningNotice, renderProjectAnnouncement, validationNotice, type ProjectAnnouncement, type ProjectNotice, type ProjectNoticeDetail } from "../modeling/projectNotices";
+export type { ProjectNotice } from "../modeling/projectNotices";
 import { failureReason } from "../networkWords";
-import { finishedLine, isStale, staleLine, type ReasoningNow } from "../reasoning/reasonSentences";
+import type { ReasoningNow } from "../reasoning/reasonSentences";
 import type {
   ChangeResult,
   CreatingKind,
@@ -123,17 +127,6 @@ import type {
 } from "../types";
 
 export type SaveStatus = "saved" | "unsaved" | "saving";
-
-/** Notice producers have a finite domain, rather than every menu/label key.
- *  This keeps their argument relation checked without distributing thousands
- *  of unrelated catalog variants through the complete project snapshot. */
-export type ProjectNotice = UiMessageFor<
-  | "dataSnapshot.switchedOn" | "dataSnapshot.switchedOff"
-  | "dataSnapshot.refreshed" | "dataSnapshot.removed"
-  | "dataSnapshot.mappingApplied" | "dataSnapshot.mappingKept"
-  | "dataSnapshot.readFailed"
-  | Extract<MessageId, `projectNotice.${string}`>
->;
 
 export interface ProjectSnapshot {
   project: ProjectSummary | null;
@@ -150,7 +143,7 @@ export interface ProjectSnapshot {
   /** What the polite live region says, e.g. "Created class Invoice. Unsaved
    *  changes." A counter beside it so the same sentence twice is announced
    *  twice. */
-  announcement: { text: string; id: number; uiMessage?: ProjectNotice };
+  announcement: ProjectAnnouncement;
   /** The last validation (shacl-authoring 5.6, D-094): kept for the session
    *  only, never written to disk, and shown in the Shapes view and under the
    *  Turtle editor alike. */
@@ -177,6 +170,8 @@ export interface ProjectSnapshot {
   /** A run that could not be asked for, or a Stop that failed: a 409, a
    *  lost connection. */
   reasoningError: string | null;
+  /** Raw failure and operation phase; localized only while rendering. */
+  reasoningErrorCause: { kind: "start" | "stop"; error: unknown } | null;
   /** Stop was pressed and the run's answer has not arrived: presses meanwhile
    *  are ignored, rather than sent again (PR #55 review). */
   reasoningStopping: boolean;
@@ -202,6 +197,8 @@ export interface ProjectSnapshot {
   creatingBusy: boolean;
   /** The server's refusal, shown under both name fields. */
   creatingError: string | null;
+  /** Keep metadata and original diagnostic together across UI language changes. */
+  creatingErrorCause: { error: unknown } | null;
   /** The last thing a draft made, for the canvas to place it and App to
    *  select it; its token is the draft's. */
   created: { iri: string; kind: CreatingKind; token: number; parent: string | null } | null;
@@ -249,6 +246,7 @@ const EMPTY: ProjectSnapshot = {
   reasoning: null,
   reasoningSince: null,
   reasoningError: null,
+  reasoningErrorCause: null,
   reasoningStopping: false,
   showInferred: false,
   reasoningData: false,
@@ -258,6 +256,7 @@ const EMPTY: ProjectSnapshot = {
   creating: null,
   creatingBusy: false,
   creatingError: null,
+  creatingErrorCause: null,
   created: null,
 };
 
@@ -402,6 +401,12 @@ function announce(message: string | ProjectNotice, legacyText?: string): void {
   set({ announcement });
 }
 
+function announceDetail(detail: ProjectNoticeDetail): void {
+  const announcement: ProjectAnnouncement = { text: "", id: snapshot.announcement.id + 1, detail };
+  announcement.text = renderProjectAnnouncement(announcement, "en", englishTranslator);
+  set({ announcement });
+}
+
 function withDocument(next: ProjectDocumentState): ProjectDocumentState[] {
   return snapshot.documents.map((d) => (d.doc === next.doc ? next : d));
 }
@@ -443,7 +448,7 @@ export const projectStore = {
           ? { draftTime: opened.recovery.draftTime }
           : null,
     });
-    announce(`Opened ${opened.project.name}. ${STATUS_WORDS[saveStatus(snapshot)]}.`);
+    announce(makeUiMessage(`projectNotice.opened.${saveStatus(snapshot)}`, { name: opened.project.name }));
     // The snapshot list is not needed to show the project, so it follows.
     void projectStore.loadData().catch(() => undefined);
     return opened.documents.find((d) => d.doc === "model")!.ontologyId;
@@ -570,7 +575,7 @@ export const projectStore = {
     if (snapshot.validating) return null;
     const run = ++validationRun;
     set({ validating: true });
-    announce("Validating…");
+    announce(makeUiMessage("projectNotice.validating"));
     const stale = () => run !== validationRun || snapshot.project?.id !== project.id;
     try {
       let result: ValidationResult;
@@ -585,7 +590,7 @@ export const projectStore = {
       // says nothing in the next one and leaves its Validate alone.
       if (stale()) return null;
       set({ validation: result });
-      announce(validationSummary(result));
+      announceDetail(validationNotice(result));
       return result;
     } finally {
       if (run === validationRun) set({ validating: false });
@@ -605,8 +610,8 @@ export const projectStore = {
     const project = requireProject();
     if (snapshot.reasoningSince !== null) return null;
     const run = ++reasoningRun;
-    set({ reasoningSince: Date.now(), reasoningError: null });
-    announce("Reasoning started.");
+    set({ reasoningSince: Date.now(), reasoningError: null, reasoningErrorCause: null });
+    announce(makeUiMessage("projectNotice.reasoningStarted"));
     const stale = () => run !== reasoningRun || snapshot.project?.id !== project.id;
     try {
       let result: ReasoningResult;
@@ -617,7 +622,7 @@ export const projectStore = {
         // Said once: the Reasoning panel's alert reads it, and a live-region
         // announcement as well said it twice (PR #55 review).
         const text = e instanceof ApiError ? e.message : `The run could not be started: ${failureReason(e)}`;
-        set({ reasoningError: text });
+        set({ reasoningError: text, reasoningErrorCause: { kind: "start", error: e } });
         return null;
       }
       if (stale()) return null;
@@ -626,6 +631,7 @@ export const projectStore = {
       set({
         reasoning: result,
         reasoningError: null,
+        reasoningErrorCause: null,
         reasoningToken: snapshot.reasoningToken + 1,
         showInferred: result.status === "done" ? true : snapshot.showInferred,
       });
@@ -636,8 +642,7 @@ export const projectStore = {
         generation: dataGenerationOf(snapshot),
         imports: importsNow(),
       };
-      const line = isStale(result, now) ? staleLine(result) : finishedLine(result);
-      announce(line.endsWith(".") ? line : `${line}.`);
+      announceDetail(reasoningNotice(result, now));
       return result;
     } finally {
       if (run === reasoningRun) set({ reasoningSince: null, reasoningStopping: false });
@@ -651,7 +656,7 @@ export const projectStore = {
     const project = requireProject();
     if (snapshot.reasoningSince === null || snapshot.reasoningStopping) return;
     const run = reasoningRun;
-    set({ reasoningStopping: true, reasoningError: null });
+    set({ reasoningStopping: true, reasoningError: null, reasoningErrorCause: null });
     try {
       await stopReasoning(project.id);
     } catch (e) {
@@ -659,7 +664,7 @@ export const projectStore = {
       // In the app's words, never the browser's ("Failed to fetch"), and
       // said once, by the panel's alert (PR #55 review).
       const text = `The run could not be stopped: ${failureReason(e)} Press Stop again.`;
-      set({ reasoningStopping: false, reasoningError: text });
+      set({ reasoningStopping: false, reasoningError: text, reasoningErrorCause: { kind: "stop", error: e } });
     }
   },
 
@@ -696,6 +701,7 @@ export const projectStore = {
       creating: { kind, parent: options.parent ?? null, name: "", token, extra: {} },
       creatingBusy: false,
       creatingError: null,
+      creatingErrorCause: null,
     });
     return token;
   },
@@ -719,7 +725,7 @@ export const projectStore = {
   async createDraft(): Promise<string | null> {
     const draft = snapshot.creating;
     if (!draft || snapshot.creatingBusy || !draft.name.trim()) return null;
-    set({ creatingBusy: true, creatingError: null });
+    set({ creatingBusy: true, creatingError: null, creatingErrorCause: null });
     try {
       const [name, args] = draftCommand(draft, draft.extra);
       const result = await projectStore.command(name, args, undefined, "model");
@@ -740,7 +746,7 @@ export const projectStore = {
       return result.created ?? null;
     } catch (e: unknown) {
       if (snapshot.creating?.token === draft.token) {
-        set({ creatingBusy: false, creatingError: e instanceof Error ? e.message : String(e) });
+        set({ creatingBusy: false, creatingError: e instanceof Error ? e.message : String(e), creatingErrorCause: { error: e } });
       }
       return null;
     }
@@ -751,7 +757,7 @@ export const projectStore = {
    *  the outline's heading -- never to the page. */
   cancelCreating(restore = true): void {
     if (!snapshot.creating) return;
-    set({ creating: null, creatingBusy: false, creatingError: null });
+    set({ creating: null, creatingBusy: false, creatingError: null, creatingErrorCause: null });
     if (!restore) {
       creatingFrom = null;
       return;
@@ -807,7 +813,7 @@ export const projectStore = {
     const project = requireProject();
     doc = doc ?? (confirmRewrite ? snapshot.commentsWarning?.doc : undefined) ?? snapshot.activeDoc;
     set({ saving: true, commentsWarning: null });
-    announce(STATUS_WORDS.saving);
+    announce(makeUiMessage("projectNotice.saving"));
     try {
       const result = await saveDocument(project.id, doc, confirmRewrite);
       if ("needsCommentsWarning" in result) {
@@ -817,8 +823,8 @@ export const projectStore = {
       set({ documents: withDocument(result.state) });
       announce(
         confirmRewrite
-          ? `Saved. The previous file was kept as ${doc}.original.ttl.`
-          : "Saved.",
+          ? makeUiMessage("projectNotice.savedBackup", { backup: `${doc}.original.ttl` })
+          : makeUiMessage("projectNotice.saved"),
       );
       return "saved";
     } finally {
@@ -839,7 +845,7 @@ export const projectStore = {
 
   cancelCommentsWarning(): void {
     set({ commentsWarning: null });
-    announce("Not saved.");
+    announce(makeUiMessage("projectNotice.notSaved"));
   },
 
   async recover(action: "recover" | "discard"): Promise<void> {
@@ -848,8 +854,8 @@ export const projectStore = {
     set({ documents: result.documents, recovery: null, editorDraft: null });
     announce(
       action === "recover"
-        ? "Recovered the unsaved changes. Unsaved changes."
-        : "Discarded the unsaved changes.",
+        ? makeUiMessage("projectNotice.recovered")
+        : makeUiMessage("projectNotice.discarded"),
     );
   },
 
@@ -861,7 +867,7 @@ export const projectStore = {
 
   setDisplayLanguage(lang: string): void {
     set({ displayLanguage: lang });
-    announce(`Showing names in ${lang}.`);
+    announce(makeUiMessage("projectNotice.language", { language: lang }));
   },
 
   async setLanguages(languages: string[]): Promise<void> {

@@ -532,7 +532,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -576,7 +576,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `network.approval.headingMany` | hosts | `frontend/src/components/NetworkApprovalDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.approval.queryAt` | url | `frontend/src/components/NetworkApprovalDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.approval.always` | purpose, sites | `frontend/src/components/NetworkApprovalDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `network.unreachable` | — | `frontend/src/networkWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `network.unreachable` | — | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/networkWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.always.fetch` | — | `frontend/src/networkWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.always.import` | — | `frontend/src/networkWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.always.context` | — | `frontend/src/networkWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -2339,7 +2339,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `dataReport.validate` | — | `frontend/src/components/ImportReport.tsx` | データ取り込みレポート | 12 | 現在のUI言語で表示、コールバックを保持 |
 | `dataReport.showData` | — | `frontend/src/components/ImportReport.tsx` | データ取り込みレポート | 12 | 現在のUI言語で表示、コールバックを保持 |
 
-| `dataSnapshot.switchedOff` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/state/projectStore.ts` | データ変更の通知 | 12 | typed descriptorを現在のUI言語で表示、生成元の接続は進行中 |
+| `dataSnapshot.switchedOff` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/modeling/projectNotices.ts` | データ変更の通知 | 12 | typed descriptorを現在のUI言語で表示、生成元の接続は進行中 |
 
 | `dataSnapshot.retry` | — | `frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
 | `dataSnapshot.retrying` | — | `frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
@@ -2367,12 +2367,12 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `dataSnapshot.removeBody` | source, count | `frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
 | `dataSnapshot.remove` | — | `frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
 | `dataSnapshot.keep` | — | `frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
-| `dataSnapshot.switchedOn` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/state/projectStore.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
-| `dataSnapshot.refreshed` | source, replacement | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/state/projectStore.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
-| `dataSnapshot.removed` | source, count | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/state/projectStore.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
-| `dataSnapshot.mappingApplied` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/state/projectStore.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
-| `dataSnapshot.mappingKept` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/state/projectStore.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
-| `dataSnapshot.readFailed` | — | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/state/projectStore.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
+| `dataSnapshot.switchedOn` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/modeling/projectNotices.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
+| `dataSnapshot.refreshed` | source, replacement | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/modeling/projectNotices.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
+| `dataSnapshot.removed` | source, count | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/modeling/projectNotices.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
+| `dataSnapshot.mappingApplied` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/modeling/projectNotices.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
+| `dataSnapshot.mappingKept` | source | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/modeling/projectNotices.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
+| `dataSnapshot.readFailed` | — | `frontend/src/components/SnapshotList.tsx`<br>`frontend/src/modeling/projectNotices.ts`<br>`frontend/src/state/projectStore.ts` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
 | `dataSnapshot.missingSheet` | sheet | `frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
 | `dataSnapshot.fromCsv` | — | `frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
 | `dataSnapshot.fromWorkbook` | — | `frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/SnapshotList.tsx` | データ一覧・操作の通知 | 12 | 現在のUI言語で表示、データ・ファイルを保持 |
@@ -2479,3 +2479,18 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `projectNotice.dataImported.many` | source, count | `frontend/src/components/DataWizard.tsx` | 取り込みウィザード | 12 | 現在のUI言語で表示、元の値を保持 |
 | `projectNotice.dataRemapped.one` | source, count | `frontend/src/components/DataWizard.tsx` | 取り込みウィザード | 12 | 現在のUI言語で表示、元の値を保持 |
 | `projectNotice.dataRemapped.many` | source, count | `frontend/src/components/DataWizard.tsx` | 取り込みウィザード | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.opened.saved` | name | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.opened.unsaved` | name | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.opened.saving` | name | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.saving` | — | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.saved` | — | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.savedBackup` | backup | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.notSaved` | — | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.recovered` | — | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.discarded` | — | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.language` | language | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.validating` | — | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `projectNotice.reasoningStarted` | — | `frontend/src/state/projectStore.ts` | プロジェクト通知 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `create.failed` | reason | `frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx` | 作成・推論失敗 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `reasonUI.startFailed` | reason | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 作成・推論失敗 | 12 | 現在のUI言語で表示、元の値を保持 |
+| `reasonUI.stopFailed` | reason | `frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/RulesBlock.tsx` | 作成・推論失敗 | 12 | 現在のUI言語で表示、元の値を保持 |

@@ -2431,3 +2431,19 @@ EXPECTED OUTPUT
   survive locale changes; errors retain original objects and structured
   refresh mismatches retain their actual missing-column array. Import notices
   carry source/count facts, keeping the legacy English text via ProjectNotice.
+
+
+### Project operation notices follow UI locale (P1)
+
+Open/save/recovery/display-language and validation/reasoning announcements
+retain a typed descriptor or minimal summary facts, with the original English
+text kept for existing callers. ProjectHeader renders these in the current UI
+locale without changing the notice counter, live-region node or operation.
+Summary notices contain counts/states/end metadata rather than full validation
+panels, reasoning witnesses or inferred graphs: a notice can outlive a closed
+project. The result itself remains in the existing session result field.
+Creation and reasoning failures retain raw errors beside legacy string fields;
+known metadata is translated at render time, while unknown diagnostic text stays
+in native details. The reasoning alert is still announced once, without a second
+error announcement in the project live region. Command/undo labels and other
+server producers remain subject to the separate backend metadata migration.

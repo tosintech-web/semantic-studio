@@ -10,7 +10,9 @@ SUMMARY
     inside a text field, the polite live region, the document switcher, and
     the language menu with the display switch and missing counts; and the
     one-row bar of edit-page-rework 5.2: Turtle, the ⋯ menu by keyboard,
-    Show canvas as a checkbox item, Save primary while unsaved.
+    Show canvas as a checkbox item, Save primary while unsaved. Operation
+    notices follow UI-language changes without new requests, and retain only
+    the result facts needed by their validation and reasoning summaries.
 
 BASIC IDEA
     api.ts is mocked and the real store is opened on a fixed project, so
@@ -31,7 +33,7 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData } =
+const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData, validateProject, reasonProject, recoverProject } =
   vi.hoisted(() => ({
     openProject: vi.fn(),
     undoChange: vi.fn(),
@@ -40,6 +42,9 @@ const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, up
     getLanguageReport: vi.fn(),
     updateProject: vi.fn(),
     listData: vi.fn(),
+    validateProject: vi.fn(),
+    reasonProject: vi.fn(),
+    recoverProject: vi.fn(),
   }));
 
 vi.mock("../api", async (importOriginal) => ({
@@ -51,11 +56,17 @@ vi.mock("../api", async (importOriginal) => ({
   getLanguageReport,
   updateProject,
   listData,
+  validateProject,
+  reasonProject,
+  recoverProject,
 }));
 
 import { projectStore } from "../state/projectStore";
 import ProjectHeader from "./ProjectHeader";
 import UiLanguageSelect from "./UiLanguageSelect";
+import type { ReasoningResult, ValidationResult } from "../types";
+import { validationSummary } from "../modeling/shapeSentences";
+import { finishedLine, staleLine } from "../reasoning/reasonSentences";
 import { makeUiMessage } from "../i18n/uiMessage";
 
 const PROJECT = {
@@ -453,4 +464,121 @@ it("renders structured snapshot notices in the current locale without changing t
     expect(listData).toHaveBeenCalledTimes(requests);
     expect(region.querySelector("b")).toBeNull();
   } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});
+
+
+/** Notifications belong to the operation; switching the UI only renders them again. */
+describe("project operation notices", () => {
+  beforeEach(() => { localStorage.removeItem("semantic-studio.uiLocale.v1"); });
+  afterEach(() => { localStorage.removeItem("semantic-studio.uiLocale.v1"); });
+
+  async function openLocalized() {
+    openProject.mockResolvedValue({ project: PROJECT, documents: [doc()], recovery: { available: false, draftTime: null } });
+    await act(async () => { await projectStore.open(PROJECT.id); });
+    render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  }
+  function locale(value: "ja" | "en") {
+    const before = projectStore.getSnapshot().announcement;
+    const content = screen.getByRole("status").firstElementChild;
+    fireEvent.change(screen.getByRole("combobox", { name: /UI/ }), { target: { value } });
+    expect(projectStore.getSnapshot().announcement).toBe(before);
+    expect(screen.getByRole("status").firstElementChild).toBe(content);
+  }
+
+  it("localizes opening, pending and completed saves, backup names and display language without replaying work", async () => {
+    await openLocalized();
+    expect(live()).toBe("Invoicesを開きました。未保存の変更があります。");
+    locale("en");
+    expect(live()).toBe("Opened Invoices. Unsaved changes.");
+    let resolveSave!: (value: { state: ReturnType<typeof doc> }) => void;
+    saveDocument.mockImplementationOnce(() => new Promise(resolve => { resolveSave = resolve; }));
+    let pending!: ReturnType<typeof projectStore.save>;
+    await act(async () => { pending = projectStore.save(); });
+    expect(live()).toBe("Saving…");
+    locale("ja");
+    expect(live()).toBe("保存中…");
+    expect(saveDocument).toHaveBeenCalledTimes(1);
+    await act(async () => { resolveSave({ state: doc({ dirty: false }) }); await pending; });
+    expect(live()).toBe("保存しました。");
+    locale("en");
+    expect(live()).toBe("Saved.");
+    saveDocument.mockResolvedValueOnce({ state: doc({ dirty: false }) });
+    await act(async () => { await projectStore.save(true); });
+    expect(live()).toBe("Saved. The previous file was kept as model.original.ttl.");
+    locale("ja");
+    expect(live()).toBe("保存しました。変更前のファイルはmodel.original.ttlとして保持しています。");
+    await act(async () => { projectStore.setDisplayLanguage("fr"); });
+    expect(live()).toBe("名称の表示言語：fr。");
+    locale("en");
+    expect(live()).toBe("Showing names in fr.");
+    expect(projectStore.getSnapshot().displayLanguage).toBe("fr");
+    expect(saveDocument).toHaveBeenCalledTimes(2);
+    expect(openProject).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["recover", "discard"] as const)("renders %s and cancelled-save notices in the current locale", async action => {
+    await openLocalized();
+    recoverProject.mockResolvedValueOnce({ documents: [doc()] });
+    await act(async () => { await projectStore.recover(action); });
+    expect(live()).toBe(action === "recover" ? "未保存の変更を復元しました。変更はまだ保存されていません。" : "未保存の変更を破棄しました。");
+    locale("en");
+    expect(live()).toBe(action === "recover" ? "Recovered the unsaved changes. Unsaved changes." : "Discarded the unsaved changes.");
+    expect(recoverProject).toHaveBeenCalledTimes(1);
+    await act(async () => { projectStore.cancelCommentsWarning(); });
+    expect(live()).toBe("Not saved.");
+    locale("ja");
+    expect(live()).toBe("保存していません。");
+  });
+
+  it.each([false, true])("renders validation facts after a pending run (stopped=%s) without retaining panel content", async stopped => {
+    await openLocalized();
+    const result: ValidationResult = {
+      stopped, statements: 24, shapeCount: 3, durationMs: 20, revisions: { model: 3, shapes: 1 },
+      shapes: [{ id: "hidden-witness", name: "hidden-witness", state: "fails", target: null, focusCount: 4, failingCount: 1, problemCount: 1, warningCount: 0, problems: [], problemsTotal: 0, error: null }],
+    };
+    let resolve!: (value: ValidationResult) => void;
+    validateProject.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    let pending!: ReturnType<typeof projectStore.validate>;
+    await act(async () => { pending = projectStore.validate(); });
+    expect(live()).toBe("検証中…");
+    locale("en");
+    expect(live()).toBe("Validating…");
+    await act(async () => { expect(await projectStore.validate()).toBeNull(); });
+    expect(validateProject).toHaveBeenCalledTimes(1);
+    await act(async () => { resolve(result); await pending; });
+    expect(live()).toBe(validationSummary(result, "en"));
+    expect(projectStore.getSnapshot().validation).toBe(result);
+    expect(JSON.stringify(projectStore.getSnapshot().announcement)).not.toContain("hidden-witness");
+    locale("ja");
+    expect(live()).toBe(validationSummary(result, "ja"));
+    expect(validateProject).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["fresh", "stale", "timeout"] as const)("renders %s reasoning completion in the active locale without replaying inference", async ending => {
+    await openLocalized();
+    const result: ReasoningResult = {
+      status: ending === "timeout" ? "timedOut" : "done", key: "synthetic", includeData: false, imports: false,
+      basis: { revision: 3, generation: 1, imports: false }, durationMs: 4200, statements: 12,
+      sentence: ending === "timeout" ? "Original timeout diagnostic." : null,
+      ...(ending === "timeout" ? { uiMessage: { code: "reasoning.timeout", args: { seconds: 7 } } } : {}),
+      problems: [], groups: [{ kind: "kinds", total: 2, offset: 0, items: [{ s: "hidden-witness", p: "urn:p", o: "urn:o", sLabel: "hidden-witness", pLabel: "p", oLabel: "o", sentence: "hidden-witness" }] }],
+      importedFacts: { kind: "imported", total: 0, offset: 0, items: [] }, stale: ending === "stale",
+    };
+    let resolve!: (value: ReasoningResult) => void;
+    reasonProject.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    let pending!: ReturnType<typeof projectStore.reason>;
+    await act(async () => { pending = projectStore.reason(false, false); });
+    expect(live()).toBe("推論を開始しました。");
+    locale("en");
+    expect(live()).toBe("Reasoning started.");
+    await act(async () => { expect(await projectStore.reason(false, false)).toBeNull(); });
+    await act(async () => { resolve(result); await pending; });
+    const english = ending === "stale" ? staleLine(result) : finishedLine(result);
+    expect(live()).toBe(english.endsWith(".") ? english : `${english}.`);
+    expect(projectStore.getSnapshot().reasoning).toBe(result);
+    expect(JSON.stringify(projectStore.getSnapshot().announcement)).not.toContain("hidden-witness");
+    locale("ja");
+    expect(live()).toBe(ending === "stale" ? staleLine(result, "ja") : finishedLine(result, "ja"));
+    expect(reasonProject).toHaveBeenCalledTimes(1);
+  });
 });

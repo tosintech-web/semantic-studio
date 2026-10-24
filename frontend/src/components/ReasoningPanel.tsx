@@ -38,6 +38,9 @@ BASIC IDEA
     terms alone are one line, collapsed until opened. Nothing is an href:
     a subject is selected as a tree row selects it.
 
+    Start and Stop failures retain their operation phase and raw error,
+    translating the one alert at render time and keeping original details.
+
 INPUTS / INPUT SOURCES (props)
     - projectId, kind: the open project; a taxonomy is told reasoning is
       for ontology projects.
@@ -52,6 +55,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { getReasoningPage } from "../api";
@@ -175,6 +179,7 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
   const result = useProjectSelector((s) => s.reasoning);
   const token = useProjectSelector((s) => s.reasoningToken);
   const error = useProjectSelector((s) => s.reasoningError);
+  const failure = useProjectSelector((s) => s.reasoningErrorCause);
   const includeData = useProjectSelector((s) => s.reasoningData);
   const elapsed = useElapsed(since);
   const headingId = useId();
@@ -194,6 +199,7 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
     return <p className="detail-note reasoning-intro">{t("reasonWords.taxonomy")}</p>;
   }
   const running = since !== null;
+  const hasError = failure !== null || error !== null;
   const stale = result !== null && isStale(result, now);
 
   return (
@@ -218,12 +224,13 @@ export default function ReasoningPanel({ projectId, kind, hasData, now, onSelect
             {panelHeading(stale ? null : result, locale)}
           </h3>
         </div>
-        {error && (
+        {hasError && (
           <p className="edit-error" role="alert">
-            {error}
+            {failure ? t(failure.kind === "start" ? "reasonUI.startFailed" : "reasonUI.stopFailed", { reason: failure.error instanceof TypeError ? t("network.unreachable") : renderServerError(failure.error, t) }) : error}
           </p>
         )}
-        {!result && !error && <p className="detail-note">{t("reasonWords.empty")}</p>}
+        {failure && <details><summary>{t("common.details")}</summary><pre>{failure.error instanceof Error ? failure.error.message : String(failure.error)}</pre></details>}
+        {!result && !hasError && <p className="detail-note">{t("reasonWords.empty")}</p>}
         {result && stale && (
           <ReasonAgain
             running={running}

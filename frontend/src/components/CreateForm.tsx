@@ -30,6 +30,9 @@ BASIC IDEA
     control the creation began from. Nothing here is `disabled`: Create is
     aria-disabled while the name is empty (NewEntityForm).
 
+    Creation failures keep their raw metadata and diagnostic; the primary
+    explanation follows the UI locale, with the original in native details.
+
 INPUTS / INPUT SOURCES (props)
     - ontologyId: the model, for the pickers' searches.
     - primaryLanguage: the language a name is written in.
@@ -41,6 +44,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { englishTranslator } from "../i18n/format";
 import type { Translator } from "../i18n/types";
@@ -92,6 +96,7 @@ function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: 
   const { t } = useI18n();
   const busy = useProjectSelector((s) => s.creatingBusy);
   const error = useProjectSelector((s) => s.creatingError);
+  const failure = useProjectSelector((s) => s.creatingErrorCause);
   // Shown here; what is made is the store's copy (setCreatingExtra).
   const [definition, setDefinition] = useState("");
   const [domain, setDomainShown] = useState<Pick | null>(null);
@@ -158,7 +163,7 @@ function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: 
         title={creatingTitle(kind, parent, t)}
         primaryLanguage={primaryLanguage}
         busy={busy}
-        error={error}
+        error={failure ? t("create.failed", { reason: renderServerError(failure.error, t) }) : error}
         missing={missing}
         datatypes={kind === "datatypeProperty"}
         name={creating.name}
@@ -204,6 +209,7 @@ function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: 
         {kind === "objectProperty" && choice("range", t("relationshipForm.to"), range, setRange, true)}
         {kind === "example" && choice("cls", t("create.exampleClass"), cls, setCls, true)}
       </NewEntityForm>
+      {failure && <details><summary>{t("common.details")}</summary><pre>{failure.error instanceof Error ? failure.error.message : String(failure.error)}</pre></details>}
     </div>
   );
 }

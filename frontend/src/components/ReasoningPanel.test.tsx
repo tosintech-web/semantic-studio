@@ -393,7 +393,8 @@ describe("Reason and the results panel (Section 6)", () => {
     await setup();
     reasonProject.mockRejectedValue(new ApiError("A run is already going.", 409));
     await press("Reason");
-    expect(screen.getByRole("alert").textContent).toBe("A run is already going.");
+    expect(screen.getByRole("alert").textContent).toBe("The run could not be started: The operation could not be completed. Check the details.");
+    expect(screen.getByText("A run is already going.").closest("details")).toBeTruthy();
     // The alert says it; the live region does not say it again.
     expect(said()).toBe("Reasoning started.");
     expect(screen.getByRole("button", { name: "Reason" })).toBeTruthy();
@@ -491,21 +492,23 @@ describe("Focus and endings (PR #55 review)", () => {
   it("says a Stop that failed in the app's words, once, and Stop can be pressed again (PR #55 review)", async () => {
     await setup();
     const run = pending();
-    // What fetch rejects with when the server is gone: never shown.
+    // Fetch diagnostics stay in details; the alert uses the application words.
     stopReasoning.mockRejectedValue(new TypeError("Failed to fetch"));
     await press("Reason");
     await press("Stop");
     expect(screen.getByRole("alert").textContent).toBe(
       "The run could not be stopped: the server did not answer. Press Stop again.",
     );
-    expect(document.body.textContent).not.toContain("Failed to fetch");
+    expect(screen.getByText("Failed to fetch").closest("details")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).not.toContain("Failed to fetch");
     expect(said()).toBe("Reasoning started.");
     // The server's own sentence, when it sent one.
     stopReasoning.mockRejectedValueOnce(new ApiError("There is no such project.", 404));
     await press("Stop");
     expect(screen.getByRole("alert").textContent).toBe(
-      "The run could not be stopped: There is no such project. Press Stop again.",
+      "The run could not be stopped: The operation could not be completed. Check the details. Press Stop again.",
     );
+    expect(screen.getByText("There is no such project.").closest("details")).toBeTruthy();
     expect(said()).toBe("Reasoning started.");
     const button = screen.getByRole("button", { name: "Stop" });
     expect(button.getAttribute("aria-disabled")).toBe("false");
@@ -588,5 +591,35 @@ it("renders timeout metadata and keeps original engine details separate", async 
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(document.querySelector(".reasoning-ending")?.textContent).toContain("1.5 seconds");
   expect(reasonProject).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each([["start", "Original <img>{diagnostic}"], ["stop", "Original <img>{diagnostic}"], ["start", ""]] as const)("renders a %s failure once in the current locale and keeps its original details (%s)", async (phase, diagnostic) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn();
+  const error = new ApiError(diagnostic, 409, undefined, { code: "model.invalid_value", args: { value: "<b>値</b>", datatype: "xsd:integer" } });
+  render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  const run = phase === "stop" ? pending() : null;
+  if (phase === "start") reasonProject.mockRejectedValueOnce(error);
+  else stopReasoning.mockRejectedValueOnce(error);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "推論" })); });
+  if (phase === "stop") await act(async () => { fireEvent.click(screen.getByRole("button", { name: "停止" })); });
+  const japanese = "「<b>値</b>」はxsd:integerの値として使用できません。";
+  expect(screen.getByRole("alert").textContent).toBe(phase === "start" ? `推論を開始できませんでした：${japanese}` : `推論を停止できませんでした：${japanese}もう一度「停止」を押してください。`);
+  expect(projectStore.getSnapshot().reasoningErrorCause).toEqual({ kind: phase, error });
+  expect(document.querySelector(".reasoning details pre")?.textContent).toBe(error.message);
+  expect(document.querySelector(".reasoning img, .reasoning b")).toBeNull();
+  const notice = projectStore.getSnapshot().announcement;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  const english = '“<b>値</b>” is not a valid xsd:integer value.';
+  expect(screen.getByRole("alert").textContent).toBe(phase === "start" ? `The run could not be started: ${english}` : `The run could not be stopped: ${english} Press Stop again.`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  expect(stopReasoning).toHaveBeenCalledTimes(phase === "stop" ? 1 : 0);
+  if (run) await run.answer(result());
+  else { reasonProject.mockResolvedValueOnce(result()); await act(async () => { await projectStore.reason(false, false); }); }
+  expect(projectStore.getSnapshot().reasoningErrorCause).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

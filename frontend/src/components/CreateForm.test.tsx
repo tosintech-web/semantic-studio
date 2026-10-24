@@ -252,3 +252,28 @@ it("keeps the shared creation draft and definition on UI language changes", asyn
   await create();
   expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", expect.objectContaining({ label: "請求書", definition: "<b>定義</b>" }));
 });
+
+
+it("keeps a structured refusal and the exact shared draft across locale switches, then clears it on cancel", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const error = new ApiError("Original <img>{diagnostic}", 422, undefined, { code: "model.invalid_value", args: { value: "<b>値</b>", datatype: "xsd:integer" } });
+  runCommand.mockRejectedValueOnce(error);
+  act(() => projectStore.startCreating("class"));
+  render(<I18nProvider><UiLanguageSelect /><CreateForm ontologyId={`${PID}-model`} primaryLanguage="en" /></I18nProvider>);
+  const input = screen.getByRole("textbox", { name: "名前（en）" });
+  fireEvent.change(input, { target: { value: "請求書" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "作成" })); });
+  expect(document.querySelector(".new-entity-form .edit-error")?.textContent).toBe("作成できませんでした：「<b>値</b>」はxsd:integerの値として使用できません。");
+  expect(projectStore.getSnapshot().creatingErrorCause?.error).toBe(error);
+  expect(screen.getByText(error.message).closest("details")).toBeTruthy();
+  expect(document.querySelector(".create-form img, .create-form b")).toBeNull();
+  const draft = projectStore.getSnapshot().creating;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".new-entity-form .edit-error")?.textContent).toBe('Could not create: “<b>値</b>” is not a valid xsd:integer value.');
+  expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(input);
+  expect(projectStore.getSnapshot().creating).toBe(draft);
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(projectStore.getSnapshot().creatingErrorCause).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});

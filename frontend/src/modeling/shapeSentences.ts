@@ -322,8 +322,13 @@ export function problemsFound(result: ValidationResult, locale: UiLocale = "en")
   return count === 1 ? t("shapeSummary.problem.one") : t("shapeSummary.problem.many", { count });
 }
 
+/** Only summary facts are needed by a retained live-region notice. */
+export type ValidationSummaryInput = Pick<ValidationResult, "stopped" | "shapeCount" | "statements"> & {
+  shapes: readonly Pick<ValidationPanel, "state">[];
+};
+
 /** The live summary is derived from result facts, never stored English. */
-export function validationSummary(result: ValidationResult, locale: UiLocale = "en"): string {
+export function validationSummary(result: ValidationSummaryInput, locale: UiLocale = "en"): string {
   const t = tFor(locale);
   if (result.stopped) return t("shapeSummary.timeout", { shapes: result.shapeCount, statements: result.statements });
   const count = result.shapes.length;

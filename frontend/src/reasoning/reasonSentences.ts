@@ -74,13 +74,20 @@ export function runningLine(elapsedSeconds: number, locale: UiLocale = "en"): st
   return tFor(locale)("reasonWords.running", { count: Math.floor(elapsedSeconds) });
 }
 
+/** Completion words use counts and ending metadata, never witness content. */
+export type ReasoningLineInput = Pick<ReasoningResult, "status" | "durationMs" | "sentence" | "uiMessage"> & {
+  problems: { readonly length: number };
+  groups: readonly { total: number }[];
+  importedFacts: { total: number };
+};
+
 /** Every new fact the run shows, imported ones included. */
-export function factCount(result: ReasoningResult): number {
+export function factCount(result: Pick<ReasoningLineInput, "groups" | "importedFacts">): number {
   return result.groups.reduce((sum, g) => sum + g.total, 0) + result.importedFacts.total;
 }
 
 /** The status line and the announcement once a run ends (5.2). */
-export function finishedLine(result: ReasoningResult, locale: UiLocale = "en"): string {
+export function finishedLine(result: ReasoningLineInput, locale: UiLocale = "en"): string {
   const t = tFor(locale);
   if (result.status !== "done") {
     if (result.uiMessage != null) return renderServerMessage(result.uiMessage, result.sentence ?? "", t);
@@ -99,7 +106,7 @@ export function finishedLine(result: ReasoningResult, locale: UiLocale = "en"): 
   });
 }
 
-export function staleLine(result: ReasoningResult, locale: UiLocale = "en"): string {
+export function staleLine(result: ReasoningLineInput, locale: UiLocale = "en"): string {
   if (result.status !== "done") return finishedLine(result, locale);
   return tFor(locale)("reasonWords.staleFinished", { time: seconds(result.durationMs, locale) });
 }
