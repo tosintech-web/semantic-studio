@@ -25,6 +25,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
 import type { QuerySchema, SchemaClass, SchemaLink } from "../types";
 import { plural } from "./describe";
 import { emptyQueryState } from "./types";
@@ -35,7 +37,10 @@ import type { QueryState } from "./types";
 const SKOS = "http://www.w3.org/2004/02/skos/core#";
 
 /** "Concept" -> "Concepts", capitalised for use in a starter title. */
-function pluralTitle(label: string): string {
+function pluralTitle(label: string, locale: UiLocale): string {
+  // Inflection belongs only to the legacy English guidance, never to RDF
+  // labels or to the Japanese template's input.
+  if (locale !== "en") return label;
   const word = plural(label);
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
@@ -94,8 +99,9 @@ function rankedLinks(schema: QuerySchema): SchemaLink[] {
 }
 
 /** Assemble up to `max` starter queries for the loaded ontology. */
-export function buildStarters(schema: QuerySchema | null, max = 5): Starter[] {
+export function buildStarters(schema: QuerySchema | null, max = 5, locale: UiLocale = "en"): Starter[] {
   if (!schema) return [];
+  const t = ((code, args) => translate(locale, code, args)) as Translator;
   // Classes that actually have instances, richest first. Sorted here rather
   // than trusting the caller's ordering.
   const populated = schema.classes
@@ -116,8 +122,8 @@ export function buildStarters(schema: QuerySchema | null, max = 5): Starter[] {
   if (biggest) {
     push({
       id: `all:${biggest.iri}`,
-      title: `All ${pluralTitle(biggest.label)}`,
-      detail: `${biggest.instances.toLocaleString()} in this ontology`,
+      title: t("starter.all", { name: pluralTitle(biggest.label, locale) }),
+      detail: t("starter.instances", { count: biggest.instances }),
       state: singleStep(biggest),
     });
   }
@@ -126,8 +132,8 @@ export function buildStarters(schema: QuerySchema | null, max = 5): Starter[] {
   if (biggest) {
     push({
       id: `count:${biggest.iri}`,
-      title: `How many ${pluralTitle(biggest.label)}?`,
-      detail: "Counts rather than rows",
+      title: t("starter.count", { name: pluralTitle(biggest.label, locale) }),
+      detail: t("starter.countDetail"),
       state: singleStep(biggest, { aggregate: "count" }),
     });
   }
@@ -138,8 +144,8 @@ export function buildStarters(schema: QuerySchema | null, max = 5): Starter[] {
     const scheme = classOf(schema, `${SKOS}ConceptScheme`);
     push({
       id: "skos:narrower",
-      title: "Concepts and their narrower concepts",
-      detail: "Walks the hierarchy downwards",
+      title: t("starter.narrower"),
+      detail: t("starter.narrowerDetail"),
       state: {
         ...emptyQueryState(),
         steps: [
@@ -161,8 +167,8 @@ export function buildStarters(schema: QuerySchema | null, max = 5): Starter[] {
     if (scheme && scheme.instances > 0) {
       push({
         id: "skos:perScheme",
-        title: "How many concepts per scheme?",
-        detail: "Counts each vocabulary",
+        title: t("starter.perScheme"),
+        detail: t("starter.perSchemeDetail"),
         state: {
           ...emptyQueryState(),
           aggregate: "count",
@@ -195,7 +201,7 @@ export function buildStarters(schema: QuerySchema | null, max = 5): Starter[] {
     push({
       id: `link:${link.source}|${link.predicate}|${link.target}`,
       title: `${source.label} → ${link.label} → ${target.label}`,
-      detail: link.count > 0 ? `${link.count.toLocaleString()} in the data` : "Declared in the schema",
+      detail: link.count > 0 ? t("starter.inData", { count: link.count }) : t("starter.declared"),
       state: twoStep(source, link, target),
     });
   }

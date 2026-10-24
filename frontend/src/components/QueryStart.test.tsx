@@ -23,8 +23,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import QueryStart from "./QueryStart";
 import type { QuerySchema } from "../types";
 import { kindColor } from "../types";
@@ -105,4 +108,23 @@ describe("Questions for this example (query-page-rework 5.4, AC-8)", () => {
     render(<QueryStart schema={SCHEMA} theme="light" onUseStarter={vi.fn()} onPickClass={vi.fn()} />);
     expect(screen.queryByRole("heading", { name: "Questions for this example" })).toBeNull();
   });
+});
+
+it("updates generated starter guidance while preserving the author's question and ready-to-run state", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const use = vi.fn();
+  const question = { id: "original", title: "Original question", about: "Author's explanation", text: 'SELECT ?s WHERE { ?s ?p "犬" }' };
+  const ask = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><QueryStart schema={SCHEMA} theme="dark" onUseStarter={use} onPickClass={vi.fn()} questions={[question]} onAskQuestion={ask} /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "まず試してみる" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Plainの全件/ }));
+  const state = use.mock.calls[0][0];
+  expect(use.mock.calls[0][1]).toBe("Plainの全件");
+  fireEvent.click(screen.getByRole("button", { name: "Original question" }));
+  expect(ask).toHaveBeenCalledWith(question);
+  expect(screen.getByText("Author's explanation")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  fireEvent.click(screen.getByRole("button", { name: /All Plains/ }));
+  expect(use.mock.calls[1][0]).toEqual(state);
+  expect(ask).toHaveBeenCalledTimes(1);
 });

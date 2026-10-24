@@ -40,7 +40,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import QueryPanel, { CUT_SHORT, DISCARD_TEXT, ONLY_SELECT, SHACL_VARIABLES_NOTE } from "./QueryPanel";

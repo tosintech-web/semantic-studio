@@ -63,15 +63,15 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/components/LinkPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/ExampleForm.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/QueryPanel.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/QueryStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/QueryStart.tsx` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
 | `frontend/src/components/ResultsTable.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有文言を移行済み |
 | `frontend/src/components/ResultPanels.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/PathBar.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/PathBar.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の文言を移行済み |
 | `frontend/src/components/ClassPropsMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/components/PredicateMenu.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/NextSteps.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/SparqlEditor.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/components/SparqlPreview.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/components/NextSteps.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の文言を移行済み |
+| `frontend/src/components/SparqlEditor.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の操作文言を移行済み、外部生成元は接続待ち |
+| `frontend/src/components/SparqlPreview.tsx` | 探索・編集・クエリ・説明文 | 11 | 画面所有の操作文言を移行済み、外部生成元は接続待ち |
 | `frontend/src/components/NothingSelected.tsx` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/types.ts` | 探索・編集・クエリ・説明文 | 11 | 種類名の翻訳接続済み |
 | `frontend/src/i18n/parts.ts` | リンク付き翻訳テンプレートの組み立て | 11 | 共通機構を実装、説明画面への接続待ち |
@@ -80,7 +80,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `frontend/src/modeling/ruleSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/explain/explainSentences.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/explain/glossary.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
-| `frontend/src/sparql/starters.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
+| `frontend/src/sparql/starters.ts` | 探索・編集・クエリ・説明文 | 11 | 開始候補の案内を移行済み |
 | `frontend/src/canvas/useCanvasData.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/relate.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
 | `frontend/src/canvas/layered.ts` | 探索・編集・クエリ・説明文 | 11 | 未移行（Task 11進行中） |
@@ -724,6 +724,62 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `sentence.link.subClassOf` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `sentence.link.broader` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
 | `sentence.link.related` | from, to | `frontend/src/modeling/sentences.ts` | リンク付き説明文の共通テンプレート | 11 | 共通関数を接続済み、画面の移行は進行中 |
+| `sparql.preview.editHint` | — | `frontend/src/components/SparqlPreview.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.preview.newHint` | — | `frontend/src/components/SparqlPreview.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.preview.edit` | — | `frontend/src/components/SparqlPreview.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.preview.new` | — | `frontend/src/components/SparqlPreview.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.preview.empty` | — | `frontend/src/components/SparqlPreview.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.fork` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.back` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.prefix` | prefix | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.label` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.helpFresh` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.helpRun` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.tabHelp` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.runningAnnouncement` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.runBlockedLabel` | reason | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.runHint` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.running` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.run` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.download` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.open` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `sparql.editor.close` | — | `frontend/src/components/SparqlEditor.tsx` | SPARQL表示・編集操作 | 11 | カタログ・画面接続済み |
+| `queryStart.try` | — | `frontend/src/components/QueryStart.tsx` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `queryStart.questions` | — | `frontend/src/components/QueryStart.tsx` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `queryStart.readyHelp` | — | `frontend/src/components/QueryStart.tsx` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `queryStart.or` | — | `frontend/src/components/QueryStart.tsx` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `queryStart.pickHelp` | — | `frontend/src/components/QueryStart.tsx` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.all` | name | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.instances` | count | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.count` | name | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.countDetail` | — | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.narrower` | — | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.narrowerDetail` | — | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.perScheme` | — | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.perSchemeDetail` | — | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.inData` | count | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `starter.declared` | — | `frontend/src/sparql/starters.ts` | クエリ開始候補と説明 | 11 | カタログ・画面接続済み |
+| `path.title` | — | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.empty` | — | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.linkHint` | step | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.classHint` | variable | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.optional` | — | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.pinned` | name | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.properties` | count | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.removeHint` | — | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.removeName` | name, step | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.clearHint` | — | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `path.clear` | — | `frontend/src/components/PathBar.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.add` | — | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.addLabel` | count | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.options` | count | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.filterPrompt` | — | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.filterLabel` | — | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.noMatch` | filter | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.from.forward` | anchor, predicate, step | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.from.inverse` | anchor, predicate, step | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.fromCount.forward` | anchor, count, predicate, step | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
+| `next.fromCount.inverse` | anchor, count, predicate, step | `frontend/src/components/NextSteps.tsx` | クエリ経路・次のステップ | 11 | カタログ・画面接続済み |
 
 ## 対象外・生成元待ち
 
@@ -750,3 +806,7 @@ Task 10の補足：`ConfirmDialog`自身は表示文を持たず、呼び出し�
 `types.ts`の`KIND_LABELS`は従来の呼び出し元向けの英語互換表。UIの種類名は現在の翻訳関数を渡し、色は引き続き`theme/kinds.ts`の定義を使う。
 
 `i18n/parts.ts`はカタログのテンプレートを先に分割してから値を挿入する。翻訳後の文章や名称・IRIからリンクを探さない。リンク参照は既存の`{iri, label}`を保持し、日英の語順が異なっても同じ参照先へ移動する。
+
+SPARQLエディターの`saveLabel`・`saveTitle`はQueryPanelが生成するため、その呼び出し元の移行で接続する。`TextQuery.note`・`runBlocked`・エラーの既知生成元も棚卸し対象であり、ユーザー／埋め込みクエリ著者の原文と区別して移行する。現時点でこれらを翻訳対象外として確定しない。
+
+開始候補の英語の複数形変換は英語表示時に限定する。日本語の案内には元の名称を渡し、言語を変えても生成するQueryStateとSPARQL本文は同一に保つ。`source → relationship → target`の矢印表記は、名前を並べた構造表示として原表記を維持する。

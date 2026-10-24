@@ -27,6 +27,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { formatNumber } from "../i18n/format";
 import type { QueryState } from "../sparql/types";
 import type { Theme } from "../types";
 import { kindColor } from "../types";
@@ -65,6 +67,7 @@ export default function PathBar({
   onRemoveStep,
   onClear,
 }: Props) {
+  const { t, locale } = useI18n();
   // A class's colour as the graph draws it; an unknown or inherited kind is
   // "other" (X-6), an absent one a class.
   const stepColor = (iri: string) =>
@@ -73,15 +76,15 @@ export default function PathBar({
   if (state.steps.length === 0) {
     return (
       <div className="path-bar empty">
-        <span className="path-label">PATH</span>
-        <span className="hint">Nothing selected yet — click a highlighted node in the graph.</span>
+        <span className="path-label">{t("path.title")}</span>
+        <span className="hint">{t("path.empty")}</span>
       </div>
     );
   }
 
   return (
     <div className="path-bar">
-      <span className="path-label">PATH</span>
+      <span className="path-label">{t("path.title")}</span>
       {state.steps.map((step, index) => {
         const link = step.link;
         const isOpenClass = openMenu?.kind === "class" && openMenu.index === index;
@@ -107,13 +110,12 @@ export default function PathBar({
                     .join(" ")}
                   onClick={() => onOpenMenu(isOpenLink ? null : { kind: "link", index })}
                   title={
-                    `Relationship from step ${link.anchor + 1}. ` +
-                    "Click to change direction, add alternatives, set a path modifier or make it optional."
+                    t("path.linkHint", { step: link.anchor + 1 })
                   }
                 >
                   {branched && <span className="chip-branch">↳{link.anchor + 1}</span>}
                   {predicateText}
-                  {link.optional && <span className="chip-flag">opt</span>}
+                  {link.optional && <span className="chip-flag">{t("path.optional")}</span>}
                 </button>
                 <span className="path-arrow">→</span>
               </>
@@ -121,7 +123,7 @@ export default function PathBar({
             <button
               className={["chip chip-class", isOpenClass ? "open" : ""].filter(Boolean).join(" ")}
               onClick={() => onOpenMenu(isOpenClass ? null : { kind: "class", index })}
-              title={`?${stepVars[index]} — click to select data properties and filters`}
+              title={t("path.classHint", { variable: stepVars[index] })}
               style={{
                 borderColor: stepColor(step.classIri),
               }}
@@ -134,19 +136,20 @@ export default function PathBar({
               </span>
               {step.label}
               {step.pin && (
-                <span className="chip-flag pin" title={`Pinned to ${step.pin.label}`}>
+                <span className="chip-flag pin" title={t("path.pinned", { name: step.pin.label })}>
                   ⚲ {step.pin.label}
                 </span>
               )}
               {step.props.length > 0 && (
-                <span className="chip-count" title={`${step.props.length} data properties`}>
-                  {step.props.length}
+                <span className="chip-count" title={t("path.properties", { count: step.props.length })}>
+                  {formatNumber(locale, step.props.length)}
                 </span>
               )}
             </button>
             <button
               className="chip-remove"
-              title="Remove this step and everything after it"
+              title={t("path.removeHint")}
+              aria-label={t("path.removeName", { step: index + 1, name: step.label })}
               onClick={() => onRemoveStep(index)}
             >
               ✕
@@ -154,8 +157,8 @@ export default function PathBar({
           </span>
         );
       })}
-      <button className="chip chip-clear" onClick={onClear} title="Clear the whole path">
-        ✕ Clear path
+      <button className="chip chip-clear" onClick={onClear} title={t("path.clearHint")}>
+        {t("path.clear")}
       </button>
     </div>
   );

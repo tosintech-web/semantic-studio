@@ -31,6 +31,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { formatNumber } from "../i18n/format";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 // One available continuation of the path (an anchor step + a predicate + a target).
@@ -67,6 +69,7 @@ const ALWAYS_OPEN_MAX = 3;
  * the graph does — the two routes build exactly the same query.
  */
 export default function NextSteps({ options, stepCount, onAdd }: Props) {
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const panelId = useId();
@@ -110,12 +113,12 @@ export default function NextSteps({ options, stepCount, onAdd }: Props) {
         controlRef.current?.focus();
       }}
       title={
-        `From step ${option.anchor + 1} (${option.anchorLabel}) via ` +
-        `${option.inverse ? "reversed " : ""}${option.predicateLabel}` +
-        (option.count > 0 ? ` · ${option.count.toLocaleString()} in the data` : "")
+        option.count > 0
+          ? t(option.inverse ? "next.fromCount.inverse" : "next.fromCount.forward", { step: option.anchor + 1, anchor: option.anchorLabel, predicate: option.predicateLabel, count: option.count })
+          : t(option.inverse ? "next.from.inverse" : "next.from.forward", { step: option.anchor + 1, anchor: option.anchorLabel, predicate: option.predicateLabel })
       }
     >
-      {stepCount > 1 && <span className="next-anchor">{option.anchor + 1}</span>}
+      {stepCount > 1 && <span className="next-anchor">{formatNumber(locale, option.anchor + 1)}</span>}
       <span className="next-pred">
         {option.inverse && <span className="dir-badge">^</span>}
         {option.predicateLabel}
@@ -129,7 +132,7 @@ export default function NextSteps({ options, stepCount, onAdd }: Props) {
     return (
       <section className="next-steps">
         <div className="next-steps-head">
-          <h3>Add a step</h3>
+          <h3>{t("next.add")}</h3>
         </div>
         <div className="chip-cloud">{options.map(chipFor)}</div>
       </section>
@@ -159,14 +162,14 @@ export default function NextSteps({ options, stepCount, onAdd }: Props) {
         // contents, and with the title removed it announced nothing at all.
         // The count is an acceptance criterion, so it is stated outright and
         // matches the visible text word for word.
-        aria-label={`Add a step, ${options.length} options`}
+        aria-label={t("next.addLabel", { count: options.length })}
         onClick={() => setOpen((was) => !was)}
       >
         <span aria-hidden="true">+</span>
-        <span className="next-steps-label">Add a step</span>
+        <span className="next-steps-label">{t("next.add")}</span>
         {/* In the accessible name, not only in the pixels: a count a screen
             reader user cannot hear is a count they do not have. */}
-        <span className="next-steps-count">{options.length} options</span>
+        <span className="next-steps-count">{t("next.options", { count: options.length })}</span>
         <span className="next-steps-arrow" aria-hidden="true">
           {open ? "▴" : "▾"}
         </span>
@@ -181,14 +184,14 @@ export default function NextSteps({ options, stepCount, onAdd }: Props) {
               ref={filterRef}
               type="search"
               className="next-filter"
-              placeholder="Filter…"
-              aria-label="Filter the available steps"
+              placeholder={t("next.filterPrompt")}
+              aria-label={t("next.filterLabel")}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
             <div className="chip-cloud">{matching.map(chipFor)}</div>
             {matching.length === 0 && (
-              <p className="detail-note">Nothing matches “{filter}”.</p>
+              <p className="detail-note">{t("next.noMatch", { filter })}</p>
             )}
           </>
         )}

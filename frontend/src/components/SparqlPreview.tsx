@@ -29,6 +29,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import type { Ref } from "react";
 import { highlightSparql } from "../sparql/highlight";
 
@@ -47,6 +48,7 @@ export default function SparqlPreview({
   editButtonRef,
   newButtonRef,
 }: Props) {
+  const { t } = useI18n();
   const actions = (onEditAsText || onNewTextQuery) && (
     <div className="sparql-preview-actions">
       {onEditAsText && (
@@ -55,9 +57,9 @@ export default function SparqlPreview({
           className="ghost"
           disabled={!sparql}
           onClick={onEditAsText}
-          title="Open this query in a text editor"
+          title={t("sparql.preview.editHint")}
         >
-          Edit as text
+          {t("sparql.preview.edit")}
         </button>
       )}
       {onNewTextQuery && (
@@ -65,9 +67,9 @@ export default function SparqlPreview({
           ref={newButtonRef}
           className="ghost"
           onClick={onNewTextQuery}
-          title="Write a SPARQL query from nothing"
+          title={t("sparql.preview.newHint")}
         >
-          New text query
+          {t("sparql.preview.new")}
         </button>
       )}
     </div>
@@ -79,7 +81,7 @@ export default function SparqlPreview({
         {actions}
         <div className="sparql-preview empty">
           <p className="detail-note">
-            Click a highlighted node in the graph to start building a query.
+            {t("sparql.preview.empty")}
           </p>
         </div>
       </>
