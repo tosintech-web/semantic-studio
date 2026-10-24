@@ -15,6 +15,14 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "parse.syntax": "{format}ファイルの構文を確認してください（行：{line}）。",
+  "model.invalid_value": "「{value}」は{datatype}の値として使用できません。",
+  "validation.min_count": "「{name}」には{count}件以上の値が必要です。",
+  "reasoning.timeout": "推論を{seconds}秒で停止しました。データやルールを減らして再試行してください。",
+  "entities.page_too_large": "応答サイズの上限を超えました（一致：{total}件）。取得件数を{suggested_limit}件以下にするか、項目の詳細を確認してください。",
+  "entities.view_changed": "辞書の更新が続いています。再試行して最新の項目を取得してください。",
+  "request.invalid": "入力値を確認して再試行してください。",
+
   "kind.class": "クラス",
   "kind.objectProperty": "オブジェクトプロパティ",
   "kind.datatypeProperty": "データ型プロパティ",

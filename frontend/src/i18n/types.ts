@@ -12,9 +12,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
-export interface MessageArgs {
+export interface MessageArgs extends ServerMessageArgs {
   "kind.class": undefined;
   "kind.objectProperty": undefined;
   "kind.datatypeProperty": undefined;

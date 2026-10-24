@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEntityPage } from "../entities/useEntityPage";
 import type { EntityKindGroup } from "../entities/types";
 import { kindLabelMessage } from "../i18n/kindLabel";
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 const groups: EntityKindGroup[] = ["all", "concept", "individual", "class", "properties", "other"];
 export interface EntityListProps {
@@ -53,7 +54,7 @@ export default function EntityList({ initialQuery, onSelect, onReferenceOnly, se
         <option value="label">{t("entities.sortLabel")}</option><option value="iri">{t("entities.sortIri")}</option>
       </select></label>
     </div>
-    <p role="status" aria-live="polite">{loading ? t("search.loading") : updating ? t("entities.updating") : error ? t("common.error") : range}</p>
+    <p role="status" aria-live="polite">{loading ? t("search.loading") : updating ? t("entities.updating") : error ? renderServerError(error, t) : range}</p>
     {(error || updating) && <button type="button" onClick={reload}>{t("common.retry")}</button>}
     {!!error && <details><summary>{t("common.error")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details>}
     {page && <>

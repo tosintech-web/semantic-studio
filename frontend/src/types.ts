@@ -26,6 +26,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+export type { WireMessage } from "./i18n/server-contracts";
 import type { EntityMatchWire } from "./entities/types";
 import type { QueryState } from "./sparql/types";
 import {

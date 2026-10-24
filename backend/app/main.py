@@ -66,6 +66,8 @@ from typing import Optional
 # FastAPI is the web framework; CORSMiddleware allows the browser dev server
 # on a different port to call this API; StaticFiles serves the built frontend.
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -214,6 +216,18 @@ app.include_router(network.router)
 app.include_router(projects.router)
 app.include_router(data.router)
 app.include_router(examples.router)
+
+
+# Message metadata is additive: old detail strings/objects remain byte-for-byte
+# data values for older clients and technical detail disclosure.
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_message(_request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    wire = getattr(exc, "ui_message", None)
+    if wire is None:
+        return await http_exception_handler(_request, exc)
+    body = {"detail": exc.detail, "uiMessage": wire}
+    return JSONResponse(status_code=exc.status_code, content=body, headers=exc.headers)
 
 
 # The broker's three policy decisions, mapped once for every route. They can

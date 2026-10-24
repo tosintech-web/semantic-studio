@@ -8,7 +8,8 @@
 #     Specified by ci-and-housekeeping (backlog X-8).
 #
 # BASIC IDEA
-#     Four blocking jobs and one informational one. The backend runs twice:
+#     Publication checks plus four build/test jobs and one informational one.
+#     Publication also checks the committed message contract types. The backend runs twice:
 #     on Linux with Python 3.12, which is what the Docker image ships, and on
 #     Windows with Python 3.14, which is what the application is developed on.
 #     A pass on one says little about the other -- path separators, line
@@ -61,6 +62,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s scripts -p 'test_check_publication.py'
+      - run: python scripts/generate_message_contracts.py --check
       - name: Check selected Git blobs
         env:
           SCAN_REF: ${{ github.sha }}

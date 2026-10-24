@@ -53,6 +53,7 @@ from contextlib import contextmanager
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from ..messages import UiHTTPException
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
@@ -150,6 +151,8 @@ def _errors():
         # A restriction named by its content that is not there (axioms 5.10).
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (CommandError, ProjectError, ReasoningRefused) as exc:
+        if getattr(exc, "ui_message", None) is not None:
+            raise UiHTTPException(status_code=422, detail=str(exc), ui_message=exc.ui_message) from exc
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except reasoning.AlreadyRunning as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

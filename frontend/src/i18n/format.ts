@@ -28,12 +28,12 @@ export function translate(locale: UiLocale, code: string, args: Record<string, P
   const template = typeof local === "string" ? local : typeof english === "string" ? english : COMMON[locale];
   let valid = true;
   const rendered = template.replace(/\{(\w+)\}/g, (_placeholder, key: string) => {
-    if (!own(args, key) || !["string", "number", "boolean"].includes(typeof args[key])) {
+    if (!own(args, key) || (args[key] !== null && !["string", "number", "boolean"].includes(typeof args[key]))) {
       valid = false;
       return "";
     }
     const value = args[key];
-    return typeof value === "number" ? formatNumber(locale, value) : String(value);
+    return value === null ? translate(locale, "common.notSet") : typeof value === "number" ? formatNumber(locale, value) : String(value);
   });
   return valid ? rendered : COMMON[locale];
 }

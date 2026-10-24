@@ -201,7 +201,11 @@ CURIE = re.compile(r"([A-Za-z][A-Za-z0-9_.-]*)?:([^\s<>\"{}|\\^`:]*)")
 
 
 class CommandError(ValueError):
-    """A command refused, with the sentence the user reads."""
+    """A command refused, retaining its legacy sentence and optional UI facts."""
+
+    def __init__(self, message: str, *, ui_message: dict | None = None):
+        super().__init__(message)
+        self.ui_message = ui_message
 
 
 class AlreadyDefined(CommandError):

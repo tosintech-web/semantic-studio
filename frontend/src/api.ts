@@ -11,7 +11,8 @@ BASIC IDEA
     Keeping every fetch call here (rather than scattered in components) means
     URL shapes, request encoding and error handling live in one file. `handle`
     centralises turning a non-2xx response into a thrown Error carrying the
-    backend's `detail` message, so callers can just try/catch.
+    backend's `detail` message, so callers can just try/catch. Optional
+    uiMessage metadata is validated and retained for current-locale rendering.
 
     Every call that changes something on the server carries CLIENT_HEADER. The
     backend refuses a state-changing request without it (local_guard.py), which
@@ -54,6 +55,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { WireMessage } from "./i18n/server-contracts";
+import { validWireMessage } from "./i18n/serverMessage";
 import type { EntityPage, EntityParams } from "./entities/types";
 import type { QueryState } from "./sparql/types";
 import type {
@@ -133,15 +136,17 @@ export const CLIENT_HEADER = { "X-Semantic-Studio": "1" } as const;
  */
 export class ApiError extends Error {
   readonly status: number;
+  readonly uiMessage?: WireMessage;
   // The backend's `detail` as sent, for a caller that reads more than the
   // sentence: a workbook refused with its sheets (csv-data-import 5.8).
   readonly detail: unknown;
 
-  constructor(message: string, status: number, detail?: unknown) {
+  constructor(message: string, status: number, detail?: unknown, uiMessage?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.uiMessage = validWireMessage(uiMessage) ? uiMessage : undefined;
   }
 }
 
@@ -228,10 +233,12 @@ async function handle<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let detail = response.statusText;
     let raw: unknown;
+    let uiMessage: unknown;
     try {
       // Backend errors put a human message in { detail: ... }.
       const body = await response.json();
       raw = body?.detail;
+      uiMessage = body?.uiMessage ?? body?.detail?.uiMessage;
       if (body.detail?.code === "approval_required") {
         // Reached only with no dialog registered: say what was needed.
         const hosts = (body.detail.requests as ApprovalRequest[]).map((r) => r.host);
@@ -250,7 +257,7 @@ async function handle<T>(response: Response): Promise<T> {
     } catch {
       /* keep statusText */
     }
-    throw new ApiError(detail, response.status, raw);
+    throw new ApiError(detail, response.status, raw, uiMessage);
   }
   return response.json() as Promise<T>;
 }
@@ -772,8 +779,8 @@ export class TurtleError extends ApiError {
   readonly column: number | null;
   readonly detail: string;
 
-  constructor(message: string, line: number | null, column: number | null, detail: string) {
-    super(message, 422);
+  constructor(message: string, line: number | null, column: number | null, detail: string, uiMessage?: unknown) {
+    super(message, 422, detail, uiMessage);
     this.name = "TurtleError";
     this.line = line;
     this.column = column;
@@ -981,7 +988,7 @@ export async function applyDocumentSource(
     body: JSON.stringify({ text }),
   });
   if (response.status === 422) {
-    let body: { detail?: unknown } = {};
+    let body: { detail?: unknown; uiMessage?: unknown } = {};
     try {
       body = await response.clone().json();
     } catch {
@@ -996,6 +1003,7 @@ export async function applyDocumentSource(
         detail.line ?? null,
         detail.column ?? null,
         detail.detail ?? "",
+        body.uiMessage,
       );
     }
   }

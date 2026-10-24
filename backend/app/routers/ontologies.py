@@ -102,6 +102,7 @@ from starlette.concurrency import run_in_threadpool
 
 # Delegate the real work to the domain modules.
 from .. import parse_errors, provenance
+from ..messages import UiHTTPException, make_message
 from ..entity_views import (EntityPageTooLarge, EntityViewChanged, encode_entity_response,
                             entity_page, entity_search, get_entity_view)
 from ..docs_export import DocsExportError, build_zip
@@ -857,9 +858,9 @@ def get_node(
 
 def _entity_refusal(error: Exception):
     if isinstance(error, EntityPageTooLarge):
-        raise HTTPException(status_code=400, detail={"code": "ENTITY_PAGE_TOO_LARGE", "message": str(error),
+        raise UiHTTPException(status_code=400, ui_message=make_message("entities.page_too_large", total=error.total, suggested_limit=error.suggested_limit), detail={"code": "ENTITY_PAGE_TOO_LARGE", "message": str(error),
                             "total": error.total, "suggested_limit": error.suggested_limit}) from error
-    raise HTTPException(status_code=409, detail={"code": "ENTITY_VIEW_CHANGED", "message": "The dictionary is updating. Try again."}) from error
+    raise UiHTTPException(status_code=409, ui_message=make_message("entities.view_changed"), detail={"code": "ENTITY_VIEW_CHANGED", "message": "The dictionary is updating. Try again."}) from error
 
 
 @router.get("/{oid}/entities")

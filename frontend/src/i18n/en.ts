@@ -15,6 +15,14 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "parse.syntax": "Check the syntax of the {format} file (line: {line}).",
+  "model.invalid_value": "“{value}” is not a valid {datatype} value.",
+  "validation.min_count": "{name} needs at least {count} values.",
+  "reasoning.timeout": "Reasoning stopped after {seconds} seconds. Reduce the data or rules and try again.",
+  "entities.page_too_large": "The response is too large ({total} matching entries). Request at most {suggested_limit} entries or inspect the item details.",
+  "entities.view_changed": "The dictionary is changing. Retry to see its latest entries.",
+  "request.invalid": "Check the supplied values and try again.",
+
   "kind.class": "Class",
   "kind.objectProperty": "Object property",
   "kind.datatypeProperty": "Datatype property",

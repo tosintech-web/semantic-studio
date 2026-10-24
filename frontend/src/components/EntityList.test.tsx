@@ -14,6 +14,7 @@ EXPECTED OUTPUT
 */
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { I18nProvider } from "../i18n/I18nProvider";
 import EntityList from "./EntityList";
 import type { EntityPage } from "../entities/types";
@@ -60,4 +61,13 @@ it("moves focus to the heading after paging and exposes each row's actual kind",
   await setup(); expect(screen.getAllByText("Individual")).toHaveLength(50);
   fireEvent.click(screen.getByRole("button", { name: "Next page" })); await act(async () => {});
   expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Entities" }));
+});
+it("re-renders a server error when the user switches UI locale", async () => {
+  const error = Object.assign(new Error("Original English detail"), { uiMessage: { code: "reasoning.timeout", args: { seconds: 10 } } });
+  getEntities.mockRejectedValue(error); localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><EntityList {...props} /></I18nProvider>); await act(async () => {});
+  expect(screen.getByRole("status").textContent).toContain("推論を10秒で停止しました");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("status").textContent).toContain("Reasoning stopped after 10 seconds");
+  expect(screen.getByText("Original English detail")).toBeTruthy();
 });

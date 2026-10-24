@@ -114,3 +114,4 @@ def test_a_single_huge_iri_is_refused_without_cutting_it_or_dropping_the_row():
     detail = response.json()['detail']
     assert detail['code'] == 'ENTITY_PAGE_TOO_LARGE' and detail['total'] == 1 and detail['suggested_limit'] == 1
     assert 'details' in detail['message'].lower()
+    assert response.json()['uiMessage'] == {'code': 'entities.page_too_large', 'args': {'total': 1, 'suggested_limit': 1}}

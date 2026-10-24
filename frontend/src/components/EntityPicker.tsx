@@ -40,6 +40,7 @@ import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguag
 import { useEffect, useId, useRef, useState } from "react";
 import { useEntitySearch } from "../entities/useEntitySearch";
 import { useDictionaryView } from "../dictionary/DictionaryViewContext";
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import type { SearchKind, VizNode } from "../types";
 
@@ -120,7 +121,7 @@ export default function EntityPicker({
   };
 
   const errorId = `${id}-error`;
-  const shownError = error ?? (search.error ? t("common.error") : null);
+  const shownError = error ?? (search.error ? renderServerError(search.error, t) : null);
   return (
     <div className="entity-picker">
       <label htmlFor={`${id}-input`} className="edit-field-label">

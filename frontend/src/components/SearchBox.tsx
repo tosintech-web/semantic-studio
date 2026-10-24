@@ -52,6 +52,7 @@ EXPECTED OUTPUT
 import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useDictionaryView } from "../dictionary/DictionaryViewContext";
 import { useEntitySearch, SHOWN_RESULTS } from "../entities/useEntitySearch";
+import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -98,7 +99,7 @@ export default function SearchBox({ ontologyId, theme, onPick, drawnIds = null, 
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive(i => i <= 0 ? results.length - 1 : i - 1); }
     else if (e.key === "Enter" && active >= 0 && active < results.length) { e.preventDefault(); pick(results[active].id); }
   };
-  const status = !query.trim() || composing ? "" : loading ? t("search.loading") : error ? t("common.error") : more ? t("search.more", { count: SHOWN_RESULTS }) : results.length ? (results.length === 1 ? t("search.one") : t("search.count", { count: results.length })) : t("search.none");
+  const status = !query.trim() || composing ? "" : loading ? t("search.loading") : error ? renderServerError(error, t) : more ? t("search.more", { count: SHOWN_RESULTS }) : results.length ? (results.length === 1 ? t("search.one") : t("search.count", { count: results.length })) : t("search.none");
   return (
     <div className="search-box" ref={wrapRef}>
       <input type="search" role="combobox" aria-label={placeholder ?? t("search.prompt")}

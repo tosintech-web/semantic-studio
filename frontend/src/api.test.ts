@@ -691,3 +691,11 @@ describe("entity list API", () => {
     } finally { api.setDisplayLanguage(null); }
   });
 });
+
+it("retains additive server metadata on ApiError alongside the original detail", async () => {
+  const uiMessage = { code: "reasoning.timeout", args: { seconds: 10 } };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Original English.", uiMessage }), { status: 400 })));
+  const error = await api.getGraph("one").catch(e => e);
+  expect(error).toBeInstanceOf(api.ApiError); expect(error.message).toBe("Original English.");
+  expect(error.detail).toBe("Original English."); expect(error.uiMessage).toEqual(uiMessage);
+});
