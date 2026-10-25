@@ -461,3 +461,47 @@ it("renders an unsupported mapping's facts in the active locale without reloadin
   expect(screen.getByText("Original <img>{reason}", { selector: "pre" })).toBe(pre);
   expect(listData).toHaveBeenCalledTimes(calls);
 });
+
+
+it("rereads snapshot class names while preserving the mounted row and its controls", async () => {
+  await setup(undefined, true);
+  const row = document.querySelector(".snapshot-row");
+  const control = document.querySelector(".snapshot-row button") as HTMLButtonElement;
+  control.focus();
+  listData.mockResolvedValue({ generation: 1, snapshots: [{ ...SNAP, className: "人" }] });
+  await act(async () => { projectStore.setDisplayLanguage("ja"); });
+  expect(screen.getByText(/人：2,000件/)).toBeTruthy();
+  expect(document.querySelector(".snapshot-row")).toBe(row);
+  expect(document.activeElement).toBe(control);
+  const reads = listData.mock.calls.length;
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(listData).toHaveBeenCalledTimes(reads);
+  expect(updateData).not.toHaveBeenCalled(); expect(refreshData).not.toHaveBeenCalled();
+});
+
+
+it("keeps the previous list visible with a retry when a name refresh fails", async () => {
+  await setup(undefined, true);
+  const row = document.querySelector(".snapshot-row");
+  const cause = new ApiError("Original name read <img>{value}", 422, null, { code: "request.invalid", args: {} });
+  listData.mockRejectedValueOnce(cause);
+  await act(async () => { projectStore.setDisplayLanguage("ja"); });
+  expect(screen.getByText("データ一覧を読み込めませんでした。")).toBeTruthy();
+  expect(document.querySelector(".snapshot-row")).toBe(row);
+  const pre = screen.getByText("Original name read <img>{value}", { selector: "pre" });
+  const details = pre.closest("details")!;
+  fireEvent.click(details.querySelector("summary")!);
+  const reads = listData.mock.calls.length;
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(screen.getByText("The data snapshots could not be read.")).toBeTruthy();
+  expect(screen.getByText("Original name read <img>{value}", { selector: "pre" })).toBe(pre);
+  expect(details.open).toBe(true);
+  expect(listData).toHaveBeenCalledTimes(reads);
+  listData.mockResolvedValueOnce({ generation: 1, snapshots: [{ ...SNAP, className: "人" }] });
+  await press(screen.getByRole("button", { name: "Try again" }));
+  expect(screen.queryByText("The data snapshots could not be read.")).toBeNull();
+  expect(projectStore.getSnapshot().dataError).toBeNull();
+  expect(document.querySelector(".snapshot-row")).toBe(row);
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Data" }));
+  expect(document.querySelector("img")).toBeNull();
+});

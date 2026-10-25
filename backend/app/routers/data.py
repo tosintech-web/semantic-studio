@@ -298,10 +298,14 @@ async def import_data(
 
 
 @router.get("/{pid}/data")
-def list_data(pid: str) -> dict:
+def list_data(pid: str, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """The project's snapshots, each with its mapping's text for Edit as RML."""
     with _errors():
-        listing = editing_service.snapshots.listing(pid)
+        if lang is None:
+            listing = editing_service.snapshots.listing(pid)
+        else:
+            with editing_service.model_reader(pid, lang) as (_, _, names):
+                listing = editing_service.snapshots.listing(pid, names=names)
         for entry in listing["snapshots"]:
             try:
                 entry["mappingText"] = editing_service.snapshots.mapping_text(pid, entry["id"])

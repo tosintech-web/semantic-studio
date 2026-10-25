@@ -786,3 +786,14 @@ it("uses the explicit data-preview language while preserving the multipart mappi
     expect(JSON.parse(String(form.get("choices")))).toEqual(choices);
   } finally { api.setDisplayLanguage(null); }
 });
+
+
+it("sends a snapshot-list display preference without using a previous dictionary's global preference", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    await api.listData("prj-one", "ja");
+    await api.listData("prj-one");
+    expect(new URL(recorded[0].url,"http://localhost").searchParams.get("lang")).toBe("ja");
+    expect(new URL(recorded[1].url,"http://localhost").searchParams.get("lang")).toBeNull();
+  } finally { api.setDisplayLanguage(null); }
+});

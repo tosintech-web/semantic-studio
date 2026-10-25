@@ -34,7 +34,7 @@ INPUTS / INPUT SOURCES
       sends them.
 
 EXPECTED OUTPUT
-    - dataLabel, sampleWords, importedOn, rowList, previewSentences,
+    - dataClassName, dataLabel, sampleWords, importedOn, rowList, previewSentences,
       reportLines, unmatchedLines, reportWord, idProblems, typeWord;
       sheetOption and headerRowOption for a workbook's pickers (5.8), and
       rowLimitSentence from the actual inspection counts.
@@ -42,6 +42,8 @@ EXPECTED OUTPUT
 */
 
 import { translate } from "../i18n/format";
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import type { WireMessage } from "../i18n/server-contracts";
 import type { Translator, UiLocale } from "../i18n/types";
 import { a } from "./sentences";
 import { plural } from "./shapeSentences";
@@ -49,6 +51,13 @@ import type { DataInspection, DataSource, IdCheck, ImportReportData, PreviewRow,
 
 const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
+
+/** Ownership comes from server facts; an authored identical name stays literal. */
+export function dataClassName(value: { className?: string | null; classNameUiMessage?: WireMessage | null }, t: Translator): string {
+  const legacy = value.className ?? t("dataWords.defaultClass");
+  return validWireMessage(value.classNameUiMessage) ? renderServerMessage(value.classNameUiMessage, legacy, t) : legacy;
+}
+
 const TYPE_WORDS = {
   date: "date", dateTime: "dateTime", integer: "integer", decimal: "number",
   double: "number", float: "number", boolean: "boolean", gYear: "year",

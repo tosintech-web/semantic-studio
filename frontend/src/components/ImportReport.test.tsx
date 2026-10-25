@@ -59,3 +59,13 @@ it("does not announce a reopened report or offer missing next-step actions", () 
   expect(screen.queryByRole("button")).toBeNull();
   expect(screen.getByText("2行、項目を2件（サンプル：全12行のうち先頭2行）")).toBeTruthy();
 });
+
+
+it.each([
+  [undefined, "concept"],
+  [{ code: "words.kind.concept", args: {} }, "概念"],
+  [{ code: "unknown.concept", args: {} }, "concept"],
+] as const)("renders only a source-owned concept word and keeps authored or unknown names literal: %j", (message, name) => {
+  render(<I18nProvider><ImportReport snapshot={{ ...snapshot, className: "concept", classNameUiMessage: message }} announce /></I18nProvider>);
+  expect(screen.getByRole("status").textContent).toBe(`2行、${name}を2件（サンプル：全12行のうち先頭2行）`);
+});

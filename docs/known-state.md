@@ -2923,3 +2923,29 @@ while the explicitly selected dictionary language stays English.
 The existing Library language rule remains as specified: an unselected
 dictionary follows UI language, while an explicit per-dictionary choice
 survives UI-language changes and reloads.
+
+### Snapshot name reads belong to their request (P1)
+
+GET `/api/projects/{pid}/data?lang=…` projects class names and unmatched
+relationship target names from the open model. Summaries and unmatched rows
+are fresh objects, so the read never rewrites snapshot.json, source files,
+RML mappings, RDF, snapshot generations or project languages. Omitting `lang`
+keeps the original listing, including listing a closed project's saved data.
+Explicit live name selection requires the model to be open. Create, refresh
+and remap keep their original model-reader language order.
+
+The project store refreshes the snapshot list on a dictionary-language
+change, even while its first list is pending. Only the latest request for
+that project owner and language may publish data, errors or announcements.
+Closing/reopening the same project invalidates an older request too. A
+language-only refresh keeps mounted snapshot rows and controls, preserving
+focus. A failed refresh keeps those rows visible and shows the original error
+in a native disclosure with a retry; a successful retry removes the error and
+focuses the list heading. Changing UI language preserves the disclosure and
+only rerenders text, making no new list request.
+
+The taxonomy row kind has always used the app-owned legacy word "concept".
+Snapshot summaries and previews now attach classNameUiMessage for that source
+identity, without changing className or persisting a new field. The shared
+name renderer in preview, report and list translates valid metadata; authored
+identical names and unknown descriptors keep their original text.

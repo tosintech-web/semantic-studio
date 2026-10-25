@@ -4,6 +4,7 @@ FILE: backend/app/snapshots.py
 ================================================================================
 
 SUMMARY
+    Optional snapshot-list name projections never rewrite import metadata.
     Preview label projections preserve the original mapping suggestions and RDF.
     Data snapshots in a project (csv-data-import 5.3 to 5.7, D-096): what the
     wizard's steps 2 to 4 offer and preview, the import itself, and each
@@ -225,6 +226,7 @@ def summary(meta: dict, known: Optional[set] = None) -> dict:
         "enabled": meta.get("enabled", True),
         "className": meta.get("className"),
         "classIri": meta.get("classIri"),
+        **({"classNameUiMessage": make_message("words.kind.concept")} if meta.get("classIri") == str(SKOS.Concept) else {}),
         "statements": meta.get("statements", 0),
         "individuals": report.get("individuals", 0),
         "report": report,
@@ -642,12 +644,22 @@ class SnapshotService:
                     metas.append(self._read_meta(folder))
         return metas
 
-    def listing(self, pid: str) -> dict:
+    def listing(self, pid: str, names: Optional[Names] = None) -> dict:
         self.projects.folder(pid)
         with self._lock(pid):
             metas = self._metas(pid)
             known = _known(metas)
-            return {"generation": self.generation(pid), "snapshots": [summary(m, known) for m in metas]}
+            snapshots = [summary(m, known) for m in metas]
+            # Summaries and unmatched links are fresh read objects. Keep the
+            # original import metadata and mapping files exactly as saved.
+            if names is not None:
+                for entry in snapshots:
+                    iri = entry.get("classIri")
+                    if iri and iri != str(SKOS.Concept):
+                        entry["className"] = names(URIRef(iri))
+                    for link in entry["report"].get("unmatched", []):
+                        link["className"] = names(URIRef(link["classIri"]))
+            return {"generation": self.generation(pid), "snapshots": snapshots}
 
     def _summary(self, pid: str, meta: dict) -> dict:
         """summary() with the links counted against the project's snapshots
@@ -731,6 +743,8 @@ class SnapshotService:
             shown = [by_iri[field["property"]] for field in offered]
         result["fields"] = shown
         result["className"] = "concept" if cls == SKOS.Concept else reading_names(cls)
+        if cls == SKOS.Concept:
+            result["classNameUiMessage"] = make_message("words.kind.concept")
         metas: list = []
         patterns: dict = {}
         if pid is not None:

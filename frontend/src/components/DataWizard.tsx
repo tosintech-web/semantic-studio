@@ -89,6 +89,7 @@ import {
   withChoice,
 } from "../modeling/dataChoices";
 import {
+  dataClassName,
   dataLabel,
   headerRowOption,
   idProblems,
@@ -1225,7 +1226,7 @@ function PreviewStep({
     );
   }
   const report = preview.report;
-  const className = preview.className ?? t("dataWords.defaultClass");
+  const className = dataClassName(preview, t);
   const sample = inspection?.sample
     ? sampleWords({ rows: inspection.kept, total: inspection.total, sample: true }, locale)
     : null;

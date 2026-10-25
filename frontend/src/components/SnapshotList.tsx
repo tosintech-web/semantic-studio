@@ -54,7 +54,7 @@ import { useI18n } from "../i18n/I18nProvider";
 import { englishTranslator } from "../i18n/format";
 import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { makeUiMessage, renderUiMessage } from "../i18n/uiMessage";
-import { dataLabel, reportWord, rowLimitSentence } from "../modeling/dataSentences";
+import { dataClassName, dataLabel, reportWord, rowLimitSentence } from "../modeling/dataSentences";
 import { plural } from "../modeling/shapeSentences";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { DataInspection, SnapshotSummary, WorkbookInspection } from "../types";
@@ -100,32 +100,32 @@ export default function SnapshotList({ projectId, onWizard, onValidate, onShowDa
     if ((focusOnMount || retried.current) && loaded) headingRef.current?.focus();
     if (loaded) retried.current = false;
   }, [focusOnMount, loaded]);
-  if (data === null && dataError !== null) {
-    // Said once in the live region by the store; shown here so the tab
-    // offers a way on instead of reading for ever (PR #53 review).
-    const retry = () => {
-      if (retrying) return;
-      setRetrying(true);
-      retried.current = true;
-      projectStore
-        .loadData()
-        .catch(() => undefined)
-        .finally(() => setRetrying(false));
-    };
-    return (
-      <div className="snapshot-section">
-        <p className="detail-error">{t("dataSnapshot.readFailed")}</p>
-        {dataErrorCause?.error instanceof ApiError && dataErrorCause.error.uiMessage &&
-          <p className="detail-error">{renderServerError(dataErrorCause.error, t)}</p>}
-        <details><summary>{t("common.details")}</summary><pre>{dataErrorCause ? message(dataErrorCause.error) : dataError}</pre></details>
-        <p>
-          <button type="button" aria-disabled={retrying} onClick={retry}>
-            {retrying ? t("dataSnapshot.retrying") : t("dataSnapshot.retry")}
-          </button>
-        </p>
-      </div>
-    );
-  }
+  // A failed name refresh retains the last good rows and offers a retry.
+  const retry = () => {
+    if (retrying) return;
+    setRetrying(true);
+    retried.current = true;
+    projectStore.loadData().then(found => {
+      if (!found) {
+        retried.current = false;
+        return;
+      }
+      if (loaded) {
+        retried.current = false;
+        headingRef.current?.focus();
+      }
+    }).catch(() => { retried.current = false; }).finally(() => setRetrying(false));
+  };
+  const failure = dataError === null ? null : <div className="snapshot-list-error">
+    <p className="detail-error">{t("dataSnapshot.readFailed")}</p>
+    {dataErrorCause?.error instanceof ApiError && dataErrorCause.error.uiMessage &&
+      <p className="detail-error">{renderServerError(dataErrorCause.error, t)}</p>}
+    <details><summary>{t("common.details")}</summary><pre>{dataErrorCause ? message(dataErrorCause.error) : dataError}</pre></details>
+    <p><button type="button" aria-disabled={retrying} onClick={retry}>
+      {retrying ? t("dataSnapshot.retrying") : t("dataSnapshot.retry")}
+    </button></p>
+  </div>;
+  if (data === null && failure) return <div className="snapshot-section">{failure}</div>;
   if (data === null) {
     return (
       <p className="detail-note" role="status">
@@ -138,6 +138,7 @@ export default function SnapshotList({ projectId, onWizard, onValidate, onShowDa
       <h3 id={headingId} ref={headingRef} tabIndex={-1}>
         {t("dataSnapshot.title")}
       </h3>
+      {failure}
       <p>
         <button type="button" className="primary" onClick={() => onWizard({ kind: "new" })}>
           {t("dataSnapshot.import")}
@@ -187,7 +188,7 @@ function SnapshotRow({
   const [pending, setPending] = useState<{ file: File; inspection: DataInspection } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const outside = snapshot.mapping.status === "outside";
-  const kind = snapshot.className ?? t("dataWords.defaultClass");
+  const kind = dataClassName(snapshot, t);
   const made = t("dataSnapshot.made", { count: snapshot.individuals, kind: locale === "en" && snapshot.individuals !== 1 ? plural(kind) : kind });
 
   const run = async (what: string, work: () => Promise<void>) => {

@@ -3876,13 +3876,14 @@ class EditingService:
         return Context(document.graph, manifest, imported, document.doc, model, imported_from)
 
     @contextlib.contextmanager
-    def model_reader(self, pid: str):
+    def model_reader(self, pid: str, lang: Optional[str] = None):
         """(model with its imports, manifest, names) under the model's lock,
-        for the data wizard: what a row can be, and what a column can
+        for snapshot reads and the data wizard: what a row can be, and what a column can
         become, are the model's classes, attributes and relationships."""
         model_doc = self._project_documents(pid)["model"]
         manifest = self.projects.manifest(pid)
-        languages = [manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
+        languages = ([manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
+                     if lang is None else self.display_languages(pid, lang))
         with model_doc.lock:
             model = self._model_view(model_doc)
             yield model, manifest, lambda iri: pick_label_in(model, iri, languages)[0]

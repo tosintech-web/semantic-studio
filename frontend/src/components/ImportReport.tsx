@@ -29,7 +29,7 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
-import { dataLabel, reportLines } from "../modeling/dataSentences";
+import { dataClassName, dataLabel, reportLines } from "../modeling/dataSentences";
 import type { SnapshotSummary } from "../types";
 
 interface Props {
@@ -41,7 +41,7 @@ interface Props {
 
 export default function ImportReport({ snapshot, announce = false, onValidate, onShowData }: Props) {
   const { locale, t } = useI18n();
-  const [first, ...rest] = reportLines(snapshot.report, snapshot.className ?? t("dataWords.defaultClass"), snapshot, locale);
+  const [first, ...rest] = reportLines(snapshot.report, dataClassName(snapshot, t), snapshot, locale);
   return (
     <div className="import-report">
       <p className="data-label">{dataLabel(snapshot, locale)}</p>

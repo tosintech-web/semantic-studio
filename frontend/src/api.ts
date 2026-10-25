@@ -1186,8 +1186,8 @@ export function importData(
   return postForm(projectUrl(pid, "/data"), dataForm(file, { options, choices }));
 }
 
-export function listData(pid: string): Promise<SnapshotListing> {
-  return send(projectUrl(pid, "/data")).then((r) => handle<SnapshotListing>(r));
+export function listData(pid: string, displayLanguage?: string): Promise<SnapshotListing> {
+  return send(withLang(projectUrl(pid, "/data"), displayLanguage ?? "")).then((r) => handle<SnapshotListing>(r));
 }
 
 // Refresh (5.7): the same mapping on a new file, or `choices` for it after a

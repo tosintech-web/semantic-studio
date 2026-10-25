@@ -309,3 +309,54 @@ def test_preview_relationship_and_missing_target_names_use_the_read_language(pro
     assert result["rows"][0]["values"][0]["label"] == "つながり"
     assert result["report"]["unmatched"][0]["className"] == "分類D"
     assert result["report"]["unmatched"][0]["classIri"] == EX+"D"
+
+
+def test_snapshot_listing_names_follow_the_read_language_without_rewriting_saved_data():
+    pid = create_project()
+    try:
+        model = MODEL + '\nex:link a owl:ObjectProperty ; rdfs:domain ex:C ; rdfs:range ex:D ; rdfs:label "link"@en, "関連"@ja .'
+        assert client.put(f"/api/projects/{pid}/documents/model/source",json={"text":model}).status_code == 200
+        choices = {"classIri":EX+"C", "idColumn":"id", "columns":{"name":{"as":"name"},"field":{"as":"attribute", "property":EX+"p"},"link":{"as":"relationship", "property":EX+"link"}}}
+        imported = client.post(f"/api/projects/{pid}/data", files={"file":("synthetic.csv", b"id,name,field,link\n1,Synthetic,Value,99\n", "text/csv")}, data={"choices":json.dumps(choices)})
+        assert imported.status_code == 200, imported.text
+        sid = imported.json()["snapshot"]["id"]
+        folder = editing_service.snapshots.data_dir(pid)/sid
+        def stored(): return {str(p.relative_to(folder)):p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+        before = stored()
+        legacy = read(f"/api/projects/{pid}/data")
+        ja = read(f"/api/projects/{pid}/data?lang=ja")
+        assert ja["snapshots"][0]["className"] == "分類C"
+        link = ja["snapshots"][0]["report"]["unmatched"][0]
+        assert link["className"] == "分類D" and link["classIri"] == EX+"D"
+        assert legacy["snapshots"][0]["report"]["unmatched"][0]["className"] == "Class D"
+        assert read(f"/api/projects/{pid}/data?lang=en") == legacy
+        assert read(f"/api/projects/{pid}/data?lang=fr") == legacy
+        assert ja["generation"] == legacy["generation"]
+        assert ja["snapshots"][0]["mappingText"] == legacy["snapshots"][0]["mappingText"]
+        assert stored() == before
+        assert client.post(f"/api/projects/{pid}/close",json={"discard":True}).status_code == 200
+        assert read(f"/api/projects/{pid}/data")["snapshots"][0]["className"] == "Class C"
+    finally:
+        editing_service.close_all()
+
+
+@pytest.mark.parametrize("class_iri, expected", [("http://www.w3.org/2004/02/skos/core#Concept", {"code":"words.kind.concept", "args":{}}), (EX+"C", None)])
+def test_snapshot_concept_word_is_owned_by_its_class_identity_not_its_english_name(class_iri, expected):
+    from app.snapshots import summary
+    meta = {"id":"synthetic-abc123", "source":"synthetic.csv", "importedAt":"2026-10-25T00:00:00Z",
+            "rows":{"kept":1,"total":1}, "classIri":class_iri, "className":"concept"}
+    shown = summary(meta)
+    assert shown["className"] == "concept"
+    assert shown.get("classNameUiMessage") == expected
+    assert "classNameUiMessage" not in meta
+
+
+def test_taxonomy_preview_retains_the_legacy_concept_word_with_source_metadata(project):
+    from app import tabular
+    from rdflib.namespace import SKOS
+    with editing_service.model_reader(project) as (model, manifest, names):
+        shown = editing_service.snapshots.preview(model=model,manifest=manifest,names=names,
+            table=tabular.read_file(b"id,name\n1,Synthetic\n","synthetic.csv",{}),
+            choices={"classIri":str(SKOS.Concept),"idColumn":"id","columns":{"name":{"as":"name"}}})
+    assert shown["className"] == "concept"
+    assert shown.get("classNameUiMessage") == {"code":"words.kind.concept","args":{}}

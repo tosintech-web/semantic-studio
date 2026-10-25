@@ -4,6 +4,7 @@ FILE: frontend/src/types.ts
 ================================================================================
 
 SUMMARY
+    Snapshot/preview class names can identify an app-owned word beside legacy text.
     Approval facts optionally describe reasons, redirects and sent content.
     Import rows, limits and chosen-file failures carry optional source UI facts.
     Optional SERVICE error metadata remains additive to the original error string.
@@ -1359,6 +1360,7 @@ export interface WorkbookChoice {
 export interface SnapshotSummary extends DataSource {
   enabled: boolean;
   className: string | null;
+  classNameUiMessage?: WireMessage | null;
   classIri: string | null;
   statements: number;
   individuals: number;
@@ -1487,6 +1489,7 @@ export interface DataPreview {
   fields: DataField[];
   suggestions: Record<string, ColumnChoice>;
   className?: string;
+  classNameUiMessage?: WireMessage | null;
   rows?: PreviewRow[];
   report?: ImportReportData;
 }

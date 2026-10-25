@@ -14,7 +14,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { ReasoningResult, ValidationResult } from "../types";
+import type { ReasoningResult, SnapshotListing, ValidationResult } from "../types";
 const api = vi.hoisted(() => ({ openProject:vi.fn(), closeProject:vi.fn(), listData:vi.fn(),
   validateProject:vi.fn(), reasonProject:vi.fn(), getValidationResult:vi.fn(), getReasoningResult:vi.fn() }));
 vi.mock("../api", async original => ({ ...await original<typeof import("../api")>(), ...api }));
@@ -104,4 +104,46 @@ it("does not report an older name-read failure over a newer successful run",asyn
   await Promise.resolve();await Promise.resolve();await Promise.resolve();await Promise.resolve();
   expect(projectStore.getSnapshot().reasoning).toBe(fresh);
   expect(projectStore.getSnapshot().resultReadError).toBeNull();
+});
+
+
+it("refreshes snapshot names on a display choice and ignores the older language response", async () => {
+  const older = deferred<SnapshotListing>();
+  const current: SnapshotListing = { generation: 7, snapshots: [] };
+  api.listData.mockReturnValueOnce(older.promise).mockResolvedValue(current);
+  const pending = projectStore.loadData();
+  projectStore.setDisplayLanguage("ja");
+  await vi.waitFor(() => expect(projectStore.getSnapshot().data).toBe(current));
+  older.resolve({ generation: 3, snapshots: [] }); await pending;
+  expect(projectStore.getSnapshot().data).toBe(current);
+  expect(api.listData).toHaveBeenLastCalledWith(PID,"ja");
+  expect(api.validateProject).not.toHaveBeenCalled(); expect(api.reasonProject).not.toHaveBeenCalled();
+});
+
+it("ignores a snapshot list from before closing and reopening the same project", async () => {
+  const older = deferred<SnapshotListing>();
+  api.listData.mockReturnValueOnce(older.promise);
+  const pending = projectStore.loadData();
+  await projectStore.close(true);
+  const current: SnapshotListing = { generation: 9, snapshots: [] };
+  api.listData.mockResolvedValueOnce(current);
+  await projectStore.open(PID);
+  await vi.waitFor(() => expect(projectStore.getSnapshot().data).toBe(current));
+  older.resolve({ generation: 2, snapshots: [] }); await pending;
+  expect(projectStore.getSnapshot().data).toBe(current);
+});
+
+it("ignores an older snapshot-read failure after a newer listing succeeds", async () => {
+  const older = deferred<SnapshotListing>();
+  api.listData.mockReturnValueOnce(older.promise);
+  const pending = projectStore.loadData();
+  const current: SnapshotListing = { generation: 8, snapshots: [] };
+  api.listData.mockResolvedValueOnce(current);
+  await projectStore.loadData();
+  const notice = projectStore.getSnapshot().announcement.id;
+  older.reject(new Error("Old list error"));
+  await expect(pending).resolves.toBeNull();
+  expect(projectStore.getSnapshot().data).toBe(current);
+  expect(projectStore.getSnapshot().dataError).toBeNull();
+  expect(projectStore.getSnapshot().announcement.id).toBe(notice);
 });

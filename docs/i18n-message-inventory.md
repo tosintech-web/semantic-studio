@@ -2290,7 +2290,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `dataWords.rowName` | row | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
 | `dataWords.rows.one` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
 | `dataWords.rows.many` | count | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
-| `dataWords.defaultClass` | — | `frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/ImportReport.tsx`<br>`frontend/src/components/SnapshotList.tsx` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
+| `dataWords.defaultClass` | — | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
 | `dataWords.preview.skipped` | row | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
 | `dataWords.preview.class` | who, kind | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
 | `dataWords.preview.link` | who, name, value | `frontend/src/modeling/dataSentences.ts` | データ取り込みの説明 | 12 | 現在のUI言語で表示、元の値は保持 |
@@ -2570,7 +2570,7 @@ modelingの文法を伴うヘルパーは末尾のUI locale引数（省略時en�
 | `words.kind.datatypeProperty` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
 | `words.kind.annotationProperty` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
 | `words.kind.property` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
-| `words.kind.concept` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
+| `words.kind.concept` | — | `backend/app/editing.py` <br>`backend/app/snapshots.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
 | `words.kind.conceptScheme` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
 | `words.kind.example` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |
 | `words.kind.entity` | — | `backend/app/editing.py` | 条件付き操作の標準語 | 12 | 元の名称を保ち現在のUI言語で表示 |

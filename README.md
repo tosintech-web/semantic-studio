@@ -592,6 +592,10 @@ APIでは、プロジェクトの `/shapes`、`/shapes/suggestions`、`/validate
 省略時は従来の言語順序を保ちます。GET `/api/projects/{id}/validate` は
 最後の検証結果を返し、未検証なら `null` を返します。GETによる検証・推論
 結果の読み取りは、検証・推論そのものを実行しません。
+データ一覧の GET `/api/projects/{id}/data?lang=ja` も、開いているモデルから
+クラス名を読み替えます。`lang` を省略した一覧は、閉じたプロジェクトも従来どおり
+保存済みの名称で参照できます。一覧・プレビューの任意の `classNameUiMessage` は
+アプリが付けた種類名の翻訳用で、元の `className` や保存データは保持します。
 
 Every `POST`, `PUT` and `DELETE` must carry `X-Semantic-Studio: 1`, and every
 request must name a loopback `Host` (see *Other web pages in your browser*

@@ -4,7 +4,7 @@ FILE: frontend/src/state/projectStore.ts
 ================================================================================
 
 SUMMARY
-    Name-only result reads are scoped to their issuing owner, language and result.
+    Name-only result and snapshot reads are scoped to their owner, language and request.
     The open project and its documents, as a small external store read through
     useSyncExternalStore (D-084): which project is open, each document's
     revision and dirty flag, the undo and redo labels, the save status, the
@@ -273,6 +273,7 @@ let snapshot: ProjectSnapshot = EMPTY;
 // Which validation is the current one. Opening, closing or forgetting a
 // project moves it on, so a check still running for the old project is
 // ignored when it answers (shacl-authoring Stage A follow-up 3).
+let dataReadRun = 0;
 let resultReadRun = 0;
 let validationRun = 0;
 // The same for reasoning: a run that outlives its project is ignored.
@@ -488,6 +489,7 @@ export const projectStore = {
     validationRun++;
     reasoningRun++;
     resultReadRun++;
+    dataReadRun++;
     set({
       ...EMPTY,
       announcement: snapshot.announcement,
@@ -510,11 +512,15 @@ export const projectStore = {
    *  asked about is still the open one. */
   async loadData(): Promise<SnapshotListing | null> {
     const project = requireProject();
+    const run = ++dataReadRun;
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
+    const stale = () => run !== dataReadRun || snapshot.project?.id !== project.id
+      || (snapshot.displayLanguage ?? snapshot.project?.primaryLanguage) !== language;
     let listing: SnapshotListing;
     try {
-      listing = await listData(project.id);
+      listing = await listData(project.id, language);
     } catch (e) {
-      if (snapshot.project?.id !== project.id) return null;
+      if (stale()) return null;
       // Said in the live region and kept for the Data tab, which otherwise
       // read "Reading the project's data…" for ever (PR #53 review).
       const text = `The data snapshots could not be read: ${failureReason(e)}`;
@@ -522,7 +528,7 @@ export const projectStore = {
       announce(makeUiMessage("dataSnapshot.readFailed"), text);
       throw e;
     }
-    if (snapshot.project?.id !== project.id) return null;
+    if (stale()) return null;
     set({ data: listing, dataError: null, dataErrorCause: null });
     return listing;
   },
@@ -546,6 +552,7 @@ export const projectStore = {
     validationRun++;
     reasoningRun++;
     resultReadRun++;
+    dataReadRun++;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -556,6 +563,7 @@ export const projectStore = {
     validationRun++;
     reasoningRun++;
     resultReadRun++;
+    dataReadRun++;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -929,6 +937,7 @@ export const projectStore = {
     set({ displayLanguage: lang, resultReadError: null });
     announce(makeUiMessage("projectNotice.language", { language: lang }));
     void refreshResultNames();
+    if (snapshot.project) void projectStore.loadData().catch(() => undefined);
   },
 
   async setLanguages(languages: string[]): Promise<void> {
@@ -940,7 +949,10 @@ export const projectStore = {
         : updated.primaryLanguage;
     const previous = snapshot.displayLanguage;
     set({ project: updated, displayLanguage: display, resultReadError: null });
-    if (display !== previous) void refreshResultNames();
+    if (display !== previous) {
+      void refreshResultNames();
+      void projectStore.loadData().catch(() => undefined);
+    }
   },
 
   /** Register a pending-write flush, awaited before the project closes.
@@ -960,6 +972,7 @@ export const projectStore = {
     validationRun++;
     reasoningRun++;
     resultReadRun++;
+    dataReadRun++;
     creatingFrom = null;
     snapshot = EMPTY;
     setApiLanguage(null);
