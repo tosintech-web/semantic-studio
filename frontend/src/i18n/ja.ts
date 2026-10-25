@@ -15,6 +15,9 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "words.editing.the_shape": "この検証ルール",
+  "canvasUI.layoutFailed": "キャンバスの配置を保存できませんでした。図の位置は維持されています。",
+  "canvasUI.shownFailed": "キャンバスに表示する項目を変更できませんでした。",
   "network.reason.context": "開こうとしているファイルは、このサイトで公開されているJSON-LDコンテキストで用語を定義しています。",
   "network.reason.fetch": "指定されたアドレスからオントロジーを読み込みます。",
   "network.reason.service": "クエリの一部を実行するため、このサイトに問い合わせます。",

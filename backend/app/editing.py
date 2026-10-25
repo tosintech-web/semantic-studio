@@ -4,6 +4,7 @@ FILE: backend/app/editing.py
 ================================================================================
 
 SUMMARY
+    Unnamed-shape history/refusals preserve source ownership beside legacy names.
     The open project documents and every way one can change: typed commands
     producing triple deltas, a whole-document Turtle apply, undo and redo,
     save under formatting option A, autosave to a draft, and recovery from it
@@ -166,7 +167,7 @@ from typing import Callable, Iterable, Optional
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
-from .messages import literal_part, make_message, word_part
+from .messages import MessageText, literal_part, make_message, word_part
 from .graph_builder import (
     lang_matches,
     name_in,
@@ -2976,14 +2977,30 @@ def _shape(ctx: Context, a: dict, editable: bool = True):
         if not shape["editable"]:
             raise CommandError(
                 f"{shape['name']} is written in Turtle with parts the form cannot edit ({'; '.join(shape['unsupported'])}). Change it in the Turtle editor.",
-                ui_message=make_message('editing.guard.shape_readonly', name=shape['name'], count=len(shape['unsupported'])),
+                ui_message=make_message('editing.guard.shape_readonly', name=([word_part(shape["nameUiMessage"]["code"])]
+                      if shape.get("nameUiMessage") else shape["name"]),
+                    count=len(shape['unsupported'])),
             )
     return node
 
 
 def _shape_label(ctx: Context, node) -> str:
     label = ctx.graph.value(node, RDFS.label)
-    return str(label) if label is not None else ctx.short(node) if isinstance(node, URIRef) else "the shape"
+    if label is not None:
+        return str(label)
+    if isinstance(node, URIRef):
+        return ctx.short(node)
+    return MessageText("the shape", "words.editing.the_shape")
+
+
+def _shape_name_ui(name: str) -> str | list[dict]:
+    """Keep authored names literal and translate only a captured fallback.
+
+    The original reader already chose the name. Reusing its carrier avoids
+    another graph read and distinguishes an authored identical English label.
+    """
+    message = getattr(name, "ui_message", None)
+    return [word_part(message["code"])] if message is not None else name
 
 
 def _rdf_list(items: list) -> tuple:
@@ -3282,7 +3299,7 @@ def cmd_set_shape_target(ctx: Context, a: dict) -> Change:
         f"Made {_shape_label(ctx, node)} apply to {_model_name(ctx, target)}",
         [(node, SH.targetClass, target)],
         old,
-        ui_message=make_message("command.changed_shape_target", name=_shape_label(ctx, node), target=_model_name(ctx, target)),
+        ui_message=make_message("command.changed_shape_target", name=_shape_name_ui(_shape_label(ctx, node)), target=_model_name(ctx, target)),
     )
 
 
@@ -3300,7 +3317,7 @@ def cmd_set_shape_name(ctx: Context, a: dict) -> Change:
         f"Renamed shape {_shape_label(ctx, node)} to {value.strip()}",
         [(node, RDFS.label, Literal(value.strip(), lang=ctx.primary))],
         old,
-        ui_message=make_message("command.renamed_shape", old=_shape_label(ctx, node), new=value.strip()),
+        ui_message=make_message("command.renamed_shape", old=_shape_name_ui(_shape_label(ctx, node)), new=value.strip()),
     )
 
 
@@ -3323,7 +3340,7 @@ def cmd_set_shape_severity(ctx: Context, a: dict) -> Change:
         f"Made a failure of {_shape_label(ctx, node)} {word}",
         adds,
         removes,
-        ui_message=make_message("command.changed_shape_severity", name=_shape_label(ctx, node), severity=[word_part(f"words.severity.{severity}")]),
+        ui_message=make_message("command.changed_shape_severity", name=_shape_name_ui(_shape_label(ctx, node)), severity=[word_part(f"words.severity.{severity}")]),
     )
 
 
@@ -3340,20 +3357,20 @@ def cmd_set_shape_message(ctx: Context, a: dict) -> Change:
         if not old:
             raise CommandError(
                 f'{_shape_label(ctx, node)} has no message to remove.',
-                ui_message=make_message('editing.guard.shape_message_missing', name=_shape_label(ctx, node)),
+                ui_message=make_message('editing.guard.shape_message_missing', name=_shape_name_ui(_shape_label(ctx, node))),
             )
         return _change(
             ctx.graph,
             f"Removed the message of {_shape_label(ctx, node)}",
             removes=old,
-            ui_message=make_message("command.removed_shape_message", name=_shape_label(ctx, node)),
+            ui_message=make_message("command.removed_shape_message", name=_shape_name_ui(_shape_label(ctx, node))),
         )
     return _change(
         ctx.graph,
         f"Set the message of {_shape_label(ctx, node)}",
         [(node, SH.message, Literal(value.strip(), lang=ctx.primary))],
         old,
-        ui_message=make_message("command.changed_shape_message", name=_shape_label(ctx, node)),
+        ui_message=make_message("command.changed_shape_message", name=_shape_name_ui(_shape_label(ctx, node))),
     )
 
 
@@ -3395,7 +3412,7 @@ def cmd_add_rule(ctx: Context, a: dict) -> Change:
         f"Added a rule on {label} to {_shape_label(ctx, node)}",
         adds,
         removes,
-        ui_message=make_message("command.added_rule", shape_name=_shape_label(ctx, node), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+        ui_message=make_message("command.added_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
     )
 
 
@@ -3406,7 +3423,7 @@ def cmd_replace_rule(ctx: Context, a: dict) -> Change:
     if path not in rules:
         raise CommandError(
             f'{_shape_label(ctx, node)} has no rule on that path to change.',
-            ui_message=make_message('editing.guard.shape_path_missing_change', name=_shape_label(ctx, node)),
+            ui_message=make_message('editing.guard.shape_path_missing_change', name=_shape_name_ui(_shape_label(ctx, node))),
         )
     new_path, adds = _rule_triples(ctx, node, a.get("rule"), _severity_of(ctx, node))
     if new_path != path and new_path in rules:
@@ -3420,7 +3437,7 @@ def cmd_replace_rule(ctx: Context, a: dict) -> Change:
         f"Changed the rule on {label} of {_shape_label(ctx, node)}",
         adds,
         _rules_on(ctx, node, path),
-        ui_message=make_message("command.changed_rule", shape_name=_shape_label(ctx, node), path=shapes_form.path_parts(ctx.model, new_path, ctx.languages)),
+        ui_message=make_message("command.changed_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, new_path, ctx.languages)),
     )
 
 
@@ -3431,14 +3448,14 @@ def cmd_remove_rule(ctx: Context, a: dict) -> Change:
     if not removes:
         raise CommandError(
             f'{_shape_label(ctx, node)} has no rule on that path to remove.',
-            ui_message=make_message('editing.guard.shape_path_missing_remove', name=_shape_label(ctx, node)),
+            ui_message=make_message('editing.guard.shape_path_missing_remove', name=_shape_name_ui(_shape_label(ctx, node))),
         )
     label = shapes_form.path_label(ctx.model, path, ctx.languages)
     return _change(
         ctx.graph,
         f"Removed the rule on {label} from {_shape_label(ctx, node)}",
         removes=removes,
-        ui_message=make_message("command.removed_rule", shape_name=_shape_label(ctx, node), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+        ui_message=make_message("command.removed_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
     )
 
 
@@ -3455,7 +3472,7 @@ def cmd_delete_shape(ctx: Context, a: dict) -> Change:
         g,
         f"Deleted shape {_shape_label(ctx, node)}",
         removes=list(removes),
-        ui_message=make_message("command.deleted_shape", name=_shape_label(ctx, node)),
+        ui_message=make_message("command.deleted_shape", name=_shape_name_ui(_shape_label(ctx, node))),
     )
 
 
@@ -3508,12 +3525,12 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
             if all(existing.get(k) == v for k, v in plain.items()):
                 raise CommandError(
                     f'{shape_name} already checks this.',
-                    ui_message=make_message('editing.guard.check_exists', name=shape_name),
+                    ui_message=make_message('editing.guard.check_exists', name=_shape_name_ui(shape_name)),
                 )
             if any(k in existing and existing[k] != v for k, v in plain.items()):
                 raise CommandError(
                     f'{shape_name} already checks {path_label} differently; change that rule in the Shapes view.',
-                    ui_message=make_message('editing.guard.check_path_conflict', name=shape_name, path=shapes_form.path_parts(model, path, ctx.languages)),
+                    ui_message=make_message('editing.guard.check_path_conflict', name=_shape_name_ui(shape_name), path=shapes_form.path_parts(model, path, ctx.languages)),
                 )
             rule = _merged(existing, plain)
             removes = _rules_on(ctx, node, path)
@@ -3526,7 +3543,7 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
         if any(axioms.signature(ctx.graph, p) == wanted for p in ctx.graph.objects(node, SH.property)):
             raise CommandError(
                 f'{shape_name} already checks this.',
-                ui_message=make_message('editing.guard.check_exists', name=shape_name),
+                ui_message=make_message('editing.guard.check_exists', name=_shape_name_ui(shape_name)),
             )
         adds += [(node, SH.property, prop), *triples]
     _bind_shapes(ctx)
@@ -3535,7 +3552,7 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
         f"Added a check on {path_label} to {shape_name}",
         adds,
         removes,
-        ui_message=make_message("command.added_check", shape_name=shape_name, path=shapes_form.path_parts(model, path, ctx.languages)),
+        ui_message=make_message("command.added_check", shape_name=_shape_name_ui(shape_name), path=shapes_form.path_parts(model, path, ctx.languages)),
     )
 
 

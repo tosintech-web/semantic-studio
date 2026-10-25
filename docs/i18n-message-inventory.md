@@ -3302,3 +3302,8 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `network.sends.service` | — | `backend/app/network_broker.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
 | `network.approval.declined` | hosts | `frontend/src/api.ts` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
 | `words.host_separator` | — | `frontend/src/api.ts` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+
+| `canvasUI.layoutFailed` | — | `frontend/src/canvas/useCanvasData.ts` | キャンバスの配置保存失敗 | 11 | 原因・配置を保持し現在のUI言語で表示 |
+| `canvasUI.shownFailed` | — | `frontend/src/canvas/useCanvasData.ts` | 表示項目変更失敗 | 11 | 以前の表示集合と原文を保持 |
+
+| `words.editing.the_shape` | — | `backend/app/editing.py` | 名前のない検証ルールの履歴・拒否 | 12 | 登録名は元の文字列を保持し所有する既定名だけ翻訳 |

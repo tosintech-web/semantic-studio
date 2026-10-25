@@ -4,6 +4,7 @@ FILE: frontend/src/canvas/ModelCanvas.tsx
 ================================================================================
 
 SUMMARY
+    Target-owned canvas state and localized failures with retained original details.
     The modeling canvas (visual-modeling 5.4 to 5.6, D-086): a project's
     model.ttl drawn as boxes and lines on React Flow, between the outline and
     the side panel on the Edit page. Drag a Class or a Concept from the Add
@@ -151,6 +152,7 @@ import { Legend, TipCard, type LegendLine } from "./CanvasAids";
 import type { LineKind } from "./kindColours";
 import { BOX_HEIGHT, freeSpot } from "./layered";
 import RelateMenu from "./RelateMenu";
+import OperationError from "../components/OperationError";
 import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { translate } from "../i18n/format";
@@ -961,7 +963,7 @@ function Canvas(props: ModelCanvasProps) {
     return (
       <section className="model-canvas canvas-message" aria-label={t("canvasUI.name")}>
         <p>{t("canvasUI.failed")}</p>
-        <p className="detail-note">{data.error}</p>
+        <OperationError key={data.error.token} className="detail-note" failure={data.error} />
         <button type="button" className="ghost" onClick={data.retry}>
           {t("canvasUI.retry")}
         </button>
@@ -985,7 +987,7 @@ function Canvas(props: ModelCanvasProps) {
   const drawnPlace = draft && place?.token === draft.token ? place.at : null;
   const draftNode = drawnPlace ? flow.flowToScreenPosition({ x: drawnPlace[0], y: drawnPlace[1] }) : null;
   const origin = wrapper.current?.getBoundingClientRect();
-  const refused = errors.rename || errors.attribute || errors.edge || data.saveError || "";
+  const refused = errors.rename || errors.attribute || errors.edge || "";
 
   return (
     <section className="model-canvas" aria-label={t("canvasUI.name")} aria-busy={busy} ref={section} tabIndex={-1}>
@@ -1083,6 +1085,9 @@ function Canvas(props: ModelCanvasProps) {
       <p className="canvas-hint" role="status">
         {busy ? t("canvasMenu.saving") : hintText() || refused}
       </p>
+      <div className="canvas-save-error" aria-live="polite">
+        {data.saveError && <OperationError key={data.saveError.token} failure={data.saveError} />}
+      </div>
       {otherNote && <p className="detail-note canvas-other-kind">{otherNote}</p>}
       {view.limited && (
         <p className="detail-note canvas-limited">
@@ -1346,10 +1351,12 @@ function label(view: CanvasView, iri: string): string {
   return view.nodes.find((n) => n.iri === iri)?.label ?? iri;
 }
 
-/** The lazily loaded module's one export. */
+/** Each project/document owns its provider, layout and pending saves. A new
+ *  target cannot inherit the previous canvas or its late save generation.
+ *  UI language and display language keep the same owner and layout. */
 export default function ModelCanvas(props: ModelCanvasProps) {
   return (
-    <ReactFlowProvider>
+    <ReactFlowProvider key={JSON.stringify([props.projectId, props.doc])}>
       <Canvas {...props} />
     </ReactFlowProvider>
   );

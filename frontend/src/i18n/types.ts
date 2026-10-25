@@ -16,6 +16,8 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "canvasUI.layoutFailed": undefined;
+  "canvasUI.shownFailed": undefined;
   "queryPanel.tooLargeRun": { limit: number };
   "queryPanel.tooLargeOpen": { limit: number };
   "queryPanel.notUtf8": undefined;

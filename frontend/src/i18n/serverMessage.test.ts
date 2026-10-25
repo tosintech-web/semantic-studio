@@ -303,3 +303,11 @@ it("renders declined host facts in either language with literal names and a tran
   expect(renderServerMessage(wire, "Legacy", translator("ja"))).toBe("first.example、second.<img>{raw}への接続を許可しなかったため、この要求では何も送信していません。");
   expect(renderServerMessage(wire, "Legacy", translator("en"))).toBe("Semantic Studio did not connect to first.example, second.<img>{raw}, so nothing was sent.");
 });
+
+it("localizes an unnamed shape in history while an identical authored name remains literal", () => {
+  const wire = { code: "command.changed_shape_message", args: { name: [{ code: "words.editing.the_shape", args: {} }] } };
+  expect(renderServerMessage(wire, "Set the message of the shape", translator("ja"))).toBe("ルールセット「この検証ルール」のメッセージの設定");
+  expect(renderServerMessage(wire, "Set the message of the shape", translator("en"))).toBe("Set the message of the shape");
+  const authored = { code: "command.changed_shape_message", args: { name: "the shape" } };
+  expect(renderServerMessage(authored, "", translator("ja"))).toBe("ルールセット「the shape」のメッセージの設定");
+});

@@ -473,6 +473,8 @@ leaves one behind.
 - Unsupported reason metadata follows the deduplicated legacy strings, and metadata-only names never allocate namespace prefixes. [Shape-form integer precision]
 
 **Edit page**
+- Canvas state belongs to a project/document provider; late saves must not change the next target's failure or generation. UI language does not change that owner. [Canvas failures belong]
+- Unnamed-shape metadata uses the captured fallback carrier; authored identical English names stay literal. [Editing keeps unnamed shapes distinct]
 - An outline section clips its content; open sections have a 120 px minimum and are capped at their rows. [Edit page]
 - One draft, in the project store: the canvas box and the side panel's form share its name; the store makes it in one command. [Edit page]
 - Cancel gives focus back where a draft began, or to the control now standing there (`data-create-from`), never the page. [Edit page]

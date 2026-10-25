@@ -5,6 +5,7 @@ FILE: frontend/src/canvas/ModelCanvas.test.tsx
 ================================================================================
 
 SUMMARY
+    Failures retain causes across UI locales and cannot cross project/document owners.
     The modeling canvas (visual-modeling Stage 2, AC-10 to AC-14): what it
     draws and how it names it, the empty, too-big and error states, the
     palette, a drop onto a class, the relate menu and its refusal explanations
@@ -985,7 +986,8 @@ describe("PR #47 review", () => {
     await act(async () => {
       vi.advanceTimersByTime(1100);
     });
-    expect(screen.getByText(/The canvas layout could not be saved: The disk is full\./)).toBeTruthy();
+    expect(screen.getByText("The canvas layout could not be saved. Your boxes stay where they are.")).toBeTruthy();
+    expect(screen.getByText("The disk is full.").closest("details")).toBeTruthy();
     // A refetch that does not know the move keeps it.
     getCanvas.mockResolvedValue(viewOf({ revision: 3 }));
     await act(async () => {
@@ -1029,7 +1031,8 @@ describe("PR #47 review", () => {
     await act(async () => {
       await expect(set.show(EX + "Invoice")).resolves.toBeUndefined();
     });
-    expect(screen.getByText("The canvas could not change what it shows: Refused.")).toBeTruthy();
+    expect(screen.getByText("The canvas could not change what it shows.")).toBeTruthy();
+    expect(screen.getByText("Refused.").closest("details")).toBeTruthy();
     const after = onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0];
     expect(after.shown).toEqual([]);
     expect(getCanvas).not.toHaveBeenCalled();
@@ -2032,4 +2035,125 @@ it("rewords a read-only explanation and selected-line hint in the current langua
   expect(document.querySelector(".canvas-hint")?.textContent).toBe("「PaidはStatusより狭い概念です」を選択しています。Deleteで削除できます。");
   expect(runCommand).not.toHaveBeenCalled();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps a canvas read failure as original details while UI language and retry change", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const raw = "Original canvas read <img>{cause}";
+  getCanvas.mockRejectedValueOnce(new Error(raw));
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  });
+  expect(screen.getByText("操作を完了できませんでした。詳細を確認してください。")).toBeTruthy();
+  const details = screen.getByText(raw).closest("details");
+  expect(details).not.toBeNull();
+  fireEvent.click(details!.querySelector("summary")!);
+  details!.querySelector("summary")!.focus();
+  const calls = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(details!.open).toBe(true);
+  expect(document.activeElement).toBe(details!.querySelector("summary"));
+  expect(getCanvas.mock.calls.length).toBe(calls);
+  expect(document.querySelector("img")).toBeNull();
+  getCanvas.mockResolvedValue(viewOf());
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Retry" })); });
+  expect(screen.queryByText(raw)).toBeNull();
+  expect(box("Document")).toBeTruthy();
+});
+
+it("renders a layout save failure and its server reason per locale without moving boxes or retrying", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf());
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  });
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  const raw = "Original layout limit <img>{cause}";
+  putLayout.mockRejectedValueOnce(Object.assign(new Error(raw), { uiMessage: { code: "request.layout_limit", args: { limit: 9 } } }));
+  await act(async () => {
+    flow.props.onNodesChange([{ type: "position", id: EX + "Paid", position: { x: 900, y: 9 }, dragging: false }]);
+  });
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  expect(screen.getByText("キャンバスの配置を保存できませんでした。図の位置は維持されています。")).toBeTruthy();
+  expect(screen.getByText("レイアウトの容量は9バイトまでです。")).toBeTruthy();
+  const details = screen.getByText(raw).closest("details")!;
+  expect(details).not.toBeNull();
+  fireEvent.click(details.querySelector("summary")!);
+  details.querySelector("summary")!.focus();
+  const calls = putLayout.mock.calls.length;
+  const reads = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("The canvas layout could not be saved. Your boxes stay where they are.")).toBeTruthy();
+  expect(screen.getByText("A layout may contain at most 9 bytes.")).toBeTruthy();
+  expect(details.open).toBe(true);
+  expect(document.activeElement).toBe(details.querySelector("summary"));
+  expect(putLayout.mock.calls.length).toBe(calls);
+  expect(getCanvas.mock.calls.length).toBe(reads);
+  expect((flow.props.nodes as any[]).find(n => n.id === EX + "Paid").position).toEqual({ x: 900, y: 9 });
+  await act(async () => { await projectStore.flushAll(); });
+  expect(screen.queryByText(raw)).toBeNull();
+});
+
+it("keeps a failed shown-set change and its raw cause without another request on locale change", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf({ limited: true, nodes: [], edges: [], undrawn: [], layout: { version: 1, generation: 0, positions: {}, shown: [], viewport: null } }));
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} onCanvasSet={onCanvasSet} /></I18nProvider>);
+  });
+  const raw = "Original shown-set refusal <img>{cause}";
+  putLayout.mockRejectedValueOnce(new Error(raw));
+  await act(async () => { await onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0].show(EX + "Invoice"); });
+  expect(screen.getByText("キャンバスに表示する項目を変更できませんでした。")).toBeTruthy();
+  const details = screen.getByText(raw).closest("details")!;
+  expect(details).not.toBeNull();
+  const calls = putLayout.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("The canvas could not change what it shows.")).toBeTruthy();
+  expect(onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0].shown).toEqual([]);
+  expect(putLayout.mock.calls.length).toBe(calls);
+  fireEvent.click(details.querySelector("summary")!);
+  expect(details.open).toBe(true);
+  putLayout.mockRejectedValueOnce(new Error("Second shown refusal"));
+  await act(async () => { await onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0].show(EX + "Invoice"); });
+  const next = screen.getByText("Second shown refusal").closest("details")!;
+  expect(next).not.toBe(details);
+  expect(next.open).toBe(false);
+  expect(screen.queryByText(raw)).toBeNull();
+  expect(putLayout.mock.calls.length).toBe(calls + 1);
+});
+
+it.each(["project", "document"])("hides old canvas data while a different %s is being read", async (kind) => {
+  const view = await renderCanvas();
+  getCanvas.mockImplementationOnce(() => new Promise(() => {}));
+  await act(async () => {
+    view.rerender(<ModelCanvas projectId={kind === "project" ? "second-project" : PID} doc={kind === "document" ? "shapes" : "model"} revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} />);
+  });
+  expect(document.querySelectorAll(".react-flow__node")).toHaveLength(0);
+  expect(screen.getByRole("region", { name: "Modeling canvas" }).getAttribute("aria-busy")).toBe("true");
+});
+
+it.each(["success", "failure"])("ignores an old project's late save %s after the canvas target changes", async (result) => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const view = await renderCanvas();
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  let resolve!: (value: any) => void;
+  let reject!: (error: Error) => void;
+  putLayout.mockImplementationOnce(() => new Promise((yes, no) => { resolve = yes; reject = no; }));
+  await act(async () => {
+    flow.props.onNodesChange([{ type: "position", id: EX + "Document", position: { x: 900, y: 9 }, dragging: false }]);
+  });
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  const newer = viewOf({ nodes: [viewOf().nodes[0]], edges: [], undrawn: [], total: 1, layout: { version: 1, generation: 0, positions: { [EX + "Document"]: [777, 7] }, shown: null, viewport: null } });
+  getCanvas.mockResolvedValue(newer);
+  const props = { projectId: "second-project", doc: "model" as const, language: "en", primaryLanguage: "en", selected: null, onSelect, onDeleted };
+  await act(async () => { view.rerender(<ModelCanvas {...props} revision={2} />); });
+  await act(async () => {
+    if (result === "success") resolve({ generation: 100 });
+    else reject(new Error("Old project save refused"));
+  });
+  expect(screen.queryByText(/Old project save refused/)).toBeNull();
+  getCanvas.mockResolvedValue({ ...newer, revision: 3, layout: { ...newer.layout, generation: 1, positions: { [EX + "Document"]: [888, 8] } } });
+  await act(async () => { view.rerender(<ModelCanvas {...props} revision={3} />); });
+  expect((flow.props.nodes as any[]).find(n => n.id === EX + "Document").position).toEqual({ x: 888, y: 8 });
 });

@@ -4,6 +4,7 @@ FILE: frontend/src/canvas/useCanvasData.ts
 ================================================================================
 
 SUMMARY
+    Canvas failures retain causes and typed facts, independent of UI language.
     The modeling canvas's data (visual-modeling 5.4 to 5.6): the view fetched
     for each revision and display language, every box's position, and the
     layout saved a second after the last move. Also the shown set past 300
@@ -67,6 +68,8 @@ EXPECTED OUTPUT
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { OperationFailure } from "../i18n/operationFailure";
+import { makeUiMessage } from "../i18n/uiMessage";
 import { getCanvas, putLayout } from "../api";
 import type { CanvasLayout, CanvasView, ProjectDocName } from "../types";
 import { layered, placeMissing, type Box, type Link, type Positions } from "./layered";
@@ -84,9 +87,7 @@ function links(view: CanvasView): Link[] {
     .map((e) => ({ child: e.source, parent: e.target }));
 }
 
-function message(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
+type CanvasFailure = OperationFailure & { token: number };
 
 export function useCanvasData(
   projectId: string,
@@ -98,8 +99,9 @@ export function useCanvasData(
   // The result's token too: a new run on the same basis brings new lines.
   const inferredKey = inferred ? `on|${inferred.imports}|${inferred.token ?? 0}` : "off";
   const [view, setView] = useState<CanvasView | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [error, setError] = useState<CanvasFailure | null>(null);
+  const [saveError, setSaveError] = useState<CanvasFailure | null>(null);
+  const failureSerial = useRef(0);
   const [attempt, setAttempt] = useState(0);
   const [positions, setPositions] = useState<Positions>({});
   const [shown, setShownState] = useState<string[] | null>(null);
@@ -133,7 +135,7 @@ export function useCanvasData(
       try {
         settle((await putLayout(projectId, doc, sent))?.generation);
       } catch (e) {
-        setSaveError(`The canvas layout could not be saved: ${message(e)} Your boxes stay where they are.`);
+        setSaveError({ cause: e, message: makeUiMessage("canvasUI.layoutFailed"), token: ++failureSerial.current });
         return;
       }
       setSaveError(null);
@@ -209,7 +211,7 @@ export function useCanvasData(
         setView(fetched);
         if (added.length) scheduleSave();
       })
-      .catch((e: unknown) => !cancelled && setError(message(e)));
+      .catch((e: unknown) => !cancelled && setError({ cause: e, token: ++failureSerial.current }));
     return () => {
       cancelled = true;
     };
@@ -256,7 +258,7 @@ export function useCanvasData(
       } catch (e) {
         current.shown = before;
         setShownState(before);
-        setSaveError(`The canvas could not change what it shows: ${message(e)}`);
+        setSaveError({ cause: e, message: makeUiMessage("canvasUI.shownFailed"), token: ++failureSerial.current });
         return;
       }
       current.shown = next;

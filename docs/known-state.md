@@ -2831,3 +2831,41 @@ the unchanged ApiError message/status. The explanation and host separator render
 in the current locale without another request. Recording-server tests prove a
 redirect target sees zero requests before approval. The full browser keyboard/AX
 check and stale-operation lifecycle checks remain part of the final P1 gate.
+
+### Canvas failures belong to their target (P1)
+
+The canvas's read, layout-save and shown-set failures retain their original
+cause. Save failures carry a typed client context; a known server reason appears
+in the current UI language beside it, and original details stay escaped in a
+native disclosure. Language changes do not fetch, save or move boxes. A new
+failure resets its disclosure; changing the language preserves the current
+failure's disclosure and focus. The save notice's polite live container exists
+before the message arrives.
+
+ModelCanvas keys its React Flow provider by project and document, keeping the
+provider, hook refs, pending saves and rendered view with their owner. Previously
+a target change retained the previous view until the new fetch finished, and a
+late save could put its failure or saved generation into the next target. A
+remount prevents both, including a late success that would have made the next
+target's fresh layout look stale. UI/display language and ordinary revisions do
+not change this key. The debounce, flush-on-close, generation comparison, unsaved
+position tracking and RDF commands remain as before. Mounted tests reproduce
+both project/document switches and late save success/failure, and retain moved
+boxes after a failed save through a successful retry. Real browser focus/AX
+verification remains part of the P1 final gate.
+
+### Editing keeps unnamed shapes distinct from authored names (P1)
+
+The existing shape reader already distinguished its unnamed default through
+nameUiMessage, and the form/list already rendered it. Editing history and
+refusals still captured the separate "the shape" fallback as literal data.
+The original name reader now gives only that fallback a MessageText carrier;
+metadata projects its word token without another graph read. Authored names,
+including identical "the shape" and "Unnamed shape" labels, stay literal.
+The read-only edit guard forwards ownership from the existing shape reading.
+Seventeen metadata sites in sixteen message fields permit either a literal
+string or flat word parts; legacy English labels and details stay unchanged.
+A differential check of 38 synthetic command/refusal cases against the previous
+commit finds identical legacy text/codes and isomorphic resulting RDF, including
+Japanese label/message writes. The model, graph comparisons and command deltas
+are unchanged.

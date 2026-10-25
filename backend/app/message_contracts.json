@@ -141,43 +141,73 @@
     "words.severity.violation": {},
     "words.severity.warning": {},
     "command.added_rule": {
-      "shape_name": "string",
+      "shape_name": [
+        "string",
+        "parts"
+      ],
       "path": "parts"
     },
     "command.created_shape": {
       "name": "string"
     },
     "command.changed_shape_target": {
-      "name": "string",
+      "name": [
+        "string",
+        "parts"
+      ],
       "target": "string"
     },
     "command.renamed_shape": {
-      "old": "string",
+      "old": [
+        "string",
+        "parts"
+      ],
       "new": "string"
     },
     "command.changed_shape_severity": {
-      "name": "string",
+      "name": [
+        "string",
+        "parts"
+      ],
       "severity": "parts"
     },
     "command.removed_shape_message": {
-      "name": "string"
+      "name": [
+        "string",
+        "parts"
+      ]
     },
     "command.changed_shape_message": {
-      "name": "string"
+      "name": [
+        "string",
+        "parts"
+      ]
     },
     "command.changed_rule": {
-      "shape_name": "string",
+      "shape_name": [
+        "string",
+        "parts"
+      ],
       "path": "parts"
     },
     "command.removed_rule": {
-      "shape_name": "string",
+      "shape_name": [
+        "string",
+        "parts"
+      ],
       "path": "parts"
     },
     "command.deleted_shape": {
-      "name": "string"
+      "name": [
+        "string",
+        "parts"
+      ]
     },
     "command.added_check": {
-      "shape_name": "string",
+      "shape_name": [
+        "string",
+        "parts"
+      ],
       "path": "parts"
     },
     "words.list.and": {},
@@ -795,7 +825,10 @@
       "second": "string"
     },
     "editing.guard.shape_readonly": {
-      "name": "string",
+      "name": [
+        "string",
+        "parts"
+      ],
       "count": "number"
     },
     "editing.guard.field_nonnegative_integer": {
@@ -822,22 +855,37 @@
     },
     "editing.guard.pattern_invalid": {},
     "editing.guard.shape_message_missing": {
-      "name": "string"
+      "name": [
+        "string",
+        "parts"
+      ]
     },
     "editing.guard.shape_path_exists": {
       "path": "parts"
     },
     "editing.guard.shape_path_missing_change": {
-      "name": "string"
+      "name": [
+        "string",
+        "parts"
+      ]
     },
     "editing.guard.shape_path_missing_remove": {
-      "name": "string"
+      "name": [
+        "string",
+        "parts"
+      ]
     },
     "editing.guard.check_exists": {
-      "name": "string"
+      "name": [
+        "string",
+        "parts"
+      ]
     },
     "editing.guard.check_path_conflict": {
-      "name": "string",
+      "name": [
+        "string",
+        "parts"
+      ],
       "path": "parts"
     },
     "editing.guard.unknown_command": {
@@ -1640,6 +1688,7 @@
     "network.sends.context": {},
     "network.sends.service": {},
     "network.approval.declined": {"hosts": "parts"},
-    "words.host_separator": {}
+    "words.host_separator": {},
+    "words.editing.the_shape": {}
   }
 }

@@ -22,7 +22,10 @@ export const SERVER_CONTRACTS = {
   },
   "command.added_check": {
     "path": "parts",
-    "shape_name": "string"
+    "shape_name": [
+      "string",
+      "parts"
+    ]
   },
   "command.added_disjoint": {
     "first": "string",
@@ -51,7 +54,10 @@ export const SERVER_CONTRACTS = {
   },
   "command.added_rule": {
     "path": "parts",
-    "shape_name": "string"
+    "shape_name": [
+      "string",
+      "parts"
+    ]
   },
   "command.added_subclass": {
     "child": "string",
@@ -76,17 +82,29 @@ export const SERVER_CONTRACTS = {
   },
   "command.changed_rule": {
     "path": "parts",
-    "shape_name": "string"
+    "shape_name": [
+      "string",
+      "parts"
+    ]
   },
   "command.changed_shape_message": {
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "command.changed_shape_severity": {
-    "name": "string",
+    "name": [
+      "string",
+      "parts"
+    ],
     "severity": "parts"
   },
   "command.changed_shape_target": {
-    "name": "string",
+    "name": [
+      "string",
+      "parts"
+    ],
     "target": "string"
   },
   "command.cleared_domain": {
@@ -125,7 +143,10 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "command.deleted_shape": {
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "command.linked_example_value": {
     "property": "string",
@@ -188,10 +209,16 @@ export const SERVER_CONTRACTS = {
   },
   "command.removed_rule": {
     "path": "parts",
-    "shape_name": "string"
+    "shape_name": [
+      "string",
+      "parts"
+    ]
   },
   "command.removed_shape_message": {
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "command.removed_subclass": {
     "child": "string",
@@ -207,7 +234,10 @@ export const SERVER_CONTRACTS = {
   },
   "command.renamed_shape": {
     "new": "string",
-    "old": "string"
+    "old": [
+      "string",
+      "parts"
+    ]
   },
   "command.set_comment": {
     "language": "string",
@@ -327,10 +357,16 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "editing.guard.check_exists": {
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "editing.guard.check_path_conflict": {
-    "name": "string",
+    "name": [
+      "string",
+      "parts"
+    ],
     "path": "parts"
   },
   "editing.guard.class_rule_exists": {
@@ -569,20 +605,32 @@ export const SERVER_CONTRACTS = {
     "field": "parts"
   },
   "editing.guard.shape_message_missing": {
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "editing.guard.shape_path_exists": {
     "path": "parts"
   },
   "editing.guard.shape_path_missing_change": {
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "editing.guard.shape_path_missing_remove": {
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "editing.guard.shape_readonly": {
     "count": "number",
-    "name": "string"
+    "name": [
+      "string",
+      "parts"
+    ]
   },
   "editing.guard.shape_target_missing": {
     "name": "string"
@@ -2001,6 +2049,7 @@ export const SERVER_CONTRACTS = {
   "words.characteristic.reflexive": {},
   "words.characteristic.symmetric": {},
   "words.characteristic.transitive": {},
+  "words.editing.the_shape": {},
   "words.field.allowed_languages": {},
   "words.field.annotation_property": {},
   "words.field.attribute_relationship": {},
@@ -2735,6 +2784,7 @@ export interface ServerMessageArgs {
   "words.characteristic.reflexive": undefined;
   "words.characteristic.symmetric": undefined;
   "words.characteristic.transitive": undefined;
+  "words.editing.the_shape": undefined;
   "words.field.allowed_languages": undefined;
   "words.field.annotation_property": undefined;
   "words.field.attribute_relationship": undefined;

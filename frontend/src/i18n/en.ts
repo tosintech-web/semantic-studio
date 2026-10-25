@@ -15,6 +15,9 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "words.editing.the_shape": "the shape",
+  "canvasUI.layoutFailed": "The canvas layout could not be saved. Your boxes stay where they are.",
+  "canvasUI.shownFailed": "The canvas could not change what it shows.",
   "network.reason.context": "The file you are opening defines its terms in a JSON-LD context published on this site.",
   "network.reason.fetch": "You asked Semantic Studio to load an ontology from this address.",
   "network.reason.service": "Your query asks this site to answer part of it.",
