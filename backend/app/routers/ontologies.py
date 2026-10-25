@@ -12,6 +12,9 @@ SUMMARY
     load (load-progress 5.3).
 
 BASIC IDEA
+    Translated HTTP refusals carry source codes and facts while keeping the
+    original status and detail payloads intact.
+
     The read endpoints take ?imports=true, which serves the same view built
     over the ontology plus its resolved imports (imports.py). Off is the
     default and answers exactly as before. A project model with switched-on
@@ -216,9 +219,10 @@ def _check_docs_rate_limit() -> None:
         while _docs_request_times and now - _docs_request_times[0] > DOCS_RATE_WINDOW:
             _docs_request_times.popleft()
         if len(_docs_request_times) >= DOCS_RATE_MAX:
-            raise HTTPException(
+            raise UiHTTPException(
                 status_code=429,
-                detail="Too many documentation exports in a short time. Try again in a moment.",
+                detail='Too many documentation exports in a short time. Try again in a moment.',
+                ui_message=make_message('export.too_frequent'),
             )
         _docs_request_times.append(now)
 
@@ -394,7 +398,11 @@ def _get_or_404(oid: str):
     """Fetch an ontology by id or raise a 404 — shared by every /{oid} route."""
     ontology = store.get(oid)
     if ontology is None:
-        raise HTTPException(status_code=404, detail=f"Unknown ontology id: {oid}")
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'Unknown ontology id: {oid}',
+            ui_message=make_message('ontology.not_found'),
+        )
     return ontology
 
 
@@ -450,7 +458,11 @@ async def read_json_capped(request: Request, limit: int, detail: str):
     try:
         return json.loads(b"".join(chunks) or b"null")
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="The body must be JSON.") from exc
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be JSON.',
+            ui_message=make_message('request.body_json'),
+        ) from exc
 
 
 CANCELLED_DETAIL = {
@@ -469,11 +481,16 @@ def _load(load_id: Optional[uuid.UUID]):
         with running_loads.running(str(load_id) if load_id else None) as mark:
             yield mark
     except LoadCancelled as exc:
-        raise HTTPException(status_code=409, detail=CANCELLED_DETAIL) from exc
-    except LoadAlreadyRunning as exc:
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=409,
-            detail={"code": "load_running", "message": "A load with this id is already running."},
+            detail=CANCELLED_DETAIL,
+            ui_message=make_message('load.cancelled'),
+        ) from exc
+    except LoadAlreadyRunning as exc:
+        raise UiHTTPException(
+            status_code=409,
+            detail={'code': 'load_running', 'message': 'A load with this id is already running.'},
+            ui_message=make_message('load.already_running'),
         ) from exc
 
 
@@ -516,7 +533,11 @@ async def upload_ontology(
     with _load(loadId) as mark:
         data = await _read_capped(file, MAX_UPLOAD_BYTES, "SEMANTIC_STUDIO_MAX_UPLOAD_BYTES")
         if not data:
-            raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+            raise UiHTTPException(
+                status_code=400,
+                detail='The uploaded file is empty.',
+                ui_message=make_message('load.empty_file'),
+            )
         # Detect the RDF format from the filename (or the caller's override).
         fmt = detect_format(file.filename, format)
         try:
@@ -585,11 +606,19 @@ async def fetch_ontology(request: FetchRequest) -> dict:
     parsed = urlparse(raw_input)
     # Only web URLs are fetchable.
     if parsed.scheme not in ("http", "https"):
-        raise HTTPException(status_code=400, detail="Only http(s) URLs are supported.")
+        raise UiHTTPException(
+            status_code=400,
+            detail='Only http(s) URLs are supported.',
+            ui_message=make_message('fetch.web_only'),
+        )
     host = (parsed.hostname or "").lower()
     # Reject GitHub Enterprise hosts up front with a helpful message.
     if is_github_enterprise_host(host):
-        raise HTTPException(status_code=400, detail=GHE_NOT_SUPPORTED_DETAIL)
+        raise UiHTTPException(
+            status_code=400,
+            detail=GHE_NOT_SUPPORTED_DETAIL,
+            ui_message=make_message('fetch.github_enterprise'),
+        )
     # Turn a github.com "blob" page URL into the raw download URL.
     url = to_raw_url(raw_input)
     with _load(request.loadId) as mark:
@@ -622,9 +651,10 @@ async def fetch_ontology(request: FetchRequest) -> dict:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         if response.status >= 400:
             # The remote server returned an error status (404, 403, ...).
-            raise HTTPException(
+            raise UiHTTPException(
                 status_code=502,
-                detail=f"Fetching {url} failed with HTTP {response.status}.",
+                detail=f'Fetching {url} failed with HTTP {response.status}.',
+                ui_message=make_message('fetch.http_failed', url=url, status=response.status),
             )
         final_url, data = response.url, response.body
 
@@ -657,7 +687,11 @@ async def fetch_ontology(request: FetchRequest) -> dict:
 def delete_ontology(oid: str) -> dict:
     """DELETE /api/ontologies/{oid} -> remove the ontology and its saved queries."""
     if not store.remove(oid):
-        raise HTTPException(status_code=404, detail=f"Unknown ontology id: {oid}")
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'Unknown ontology id: {oid}',
+            ui_message=make_message('ontology.not_found'),
+        )
     # Saved queries belong to an ontology; leaving them would orphan them
     # because a re-loaded file gets a fresh id.
     #
@@ -724,9 +758,10 @@ def get_neighborhood(
         # Blank nodes are excluded from the viz graph by build_viz_graph, so
         # this is also the expected answer for one, and for a predicate that
         # was never drawn as an entity.
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=404,
-            detail=f"No entity with that IRI is drawn in this ontology: {iri}",
+            detail=f'No entity with that IRI is drawn in this ontology: {iri}',
+            ui_message=make_message('ontology.entity_not_drawn', iri=iri),
         )
     return result
 
@@ -848,7 +883,11 @@ def get_node(
             if example is not None:
                 details["example"] = example
     if details is None:
-        raise HTTPException(status_code=404, detail=f"No statements found for {iri}")
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'No statements found for {iri}',
+            ui_message=make_message('ontology.no_statements', iri=iri),
+        )
     if imports:
         source = imports_service.merged(ontology)["importedFrom"].get(iri)
         if source is not None:
@@ -932,8 +971,10 @@ def get_source(
         try:
             raw = ontology.source_bytes()
         except OSError as exc:
-            raise HTTPException(
-                status_code=404, detail="The stored source file is no longer available."
+            raise UiHTTPException(
+                status_code=404,
+                detail='The stored source file is no longer available.',
+                ui_message=make_message('ontology.source_missing'),
             ) from exc
         # Normalized so a file written on Windows does not render with a
         # stray carriage return at the end of every line.
@@ -1097,9 +1138,10 @@ def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARA
     with ontology.reading():
         described = describe_query_node(graph, iri, schema, langs=ontology.label_langs(lang))
     if described is None:
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=404,
-            detail="This node is not a class and has no type that can be queried.",
+            detail='This node is not a class and has no type that can be queried.',
+            ui_message=make_message('query.node_not_queryable'),
         )
     return described
 
@@ -1188,7 +1230,11 @@ def map_import(oid: str, body: ImportMapping) -> dict:
     ontology = _get_or_404(oid)
     target = store.get(body.ontologyId)
     if target is None or target.id == ontology.id:
-        raise HTTPException(status_code=400, detail="Choose another ontology from your library.")
+        raise UiHTTPException(
+            status_code=400,
+            detail='Choose another ontology from your library.',
+            ui_message=make_message('ontology.choose_other'),
+        )
     imports_service.map_to_library(ontology, body.iri, target, parse_timeout=PARSE_TIMEOUT_SECONDS)
     return imports_service.listing(ontology)
 

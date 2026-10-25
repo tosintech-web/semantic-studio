@@ -727,7 +727,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `crash.description` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `crash.reload` | — | `frontend/src/components/ErrorBoundary.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.success` | name | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `parse.syntax` | format, line | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
+| `parse.syntax` | format, line | `backend/app/routers/projects.py` | UI・読み上げ・通知 | 12 | 契約のみ |
 | `model.invalid_value` | value, datatype | producer接続待ち | UI・読み上げ・通知 | 12 | 契約のみ |
 | `validation.min_count` | name, count | `frontend/src/sparql/generate.ts` | UI・読み上げ・通知 | 12 | 静的使用箇所確認（動的候補を含む） |
 | `reasoning.timeout` | seconds | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/reasoning.py` | UI・読み上げ・通知 | 12 | 実際のタイムアウト値から生成、推論画面に接続済み |
@@ -3153,3 +3153,49 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `words.reasoning.any_value` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
 | `words.reasoning.stated_rule` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
 | `words.reasoning.rule_value` | — | `backend/app/reasoning.py` | 推論の根拠・定義・原文詳細 | 12 | 元の候補順・文・IRIを維持し生成元の事実で表示 |
+
+### HTTP生成元の固定・パラメータ付き拒否
+
+| `project.not_found` | — | `backend/app/routers/queries.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `query.name_required` | — | `backend/app/routers/queries.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `query.builder_required` | — | `backend/app/routers/queries.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `request.source_body` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `project.document_not_found` | — | `backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `project.not_open` | — | `backend/app/routers/data.py`<br>`backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `project.unsaved` | — | `backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `reasoning.fact_required` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `reasoning.fact_missing` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `ontology.library_missing` | — | `backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `reasoning.group_missing` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `fetch.web_only` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `query.node_not_queryable` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `ontology.choose_other` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `export.too_frequent` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `request.body_json` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/data.py`<br>`backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `load.empty_file` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `ontology.source_missing` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `network.invalid_host` | — | `backend/app/routers/network.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `data.source_required` | — | `backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `data.file_required` | — | `backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `data.new_file_required` | — | `backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `request.body_object` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `project.snapshot_not_found` | — | `backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `data.change_required` | — | `backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `ontology.not_found` | — | `backend/app/routers/ontologies.py`<br>`backend/app/routers/queries.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `query.not_found` | — | `backend/app/routers/queries.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `ontology.entity_not_drawn` | iri | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `ontology.no_statements` | iri | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `fetch.http_failed` | url, status | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `network.unknown_capability` | capability | `backend/app/routers/network.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `network.grant_missing` | — | `backend/app/routers/network.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `request.field_json` | field | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `request.field_object` | field | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `data.read_timeout` | seconds | `backend/app/routers/data.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `reasoning.not_run` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `load.cancelled` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `load.already_running` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `reasoning.already_running` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/projects.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `reasoning.ontology_only` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/editing.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `fetch.github_enterprise` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+
+| `parse.syntax_without_line` | format | `backend/app/routers/projects.py` | 行番号が不明な構文失敗 | 12 | 行番号を推測せず原文を保持 |

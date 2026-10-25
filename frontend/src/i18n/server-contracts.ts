@@ -257,6 +257,13 @@ export const SERVER_CONTRACTS = {
     "characteristic": "parts",
     "name": "string"
   },
+  "data.change_required": {},
+  "data.file_required": {},
+  "data.new_file_required": {},
+  "data.read_timeout": {
+    "seconds": "number"
+  },
+  "data.source_required": {},
   "editing.guard.annotation_exists": {
     "name": "string",
     "property": "string"
@@ -710,6 +717,16 @@ export const SERVER_CONTRACTS = {
     "total": "number"
   },
   "entities.view_changed": {},
+  "export.too_frequent": {},
+  "fetch.github_enterprise": {},
+  "fetch.http_failed": {
+    "status": "number",
+    "url": "string"
+  },
+  "fetch.web_only": {},
+  "load.already_running": {},
+  "load.cancelled": {},
+  "load.empty_file": {},
   "model.broader.related": {
     "broad": "string",
     "narrow": "string"
@@ -846,6 +863,21 @@ export const SERVER_CONTRACTS = {
     "end": "string",
     "name": "string"
   },
+  "network.grant_missing": {},
+  "network.invalid_host": {},
+  "network.unknown_capability": {
+    "capability": "string"
+  },
+  "ontology.choose_other": {},
+  "ontology.entity_not_drawn": {
+    "iri": "string"
+  },
+  "ontology.library_missing": {},
+  "ontology.no_statements": {
+    "iri": "string"
+  },
+  "ontology.not_found": {},
+  "ontology.source_missing": {},
   "parse.syntax": {
     "format": "string",
     "line": [
@@ -853,6 +885,14 @@ export const SERVER_CONTRACTS = {
       "null"
     ]
   },
+  "parse.syntax_without_line": {
+    "format": "string"
+  },
+  "project.document_not_found": {},
+  "project.not_found": {},
+  "project.not_open": {},
+  "project.snapshot_not_found": {},
+  "project.unsaved": {},
   "projects.base_iri": {},
   "projects.document_kind": {},
   "projects.kind": {},
@@ -879,6 +919,11 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "projects.viewport": {},
+  "query.builder_required": {},
+  "query.name_required": {},
+  "query.node_not_queryable": {},
+  "query.not_found": {},
+  "reasoning.already_running": {},
   "reasoning.characteristic.asymmetric": {
     "s": "parts"
   },
@@ -960,7 +1005,12 @@ export const SERVER_CONTRACTS = {
     "o": "parts",
     "s": "parts"
   },
+  "reasoning.fact_missing": {},
+  "reasoning.fact_required": {},
   "reasoning.failed": {},
+  "reasoning.group_missing": {},
+  "reasoning.not_run": {},
+  "reasoning.ontology_only": {},
   "reasoning.problem.asymmetric": {
     "first": "parts",
     "property": "parts",
@@ -1150,7 +1200,16 @@ export const SERVER_CONTRACTS = {
     "count": "number",
     "limit": "number"
   },
+  "request.body_json": {},
+  "request.body_object": {},
+  "request.field_json": {
+    "field": "string"
+  },
+  "request.field_object": {
+    "field": "string"
+  },
   "request.invalid": {},
+  "request.source_body": {},
   "rml.class_limit": {
     "limit": "number"
   },
@@ -1788,6 +1847,11 @@ export interface ServerMessageArgs {
   "command.shared_parent": { "names": string; "property": string };
   "command.swapped_ends": { "name": string };
   "command.unmarked_characteristic": { "characteristic": string; "name": string };
+  "data.change_required": undefined;
+  "data.file_required": undefined;
+  "data.new_file_required": undefined;
+  "data.read_timeout": { "seconds": number };
+  "data.source_required": undefined;
   "editing.guard.annotation_exists": { "name": string; "property": string };
   "editing.guard.annotation_missing_remove": { "name": string; "property": string };
   "editing.guard.annotation_missing_replace": { "name": string; "property": string };
@@ -1959,6 +2023,13 @@ export interface ServerMessageArgs {
   "editing.value.unsupported_datatype": { "datatype": string };
   "entities.page_too_large": { "suggested_limit": number; "total": number };
   "entities.view_changed": undefined;
+  "export.too_frequent": undefined;
+  "fetch.github_enterprise": undefined;
+  "fetch.http_failed": { "status": number; "url": string };
+  "fetch.web_only": undefined;
+  "load.already_running": undefined;
+  "load.cancelled": undefined;
+  "load.empty_file": undefined;
   "model.broader.related": { "broad": string; "narrow": string };
   "model.chain.changed_inverse": { "characteristic": string; "name": string; "source": string };
   "model.chain.changed_under": { "characteristic": string; "name": string; "source": string };
@@ -1997,7 +2068,22 @@ export interface ServerMessageArgs {
   "model.warning.symmetric.all": { "classes": string; "end": string; "name": string };
   "model.warning.symmetric.any": { "classes": string; "end": string; "name": string };
   "model.warning.symmetric.one": { "classes": string; "end": string; "name": string };
+  "network.grant_missing": undefined;
+  "network.invalid_host": undefined;
+  "network.unknown_capability": { "capability": string };
+  "ontology.choose_other": undefined;
+  "ontology.entity_not_drawn": { "iri": string };
+  "ontology.library_missing": undefined;
+  "ontology.no_statements": { "iri": string };
+  "ontology.not_found": undefined;
+  "ontology.source_missing": undefined;
   "parse.syntax": { "format": string; "line": number | null };
+  "parse.syntax_without_line": { "format": string };
+  "project.document_not_found": undefined;
+  "project.not_found": undefined;
+  "project.not_open": undefined;
+  "project.snapshot_not_found": undefined;
+  "project.unsaved": undefined;
   "projects.base_iri": undefined;
   "projects.document_kind": undefined;
   "projects.kind": undefined;
@@ -2014,6 +2100,11 @@ export interface ServerMessageArgs {
   "projects.shown": undefined;
   "projects.template": { "name": string };
   "projects.viewport": undefined;
+  "query.builder_required": undefined;
+  "query.name_required": undefined;
+  "query.node_not_queryable": undefined;
+  "query.not_found": undefined;
+  "reasoning.already_running": undefined;
   "reasoning.characteristic.asymmetric": { "s": string };
   "reasoning.characteristic.functional": { "s": string };
   "reasoning.characteristic.inverse_functional": { "s": string };
@@ -2035,7 +2126,12 @@ export interface ServerMessageArgs {
   "reasoning.fact.range": { "o": string; "s": string };
   "reasoning.fact.same": { "o": string; "s": string };
   "reasoning.fact.type": { "o": string; "s": string };
+  "reasoning.fact_missing": undefined;
+  "reasoning.fact_required": undefined;
   "reasoning.failed": undefined;
+  "reasoning.group_missing": undefined;
+  "reasoning.not_run": undefined;
+  "reasoning.ontology_only": undefined;
   "reasoning.problem.asymmetric": { "first": string; "property": string; "second": string };
   "reasoning.problem.different_same": { "first": string; "second": string };
   "reasoning.problem.disjoint_member": { "first": string; "second": string; "subject": string };
@@ -2076,7 +2172,12 @@ export interface ServerMessageArgs {
   "reasoning.stopped": undefined;
   "reasoning.timeout": { "seconds": number };
   "reasoning.too_large": { "count": number; "limit": number };
+  "request.body_json": undefined;
+  "request.body_object": undefined;
+  "request.field_json": { "field": string };
+  "request.field_object": { "field": string };
   "request.invalid": undefined;
+  "request.source_body": undefined;
   "rml.class_limit": { "limit": number };
   "rml.columns_missing": { "columns": string };
   "rml.delimiter": undefined;

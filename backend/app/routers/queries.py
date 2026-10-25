@@ -8,6 +8,9 @@ SUMMARY
     (create or update), and delete.
 
 BASIC IDEA
+    Translated HTTP refusals carry source codes and facts while keeping the
+    original status and detail payloads intact.
+
     A thin HTTP layer over the SavedQueryStore. It validates that the referenced
     ontology exists and that a name was given, then delegates persistence to the
     store. Saving a visual query stores the full builder state, so it reopens
@@ -44,6 +47,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from ..messages import UiHTTPException, make_message
 from ..embedded_queries import MAX_TEXT_CHARS
 
 # The saved-query store, plus the ontology store to validate references.
@@ -61,7 +65,11 @@ def _store_for(ontology_id: Optional[str]) -> SavedQueryStore:
     try:
         return project_store.queries(split[0])
     except UnknownProject as exc:
-        raise HTTPException(status_code=404, detail="There is no such project.") from exc
+        raise UiHTTPException(
+            status_code=404,
+            detail='There is no such project.',
+            ui_message=make_message('project.not_found'),
+        ) from exc
 
 # All routes hang off /api/queries.
 router = APIRouter(prefix="/api/queries", tags=["queries"])
@@ -93,15 +101,25 @@ def save_query(request: SaveQueryRequest) -> dict:
     # The query must belong to a currently-loaded ontology.
     ontology = store.get(request.ontologyId)
     if ontology is None:
-        raise HTTPException(
-            status_code=404, detail=f"Unknown ontology id: {request.ontologyId}"
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'Unknown ontology id: {request.ontologyId}',
+            ui_message=make_message('ontology.not_found'),
         )
     # A blank name would produce an unusable library entry.
     if not request.name.strip():
-        raise HTTPException(status_code=400, detail="A query name is required.")
+        raise UiHTTPException(
+            status_code=400,
+            detail='A query name is required.',
+            ui_message=make_message('query.name_required'),
+        )
     # A visual query without a builder state could never reopen visually.
     if request.mode == "visual" and request.state is None:
-        raise HTTPException(status_code=400, detail="A visual query needs its builder state.")
+        raise UiHTTPException(
+            status_code=400,
+            detail='A visual query needs its builder state.',
+            ui_message=make_message('query.builder_required'),
+        )
     # Persist; the store keeps createdAt when id refers to an existing query.
     return _store_for(request.ontologyId).save(
         name=request.name,
@@ -125,4 +143,8 @@ def delete_query(qid: str) -> dict:
     for candidate in [saved_queries, *project_store.all_query_stores()]:
         if candidate.delete(qid):
             return {"deleted": qid}
-    raise HTTPException(status_code=404, detail=f"Unknown query id: {qid}")
+    raise UiHTTPException(
+        status_code=404,
+        detail=f'Unknown query id: {qid}',
+        ui_message=make_message('query.not_found'),
+    )

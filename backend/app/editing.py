@@ -14,6 +14,9 @@ SUMMARY
     retaining their original exception types, text and RDF checks.
 
 BASIC IDEA
+    Domain-specific reasoning refusals also expose additive display metadata;
+    their ValueError identity and legacy arguments remain intact.
+
     A document, once its project is opened, is an Ontology registered in the
     store under prj-<hex>-<doc>, so every read endpoint serves it unchanged.
     Every change goes through one path: work out a delta (triples to add,
@@ -304,6 +307,10 @@ class Dirty(RuntimeError):
 
 class ReasoningRefused(ValueError):
     """Reason asked of a project it is not offered for (axioms-and-reasoning 4)."""
+
+    def __init__(self, *args, ui_message: Optional[dict] = None):
+        super().__init__(*args)
+        self.ui_message = ui_message
 
 
 # ---------------------------------------------------------------------------
@@ -4413,7 +4420,7 @@ class EditingService:
         documents = self._project_documents(pid)
         manifest = self.projects.manifest(pid)
         if manifest.get("kind") == "taxonomy":
-            raise ReasoningRefused("Reasoning is for ontology projects.")
+            raise ReasoningRefused("Reasoning is for ontology projects.", ui_message=make_message("reasoning.ontology_only"))
         languages = [manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
         model_doc = documents["model"]
         handle = reasoning.service.begin(pid)

@@ -2628,3 +2628,25 @@ The subsequent full backend suite under normal conditions passed 2,331 tests
 reasoning budgets. No seed, budget factor, limit, assertion or inference
 algorithm was changed to obtain that result. The diagnostic run remains
 separate from this verification.
+
+### Source-owned HTTP refusal metadata (P1)
+
+Fixed and parameterized HTTP refusals attach validated descriptors at their
+source. The original status and detail expression remain unchanged, including
+structured load-cancellation and Turtle-error details. The HTTP exception
+subclass carries metadata through the existing handler; there is no runtime
+lookup by English text. Unknown domain/third-party fallbacks keep their original
+paths and details. ReasoningRefused retains its ValueError identity and original
+arguments, with optional source metadata for its ontology-only refusal.
+
+A Turtle error with no known line uses a separate format-only descriptor. The
+server never invents a line or asks the person to set a missing line field.
+Other syntax details, including the original parser trace, remain intact.
+
+Real API tests cover missing resources, saved-query guards, closed/dirty
+projects, reasoning-result reads, JSON field/body failures, import inputs and
+network-setting guards. They compare model statements, source/revision/dirty
+state and data generation before and after refusals. Controlled remote-status
+responses use no external connection. A source check rejects newly introduced
+literal HTTP refusals without metadata. This does not declare the remaining
+size-limit, parser, timeout and network-purpose producers complete.

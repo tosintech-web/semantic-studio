@@ -14,6 +14,9 @@ SUMMARY
     Stop, its pages and its reasons (axioms-and-reasoning Stage A).
 
 BASIC IDEA
+    Translated HTTP refusals carry source codes and facts while keeping the
+    original status and detail payloads intact.
+
     Command refusals retain their original status and detail payload, adding
     validated display metadata for the current UI language, including 404/409.
 
@@ -56,6 +59,7 @@ from contextlib import contextmanager
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from ..messages import make_message
 from ..messages import UiHTTPException
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
@@ -130,18 +134,32 @@ def _errors():
     try:
         yield
     except (UnknownProject, UnknownDocument) as exc:
-        raise HTTPException(status_code=404, detail="There is no such project or document.") from exc
+        raise UiHTTPException(
+            status_code=404,
+            detail='There is no such project or document.',
+            ui_message=make_message('project.document_not_found'),
+        ) from exc
     except NotOpen as exc:
-        raise HTTPException(status_code=409, detail="Open the project first.") from exc
-    except Dirty as exc:
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=409,
-            detail="This project has unsaved changes. Save them, or close with discard.",
+            detail='Open the project first.',
+            ui_message=make_message('project.not_open'),
+        ) from exc
+    except Dirty as exc:
+        raise UiHTTPException(
+            status_code=409,
+            detail='This project has unsaved changes. Save them, or close with discard.',
+            ui_message=make_message('project.unsaved'),
         ) from exc
     except TurtleSyntaxError as exc:
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=422,
-            detail={"line": exc.line, "column": exc.column, "message": str(exc), "detail": exc.detail},
+            detail={'line': exc.line, 'column': exc.column, 'message': str(exc), 'detail': exc.detail},
+            ui_message=(
+                make_message('parse.syntax', format='Turtle', line=exc.line)
+                if exc.line is not None
+                else make_message('parse.syntax_without_line', format='Turtle')
+            ),
         ) from exc
     except AlreadyDefined as exc:
         # A property of that name and kind is there already (attribute-reuse
@@ -160,7 +178,11 @@ def _errors():
             raise UiHTTPException(status_code=422, detail=str(exc), ui_message=exc.ui_message) from exc
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except reasoning.AlreadyRunning as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise UiHTTPException(
+            status_code=409,
+            detail=str(exc),
+            ui_message=make_message('reasoning.already_running'),
+        ) from exc
     except ParseTimeout as exc:
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except ParseError as exc:
@@ -179,7 +201,11 @@ def create_project(body: CreateProject) -> dict:
         if body.fromOntologyId is not None:
             source = store.get(body.fromOntologyId)
             if source is None or source.editable:
-                raise HTTPException(status_code=404, detail="There is no such ontology in the library.")
+                raise UiHTTPException(
+                    status_code=404,
+                    detail='There is no such ontology in the library.',
+                    ui_message=make_message('ontology.library_missing'),
+                )
             # A Turtle file is copied as it is, comments and layout included;
             # any other format is written as clean Turtle. The library entry
             # itself is read and never changed.
@@ -301,10 +327,18 @@ async def put_source(pid: str, doc: str, request: Request) -> dict:
     try:
         payload = json.loads(b"".join(chunks) or b"{}")
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="The body must be JSON: {\"text\": ...}.") from exc
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be JSON: {"text": ...}.',
+            ui_message=make_message('request.source_body'),
+        ) from exc
     text = payload.get("text") if isinstance(payload, dict) else None
     if not isinstance(text, str):
-        raise HTTPException(status_code=422, detail="The body must be JSON: {\"text\": ...}.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be JSON: {"text": ...}.',
+            ui_message=make_message('request.source_body'),
+        )
     with _errors():
         return await run_in_threadpool(
             editing_service.apply_text, pid, doc, text, ontologies.PARSE_TIMEOUT_SECONDS
@@ -431,7 +465,11 @@ NOT_REASONED = "Nothing has been reasoned in this project yet."
 def _last(pid: str) -> "reasoning.Outcome":
     outcome = editing_service.reasoning_result(pid)
     if outcome is None:
-        raise HTTPException(status_code=404, detail=NOT_REASONED)
+        raise UiHTTPException(
+            status_code=404,
+            detail=NOT_REASONED,
+            ui_message=make_message('reasoning.not_run'),
+        )
     return outcome
 
 
@@ -454,7 +492,11 @@ def get_reasoning(
             try:
                 return outcome.page(group, offset, current)
             except KeyError as exc:
-                raise HTTPException(status_code=404, detail="There is no such group.") from exc
+                raise UiHTTPException(
+                    status_code=404,
+                    detail='There is no such group.',
+                    ui_message=make_message('reasoning.group_missing'),
+                ) from exc
         return outcome.summary(current)
 
 
@@ -466,10 +508,18 @@ def why(pid: str, s: Optional[str] = None, p: Optional[str] = None, o: Optional[
     with _errors():
         outcome = _last(pid)
         if s is None or p is None or o is None:
-            raise HTTPException(status_code=422, detail="Name the fact: s, p and o.")
+            raise UiHTTPException(
+                status_code=422,
+                detail='Name the fact: s, p and o.',
+                ui_message=make_message('reasoning.fact_required'),
+            )
         reason_ = outcome.why(s, p, o)
         if reason_ is None:
-            raise HTTPException(status_code=404, detail="That fact is not in the last result.")
+            raise UiHTTPException(
+                status_code=404,
+                detail='That fact is not in the last result.',
+                ui_message=make_message('reasoning.fact_missing'),
+            )
         return reason_
 
 

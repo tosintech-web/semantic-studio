@@ -10,6 +10,9 @@ SUMMARY
     need, and nothing that makes a connection.
 
 BASIC IDEA
+    Translated HTTP refusals carry source codes and facts while keeping the
+    original status and detail payloads intact.
+
     Thin, like every router here. The broker (network_broker.py) owns the
     policy and the log; this file validates the shapes and hands over.
 
@@ -38,6 +41,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from ..messages import UiHTTPException, make_message
 from ..network_broker import (
     ACTIVITY_DEFAULT_LIMIT,
     ACTIVITY_MAX_LIMIT,
@@ -73,17 +77,29 @@ def get_policy() -> dict:
 @router.post("/grants")
 def post_grant(body: GrantRequest) -> dict:
     if body.capability not in CAPABILITIES:
-        raise HTTPException(status_code=422, detail=f"Unknown capability: {body.capability}")
+        raise UiHTTPException(
+            status_code=422,
+            detail=f'Unknown capability: {body.capability}',
+            ui_message=make_message('network.unknown_capability', capability=body.capability),
+        )
     host = normalize_host(body.host)
     if not host or not _HOST_RE.match(host):
-        raise HTTPException(status_code=422, detail="That is not a host name.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='That is not a host name.',
+            ui_message=make_message('network.invalid_host'),
+        )
     return broker.policy.grant(body.capability, host, body.decision, body.remember)
 
 
 @router.delete("/grants/{grant_id}")
 def delete_grant(grant_id: str) -> dict:
     if not broker.policy.revoke(grant_id):
-        raise HTTPException(status_code=404, detail=f"Unknown grant: {grant_id}")
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'Unknown grant: {grant_id}',
+            ui_message=make_message('network.grant_missing'),
+        )
     return {"revoked": grant_id}
 
 

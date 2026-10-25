@@ -9,6 +9,9 @@ SUMMARY
     change or edit the mapping, and remove, under /api/projects/{pid}/data.
 
 BASIC IDEA
+    Translated HTTP refusals carry source codes and facts while keeping the
+    original status and detail payloads intact.
+
     Domain refusal metadata is forwarded alongside the original status/detail,
     including workbook picker state and size-limit responses.
 
@@ -57,6 +60,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from starlette.concurrency import run_in_threadpool
 
+from ..messages import make_message
 from ..messages import UiHTTPException
 from .. import tabular
 from ..editing import NotOpen, editing_service
@@ -81,9 +85,17 @@ def _errors():
     try:
         yield
     except (UnknownProject, UnknownSnapshot) as exc:
-        raise HTTPException(status_code=404, detail="There is no such project or snapshot.") from exc
+        raise UiHTTPException(
+            status_code=404,
+            detail='There is no such project or snapshot.',
+            ui_message=make_message('project.snapshot_not_found'),
+        ) from exc
     except NotOpen as exc:
-        raise HTTPException(status_code=409, detail="Open the project first.") from exc
+        raise UiHTTPException(
+            status_code=409,
+            detail='Open the project first.',
+            ui_message=make_message('project.not_open'),
+        ) from exc
     except tabular.TabularError as exc:
         status = 413 if exc.kind == "too-large" else 422
         detail = {"message": str(exc), "kind": exc.kind}
@@ -120,8 +132,10 @@ def _bounded(work, *args, **kwargs):
         try:
             return future.result(timeout=limit)
         except FuturesTimeout as exc:
-            raise HTTPException(
-                status_code=504, detail=f"Reading the data took longer than {limit:g} seconds and was stopped."
+            raise UiHTTPException(
+                status_code=504,
+                detail=f'Reading the data took longer than {limit:g} seconds and was stopped.',
+                ui_message=make_message('data.read_timeout', seconds=limit),
             ) from exc
     finally:
         pool.shutdown(wait=False, cancel_futures=True)
@@ -156,9 +170,17 @@ def _json_field(raw: Optional[str], what: str) -> Optional[dict]:
     try:
         value = json.loads(raw)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=f"The {what} must be JSON.") from exc
+        raise UiHTTPException(
+            status_code=422,
+            detail=f'The {what} must be JSON.',
+            ui_message=make_message('request.field_json', field=what),
+        ) from exc
     if value is not None and not isinstance(value, dict):
-        raise HTTPException(status_code=422, detail=f"The {what} must be an object.")
+        raise UiHTTPException(
+            status_code=422,
+            detail=f'The {what} must be an object.',
+            ui_message=make_message('request.field_object', field=what),
+        )
     return value
 
 
@@ -171,7 +193,11 @@ def _table(
         return service.read(data, options or {}, filename), None
     if snapshot:
         return service.stored_table(pid, snapshot)
-    raise HTTPException(status_code=422, detail="Send a file, or name a snapshot.")
+    raise UiHTTPException(
+        status_code=422,
+        detail='Send a file, or name a snapshot.',
+        ui_message=make_message('data.source_required'),
+    )
 
 
 @router.post("/{pid}/data/inspect")
@@ -235,7 +261,11 @@ async def import_data(
     """Import: a new snapshot, switched on, with its report (5.5)."""
     _known(pid)
     if file is None:
-        raise HTTPException(status_code=422, detail="Send the file to import.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='Send the file to import.',
+            ui_message=make_message('data.file_required'),
+        )
     data = await _file_bytes(file)
     opts = _json_field(options, "options") or {}
     chosen = _json_field(choices, "choices") or {}
@@ -278,7 +308,11 @@ async def refresh(
     the wizard's new mapping for it."""
     _known(pid, sid)
     if file is None:
-        raise HTTPException(status_code=422, detail="Send the new version of the file.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='Send the new version of the file.',
+            ui_message=make_message('data.new_file_required'),
+        )
     data = await _file_bytes(file)
     opts = _json_field(options, "options") or {}
     chosen = _json_field(choices, "choices")
@@ -314,9 +348,17 @@ async def patch_data(pid: str, sid: str, request: Request) -> dict:
     try:
         body = json.loads(b"".join(chunks) or b"{}")
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="The body must be JSON.") from exc
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be JSON.',
+            ui_message=make_message('request.body_json'),
+        ) from exc
     if not isinstance(body, dict):
-        raise HTTPException(status_code=422, detail="The body must be an object.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be an object.',
+            ui_message=make_message('request.body_object'),
+        )
 
     def work() -> dict:
         with _errors():
@@ -331,7 +373,11 @@ async def patch_data(pid: str, sid: str, request: Request) -> dict:
                         pid, sid, model=model, manifest=manifest, names=names, choices=body["choices"],
                     )
             else:
-                raise HTTPException(status_code=422, detail="Send enabled, choices or mapping.")
+                raise UiHTTPException(
+                    status_code=422,
+                    detail='Send enabled, choices or mapping.',
+                    ui_message=make_message('data.change_required'),
+                )
             return {"snapshot": made, "generation": service.generation(pid)}
 
     return await run_in_threadpool(_bounded, work)
