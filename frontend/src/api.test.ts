@@ -9,7 +9,7 @@ SUMMARY
     proves the approval round trip in `send` (external-access Stage 1): a 409
     asks the registered handler, Allow repeats the same request with the grant
     id, Don't allow fails with a sentence naming the host and sends nothing
-    more. Covers
+    more. Nested parser metadata survives both fetch and upload failures. Covers
     AC-4 of the external-access spec, Stage 0 (backlog S-6, decision D-065):
     the backend refuses a state-changing request without the header, so a
     mutating call that forgot it would break in the application while every
@@ -707,4 +707,21 @@ it("keeps the already-defined payload and forwards validated display facts witho
   expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail))).toBe(detail);
   expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail, { code: "unknown", args: {} }))).toBe(detail);
   expect(api.alreadyDefined(new api.ApiError(detail.message, 422, detail, wire))).toBeNull();
+});
+
+
+it("keeps nested parser metadata and original fields on fetch and upload errors", async () => {
+  const uiMessage = { code: "parse.undeclared_prefix", args: { line: 4, prefix: "<img>{prefix}:" } };
+  const detail = { code: "parse_error", message: "Original parse explanation", line: 4, format: "Turtle", technical: "Original parser <img>", uiMessage };
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({ detail }), { status: 422 })));
+  for (const attempt of [
+    () => api.fetchOntology("https://example.test/sample.ttl"),
+    () => api.uploadOntology(new File(["x"], "sample.ttl")),
+  ]) {
+    const error = await attempt().catch(e => e);
+    expect(error).toBeInstanceOf(api.ApiError);
+    expect(error.message).toBe(detail.message);
+    expect(error.detail).toEqual(detail);
+    expect(error.uiMessage).toEqual(uiMessage);
+  }
 });

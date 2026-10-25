@@ -43,7 +43,8 @@ INPUTS / INPUT SOURCES
 
 EXPECTED OUTPUT
     - explain(...): the 422 detail, {code: "parse_error", message, line,
-      format, technical}.
+      format, technical, uiMessage}. Legacy values are unchanged; UI metadata
+      captures source facts for rendering in the current client language.
     - format_from_content_type(value): a parser name or None.
     - FORMAT_NAMES / format_name: the formats as people write them, the same
       table as the frontend's statusWords.ts.
@@ -54,6 +55,8 @@ from __future__ import annotations
 
 import re
 from typing import Optional, Sequence
+
+from .messages import MessageText
 
 # The written names, as the status bar shows them (statusWords.ts holds the
 # same table; a test reads both).
@@ -162,45 +165,63 @@ def _looks_like_rdf(head: bytes) -> bool:
     return not _binary(head) and any(sign in head for sign in _RDF_SIGNS)
 
 
-def _known(fmt: str, message: str, line: Optional[int]) -> Optional[str]:
-    """The table of 5.1: a message it knows, translated; None for any other."""
+def _known(fmt: str, message: str, line: Optional[int]) -> Optional[MessageText]:
+    """The known reason and captured parser facts; None for any other."""
     at = f"Line {line}: " if line is not None else ""
     if fmt in _TURTLE_FAMILY:
         if "EOF found" in message:
-            return "The file ends in the middle of a statement."
+            return MessageText(
+                "The file ends in the middle of a statement.", "parse.unfinished_file",
+            )
         if line is not None:
             if "expected '.' or '}' or ']' at end of statement" in message:
-                return (
+                return MessageText(
                     f"{at}the statement before this line is not finished. "
-                    "It probably needs a full stop (.) at its end."
+                    "It probably needs a full stop (.) at its end.",
+                    "parse.missing_stop", line=line,
                 )
             prefix = _PREFIX_NOT_BOUND.search(message)
             if prefix:
                 p = prefix.group(1)
-                return (
+                return MessageText(
                     f"{at}the prefix {p} is used but never declared. "
-                    f"Add @prefix {p} <…> . near the top of the file."
+                    f"Add @prefix {p} <…> . near the top of the file.",
+                    "parse.undeclared_prefix", line=line, prefix=p,
                 )
             if "newline found in string literal" in message:
-                return f"{at}a text value in quotes is not closed before the end of the line."
+                return MessageText(
+                    f"{at}a text value in quotes is not closed before the end of the line.",
+                    "parse.unclosed_text", line=line,
+                )
     elif fmt == "xml":
         if "mismatched tag" in message or "not well-formed" in message:
-            return (
+            return MessageText(
                 f"{at}the XML is not well formed: an element is not closed, "
-                "or a character is out of place."
+                "or a character is out of place.",
+                "parse.malformed_xml_line" if line is not None else "parse.malformed_xml",
+                **({"line": line} if line is not None else {}),
             )
     elif fmt == "json-ld":
         if _JSON_MESSAGE.search(message):
-            return f"{at}the JSON is not valid."
+            return MessageText(
+                f"{at}the JSON is not valid.",
+                "parse.invalid_json_line" if line is not None else "parse.invalid_json",
+                **({"line": line} if line is not None else {}),
+            )
     return None
 
 
-def _named(fmt: str, line: Optional[int]) -> str:
+def _named(fmt: str, line: Optional[int]) -> MessageText:
     """The table's last row: any other message, named by format and line."""
     name = format_name(fmt)
     if line is not None:
-        return f"The file could not be read as {name}, line {line}."
-    return f"The file could not be read as {name}."
+        return MessageText(
+            f"The file could not be read as {name}, line {line}.",
+            "parse.unreadable_line", format=name, line=line,
+        )
+    return MessageText(
+        f"The file could not be read as {name}.", "parse.unreadable", format=name,
+    )
 
 
 def explain(
@@ -226,15 +247,17 @@ def explain(
     # has no "<" or "@prefix", and is a Turtle file missing its prefix. A
     # binary file is no RDF whatever a parser made of its stray bytes.
     if _binary(head) or (known is None and furthest <= 1 and not _looks_like_rdf(head)):
-        message = NOT_RDF
+        message = MessageText(NOT_RDF, "parse.not_rdf")
         if filename and filename.lower().endswith(_TABLE_EXTENSIONS):
-            message = f"{message} {TABLE_HINT}"
+            message = MessageText(f"{message} {TABLE_HINT}", "parse.not_rdf_table")
         return {"code": "parse_error", "message": message, "line": None,
-                "format": None, "technical": technical}
+                "format": None, "technical": technical, "uiMessage": message.ui_message}
+    message = known if known is not None else _named(fmt, line)
     return {
         "code": "parse_error",
-        "message": known if known is not None else _named(fmt, line),
+        "message": message,
         "line": line,
         "format": format_name(fmt),
         "technical": technical,
+        "uiMessage": message.ui_message,
     }

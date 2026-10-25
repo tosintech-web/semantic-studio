@@ -878,6 +878,19 @@ export const SERVER_CONTRACTS = {
   },
   "ontology.not_found": {},
   "ontology.source_missing": {},
+  "parse.invalid_json": {},
+  "parse.invalid_json_line": {
+    "line": "number"
+  },
+  "parse.malformed_xml": {},
+  "parse.malformed_xml_line": {
+    "line": "number"
+  },
+  "parse.missing_stop": {
+    "line": "number"
+  },
+  "parse.not_rdf": {},
+  "parse.not_rdf_table": {},
   "parse.syntax": {
     "format": "string",
     "line": [
@@ -887,6 +900,21 @@ export const SERVER_CONTRACTS = {
   },
   "parse.syntax_without_line": {
     "format": "string"
+  },
+  "parse.unclosed_text": {
+    "line": "number"
+  },
+  "parse.undeclared_prefix": {
+    "line": "number",
+    "prefix": "string"
+  },
+  "parse.unfinished_file": {},
+  "parse.unreadable": {
+    "format": "string"
+  },
+  "parse.unreadable_line": {
+    "format": "string",
+    "line": "number"
   },
   "project.document_not_found": {},
   "project.not_found": {},
@@ -2077,8 +2105,20 @@ export interface ServerMessageArgs {
   "ontology.no_statements": { "iri": string };
   "ontology.not_found": undefined;
   "ontology.source_missing": undefined;
+  "parse.invalid_json": undefined;
+  "parse.invalid_json_line": { "line": number };
+  "parse.malformed_xml": undefined;
+  "parse.malformed_xml_line": { "line": number };
+  "parse.missing_stop": { "line": number };
+  "parse.not_rdf": undefined;
+  "parse.not_rdf_table": undefined;
   "parse.syntax": { "format": string; "line": number | null };
   "parse.syntax_without_line": { "format": string };
+  "parse.unclosed_text": { "line": number };
+  "parse.undeclared_prefix": { "line": number; "prefix": string };
+  "parse.unfinished_file": undefined;
+  "parse.unreadable": { "format": string };
+  "parse.unreadable_line": { "format": string; "line": number };
   "project.document_not_found": undefined;
   "project.not_found": undefined;
   "project.not_open": undefined;

@@ -2650,3 +2650,25 @@ state and data generation before and after refusals. Controlled remote-status
 responses use no external connection. A source check rejects newly introduced
 literal HTTP refusals without metadata. This does not declare the remaining
 size-limit, parser, timeout and network-purpose producers complete.
+
+
+### Source-owned failed-load explanations (P1)
+
+`parse_errors.py` attaches optional `uiMessage` to each explanation its existing
+selection table produces. Known reasons capture the parsed line and undeclared
+prefix; generic reasons capture the selected format and a line only when known.
+XML/JSON without a line have separate whole-sentence contracts. Non-RDF guidance
+keeps the existing binary/header tests and table-extension hint. No parser,
+format selection, line extraction or refusal predicate changes for translation.
+
+The original `message`, `line`, `format` and `technical` fields remain intact.
+A mid-parse refusal without attempts remains an unknown original detail, rather
+than being assigned an invented parser cause. LoadDialog already retains the
+validated descriptor: changing UI language re-renders the same error while its
+technical disclosure stays open and no upload is repeated. Prefixes and traces
+containing markup-like text or placeholder braces remain literal text.
+
+Tests exercise all explanation contracts, real upload and controlled fetch
+responses, the client boundary on both upload and fetch, and the mounted dialog
+through a language switch. This covers failed-load explanation generation; size
+limits, timeout producers and network decision descriptions remain separate work.

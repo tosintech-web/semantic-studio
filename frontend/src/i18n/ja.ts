@@ -15,6 +15,18 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "parse.unfinished_file": "ファイルが文の途中で終わっています。",
+  "parse.missing_stop": "{line}行目：直前の文が完結していません。文末にピリオド（.）が必要か確認してください。",
+  "parse.undeclared_prefix": "{line}行目：接頭辞「{prefix}」が宣言されていません。ファイルの先頭付近に @prefix {prefix} <…> . を追加してください。",
+  "parse.unclosed_text": "{line}行目：引用符で囲まれたテキストが、行末までに閉じられていません。",
+  "parse.malformed_xml_line": "{line}行目：XMLの構文が正しくありません。要素が閉じられていないか、不適切な位置に文字があります。",
+  "parse.malformed_xml": "XMLの構文が正しくありません。要素が閉じられていないか、不適切な位置に文字があります。",
+  "parse.invalid_json_line": "{line}行目：JSONの構文が正しくありません。",
+  "parse.invalid_json": "JSONの構文が正しくありません。",
+  "parse.unreadable_line": "{line}行目：ファイルを{format}形式で読み込めませんでした。",
+  "parse.unreadable": "ファイルを{format}形式で読み込めませんでした。",
+  "parse.not_rdf": "このファイルはRDFではないようです。Semantic StudioはTurtle、RDF/XML、JSON-LD、N-Triples、N3、TriG、N-Quadsに対応しています。",
+  "parse.not_rdf_table": "このファイルはRDFではないようです。Semantic StudioはTurtle、RDF/XML、JSON-LD、N-Triples、N3、TriG、N-Quadsに対応しています。表データを読み込むには、プロジェクトを開き「データ」タブを使用してください。",
   "parse.syntax_without_line": "{format}ファイルの構文を確認してください。",
   "project.not_found": "指定されたプロジェクトは見つかりません。",
   "query.name_required": "クエリ名を入力してください。",

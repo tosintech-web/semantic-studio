@@ -14,7 +14,8 @@ BASIC IDEA
     The unit tests feed explain() messages copied from rdflib, expat and
     Python's json as they read on 2026-10-16. The integration tests do not
     copy anything: they upload the seven files and compare the answer with
-    the spec's last table, sentence for sentence, and `technical` with the
+    the spec's last table, sentence for sentence, localized source metadata,
+    and `technical` with the
     text the route answered before (the same string ParseError carries).
 
     The fixtures are inline and each defect is the one its name says, per
@@ -327,6 +328,14 @@ def test_the_seven_files_say_what_the_spec_says(name):
     assert detail["message"] == sentence
     assert detail["line"] == line
     assert detail["format"] == fmt
+    assert detail["uiMessage"] == {
+        "missing-dot.ttl": {"code": "parse.missing_stop", "args": {"line": 3}},
+        "no-prefix.ttl": {"code": "parse.undeclared_prefix", "args": {"line": 1, "prefix": "ex:"}},
+        "open-string.ttl": {"code": "parse.unclosed_text", "args": {"line": 2}},
+        "broken.rdf": {"code": "parse.malformed_xml_line", "args": {"line": 1}},
+        "broken.jsonld": {"code": "parse.invalid_json_line", "args": {"line": 1}},
+        "notrdf.ttl": {"code": "parse.not_rdf", "args": {}},
+    }[name]
     # The technical text is today's whole answer, every parser named.
     with pytest.raises(ParseError) as caught:
         from app.store import detect_format
@@ -361,6 +370,7 @@ def test_the_url_route_answers_the_same_shape(public_fetch):
     detail = response.json()["detail"]
     assert detail["message"] == EXPECTED["missing-dot.ttl"][0]
     assert detail["line"] == 3 and detail["format"] == "Turtle"
+    assert detail["uiMessage"] == {"code": "parse.missing_stop", "args": {"line": 3}}
     assert detail["technical"].startswith("Could not parse the file as RDF. Attempts:\n")
 
 

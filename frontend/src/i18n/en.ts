@@ -15,6 +15,18 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "parse.unfinished_file": "The file ends in the middle of a statement.",
+  "parse.missing_stop": "Line {line}: the statement before this line is not finished. It probably needs a full stop (.) at its end.",
+  "parse.undeclared_prefix": "Line {line}: the prefix {prefix} is used but never declared. Add @prefix {prefix} <…> . near the top of the file.",
+  "parse.unclosed_text": "Line {line}: a text value in quotes is not closed before the end of the line.",
+  "parse.malformed_xml_line": "Line {line}: the XML is not well formed: an element is not closed, or a character is out of place.",
+  "parse.malformed_xml": "The XML is not well formed: an element is not closed, or a character is out of place.",
+  "parse.invalid_json_line": "Line {line}: the JSON is not valid.",
+  "parse.invalid_json": "The JSON is not valid.",
+  "parse.unreadable_line": "The file could not be read as {format}, line {line}.",
+  "parse.unreadable": "The file could not be read as {format}.",
+  "parse.not_rdf": "This file does not look like RDF. Semantic Studio reads Turtle, RDF/XML, JSON-LD, N-Triples, N3, TriG and N-Quads.",
+  "parse.not_rdf_table": "This file does not look like RDF. Semantic Studio reads Turtle, RDF/XML, JSON-LD, N-Triples, N3, TriG and N-Quads. To bring in a table, open a project and use its Data tab.",
   "parse.syntax_without_line": "Check the syntax of the {format} file.",
   "project.not_found": "There is no such project.",
   "query.name_required": "A query name is required.",

@@ -1548,6 +1548,18 @@
     "reasoning.already_running": {},
     "reasoning.ontology_only": {},
     "fetch.github_enterprise": {},
-    "parse.syntax_without_line": {"format": "string"}
+    "parse.syntax_without_line": {"format": "string"},
+    "parse.unfinished_file": {},
+    "parse.missing_stop": {"line": "number"},
+    "parse.undeclared_prefix": {"line": "number", "prefix": "string"},
+    "parse.unclosed_text": {"line": "number"},
+    "parse.malformed_xml_line": {"line": "number"},
+    "parse.malformed_xml": {},
+    "parse.invalid_json_line": {"line": "number"},
+    "parse.invalid_json": {},
+    "parse.unreadable_line": {"format": "string", "line": "number"},
+    "parse.unreadable": {"format": "string"},
+    "parse.not_rdf": {},
+    "parse.not_rdf_table": {}
   }
 }

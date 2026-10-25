@@ -3199,3 +3199,16 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `fetch.github_enterprise` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
 
 | `parse.syntax_without_line` | format | `backend/app/routers/projects.py` | 行番号が不明な構文失敗 | 12 | 行番号を推測せず原文を保持 |
+
+| `parse.unfinished_file` | — | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.missing_stop` | line | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.undeclared_prefix` | line, prefix | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.unclosed_text` | line | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.malformed_xml_line` | line | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.malformed_xml` | — | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.invalid_json_line` | line | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.invalid_json` | — | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.unreadable_line` | format, line | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.unreadable` | format | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.not_rdf` | — | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+| `parse.not_rdf_table` | — | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
