@@ -4,7 +4,8 @@ FILE: frontend/src/sparql/useQueryBuilder.ts
 ================================================================================
 
 SUMMARY
-    Schema failures retain their source objects; text-query facts remain locale-free.
+    Schema failures retain source objects; owned hints render from current-locale facts.
+    Delayed node picks are scoped to their dictionary view and query intent.
     The React hook that owns all query-builder state and behaviour. It fetches
     the ontology's query schema, holds the current QueryState, derives the live
     SPARQL and the graph highlighting, and exposes the actions the UI calls to
@@ -47,7 +48,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import type { UiMessage } from "../i18n/uiMessage";
+import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
+import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getQueryNode, getQuerySchema } from "../api";
 import type { QueryNodeInfo, QuerySchema } from "../types";
@@ -212,7 +214,8 @@ export function useQueryBuilder(
   const [schemaError, setSchemaError] = useState<unknown | null>(null); // schema fetch error
   const [loadingSchema, setLoadingSchema] = useState(false);
   const [state, setState] = useState<QueryState>(emptyQueryState);     // the query being built
-  const [hint, setHint] = useState<string | null>(null);               // transient user guidance
+  const { t } = useI18n();
+  const [hint, setHint] = useState<UiMessage | null>(null);               // transient user guidance
   const [openQuery, setOpenQuery] = useState<{ id: string; name: string } | null>(null); // saved query being edited
   const [textQuery, setTextQuery] = useState<TextQuery | null>(null);  // set while the query is text
   const textRef = useRef("");                        // the live text; a ref so typing renders nothing here
@@ -221,6 +224,12 @@ export function useQueryBuilder(
   const openQueryRef = useRef(openQuery);
   openQueryRef.current = openQuery;
   const sessionRef = useRef(0);
+  // Read identity and user intent are separate: a response belongs both to
+  // its dictionary view and to the visual query session that requested it.
+  const nodeView = useMemo(() => ({}), [ontologyId, imports, revision, displayLanguage, viewGeneration]);
+  const nodeViewRef = useRef(nodeView);
+  nodeViewRef.current = nodeView;
+  const nodeIntent = useRef(0);
   const requestedFor = useRef<string | null>(null);  // "ontology|imports" whose schema we already fetched
   // A ref mirror of state so async callbacks read the latest without re-binding.
   const stateRef = useRef(state);
@@ -361,7 +370,7 @@ export function useQueryBuilder(
       if (!schema) return;
       setHint(null);
       if (!appendClass(classIri, label, null, schema)) {
-        setHint(`No relationship connects “${label}” to the current path.`);
+        setHint(makeUiMessage("queryBuilder.unconnectedClass", { name: label }));
       }
     },
     [schema, appendClass],
@@ -406,17 +415,22 @@ export function useQueryBuilder(
       // but nothing it does reaches the text or the builder behind it.
       if (!ontologyId || !schema || textQueryRef.current) return;
       setHint(null);
+      const view = nodeViewRef.current;
+      const intent = nodeIntent.current;
+      const current = () => nodeViewRef.current === view && nodeIntent.current === intent && !textQueryRef.current;
       let info: QueryNodeInfo;
       try {
         info = await getQueryNode(ontologyId, nodeIri, imports, displayLanguage);
       } catch {
-        setHint("That node has no type, so it cannot be used as a query step.");
+        if (!current()) return;
+        setHint(makeUiMessage("queryBuilder.untyped"));
         return;
       }
+      if (!current()) return;
       const target = info.isClass ? null : info.types[0];
       const classIri = info.isClass ? info.iri : target?.iri;
       if (!classIri) {
-        setHint("That node has no type, so it cannot be used as a query step.");
+        setHint(makeUiMessage("queryBuilder.untyped"));
         return;
       }
       const label = info.isClass ? info.label : target?.label ?? classIri;
@@ -424,10 +438,7 @@ export function useQueryBuilder(
 
       // Attaches to the most recent step that actually relates to this class.
       if (!appendClass(classIri, label, pin, schema)) {
-        setHint(
-          `No relationship in this ontology connects “${label}” to the current path. ` +
-            "Pick a highlighted node, or choose one of the suggested next steps.",
-        );
+        setHint(makeUiMessage("queryBuilder.unconnectedNode", { name: label }));
       }
     },
     [ontologyId, schema, appendClass, imports, displayLanguage],
@@ -547,6 +558,7 @@ export function useQueryBuilder(
 
   /** Empty the path back to a blank query. */
   const clear = useCallback(() => {
+    nodeIntent.current += 1;
     setState((prev) => ({ ...prev, steps: [] }));
     setHint(null);
     setOpenQuery(null);
@@ -554,6 +566,7 @@ export function useQueryBuilder(
 
   /** Load a saved query's state and remember which saved query it is. */
   const loadState = useCallback((next: QueryState, opened: { id: string; name: string }) => {
+    nodeIntent.current += 1;
     setState({ ...emptyQueryState(), ...next });
     setOpenQuery(opened);
     setHint(null);
@@ -565,6 +578,7 @@ export function useQueryBuilder(
    * session is kept, because the editor already holds what was typed.
    */
   const forkToText = useCallback((text: string, baseline: string) => {
+    nodeIntent.current += 1;
     textRef.current = text;
     setTextQuery({
       forkedFrom: stateRef.current,
@@ -593,6 +607,7 @@ export function useQueryBuilder(
         opened?: { id: string; name: string } | null;
       } = {},
     ) => {
+      nodeIntent.current += 1;
       textRef.current = text;
       sessionRef.current += 1;
       // From one text query to another, the query to resume is still the one
@@ -636,6 +651,7 @@ export function useQueryBuilder(
    * the builder is left as it was, and so is the saved query behind it.
    */
   const leaveText = useCallback(() => {
+    nodeIntent.current += 1;
     const current = textQueryRef.current;
     if (!current) return;
     if (!current.forkedFrom) setOpenQuery(current.resume);
@@ -700,7 +716,7 @@ export function useQueryBuilder(
     state: displayState,
     setState,
     sparql,
-    hint,
+    hint: hint ? renderUiMessage(hint, t) : null,
     setHint,
     pathIris,
     candidates,

@@ -15,6 +15,10 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "queryBuilder.untyped": "That node has no type, so it cannot be used as a query step.",
+  "queryBuilder.unconnectedClass": "No relationship connects “{name}” to the current path.",
+  "queryBuilder.unconnectedNode": "No relationship in this ontology connects “{name}” to the current path. Pick a highlighted node, or choose one of the suggested next steps.",
+
   "project.result_names_failed": "The result names could not be updated. The affected result keeps its previous display. Select the display language again to retry.",
   "words.editing.the_shape": "the shape",
   "canvasUI.layoutFailed": "The canvas layout could not be saved. Your boxes stay where they are.",

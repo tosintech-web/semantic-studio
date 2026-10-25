@@ -77,7 +77,7 @@ from rdflib.namespace import OWL, RDF, RDFS, SKOS
 
 from .axioms import class_type, defined, disjoint_pairs, disjoint_with, domain_of, named_pairs
 from .sentences import article, verb
-from .messages import MessageText, literal_part, make_message, word_part
+from .messages import integer_arg, MessageText, literal_part, make_message, word_part
 
 Name = Callable[[URIRef], str]
 
@@ -325,7 +325,7 @@ def count_conflict_refusal(cls_name: str, prop_label: str, low: int, high: int) 
     """*At least* above *at most* on one class and property (5.10)."""
     if low <= high:
         return None
-    return MessageText(f"{cls_name} cannot have at least {low} and at most {high} {_noun(prop_label, True)}.", "model.count.conflict", name=cls_name, property=prop_label, low=low, high=high)
+    return MessageText(f"{cls_name} cannot have at least {low} and at most {high} {_noun(prop_label, True)}.", "model.count.conflict", name=cls_name, property=prop_label, low=integer_arg(low), high=integer_arg(high))
 
 
 def own_inverse_refusal(prop: URIRef, inverse: URIRef, name: str) -> Optional[str]:

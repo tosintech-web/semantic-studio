@@ -235,3 +235,11 @@ it.each([
   expect(renderServerMessage(wire, english, tFor("en"))).toBe(english);
   expect(renderServerMessage(wire, english, tFor("ja"))).toBe(japanese);
 });
+
+
+it.each(["9007199254740993", "1" + "0".repeat(400)])("keeps the exact conflicting count %s in both locale explanations", low => {
+  const wire = { code: "editing.guard.count_bounds_conflict", args: { low, high: "9007199254740992" } };
+  expect(validWireMessage(wire)).toBe(true);
+  expect(renderServerMessage(wire, "original detail", tFor("ja"))).toBe(`件数の下限${low}が上限9007199254740992を超えているため、このルールを満たせません。`);
+  expect(renderServerMessage(wire, "original detail", tFor("en"))).toBe(`The minimum count ${low} is greater than the maximum count 9007199254740992; the rule could never be met.`);
+});

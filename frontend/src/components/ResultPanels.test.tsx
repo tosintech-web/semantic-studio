@@ -496,3 +496,18 @@ it("translates a blank-value placeholder while keeping an identically worded RDF
   expect(validateProject).toHaveBeenCalledTimes(1);
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });
+
+it("localizes sampled validation provenance and date on UI switches", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc("model", 2), doc("shapes", 5)], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  const source = { id: "sample", source: "名簿 <b>{file}.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true };
+  validateProject.mockResolvedValue({ ...RESULT, dataSources: [source], shapes: [panel({ data: [source.id] })] });
+  const { container } = render(<I18nProvider><UiLanguageSelect /><ValidateButton onError={vi.fn()} /><ResultPanels onSelect={vi.fn()} /></I18nProvider>);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "検証" })); });
+  expect(container.textContent).toContain("名簿 <b>{file}.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(container.textContent).toContain("from 名簿 <b>{file}.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows");
+  expect(validateProject).toHaveBeenCalledTimes(1);
+});

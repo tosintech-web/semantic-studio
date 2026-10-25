@@ -496,6 +496,8 @@ leaves one behind.
 - Runtime notices come from actual emitted modules/installed versions, including generated helpers; unknown or changed originals fail distribution. [Actual distribution inventories]
 
 **Dictionary display language (P1)**
+- Incremental graph/query reads and import notifications retain full view/owner identity; query picks also retain user-intent generation. Fresh entity pages reconcile reference-only selection after structural changes. [P1 asynchronous views]
+- Conflicting SHACL/OWL count bounds use `integer_arg` even when only existing Turtle can hold the huge value. [P1 asynchronous views]
 - Completed import reports project only names from current lists, retaining operation counts and row facts. Old edit/save responses cannot modify a reopened project session. [Retained import reports]
 - Command display-name carriers keep their legacy string value; only message arguments and read-only previews project the selected name. Never use the display language for RDF writes. [command display names]
 - A shape's `displayName` is a read-only title; its original `name` remains the editable value. [command display names]

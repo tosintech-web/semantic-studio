@@ -12,7 +12,9 @@ SUMMARY
 BASIC IDEA
     App is the conductor: it fetches the ontology list and the active graph,
     holds the query-builder hook (shared by the graph and the query panel), and
-    routes user actions. The three modes (View / Explore / Query) all render
+    routes user actions. Incremental graph reads share the full view identity
+    so late expansions cannot revive a replaced graph. The three modes
+    (View / Explore / Query) all render
     over the SAME graph so switching between them never throws away the settled
     layout — View overlays a source pane, Explore shows the detail panel, Query
     shows the builder panel.
@@ -430,6 +432,11 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [ontologies, setOntologies] = useState<OntologySummary[]>([]);   // dropdown list
   const [activeId, setActiveId] = useState<string | null>(null);          // selected ontology
+  // Notifications may finish after their panel unmounts. Changing tabs keeps
+  // authority; leaving and reopening a dictionary creates a different owner.
+  const activeOwner = useMemo(() => ({}), [activeId]);
+  const activeOwnerRef = useRef(activeOwner);
+  activeOwnerRef.current = activeOwner;
   const [graphData, setGraphData] = useState<VizGraph | null>(null);      // its graph
   const [selected, setSelected] = useState<string | null>(null);          // clicked node (Explore)
   // The selection as it is now, for effects that must not follow it.
@@ -474,6 +481,7 @@ export default function App() {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [entityQuery, setEntityQuery] = useState("");
   const [referenceOnlySelection, setReferenceOnlySelection] = useState<string | null>(null);
+  const [entitySelectionSource, setEntitySelectionSource] = useState<{ iri: string; view: object } | null>(null);
   const [mode, setMode] = useState<AppMode>("explore");
   // A mode picked from the header with nothing open. It is remembered rather
   // than refused, so the library heading can ask which ontology it should act
@@ -565,9 +573,10 @@ export default function App() {
   // the imports panel reports a change.
   const [importsCount, setImportsCount] = useState<number | null>(null);
   const onImportsChanged = useCallback((listing: ImportsListing) => {
+    if (activeOwnerRef.current !== activeOwner) return;
     setImportsCount(resolvedCount(listing));
     setImportsVersion((v) => v + 1);
-  }, []);
+  }, [activeOwner]);
   // The open project (authoring-foundations). Its revision and display
   // language are part of every fetch key below, so a change refreshes the
   // views; a Library keeps revision 0 but has its own display language.
@@ -608,6 +617,18 @@ export default function App() {
   const openDocName = projectDocuments.find((d) => d.ontologyId === activeId)?.doc ?? null;
   const dictionaryView = useMemo(() => ({ revision: editingProjectDoc ? revision : 0, viewGeneration: `${importsVersion}:${editingProjectDoc ? dataGeneration : 0}` }), [revision, importsVersion, editingProjectDoc, dataGeneration]);
   const viewRevision = openDocName === "model" ? revision + dataGeneration : revision;
+  // Every graph replacement invalidates incremental reads too. Keep an opaque
+  // token (rather than comparing values after await) so leaving and reopening
+  // the same view cannot revive an old request. Update during render: an old
+  // response must be refused even before the refetch effect runs.
+  const graphView = useMemo(() => ({}), [activeId, graphBudget, mode === "entities",
+    includeImports, includeImports ? importsVersion : 0, viewRevision, displayLanguage]);
+  // Classification is structural, independent of label language and graph
+  // budget. Retain its source across tab unmounts until a fresh list reconciles it.
+  const entitySource = useMemo(() => ({}), [activeId, includeImports,
+    includeImports ? importsVersion : 0, viewRevision]);
+  const graphViewRef = useRef(graphView);
+  graphViewRef.current = graphView;
   // Where the model's data came from, for the Explore and Query source lines.
   const dataSources = useMemo(
     () => (openDocName === "model" ? (projectData?.snapshots ?? []).filter((d) => d.enabled) : []),
@@ -1287,21 +1308,23 @@ export default function App() {
   const onExpand = useCallback(async (iri: string) => {
     const id = activeIdRef.current;
     if (!id) return;
+    const view = graphViewRef.current;
     setExpandingIri(iri);
     try {
       const data = await getNeighborhood(id, iri, undefined, includeImportsRef.current, displayLanguageRef.current);
-      if (activeIdRef.current !== id) return;
+      if (graphViewRef.current !== view) return;
       // The token, not the data, is what tells GraphView this is a new merge:
       // expanding the same entity twice hands over an equal object.
       setExpansion((prev) => ({ data, token: (prev?.token ?? 0) + 1 }));
     } catch (e: unknown) {
+      if (graphViewRef.current !== view) return;
       // 404 is the endpoint's answer for "that IRI is not a node here", which is
       // a fact about the graph rather than a failure — see NOT_A_GRAPH_NODE.
       // Everything else is a real error and keeps the error bar.
       if (e instanceof ApiError && e.status === 404) setNotice(NOT_A_GRAPH_NODE);
       else setError(e);
     } finally {
-      if (activeIdRef.current === id) setExpandingIri(null);
+      if (graphViewRef.current === view) setExpandingIri(null);
     }
   }, []);
 
@@ -1353,6 +1376,7 @@ export default function App() {
   // a person building a path is not thrown around.
   const onQueryResults = useCallback((results: SparqlResults | null, explicit: boolean) => {
     const run = ++resultsRun.current;
+    const view = graphViewRef.current;
     const iris = resultIris(results);
     setQueryResults(iris.length ? new Set(iris) : NO_RESULTS);
     setResultsNote(null);
@@ -1374,7 +1398,7 @@ export default function App() {
     }
     getResultNodes(id, sendable(hidden), includeImportsRef.current, displayLanguageRef.current)
       .then((answer) => {
-        if (resultsRun.current !== run || activeIdRef.current !== id) return;
+        if (resultsRun.current !== run || graphViewRef.current !== view) return;
         if (answer.nodes.length > 0) {
           setExpansion((prev) => ({ data: answer, token: (prev?.token ?? 0) + 1 }));
         }
@@ -1383,7 +1407,7 @@ export default function App() {
       })
       .catch(() => {
         // The table still holds every answer; frame what is drawn.
-        if (resultsRun.current === run) finish(shown);
+        if (resultsRun.current === run && graphViewRef.current === view) finish(shown);
       });
   }, []);
 
@@ -2180,7 +2204,15 @@ export default function App() {
             <EntityList key={activeId} ontologyId={activeId} language={displayLanguage} imports={includeImports}
               revision={dictionaryView.revision} viewGeneration={dictionaryView.viewGeneration}
               initialQuery={entityQuery} selectedIri={selected}
-              onSelect={(iri) => { setSelected(iri); setFocusPanel(true); }} onReferenceOnly={setReferenceOnlySelection} />
+              selectionStale={entitySelectionSource?.iri === selected && entitySelectionSource.view !== entitySource}
+              onSelect={(iri) => {
+                setSelected(iri); setFocusPanel(!!iri);
+                setEntitySelectionSource(iri ? { iri, view: entitySource } : null);
+              }} onReferenceOnly={(iri) => {
+                setReferenceOnlySelection(iri);
+                if (selected) setEntitySelectionSource(previous => previous?.iri === selected && previous.view === entitySource
+                  ? previous : { iri: selected, view: entitySource });
+              }} />
           </div>
           {selected && (referenceOnlySelection === selected ?
             <ReferenceOnlyPanel key={selected} iri={selected} onClose={() => setSelected(null)} /> :

@@ -377,8 +377,14 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "editing.guard.count_bounds_conflict": {
-    "high": "number",
-    "low": "number"
+    "high": [
+      "number",
+      "string"
+    ],
+    "low": [
+      "number",
+      "string"
+    ]
   },
   "editing.guard.disjoint_exists": {
     "first": "string",
@@ -988,8 +994,14 @@ export const SERVER_CONTRACTS = {
   "model.conflict.reflexive_irreflexive": {},
   "model.conflict.symmetric_asymmetric": {},
   "model.count.conflict": {
-    "high": "number",
-    "low": "number",
+    "high": [
+      "number",
+      "string"
+    ],
+    "low": [
+      "number",
+      "string"
+    ],
     "name": "string",
     "property": "string"
   },
@@ -2243,7 +2255,7 @@ export interface ServerMessageArgs {
   "editing.guard.check_path_conflict": { "name": string; "path": string };
   "editing.guard.class_rule_exists": { "name": string };
   "editing.guard.clear_missing_end": { "field": string; "name": string };
-  "editing.guard.count_bounds_conflict": { "high": number; "low": number };
+  "editing.guard.count_bounds_conflict": { "high": number | string; "low": number | string };
   "editing.guard.disjoint_exists": { "first": string; "second": string };
   "editing.guard.disjoint_group_readonly": { "first": string; "second": string };
   "editing.guard.disjoint_missing": { "first": string; "second": string };
@@ -2448,7 +2460,7 @@ export interface ServerMessageArgs {
   "model.class.equivalent_self": undefined;
   "model.conflict.reflexive_irreflexive": undefined;
   "model.conflict.symmetric_asymmetric": undefined;
-  "model.count.conflict": { "high": number; "low": number; "name": string; "property": string };
+  "model.count.conflict": { "high": number | string; "low": number | string; "name": string; "property": string };
   "model.count.inverse": { "name": string };
   "model.count.self": { "name": string };
   "model.count.under": { "name": string; "source": string };

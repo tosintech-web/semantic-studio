@@ -56,6 +56,8 @@ import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguag
 import type { Translator } from "../i18n/types";
 import { useEffect, useState } from "react";
 import { previewDelete } from "../api";
+import { renderServerError } from "../i18n/serverMessage";
+import { originalError } from "../i18n/operationFailure";
 import { projectStore } from "../state/projectStore";
 import type { DeleteImpact } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
@@ -127,7 +129,7 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
   const parents = impact?.reparentedTo ?? [];
   const childNumber = impact?.children.length === 1 ? "one" : "many";
   const error = loadError
-    ? loadError.kind === "noProject" ? t("delete.noProject") : t("delete.failed", { name: label, detail: loadError.error instanceof Error ? loadError.error.message : String(loadError.error) })
+    ? loadError.kind === "noProject" ? t("delete.noProject") : t("delete.failed", { name: label, detail: renderServerError(loadError.error, t) })
     : errors.delete || null;
   return (
     <ConfirmDialog
@@ -184,6 +186,7 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
           )}
         </>
       )}
+      {loadError?.kind === "preview" && <details><summary>{t("common.details")}</summary><pre>{originalError(loadError.error)}</pre></details>}
       {error && (
         <p className="edit-error" role="alert">
           {error}

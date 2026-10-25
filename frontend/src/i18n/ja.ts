@@ -15,6 +15,10 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "queryBuilder.untyped": "この項目には型がないため、クエリのステップに使えません。",
+  "queryBuilder.unconnectedClass": "現在のパスと「{name}」を結ぶ関連がありません。",
+  "queryBuilder.unconnectedNode": "このオントロジーには、現在のパスと「{name}」を結ぶ関連がありません。強調表示された項目か、次のステップの候補を選んでください。",
+
   "project.result_names_failed": "結果の名称表示を更新できませんでした。更新できなかった結果は、変更前の表示を保持しています。表示言語を選び直して再試行してください。",
   "words.editing.the_shape": "この検証ルール",
   "canvasUI.layoutFailed": "キャンバスの配置を保存できませんでした。図の位置は維持されています。",
@@ -1749,7 +1753,7 @@ export const ja: Catalog = {
   "delete.action": "削除",
   "delete.checking": "{name}の削除による影響を確認中…",
   "delete.noProject": "プロジェクトが開かれていないため、削除による影響を確認できません。",
-  "delete.failed": "{name}の削除による影響を確認できませんでした。原文：{detail}",
+  "delete.failed": "{name}の削除による影響を確認できませんでした。理由：{detail}",
   "delete.statements.one": "{name}を削除すると、{count}件の記述が削除されます。",
   "delete.statements.many": "{name}を削除すると、{count}件の記述が削除されます。",
   "delete.reparent.one": "{parents}の下に移す",

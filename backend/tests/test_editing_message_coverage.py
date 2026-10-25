@@ -173,3 +173,52 @@ def test_imported_parent_refusal_keeps_first_class_and_source_as_data(source):
     expected = {"name": "外部 <img>{name}"}
     if source: expected["source"] = source
     assert editing._imported_parent_message(plan) == {"code": "editing.guard.imported_parent" + ("" if source else "_unknown"), "args": expected}
+
+
+@pytest.mark.parametrize("low,high", [(2**53 + 1, 1), (10**400, 1), (10**400, 10**399)])
+def test_conflicting_count_bounds_keep_exact_integers_and_refusal(opened, low, high):
+    from rdflib.compare import isomorphic
+    client, pid = opened
+    url = f"/api/projects/{pid}/documents/shapes/commands"
+    created = client.post(url, json={"command": "CreateShape", "args": {"target": "shop:Person", "name": "Count guards"}})
+    assert created.status_code == 200, created.text
+    document = editing.editing_service.document(pid, "shapes")
+    before = Graph()
+    for triple in document.graph: before.add(triple)
+    revision = document.ontology.revision
+    response = client.post(url, json={"command": "AddRule", "args": {"shape": created.json()["created"],
+        "rule": {"path": ["rdfs:label"], "minCount": low, "maxCount": high}}})
+    assert response.status_code == 422, response.text
+    data = response.json()
+    assert data["uiMessage"] == {"code": "editing.guard.count_bounds_conflict", "args": {
+        "low": str(low), "high": str(high) if high > 2**53 - 1 else high}}
+    assert str(low) in data["detail"] and str(high) in data["detail"]
+    assert document.ontology.revision == revision
+    assert isomorphic(document.graph, before)
+
+
+@pytest.mark.parametrize("low", [2**53 + 1, 10**400])
+def test_stored_owl_count_conflict_keeps_exact_refusal(opened, low):
+    from rdflib.compare import isomorphic
+    client, pid = opened
+    source = f'''@prefix shop: <http://example.org/shop#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+shop:Person a owl:Class; rdfs:subClassOf [a owl:Restriction; owl:onProperty shop:memberOf; owl:minCardinality {low}] .
+shop:memberOf a owl:ObjectProperty .'''
+    applied = client.put(f"/api/projects/{pid}/documents/model/source", json={"text": source})
+    assert applied.status_code == 200, applied.text
+    document = editing.editing_service.document(pid, "model")
+    before = Graph()
+    for triple in document.graph: before.add(triple)
+    revision = document.ontology.revision
+    response = client.post(f"/api/projects/{pid}/documents/model/commands", json={"command": "AddRestriction",
+        "args": {"class": "shop:Person", "property": "shop:memberOf", "kind": "atMost", "n": 1}})
+    assert response.status_code == 422, response.text
+    data = response.json()
+    assert data["uiMessage"]["code"] == "model.count.conflict"
+    assert data["uiMessage"]["args"]["low"] == str(low)
+    assert data["uiMessage"]["args"]["high"] == 1
+    assert str(low) in data["detail"]
+    assert document.ontology.revision == revision
+    assert isomorphic(document.graph, before)

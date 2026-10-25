@@ -3080,3 +3080,24 @@ No threshold, corpus seed or budget factor was weakened to obtain these passes.
 Project reload and language-setting responses also check the project-session
 counter after their await. A late reading cannot replace a reopened project's
 manifest/documents or its current language settings, including the same id.
+
+### P1 asynchronous views keep their owner and user intent
+
+A graph expansion is an incremental read of the complete view, not only an
+ontology id. Language, budget, revision, data or imports changes invalidate its
+success, error and cleanup. An opaque render-time token also rejects a reply
+from before leaving and reopening the same view. Query-node picks carry both
+that dictionary identity and an independent query-intent generation: opening a
+saved/text query or clearing the visual query invalidates a pending pick.
+
+Import completion may outlive its panel. Its parent notification still updates
+a different tab of the same dictionary, but a dictionary owner token refuses it
+after switching away, including a return to the same id. Entity selection's
+reference-only classification likewise belongs to the structural read source;
+fresh page facts reconcile it across Undo and tab remounts without using old
+rows while the new read is pending.
+
+Both SHACL and OWL conflicting-count refusals use integer_arg on each bound.
+The existing Turtle may contain a huge OWL cardinality even when new commands
+cap their own input. Number-or-string message contracts retain those exact
+counts across JSON and JavaScript, preserving refusal status and RDF state.

@@ -44,6 +44,7 @@ function noticeIn(locale: UiLocale): string {
 
 import type { NodeDetails, TermRef } from "../types";
 import EditSection from "./EditSection";
+import { ApiError } from "../api";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 import UiLanguageSelect from "./UiLanguageSelect";
@@ -719,8 +720,9 @@ describe("Stage 2 follow-ups (visual-modeling 5.8)", () => {
     });
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("alert").textContent).toBe(
-      "What deleting Invoice would take could not be worked out: Service unavailable",
+      "What deleting Invoice would take could not be worked out: The operation could not be completed. Check the details.",
     );
+    expect(within(dialog).getByText("Service unavailable").tagName).toBe("PRE");
     expect(within(dialog).queryByText(/Working out/)).toBeNull();
     expect(within(dialog).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel"]);
   });
@@ -1330,10 +1332,11 @@ it("rephrases a failed delete preview after UI switch while keeping the original
   await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })));
   const dialog = screen.getByRole("dialog");
-  expect(within(dialog).getByRole("alert").textContent).toBe("Invoiceの削除による影響を確認できませんでした。原文：<b>Service unavailable</b>");
+  expect(within(dialog).getByRole("alert").textContent).toBe("Invoiceの削除による影響を確認できませんでした。理由：操作を完了できませんでした。詳細を確認してください。");
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
-  expect(within(dialog).getByRole("alert").textContent).toBe("What deleting Invoice would take could not be worked out: <b>Service unavailable</b>");
+  expect(within(dialog).getByRole("alert").textContent).toBe("What deleting Invoice would take could not be worked out: The operation could not be completed. Check the details.");
   expect(within(dialog).getAllByRole("button").map(b => b.textContent)).toEqual(["Cancel"]);
+  expect(within(dialog).getByText("<b>Service unavailable</b>").tagName).toBe("PRE");
   expect(dialog.querySelector("b")).toBeNull();
   expect(previewDelete).toHaveBeenCalledTimes(1);
 });
@@ -1364,4 +1367,21 @@ it("rereads delete impact names in the dictionary language while retaining the c
   expect(screen.getByRole("dialog",{name:"請求書を削除しますか？"})).toBeTruthy();
   expect(previewDelete).toHaveBeenCalledTimes(reads);
   expect(runCommand).not.toHaveBeenCalled();localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("translates a retained delete-preview refusal and preserves the original detail", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const legacy = "Original <b>{reason}";
+  previewDelete.mockRejectedValue(new ApiError(legacy, 409, undefined, { code: "project.not_open", args: {} }));
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })); });
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByRole("alert").textContent).not.toContain(legacy);
+  expect(within(dialog).getByRole("alert").textContent).toContain(translate("ja", "project.not_open"));
+  expect(within(dialog).getByText(legacy).tagName).toBe("PRE");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(within(dialog).getByRole("alert").textContent).toContain(translate("en", "project.not_open"));
+  expect(previewDelete).toHaveBeenCalledTimes(1);
+  expect(runCommand).not.toHaveBeenCalled();
 });

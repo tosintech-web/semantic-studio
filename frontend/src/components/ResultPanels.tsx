@@ -235,7 +235,7 @@ function Panel({ panel, expanded, onToggle, onSelect, data = [] }: PanelProps) {
       </h4>
       {data.map((source) => (
         <p key={source.id} className="result-data">
-          {t("results.checkedData", { source: dataLabel(source) })}
+          {t("results.checkedData", { source: dataLabel(source, locale) })}
         </p>
       ))}
       <div id={`${id}-body`} className="result-panel-body" hidden={!expanded}>

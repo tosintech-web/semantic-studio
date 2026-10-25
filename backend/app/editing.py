@@ -169,7 +169,7 @@ from typing import Callable, Iterable, Optional
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
-from .messages import DisplayName, MessageText, display_values, literal_part, make_message, word_part
+from .messages import DisplayName, MessageText, display_values, integer_arg, literal_part, make_message, word_part
 from .graph_builder import (
     lang_matches,
     name_in,
@@ -3111,7 +3111,7 @@ def _rule_triples(ctx: Context, node, rule, severity) -> tuple[tuple, list]:
     if "minCount" in counts and "maxCount" in counts and counts["minCount"] > counts["maxCount"]:
         raise CommandError(
             f"{words['minCount'].capitalize()} {counts['minCount']} is more than {words['maxCount']} {counts['maxCount']}; the rule could never be met.",
-            ui_message=make_message('editing.guard.count_bounds_conflict', low=counts['minCount'], high=counts['maxCount']),
+            ui_message=make_message('editing.guard.count_bounds_conflict', low=integer_arg(counts['minCount']), high=integer_arg(counts['maxCount'])),
         )
     if "minLength" in counts and "maxLength" in counts and counts["minLength"] > counts["maxLength"]:
         raise CommandError(

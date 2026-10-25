@@ -21,9 +21,9 @@ import { useI18n } from "../i18n/I18nProvider";
 const groups: EntityKindGroup[] = ["all", "concept", "individual", "class", "properties", "other"];
 export interface EntityListProps {
   ontologyId: string; language: string; imports: boolean; revision: number; viewGeneration: string;
-  initialQuery: string; onSelect(iri: string): void; onReferenceOnly?(iri: string | null): void; selectedIri?: string | null;
+  initialQuery: string; onSelect(iri: string | null): void; onReferenceOnly?(iri: string | null): void; selectedIri?: string | null; selectionStale?: boolean;
 }
-export default function EntityList({ initialQuery, onSelect, onReferenceOnly, selectedIri, ...identity }: EntityListProps) {
+export default function EntityList({ initialQuery, onSelect, onReferenceOnly, selectedIri, selectionStale, ...identity }: EntityListProps) {
   const { t } = useI18n();
   const [query, setQuery] = useState(initialQuery);
   const [composing, setComposing] = useState(false);
@@ -40,6 +40,15 @@ export default function EntityList({ initialQuery, onSelect, onReferenceOnly, se
     return () => window.clearTimeout(timer);
   }, [query, composing]);
   useEffect(() => { if (!loading && focusAfterPage.current) { heading.current?.focus(); focusAfterPage.current = false; } }, [loading]);
+  useEffect(() => {
+    // Only the current page is exposed by useEntityPage while a new source is
+    // loading. A repeated IRI may now be defined (or only referenced). Preserve
+    // it across Undo, but never retain an absent old-source classification.
+    if (!page || !selectedIri) return;
+    const row = page.items.find(item => item.iri === selectedIri);
+    if (row) onReferenceOnly?.(row.reference_only ? row.iri : null);
+    else if (selectionStale) { onSelect(null); onReferenceOnly?.(null); }
+  }, [page, selectedIri, selectionStale, onSelect, onReferenceOnly]);
   const move = (position: number) => { focusAfterPage.current = true; setOffset(position); };
   const range = page ? t("entities.range", { start: page.total ? page.offset + 1 : 0, end: Math.min(page.offset + page.items.length, page.total), total: page.total }) : "";
   return <section className="entity-list" aria-labelledby="entities-heading">

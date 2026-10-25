@@ -468,8 +468,8 @@
     "model.count.conflict": {
       "name": "string",
       "property": "string",
-      "low": "number",
-      "high": "number"
+      "low": ["number", "string"],
+      "high": ["number", "string"]
     },
     "model.inverse.self": {
       "name": "string"
@@ -847,8 +847,8 @@
       "language": "string"
     },
     "editing.guard.count_bounds_conflict": {
-      "low": "number",
-      "high": "number"
+      "low": ["number", "string"],
+      "high": ["number", "string"]
     },
     "editing.guard.shape_target_missing": {
       "name": "string"

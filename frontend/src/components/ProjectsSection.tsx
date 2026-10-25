@@ -223,7 +223,7 @@ export default function ProjectCard({
         </p>
         {(project.data ?? []).map((source) => (
           <p key={source.id} className="project-data data-label">
-            {t("home.projectData", { label: dataLabel(source) })}
+            {t("home.projectData", { label: dataLabel(source, locale) })}
             {source.enabled ? "" : t("home.dataOff")}
           </p>
         ))}

@@ -116,6 +116,7 @@ const {
   restoreExamples,
   getResultNodes,
   getEntities,
+  resolveImports,
 } = vi.hoisted(() => ({
   listOntologies: vi.fn(),
   getGraph: vi.fn(),
@@ -170,6 +171,7 @@ const {
   // query-page-rework 5.2: a query's hidden results drawn.
   getResultNodes: vi.fn(),
   getEntities: vi.fn(),
+  resolveImports: vi.fn(),
 }));
 
 // importOriginal rather than a bare factory, so ApiError stays the real class.
@@ -217,12 +219,14 @@ vi.mock("./api", async (importOriginal) => ({
   restoreExamples,
   getResultNodes,
   getEntities,
+  resolveImports,
 }));
 
 /** Every mocked client function, so a test can count what mount actually did. */
 const ALL_API = {
   getResultNodes,
   getEntities,
+  resolveImports,
   restoreExamples,
   listData,
   listImports,
@@ -1166,6 +1170,38 @@ describe("App expand on demand", () => {
       fireEvent.click(screen.getByRole("button", { name: "fake merge" }));
     });
   }
+
+  it.each(["language", "budget"] as const)("ignores late neighbourhood success and failure after a same-ID %s change", async (change) => {
+    let settle!: (value: VizNeighborhood) => void;
+    let reject!: (error: Error) => void;
+    getNeighborhood.mockImplementationOnce(() => new Promise<VizNeighborhood>(resolve => { settle = resolve; }))
+      .mockImplementationOnce(() => new Promise<VizNeighborhood>((_resolve, fail) => { reject = fail; }));
+    getGraph.mockImplementation((_id: string, limit?: number) => Promise.resolve({ ...TRUNCATED, stats: { ...TRUNCATED.stats, budget: limit ?? 2000 } }));
+    await renderAppOpened();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "fake node" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /show its connections/i })); });
+    const changeView = async () => {
+      await act(async () => {
+        if (change === "language") {
+          fireEvent.change(screen.getByRole("combobox", { name: "Dictionary display language" }), { target: { value: "ja" } });
+          fireEvent.click(screen.getByRole("button", { name: "Apply display language" }));
+        } else fireEvent.click(screen.getByRole("button", { name: /show more/i }));
+      });
+    };
+    await changeView();
+    await act(async () => { settle(NEIGHBORHOOD); });
+    expect(screen.getByTestId("graph").getAttribute("data-expansion")).toBe("");
+    // A later request's failure belongs to its old view as well.
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /show its connections/i })); });
+    await act(async () => {
+      if (change === "language") {
+        fireEvent.change(screen.getByRole("combobox", { name: "Dictionary display language" }), { target: { value: "en" } });
+        fireEvent.click(screen.getByRole("button", { name: "Apply display language" }));
+      } else fireEvent.click(screen.getByRole("button", { name: /show less/i }));
+    });
+    await act(async () => { reject(new Error("obsolete neighbourhood")); });
+    expect(document.querySelector(".error-bar")).toBeNull();
+  });
 
   it("the detail panel asks for the selected entity's neighbourhood", async () => {
     // AC-15 from the client's side. The IRI it sends is the selected one, not
@@ -3888,6 +3924,37 @@ describe("App: the graph frames the results (query-page-rework 5.2)", () => {
     } finally { localStorage.removeItem("semantic-studio.uiLocale.v1"); }
   });
 
+  it.each(["language", "budget"] as const)("ignores late result-node success and failure after a same-ID %s change", async (change) => {
+    queryAnswer.results = rows(["http://x/Coupon"]);
+    let settle!: (value: VizNodes) => void;
+    let reject!: (error: Error) => void;
+    getResultNodes.mockImplementationOnce(() => new Promise<VizNodes>(resolve => { settle = resolve; }))
+      .mockImplementationOnce(() => new Promise<VizNodes>((_resolve, fail) => { reject = fail; }));
+    await inQuery();
+    getGraph.mockImplementation((_id: string, limit?: number) => Promise.resolve({ ...DRAWN, stats: { ...DRAWN.stats, budget: limit ?? 2000 } }));
+    await click("fake explicit run");
+    const changeView = async (language: string, budget: RegExp) => {
+      await act(async () => {
+        if (change === "language") {
+          fireEvent.change(screen.getByRole("combobox", { name: "Dictionary display language" }), { target: { value: language } });
+          fireEvent.click(screen.getByRole("button", { name: "Apply display language" }));
+        } else fireEvent.click(screen.getByRole("button", { name: budget }));
+      });
+    };
+    await changeView("ja", /show more/i);
+    const before = frames();
+    await act(async () => { settle({ nodes: [{ id: "http://x/Coupon", label: "stale", kind: "class", degree: 1 }], edges: [], total: 1, drawn: 1 }); });
+    expect(graph().getAttribute("data-expansion")).toBe("");
+    expect(frames()).toBe(before);
+    await click("fake explicit run");
+    await changeView("en", /show less/i);
+    const after = frames();
+    const said = liveRegion();
+    await act(async () => { reject(new Error("obsolete result nodes")); });
+    expect(frames()).toBe(after);
+    expect(liveRegion()).toBe(said);
+  });
+
   it("an answer for a run already cleared draws nothing", async () => {
     queryAnswer.results = rows(["http://x/Coupon"]);
     let resolve!: (v: VizNodes) => void;
@@ -3989,6 +4056,36 @@ it("uses reference-only details and never asks a missing node to open an edit fo
   expect(getNodeDetails).not.toHaveBeenCalled(); expect(getNeighborhood).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "Copy full IRI" })).toBeTruthy();
 });
+it.each([[true, false], [false, false], [true, true], [false, true]])("refreshes selected reference classification (reference=%s, remounted=%s)", async (reference, remounted) => {
+  const row = { iri: "http://x/Bond", label: "Bond", kind: "class", description: null, match: null, label_language: "en", label_fallback: false, label_truncated: false, reference_only: reference };
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderProject({ canUndo: true, undoLabel: "Changed Bond", dirty: true });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Bond" })); });
+  expect(!!screen.queryByRole("complementary", { name: "Reference only" })).toBe(reference);
+  getDocumentSource.mockResolvedValue({ text: "", revision: 0, fromEditor: true });
+  if (remounted) await act(async () => { fireEvent.click(tab("View")); });
+  undoChange.mockResolvedValue({ revision: 1, label: "Changed Bond", state: docState({ revision: 1 }) });
+  getEntities.mockResolvedValue({ items: [{ ...row, reference_only: !reference }], total: 1, offset: 0, limit: 50, revision: "two" });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Undo: Changed Bond" })); });
+  if (remounted) await act(async () => { fireEvent.click(tab("Entities")); });
+  expect(!!screen.queryByRole("complementary", { name: "Reference only" })).toBe(!reference);
+  expect(screen.getByRole("row", { name: /Bond/ }).getAttribute("aria-selected")).toBe("true");
+});
+it("clears a selected classification absent from the refreshed structural view after remount", async () => {
+  const row = { iri: "http://x/Bond", label: "Bond", kind: "class", description: null, match: null, label_language: "en", label_fallback: false, label_truncated: false, reference_only: true };
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderProject({ canUndo: true, undoLabel: "Changed Bond", dirty: true });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Bond" })); });
+  getDocumentSource.mockResolvedValue({ text: "", revision: 0, fromEditor: true });
+  await act(async () => { fireEvent.click(tab("View")); });
+  undoChange.mockResolvedValue({ revision: 1, label: "Changed Bond", state: docState({ revision: 1 }) });
+  getEntities.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 50, revision: "two" });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Undo: Changed Bond" })); });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  expect(screen.queryByRole("complementary", { name: "Reference only" })).toBeNull();
+});
 it("keeps the selected entity and refreshes the project list after Undo", async () => {
   const row = { iri: "http://x/Bond", label: "Bond", kind: "class", description: null, match: null, label_language: "en", label_fallback: false, label_truncated: false, reference_only: false };
   getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "one" });
@@ -4082,4 +4179,26 @@ it("uses the list's own search after entering Entities, keeping reference-only s
   await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
   expect(screen.queryByRole("button", { name: "fake search hit" })).toBeNull();
   expect(screen.getByRole("searchbox", { name: "Search dictionary" })).toBeTruthy();
+});
+
+it.each([[false, true], [true, true], [false, false], [true, false]])("scopes an import notification to its dictionary owner (failure=%s, switched=%s)", async (failed, switched) => {
+  localStorage.removeItem("semantic-studio-include-imports");
+  const empty = { imports: [], limit: null, resolving: null, offline: false };
+  const row = { iri: "https://example.org/import", status: "unresolved", source: null, sourceName: null, fetchedAt: null, error: null, documentCount: 0, depth: 1, importedBy: null };
+  let complete!: (value: unknown) => void;
+  let reject!: (error: Error) => void;
+  resolveImports.mockImplementation(() => new Promise((yes, no) => { complete = yes; reject = no; }));
+  listOntologies.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "o2", name: "Second" }]);
+  listImports.mockImplementation((id: string) => Promise.resolve(id === "o1" ? { ...empty, imports: [row] } : empty));
+  await renderAppOpened();
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "View" })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Imports/ })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Resolve imports" })); });
+  if (switched) await act(async () => { fireEvent.change(document.querySelector("#ontology-select")!, { target: { value: "o2" } }); });
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Query" })); });
+  await waitFor(() => expect(screen.getByTestId("query-scope").textContent).toBe("false|0"));
+  const old = { ...empty, imports: Array.from({ length: 9 }, (_, i) => ({ ...row, iri: `https://example.org/import/${i}`, status: "resolved", source: "bundled", documentCount: 1 })) };
+  listImports.mockImplementation((id: string) => Promise.resolve(id === "o1" ? old : empty));
+  await act(async () => { if (failed) reject(new Error("old failure")); else complete(old); });
+  expect(screen.getByTestId("query-scope").textContent).toBe(`false|${switched ? 0 : 9}`);
 });

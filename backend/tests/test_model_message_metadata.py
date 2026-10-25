@@ -257,4 +257,4 @@ def test_described_string_copies_parts_and_validates_contract():
     assert text == "Unchanged original" and json.dumps(text) == '"Unchanged original"'
     assert text.ui_message["args"]["classes"] == [{"text": "甲 <b>{name}"}]
     with pytest.raises(ValueError): MessageText("Original", "future.code")
-    with pytest.raises(ValueError): MessageText("Original", "model.count.conflict", name="a", property="p", low="3", high=2)
+    with pytest.raises(ValueError): MessageText("Original", "model.count.conflict", name="a", property="p", low=[], high=2)
