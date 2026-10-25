@@ -16,8 +16,9 @@
 本書はマージ済み仕様のP1を実装へ分解した計画。独立レビューの重要指摘は修正・再確認済み。
 2026-10-24：ユーザーの実装承認を受け、Task 1〜10の基盤・検索・一覧・構造化メッセージと共通画面の翻訳を実装済み。
 Task 11〜12の探索・編集・クエリ・検証等の翻訳も実装済み。
-Task 13では性能・実ブラウザ・配布物の検証を実施し、最終全体テストを確認中です。
-実装全体の独立レビュー、公開する履歴の確認、PRと必須CIの確認は未完了です。
+Task 13のローカル検証・配布物検査を実施し、全体テストと実装全体の独立レビューが完了しました。
+計10件のレビュー指摘を修正し、最終独立確認は指摘ゼロです。公開履歴の現行ポリシー検査も成功しました。
+この文書の記録時点では、PR作成とGitHubの必須CI確認が残っています。
 操作手順は `docs/p1-user-guide.md`、実測記録は `docs/p1-verification.md` を参照してください。
 部分的な日本語表示をP1全体の完成とは扱わない。
 問い合わせ先はユーザー指定により、このリポジトリのIssuesとする。改変部分の新しい
@@ -419,24 +420,24 @@ backendの `editing.py`、`modeling_checks.py`、`shacl.py`、`reasoning.py`、`
 配布物の実照合には `frontend/build/`、`scripts/distribution_notices.py`、
 `backend/constraints-distribution.txt`、Dockerfile、文書ZIPの通知資産も含む。
 
-- [ ] 合成グラフ1k/10k/40kで索引構築と温まった検索/一覧の前後を測定する。
+- [x] 合成グラフ1k/10k/40kで索引構築と温まった検索/一覧の前後を測定する。
   10kは初回1秒/温200ms以内、40kは初回3秒/温500ms以内。中央値と既存予算係数を使う。
   キャッシュ再利用の回数テストを時間テストと分けてblocking jobに残す。
-- [ ] 一覧応答256KiB、語句の表示200文字、件数・ページ境界・拒否時のtotalを試す。
+- [x] 一覧応答256KiB、語句の表示200文字、件数・ページ境界・拒否時のtotalを試す。
   ブラウザは応答受信→操作可能500ms以内、表示DOM行50以下を確認する。
   既存graphのサイズ/速度が上限を超えないことも1k/10k/40kで測る。
-- [ ] 既存driverへ `p1` シナリオを追加する。ローカルserverと一時data dirを使い、
+- [x] 既存driverへ `p1` シナリオを追加する。ローカルserverと一時data dirを使い、
   合成辞書のload→1文字IME検索→同名項目の選択→一覧paging→Project編集/Undo/Save→
   日英UIと辞書言語の独立→辞書切替→再読込を実際のブラウザで確認する。
   キーボード/AX tree、ダーク/ライト、長い名前、縮小表示も確認する。
-- [ ] private試験データを使わず、画面画像・ログに元JSON/トークンがなく、
+- [x] private試験データを使わず、画面画像・ログに元JSON/トークンがなく、
   公開しない成果物がGit/Dockerへ入らないことを横断計画の検査で確認する。
-- [ ] backendで `python -m pytest tests`、frontendで `npm run test` と `npm run build`、
+- [x] backendで `python -m pytest tests`、frontendで `npm run test` と `npm run build`、
   repo rootで `node .claude/skills/run-semantic-viewer/driver.mjs smoke` と同 `p1` を実行する。
   実行環境/合否/性能値をPRへ日本語で記載し、未実行をPASSとして報告しない。
-- [ ] P1で配布する場合は横断計画Task 4/5を前倒しする。内部原本ZIPを公開用とせず、
+- [x] P1で配布する場合は横断計画Task 4/5を前倒しする。内部原本ZIPを公開用とせず、
   通知がDocker/フロント等の実配布物へ同梱されることを検査する。
-- [ ] ユーザー向け手順・互換APIの任意フィールド・表示言語の意味・制限をREADMEへ追記する。
+- [x] ユーザー向け手順・互換APIの任意フィールド・表示言語の意味・制限をREADMEへ追記する。
   新しい判断と性能根拠をknown-stateへ記録する。
 - [ ] 必要チェックがPASSした対象差分だけをコミットし、日本語のPR説明でレビューする。
   CIのbackend-linux/backend-windows/frontend/dockerが緑になるまでP1完了としない。
