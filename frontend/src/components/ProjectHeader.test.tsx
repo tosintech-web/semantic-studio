@@ -665,7 +665,7 @@ it("keeps compound rule descriptors and the active shapes document intact across
   expect(projectStore.getSnapshot().activeDoc).toBe("shapes");
   expect(projectStore.getSnapshot().displayLanguage).toBe("en");
   expect(projectStore.getSnapshot().documents.find(d => d.doc === "shapes")?.undoUiMessage).toBe(wire);
-  expect(runCommand).toHaveBeenCalledExactlyOnceWith(PROJECT.id, "shapes", "AddRule", packet);
+  expect(runCommand).toHaveBeenCalledExactlyOnceWith(PROJECT.id, "shapes", "AddRule", packet, "en");
   expect(openProject).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("status").querySelector("img,b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");

@@ -173,7 +173,7 @@ describe("ShapesView: the list and +", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "CreateShape", {
       target: "http://www.w3.org/2004/02/skos/core#Concept",
-    });
+    }, "en");
   });
 
   it("makes shapes.ttl with the first +, tracks it, and opens the new shape alone", async () => {
@@ -193,7 +193,7 @@ describe("ShapesView: the list and +", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Check my model" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "CreateShape", { preset: "modelCheck" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "CreateShape", { preset: "modelCheck" }, "en");
     expect(projectStore.getSnapshot().documents.map((d) => d.doc)).toEqual(["model", "shapes"]);
     expect(screen.getByRole("heading", { level: 3, name: "Check my model" })).toBeTruthy();
     // Focus goes to the new form once it is drawn (found in the Chrome pass:
@@ -270,7 +270,7 @@ describe("ShapesView: the form", () => {
     expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "AddRule", {
       shape: PERSON.id,
       rule: { path: [`${X}birthDate`], pathLabel: "birth date", pathKind: "attribute", minCount: 1, maxCount: 1, datatype: "xsd:date" },
-    });
+    }, "en");
   });
 
   it("keeps Add disabled for an impossible count and says why", async () => {
@@ -309,11 +309,11 @@ describe("ShapesView: the form", () => {
     expect(runCommand).toHaveBeenLastCalledWith(PID, "shapes", "ReplaceRule", {
       shape: PERSON.id, path: [`${X}name`],
       rule: { path: [`${X}name`], pathLabel: "name", pathKind: "attribute", maxCount: 1 },
-    });
+    }, "en");
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove the rule on name" }));
     });
-    expect(runCommand).toHaveBeenLastCalledWith(PID, "shapes", "RemoveRule", { shape: PERSON.id, path: [`${X}name`] });
+    expect(runCommand).toHaveBeenLastCalledWith(PID, "shapes", "RemoveRule", { shape: PERSON.id, path: [`${X}name`] }, "en");
   });
 
   it("adds a suggestion as one merge", async () => {
@@ -325,7 +325,7 @@ describe("ShapesView: the form", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "AddRule", {
       shape: PERSON.id, rule: SUGGESTIONS.suggestions[0].rule, merge: true,
-    });
+    }, "en");
   });
 
   it("changes the severity and shows a refusal without ticking what was refused", async () => {
@@ -334,7 +334,7 @@ describe("ShapesView: the form", () => {
     await act(async () => {
       fireEvent.click(screen.getByLabelText("A warning"));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "SetShapeSeverity", { shape: PERSON.id, severity: "warning" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "SetShapeSeverity", { shape: PERSON.id, severity: "warning" }, "en");
     expect(screen.getByText("Refused for a reason.")).toBeTruthy();
     expect((screen.getByLabelText("A problem") as HTMLInputElement).checked).toBe(true);
   });
@@ -348,7 +348,7 @@ describe("ShapesView: the form", () => {
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "DeleteShape", { shape: PERSON.id });
+    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "DeleteShape", { shape: PERSON.id }, "en");
   });
 
   it("shows a Turtle shape read-only, saying why, with Edit in Turtle", async () => {
@@ -888,14 +888,24 @@ it.each([true, false])("shows read-only reason facts (known: %s), keeps the orig
 
 it("rereads shape and suggestion names for the dictionary language without editing RDF", async () => {
   await setup([PERSON]);cleanup();getShapes.mockClear();getShapeSuggestions.mockClear();
-  const japanese={...PERSON,target:{...PERSON.target!,label:"人"},rules:PERSON.rules.map(rule=>({...rule,pathLabel:"呼称"}))};
+  const japanese={...PERSON,displayName:"人のルール",target:{...PERSON.target!,label:"人"},rules:PERSON.rules.map(rule=>({...rule,pathLabel:"呼称"}))};
   getShapes.mockImplementation((_pid,language)=>Promise.resolve(listing([language==="ja"?japanese:PERSON])));
   getShapeSuggestions.mockResolvedValue(SUGGESTIONS);
   const draw=(language:string)=><DictionaryLanguageContext.Provider value={language}><ShapesView projectId={PID} kind="ontology" languages={["en","ja"]} modelOntologyId={`${PID}-model`} {...props}/></DictionaryLanguageContext.Provider>;
   let view!:ReturnType<typeof render>;
   await act(async()=>{view=render(draw("en"));});
   expect(document.querySelector(".shape-form")?.textContent).toContain("Person");
+  fireEvent.click(screen.getByRole("button", { name: "Edit shape name" }));
+  const nameField = screen.getByRole("textbox", { name: "shape name" });
+  expect((nameField as HTMLInputElement).value).toBe(PERSON.name);
+  fireEvent.change(nameField, { target: { value: "Primary language draft" } });
+  nameField.focus();
   await act(async()=>{view.rerender(draw("ja"));});
+  expect(screen.getByRole("heading", { name: "人のルール" })).toBeTruthy();
+  expect(document.querySelector(".shapes-row-name")?.textContent).toBe("人のルール");
+  expect(screen.getByRole("textbox", { name: "shape name" })).toBe(nameField);
+  expect((nameField as HTMLInputElement).value).toBe("Primary language draft");
+  expect(document.activeElement).toBe(nameField);
   expect(document.querySelector(".shape-form")?.textContent).toContain("人");
   expect(document.querySelector(".shape-rules")?.textContent).toContain("呼称");
   expect(getShapes).toHaveBeenLastCalledWith(PID,"ja");

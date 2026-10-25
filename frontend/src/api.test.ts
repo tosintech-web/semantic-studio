@@ -797,3 +797,18 @@ it("sends a snapshot-list display preference without using a previous dictionary
     expect(new URL(recorded[1].url,"http://localhost").searchParams.get("lang")).toBeNull();
   } finally { api.setDisplayLanguage(null); }
 });
+
+
+it("sends explicit command/preview display names separately from RDF command arguments", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    const args = { iri: "https://synthetic.example/C", value: "Primary text", lang: "en" };
+    await api.runCommand("prj-one","model","SetComment",args,"ja");
+    await api.previewDelete("prj-one","model",args.iri,"orphan","ja");
+    await api.planShare("prj-one","https://synthetic.example/p",args.iri,"ja");
+    expect(recorded).toHaveLength(3);
+    for (const request of recorded) expect(new URL(request.url,"http://localhost").searchParams.get("lang")).toBe("ja");
+    const sent = JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body));
+    expect(sent.args).toEqual(args); expect(sent).not.toHaveProperty("lang");
+  } finally { api.setDisplayLanguage(null); }
+});

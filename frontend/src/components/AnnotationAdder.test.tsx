@@ -168,7 +168,7 @@ describe("AnnotationAdder", () => {
       iri: EX + "Invoice",
       property: LIST[0].iri,
       value: { kind: "text", value: "Une facture.", lang: "fr" },
-    });
+    }, "en");
     expect(onDone).toHaveBeenCalled();
   });
 
@@ -217,7 +217,7 @@ describe("AnnotationAdder", () => {
     expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateAnnotationProperty", {
       label: "approved by",
       valueType: { kind: "link" },
-    });
+    }, "en");
     expect(property().value).toBe(EX + "approvedBy");
     expect(valueType().value).toBe("link");
   });
@@ -251,5 +251,5 @@ it("keeps annotation content and RDF language while switching the UI language", 
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
   expect(runCommand).toHaveBeenCalledWith(PID, "model", "AddAnnotation", {
     iri: EX + "Invoice", property: LIST[0].iri, value: { kind: "text", value: "<b>辞書の説明</b>", lang: "fr" },
-  });
+  }, "en");
 });

@@ -4,6 +4,7 @@ FILE: frontend/src/types.ts
 ================================================================================
 
 SUMMARY
+    Shape display titles stay separate from editable names.
     Snapshot/preview class names can identify an app-owned word beside legacy text.
     Approval facts optionally describe reasons, redirects and sent content.
     Import rows, limits and chosen-file failures carry optional source UI facts.
@@ -1231,6 +1232,8 @@ export interface ShapeForm {
   id: string;
   iri: string | null;
   name: string;
+  /** Read-only title in the dictionary language; name remains the editable value. */
+  displayName?: string;
   nameUiMessage?: WireMessage | null;
   named: boolean;
   target: ShapeTarget | null;

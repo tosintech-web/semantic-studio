@@ -4,6 +4,7 @@ FILE: frontend/src/components/ReusePlan.tsx
 ================================================================================
 
 SUMMARY
+    A reuse target owns its reads and drafts; language-only reads preserve focus.
     The reuse plan of attribute-reuse 5.2: what using an existing attribute
     or relationship on one more class means, in the person's names, before
     anything is written, and the one or more choices that do it. Also the
@@ -47,6 +48,7 @@ EXPECTED OUTPUT
 
 import { renderServerError, renderServerMessage } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useId, useRef, useState } from "react";
 import { planShare } from "../api";
 import {
@@ -79,8 +81,13 @@ interface Props {
   onAlready?: (sentence: string, notice: ProjectNoticeDetail) => void;
 }
 
-export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDone, onCancel, onAlready }: Props) {
+export default function ReusePlan(props: Props) {
+  return <ReusePlanTarget key={JSON.stringify([props.pid, props.property.iri, props.cls?.iri])} {...props} />;
+}
+
+function ReusePlanTarget({ pid, ontologyId, property, cls, runner, onDone, onCancel, onAlready }: Props) {
   const { locale, t } = useI18n();
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const { busy, errors, run } = runner;
   const id = useId();
   const [plan, setPlan] = useState<SharePlan | null>(null);
@@ -90,16 +97,19 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   const [parentName, setParentName] = useState("");
   const box = useRef<HTMLDivElement>(null);
   const parentField = useRef<HTMLInputElement>(null);
+  const initialFocusGiven = useRef(false);
 
   useEffect(() => {
     let live = true;
-    planShare(pid, property.iri, cls?.iri)
+    const reading = dictionaryLanguage === undefined ? planShare(pid, property.iri, cls?.iri)
+      : planShare(pid, property.iri, cls?.iri, dictionaryLanguage);
+    reading
       .then((answer) => live && setPlan(answer.plan))
       .catch((e: unknown) => live && setFailed({ cause: e, message: e instanceof Error ? e.message : String(e) }));
     return () => {
       live = false;
     };
-  }, [pid, property.iri, cls?.iri]);
+  }, [pid, property.iri, cls?.iri, dictionaryLanguage]);
 
   // Case B writes nothing: the caller closes the form and says why. Once,
   // when the plan arrives, whatever the caller's callback is by then.
@@ -113,8 +123,12 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
 
   // The first choice takes focus when the plan arrives (5.5).
   useEffect(() => {
-    if (!plan) return;
-    box.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    if (!plan || initialFocusGiven.current) return;
+    const first = box.current?.querySelector<HTMLButtonElement>("button");
+    if (first) {
+      first.focus();
+      initialFocusGiven.current = true;
+    }
   }, [plan]);
 
   useEffect(() => {

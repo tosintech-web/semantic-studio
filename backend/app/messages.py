@@ -2,7 +2,7 @@
 ================================================================================
 FILE: backend/app/messages.py
 SUMMARY
-    Source-validated, additive UI metadata for server-owned messages.
+    Source-validated UI facts can project selected names while preserving legacy text.
 BASIC IDEA
     A single JSON contract defines primitive arguments and flat noun parts. Legacy
     English remains intact; clients choose their own UI locale at render time.
@@ -36,11 +36,36 @@ def _part(value) -> bool:
             and isinstance(value["args"], dict) and not value["args"])
 
 
+class DisplayName(str):
+    """A selected read name beside the unchanged lexical/JSON value.
+
+    Only explicit display boundaries project the selected value. Formatting,
+    comparisons, RDF-derived names and ordinary JSON retain the original text.
+    """
+    def __new__(cls, legacy: str, display: str):
+        if not isinstance(legacy, str) or not isinstance(display, str):
+            raise ValueError("A display name needs two strings")
+        value = super().__new__(cls, legacy)
+        value.display = display
+        return value
+
+
+def display_values(value):
+    """Project source name carriers in an explicitly read-only result."""
+    if isinstance(value, DisplayName):
+        return value.display
+    if isinstance(value, dict):
+        return {key: display_values(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [display_values(item) for item in value]
+    return value
+
+
 def literal_part(text: str) -> dict:
     """A captured RDF name/value, never a previously assembled UI sentence."""
     if not isinstance(text, str):
         raise ValueError("A literal part must be text")
-    return {"text": text}
+    return {"text": display_values(text)}
 
 
 def word_part(code: str) -> dict:
@@ -73,7 +98,7 @@ def make_message(code: str, **args) -> dict:
     # edit to a caller's list/dict cannot silently rewrite a history step.
     captured = {
         key: [literal_part(part["text"]) if "text" in part else word_part(part["code"])
-              for part in value] if isinstance(value, list) else value
+              for part in value] if isinstance(value, list) else display_values(value)
         for key, value in args.items()
     }
     return {"code": code, "args": captured}

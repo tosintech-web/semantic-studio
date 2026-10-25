@@ -176,7 +176,7 @@ describe("Belongs to, for a shared domain (attribute-reuse 5.3)", () => {
   it("Remove is UnshareDomain for that class", async () => {
     await show(UNION);
     await act(async () => screen.getByRole("button", { name: "Remove Contractor from hasName" }).click());
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Contractor" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Contractor" }, "en");
     expect(noticeIn("ja")).toBe("Contractorから「hasName」を外しました。");
     expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
@@ -197,7 +197,7 @@ describe("two domain lines (attribute-reuse 5.4)", () => {
     expect(within(block).getByText(SEPARATE_TEXT)).toBeTruthy();
     expect(within(block).getByText("All of these classes at once (see the warning):")).toBeTruthy();
     await act(async () => within(block).getByRole("button", { name: "Share it" }).click());
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" }, "en");
     expect(noticeIn("ja")).toBe("「hasName」をEmployee、Teamで共有しました。");
     expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
@@ -256,5 +256,5 @@ it("switches UI language with an open type draft and submits the original dataty
   expect(screen.getByRole("combobox", { name: "Type of value" })).toBe(types);
   expect((types as HTMLSelectElement).value).toBe("xsd:integer");
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Set type" })));
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetRange", { property: HR + "hasName", target: "xsd:integer" });
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetRange", { property: HR + "hasName", target: "xsd:integer" }, "en");
 });

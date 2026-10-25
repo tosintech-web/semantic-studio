@@ -2968,3 +2968,24 @@ upstream-text-collected to distinguish it from collection out of an installed
 package. All 227 notice references match their files after collection/repair.
 This byte check does not approve another version or prove what is distributed:
 actual frontend/Docker/ZIP notice inclusion remains a separate P1 gate.
+
+### Command display names preserve RDF and editing values (P1)
+
+Commands can read names in an explicit dictionary display language while their
+primary-language rules, legacy labels and RDF stay unchanged. DisplayName is a
+string with the original lexical value and a separate selected display name.
+Only source-owned message arguments and read-only preview records project the
+selected value. Context.languages and Context.primary remain the writing basis.
+Actual command, refusal, delete-impact and reuse-plan tests compare legacy text,
+unchanged choices and isomorphic model/shapes graphs with and without lang.
+
+Undo/Redo keep the operand names captured when the operation was issued; these
+are historical facts, including names of deleted resources. Their UI templates
+follow the current UI locale. Shape listings expose a separate optional
+displayName for row/heading titles; name stays the original editable value, so a
+name draft and its focused input survive a dictionary-language reread.
+
+Reuse plans are owned by project/property/class, with a new key for a new target.
+Late responses cannot fill another target's form. A language reread keeps its
+choice and custom-parent draft, and initial focus runs only once per target.
+Delete previews likewise reread selected names while keeping the chosen strategy.

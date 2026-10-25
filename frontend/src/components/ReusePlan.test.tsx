@@ -18,11 +18,12 @@ import { useState } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import { renderProjectAnnouncement, type ProjectNoticeDetail } from "../modeling/projectNotices";
 import { makeKindOf, planAlready, givenAnnouncement, sharedAnnouncement } from "../modeling/sentences";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
 import ReusePlan from "./ReusePlan";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 const { planShare } = vi.hoisted(() => ({ planShare: vi.fn() }));
 vi.mock("../api", async (original) => ({ ...await original<typeof import("../api")>(), planShare }));
 afterEach(cleanup);
@@ -170,4 +171,61 @@ it("uses a localized fallback for unknown plan metadata and keeps its original r
   expect(container.querySelector("details")).toBe(details);
   expect(planShare).toHaveBeenCalledTimes(1);
   expect(container.querySelector("img")).toBeNull();
+});
+
+
+it("rereads plan names in the dictionary language without losing a focused shared-parent draft", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1","en");
+  planShare.mockReset();
+  const property = { iri:"https://synthetic.example/p",label:"hasName" };
+  const cls = { iri:"https://synthetic.example/D",label:"Team" };
+  planShare.mockImplementation(async (_pid,_property,_cls,lang) => ({ revision:2,plan:{
+    case:"D",property:{...property,kind:"attribute"},
+    domain:{form:"one",classes:[{iri:"https://synthetic.example/C",label:lang === "ja" ? "従業員" : "Employee",type:"rdfs"}]},
+    choices:{subclass:false,union:false,parent:true,up:[]},imported:[],turtle:null,
+  }}));
+  const run = vi.fn();
+  const runner = {busy:false,errors:{},run,clear:vi.fn(),alive:()=>true};
+  const draw = (language:string) => <DictionaryLanguageContext.Provider value={language}><I18nProvider><UiLanguageSelect />
+    <ReusePlan pid="prj-synthetic" ontologyId="model" property={property} cls={cls} runner={runner} onDone={vi.fn()} onCancel={vi.fn()} />
+    </I18nProvider></DictionaryLanguageContext.Provider>;
+  const view=render(draw("en"));
+  const field = await screen.findByRole("textbox",{name:"What is every Employee and Team? For example, Worker"});
+  fireEvent.change(field,{target:{value:"Synthetic parent draft"}});field.focus();
+  await act(async()=>{view.rerender(draw("ja"));});
+  expect(screen.getByRole("textbox",{name:"What is every 従業員 and Team? For example, Worker"})).toBe(field);
+  expect((field as HTMLInputElement).value).toBe("Synthetic parent draft");
+  expect(document.activeElement).toBe(field);
+  const reads=planShare.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox",{name:"UI language"}),{target:{value:"ja"}});
+  expect(planShare).toHaveBeenCalledTimes(reads);expect(run).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it("drops an old target's plan and parent draft while the next target is being read", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1","en");planShare.mockReset();
+  const property={iri:"https://synthetic.example/p",label:"hasName"},cls={iri:"https://synthetic.example/D",label:"Team"};
+  const plan=(label:string)=>({revision:2,plan:{case:"D",property:{...property,kind:"attribute"},
+    domain:{form:"one",classes:[{iri:"https://synthetic.example/C",label,type:"rdfs"}]},
+    choices:{subclass:false,union:false,parent:true,up:[]},imported:[],turtle:null}});
+  let resolveOlder!: (value:unknown)=>void, resolveNext!: (value:unknown)=>void;
+  const older=new Promise(resolve=>{resolveOlder=resolve;}), next=new Promise(resolve=>{resolveNext=resolve;});
+  planShare.mockImplementation((pid,_property,_cls,lang)=>pid === "prj-next" ? next : lang === "fr" ? older : Promise.resolve(plan("Employee")));
+  const runner={busy:false,errors:{},run:vi.fn(),clear:vi.fn(),alive:()=>true};
+  const draw=(pid:string,lang:string)=><DictionaryLanguageContext.Provider value={lang}><I18nProvider>
+    <ReusePlan pid={pid} ontologyId="model" property={property} cls={cls} runner={runner} onDone={vi.fn()} onCancel={vi.fn()} />
+    </I18nProvider></DictionaryLanguageContext.Provider>;
+  const view=render(draw("prj-first","en"));
+  const field=await screen.findByRole("textbox",{name:"What is every Employee and Team? For example, Worker"});
+  fireEvent.change(field,{target:{value:"First target draft"}});
+  await act(async()=>{view.rerender(draw("prj-first","fr"));});
+  await act(async()=>{view.rerender(draw("prj-next","en"));});
+  expect(screen.queryByRole("textbox")).toBeNull();
+  await act(async()=>{resolveNext(plan("Next employee"));});
+  const current=screen.getByRole("textbox",{name:"What is every Next employee and Team? For example, Worker"});
+  expect((current as HTMLInputElement).value).toBe("");
+  await act(async()=>{resolveOlder(plan("Older employee"));});
+  expect(screen.getByRole("textbox",{name:"What is every Next employee and Team? For example, Worker"})).toBe(current);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

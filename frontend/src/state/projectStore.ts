@@ -611,7 +611,8 @@ export const projectStore = {
   ): Promise<ChangeResult> {
     const project = requireProject();
     const target = doc ?? snapshot.activeDoc;
-    const result = await runCommand(project.id, target, name, args);
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
+    const result = await runCommand(project.id, target, name, args, language);
     if (!snapshot.documents.some((d) => d.doc === target)) {
       // The first shape command made shapes.ttl (shacl-authoring 8): track
       // it from a fresh open, as Add shapes.ttl does.

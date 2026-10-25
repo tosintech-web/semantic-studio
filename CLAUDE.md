@@ -489,6 +489,10 @@ leaves one behind.
 - `HierarchyView` never imports from `canvas/`: App reaches `canvas/` only through `React.lazy`. [Edit page]
 - Canvas markers are sized in user space, one per line kind, coloured by CSS. [Edit page]
 
+**Dictionary display language (P1)**
+- Command display-name carriers keep their legacy string value; only message arguments and read-only previews project the selected name. Never use the display language for RDF writes. [command display names]
+- A shape's `displayName` is a read-only title; its original `name` remains the editable value. [command display names]
+
 ## Skills
 
 Project skills live in `.claude/skills/` and load automatically.

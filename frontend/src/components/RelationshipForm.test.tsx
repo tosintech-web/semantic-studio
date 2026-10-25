@@ -162,7 +162,7 @@ describe("From, for a shared start (attribute-reuse 5.3)", () => {
     expect(within(block).getByRole("button", { name: "Add a class to hasName" })).toBeTruthy();
     expect(within(block).queryByRole("button", { name: /the start of hasName/ })).toBeNull();
     await act(async () => within(block).getByRole("button", { name: "Remove Intern from hasName" }).click());
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Intern" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Intern" }, "en");
   });
 
   it("one class keeps Change from, and Add a class", async () => {
@@ -177,7 +177,7 @@ describe("From, for a shared start (attribute-reuse 5.3)", () => {
     const block = fromTo();
     expect(within(block).getByText(SEPARATE_TEXT)).toBeTruthy();
     await act(async () => within(block).getByRole("button", { name: "Share it" }).click());
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" }, "en");
   });
 });
 
@@ -207,7 +207,7 @@ it("keeps an inverse-name draft and dictionary language while switching UI langu
   expect(screen.getByRole("textbox", { name: "Name of the other way round (en)" })).toBe(input);
   expect((input as HTMLInputElement).value).toBe("<b>雇用する</b>");
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Create" })));
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetInverse", { property: HR + "hasName", label: "<b>雇用する</b>" });
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetInverse", { property: HR + "hasName", label: "<b>雇用する</b>" }, "en");
 });
 
 it("localizes the property head and preserves the rule pointer's original references", () => {
@@ -231,7 +231,7 @@ it("localizes shared-domain controls and removes the original class", async () =
   expect(screen.getByText("これらのクラスのいずれか：")).toBeTruthy();
   expect(screen.getByRole("button", { name: "hasNameにクラスを追加" })).toBeTruthy();
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "hasNameからContractorを外す" })));
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Contractor" });
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Contractor" }, "en");
 });
 
 it.each([true, false])("keeps warning details and fix identity through language changes (known=%s)", async known => {
@@ -294,6 +294,6 @@ it("renders the shared-domain warning facts without rerunning its fix on languag
   expect(block.textContent).toContain("Separate domains Employee and Team on hasName");
   expect(runCommand).not.toHaveBeenCalled();
   await act(async () => fireEvent.click(within(block).getByRole("button", { name: "Share it" })));
-  expect(runCommand).toHaveBeenCalledExactlyOnceWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" });
+  expect(runCommand).toHaveBeenCalledExactlyOnceWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" }, "en");
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

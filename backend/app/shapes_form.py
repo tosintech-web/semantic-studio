@@ -4,7 +4,7 @@ FILE: backend/app/shapes_form.py
 ================================================================================
 
 SUMMARY
-    Suggestion labels can use a read language while required languages stay unchanged.
+    Shape titles and suggestions use the read language; editable names and required languages stay unchanged.
     SHACL shapes as the learner's form sees them (shacl-authoring 5.3 to
     5.5): which node shapes a shapes document lists, each one read into the
     form's structure -- target, name, severity, message and one rule per
@@ -488,6 +488,9 @@ def read_shape(shapes: Graph, node, model: Graph, names: Names, languages: list)
         "name": str(label) if label is not None else (
             prefixed(shapes, node) if isinstance(node, URIRef) else "Unnamed shape"
         ),
+        # The editable name stays the original value. A display-language read
+        # must not feed a translated title into the primary-language writer.
+        **({"displayName": pick_label_in(shapes, node, languages)[0]} if label is not None else {}),
         "named": label is not None,
         "target": target_json(target, names),
         "severity": SEVERITIES.get(own, "violation"),

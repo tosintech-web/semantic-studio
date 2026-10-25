@@ -237,7 +237,7 @@ describe("the reuse plan in the class form (attribute-reuse 5.2)", () => {
       property: HR + "hasName",
       class: HR + "Contractor",
       how: "union",
-    });
+    }, "en");
     expect(projectStore.getSnapshot().announcement.text).toContain("hasName is now shared by Employee and Contractor.");
     // A finished choice: the form closes, focus on the class's attribute list.
     expect(screen.queryByRole("group", { name: "Use hasName" })).toBeNull();
@@ -266,7 +266,7 @@ describe("the reuse plan in the class form (attribute-reuse 5.2)", () => {
       class: HR + "Contractor",
       how: "parent",
       parentLabel: "Worker",
-    });
+    }, "en");
   });
 
   it("an imported class is never offered a parent, and the plan says why", async () => {
@@ -361,5 +361,5 @@ it("localizes property groups and keeps their original references", async () => 
   expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(input);
   expect((input as HTMLInputElement).value).toBe("<b>主任</b>");
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Create" })));
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "<b>主任</b>", parent: HR + "Manager", iri: undefined });
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "<b>主任</b>", parent: HR + "Manager", iri: undefined }, "en");
 });

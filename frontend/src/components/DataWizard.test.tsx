@@ -259,7 +259,7 @@ describe("steps 2 to 4 (5.3 to 5.5)", () => {
     expect(runCommand).toHaveBeenCalledTimes(1);
     expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", {
       label: "age", domain: `${X}Person`, datatype: "http://www.w3.org/2001/XMLSchema#integer",
-    });
+    }, "en");
     expect((within(table).getByLabelText("age") as HTMLSelectElement).value).toBe(`attribute ${X}age`);
 
     // Cancel asks, once the columns are mapped.
@@ -782,7 +782,7 @@ describe("the import wizard follows UI locale without changing the mapping", () 
     expect((type as HTMLSelectElement).value).toBe("integer");
     runCommand.mockResolvedValue({ revision: 2, label: "Created datatype property age", state: { ...MODEL, revision: 2, dirty: true, canUndo: true }, created: `${X}age` });
     await press(screen.getByRole("button", { name: "Create attribute" }));
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", { label: name, domain: `${X}Person`, datatype: "http://www.w3.org/2001/XMLSchema#integer" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", { label: name, domain: `${X}Person`, datatype: "http://www.w3.org/2001/XMLSchema#integer" }, "en");
     await press(screen.getByRole("button", { name: "Cancel" }));
     const leave = screen.getByRole("group", { name: "Leave the wizard?" });
     language("ja");
@@ -860,7 +860,7 @@ describe("the import wizard follows UI locale without changing the mapping", () 
     expect((field as HTMLInputElement).value).toBe(label);
     expect(screen.getByRole("alert").textContent).toBe("Check the supplied values and try again.");
     expect(screen.getByText("original refusal <img>").closest("details")).toBeTruthy();
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label }, "en");
     expect(fetchHierarchy).toHaveBeenCalledTimes(requests);
   });
 

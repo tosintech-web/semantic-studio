@@ -131,7 +131,7 @@ describe("CreateForm", () => {
     expect(screen.getByText(/To: Person/)).toBeTruthy();
     await create();
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateObjectProperty", { label: "works for", range: X + "Person" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateObjectProperty", { label: "works for", range: X + "Person" }, "en");
     expect(projectStore.getSnapshot().creating).toBeNull();
     expect(projectStore.getSnapshot().created).toMatchObject({ iri: X + "New", kind: "objectProperty" });
   });
@@ -149,7 +149,7 @@ describe("CreateForm", () => {
     await act(async () => {
       await projectStore.createDraft();
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Invoice", definition: "A bill.", iri: X + "Bill" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Invoice", definition: "A bill.", iri: X + "Bill" }, "en");
   });
 
   it("a relationship waits for the class it points to, as the class form's does", async () => {
@@ -172,7 +172,7 @@ describe("CreateForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "More options" }));
     fireEvent.change(screen.getByRole("combobox", { name: "Type of value" }), { target: { value: "xsd:decimal" } });
     await create();
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", { label: "total", datatype: "xsd:decimal" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", { label: "total", datatype: "xsd:decimal" }, "en");
   });
 
   it("an example waits for its class, said beside Create, and sends nothing until then", async () => {
@@ -250,7 +250,7 @@ it("keeps the shared creation draft and definition on UI language changes", asyn
   expect((screen.getByRole("textbox", { name: "Definition (optional)" }) as HTMLTextAreaElement).value).toBe("<b>定義</b>");
   expect(projectStore.getSnapshot().creating?.token).toBe(token);
   await create();
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", expect.objectContaining({ label: "請求書", definition: "<b>定義</b>" }));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", expect.objectContaining({ label: "請求書", definition: "<b>定義</b>" }), "en");
 });
 
 

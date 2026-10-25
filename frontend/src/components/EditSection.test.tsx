@@ -45,6 +45,7 @@ function noticeIn(locale: UiLocale): string {
 import type { NodeDetails, TermRef } from "../types";
 import EditSection from "./EditSection";
 import { I18nProvider } from "../i18n/I18nProvider";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, previewDelete, searchNodes, getAnnotationProperties } = vi.hoisted(() => ({
@@ -179,7 +180,8 @@ afterEach(() => {
   projectStore._reset();
 });
 
-const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2);
+// Inspect RDF write arguments; the independent display-language argument is checked at its API/store boundary.
+const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2, 4);
 
 describe("Names (AC-1)", () => {
   it("lists every project language, a missing one said in text", async () => {
@@ -1283,7 +1285,7 @@ it("keeps an entity-name draft and RDF language when the edit UI changes languag
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(screen.getByRole("textbox", { name: "name in en" })).toBe(input);
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Invoice", value: "<b>請求書</b>", lang: "en" });
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Invoice", value: "<b>請求書</b>", lang: "en" }, "en");
 });
 it("localizes read-only guidance while preserving the source name", async () => {
   localStorage.removeItem("semantic-studio.uiLocale.v1");
@@ -1318,7 +1320,7 @@ it("keeps the delete strategy and impact across a UI language switch", async () 
   expect(previewDelete).toHaveBeenCalledTimes(1);
   expect(dialog.querySelector("b")).toBeNull();
   await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Delete" })));
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Invoice", strategy: "orphan" });
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Invoice", strategy: "orphan" }, "en");
 });
 
 
@@ -1334,4 +1336,32 @@ it("rephrases a failed delete preview after UI switch while keeping the original
   expect(within(dialog).getAllByRole("button").map(b => b.textContent)).toEqual(["Cancel"]);
   expect(dialog.querySelector("b")).toBeNull();
   expect(previewDelete).toHaveBeenCalledTimes(1);
+});
+
+
+it("rereads delete impact names in the dictionary language while retaining the chosen strategy", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1","en");
+  previewDelete.mockImplementation(async (_pid,_doc,_iri,_strategy,lang)=>({dryRun:true,revision:2,impact:{
+    iri:EX+"Invoice",label:lang === "ja" ? "請求書" : "Invoice",kind:"class",statements:5,strategy:"reparent",
+    children:[{iri:EX+"SalesInvoice",label:lang === "ja" ? "売上請求書" : "Sales Invoice"}],
+    reparentedTo:[{iri:EX+"Document",label:lang === "ja" ? "文書" : "Document"}],properties:[],individuals:[],importMentions:0,
+  }}));
+  const details=invoice();
+  const draw=(lang:string)=><DictionaryLanguageContext.Provider value={lang}><I18nProvider><UiLanguageSelect />
+    <EditSection ontologyId={OID} details={details} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} />
+    </I18nProvider></DictionaryLanguageContext.Provider>;
+  let view!: ReturnType<typeof render>;
+  await act(async()=>{view=render(draw("en"));});
+  await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Delete Invoice…"}));});
+  const orphan=screen.getByRole("radio",{name:"Leave it without a parent"});fireEvent.click(orphan);
+  await act(async()=>{view.rerender(draw("ja"));});
+  expect(screen.getByRole("dialog",{name:"Delete 請求書?"})).toBeTruthy();
+  expect(screen.getByRole("radio",{name:"Leave it without a parent"})).toBe(orphan);
+  expect((orphan as HTMLInputElement).checked).toBe(true);
+  expect(previewDelete).toHaveBeenLastCalledWith(PID,"model",EX+"Invoice","reparent","ja");
+  const reads=previewDelete.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox",{name:"UI language"}),{target:{value:"ja"}});
+  expect(screen.getByRole("dialog",{name:"請求書を削除しますか？"})).toBeTruthy();
+  expect(previewDelete).toHaveBeenCalledTimes(reads);
+  expect(runCommand).not.toHaveBeenCalled();localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

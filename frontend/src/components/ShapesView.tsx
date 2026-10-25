@@ -4,6 +4,7 @@ FILE: frontend/src/components/ShapesView.tsx
 ================================================================================
 
 SUMMARY
+    Row titles use selected display names without remounting a selected form.
     Read names follow the selected dictionary language independently of UI locale.
     The Shapes view of a project (shacl-authoring 5.1, 5.2), in two columns
     (load-and-shapes 5.3): on the left the list of shapes, each a short
@@ -304,7 +305,7 @@ export default function ShapesView({
                       chooseTab("shape");
                     }}
                   >
-                    <span className="shapes-row-name">{validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : shape.name}</span>
+                    <span className="shapes-row-name">{validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : (shape.displayName ?? shape.name)}</span>
                     <span className="shapes-row-sentence">{rowSentence(shape, locale)}</span>
                     <span className={`shapes-row-result result-dot-${state ?? "none"}`}>
                       <span className="result-dot" aria-hidden="true" />

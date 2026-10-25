@@ -4,6 +4,7 @@ FILE: frontend/src/api.ts
 ================================================================================
 
 SUMMARY
+    Command/preview requests accept a read language independent of RDF arguments.
     Explicit label-language reads reuse recorded validation and reasoning results.
     Declined approvals retain host facts beside their original failure text.
     Documentation downloads share the API error boundary and preserve UI facts.
@@ -890,8 +891,9 @@ export function runCommand(
   doc: ProjectDocName,
   command: string,
   args: Record<string, unknown>,
+  displayLanguage?: string,
 ): Promise<ChangeResult> {
-  return send(documentUrl(pid, doc, "/commands"), {
+  return send(withLang(documentUrl(pid, doc, "/commands"), displayLanguage ?? ""), {
     method: "POST",
     headers: JSON_WRITE,
     body: JSON.stringify({ command, args }),
@@ -904,8 +906,9 @@ export function previewDelete(
   doc: ProjectDocName,
   iri: string,
   strategy: "reparent" | "orphan" = "reparent",
+  displayLanguage?: string,
 ): Promise<{ dryRun: true; impact: DeleteImpact; revision: number }> {
-  return send(documentUrl(pid, doc, "/commands"), {
+  return send(withLang(documentUrl(pid, doc, "/commands"), displayLanguage ?? ""), {
     method: "POST",
     headers: JSON_WRITE,
     body: JSON.stringify({ command: "DeleteEntity", args: { iri, strategy }, dryRun: true }),
@@ -918,8 +921,9 @@ export function planShare(
   pid: string,
   property: string,
   cls?: string,
+  displayLanguage?: string,
 ): Promise<{ dryRun: true; plan: SharePlan; revision: number }> {
-  return send(documentUrl(pid, "model", "/commands"), {
+  return send(withLang(documentUrl(pid, "model", "/commands"), displayLanguage ?? ""), {
     method: "POST",
     headers: JSON_WRITE,
     body: JSON.stringify({ command: "ShareDomain", args: cls ? { property, class: cls } : { property }, dryRun: true }),

@@ -177,7 +177,7 @@ describe("the Rules block (5.9)", () => {
       fireEvent.click(add);
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand.mock.calls[0].slice(1)).toEqual([
+    expect(runCommand.mock.calls[0].slice(1, 4)).toEqual([
       "model",
       "AddRestriction",
       { class: EX + "Order", form: "every", property: EX + "hasLine", kind: "some", filler: EX + "OrderLine", n: null },
@@ -200,7 +200,7 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["AddDisjointWith", { a: EX + "Order", b: EX + "Person" }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["AddDisjointWith", { a: EX + "Order", b: EX + "Person" }]);
   });
 
   it("a refusal stands under the builder and is said in the live region; the builder stays (AC-10)", async () => {
@@ -236,7 +236,7 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual([
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual([
       "ReplaceRestriction",
       {
         class: EX + "Order",
@@ -257,7 +257,7 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove: Every Order has at least one line that is an Order line" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["RemoveRestriction", { class: EX + "Order", restriction: first.key }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["RemoveRestriction", { class: EX + "Order", restriction: first.key }]);
     expect(said()).toMatch(/^Removed: Every Order has at least one line that is an Order line\./);
     await refetch(rulesOf([second]));
     await waitFor(() =>
@@ -309,7 +309,7 @@ describe("the Rules block (5.9)", () => {
         screen.getByRole("button", { name: "Check it in data too: Every Order has at least one line that is an Order line" }),
       );
     });
-    expect(runCommand.mock.calls[0].slice(1)).toEqual(["shapes", "CheckInData", { class: EX + "Order", restriction: rule.key }]);
+    expect(runCommand.mock.calls[0].slice(1, 4)).toEqual(["shapes", "CheckInData", { class: EX + "Order", restriction: rule.key }]);
     expect(said()).toBe("Did CheckInData. Validate checks it in your data.");
   });
 
@@ -371,7 +371,7 @@ it("switches rule editing controls without changing the selected identifiers or 
   expect((count as HTMLInputElement).value).toBe("3");
   expect(runCommand).not.toHaveBeenCalled();
   await act(async () => fireEvent.click(within(group).getByRole("button", { name: "Add" })));
-  expect(runCommand.mock.calls[0].slice(1)).toEqual(["model", "AddRestriction", { class: EX + "Order", form: "every", property: EX + "hasLine", kind: "atLeast", filler: null, n: 3 }]);
+  expect(runCommand.mock.calls[0].slice(1, 4)).toEqual(["model", "AddRestriction", { class: EX + "Order", form: "every", property: EX + "hasLine", kind: "atLeast", filler: null, n: 3 }]);
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });
 

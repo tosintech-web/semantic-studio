@@ -581,7 +581,8 @@ The image stores ontologies in the `/data` volume:
 | `DELETE /api/queries/{id}`          | Delete a saved query                 |
 
 UIの言語と辞書の表示言語は別々に選べます。辞書の表示言語を変えても、
-主言語・保存したラベル・検証ルールは変わりません。検証済み・推論済みの
+主言語・保存したラベル・検証ルールは変わりません。検証ルールの見出しも
+表示言語に合わせますが、編集中の名前と下書きは保持します。検証済み・推論済みの
 結果は、再実行せずに名称を読み替えます。検証結果は検証した時点の内容を
 保持し、モデルの変更後も新しい検証結果として扱いません。名称の読み込みに
 失敗した場合は結果を保持してエラーを表示します。言語メニューで選択中の
@@ -596,6 +597,11 @@ APIでは、プロジェクトの `/shapes`、`/shapes/suggestions`、`/validate
 クラス名を読み替えます。`lang` を省略した一覧は、閉じたプロジェクトも従来どおり
 保存済みの名称で参照できます。一覧・プレビューの任意の `classNameUiMessage` は
 アプリが付けた種類名の翻訳用で、元の `className` や保存データは保持します。
+
+編集コマンドの POST `/api/projects/{id}/documents/{doc}/commands?lang=ja` も
+任意の `lang` を受け取り、操作結果・拒否理由・削除確認・関係共有の名称に使います。
+RDFを書き込む言語や元の互換メッセージは変更しません。Undo/Redoの名称は
+操作した時点の記録を保持し、説明文の言語はUIの設定に合わせます。
 
 Every `POST`, `PUT` and `DELETE` must carry `X-Semantic-Studio: 1`, and every
 request must name a loopback `Host` (see *Other web pages in your browser*

@@ -103,7 +103,7 @@ describe("LinkPanel", () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove this link" }));
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" }]);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -161,7 +161,7 @@ describe("LinkPanel", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove this link" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["RemoveRelated", { concept: EX + "Apple", related: EX + "Orchard" }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["RemoveRelated", { concept: EX + "Apple", related: EX + "Orchard" }]);
   });
 
   it("item 5: a refusal for one line is gone when another line is shown", async () => {
@@ -202,7 +202,7 @@ it("switches link guidance without changing references or removal arguments", as
   expect(screen.getByRole("heading", { name: "<b>Employee</b> is a kind of Person" })).toBeTruthy();
   expect(document.querySelector("b")).toBeNull();
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Remove this link" })));
-  expect(runCommand).toHaveBeenCalledWith(PID, "model", "RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" });
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" }, "en");
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 

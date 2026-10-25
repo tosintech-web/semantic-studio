@@ -3430,7 +3430,7 @@ describe("App Edit page (edit-page-rework)", () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", parent: X + "Instrument" });
+    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", parent: X + "Instrument" }, "en");
     expect(projectStore.getSnapshot().creating).toBeNull();
   });
 
@@ -3447,7 +3447,7 @@ describe("App Edit page (edit-page-rework)", () => {
     await act(async () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", definition: "A debt." });
+    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", definition: "A debt." }, "en");
     await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Bond", false, expect.any(AbortSignal), "en"));
     // Nothing dropped to the page meanwhile.
     expect(document.activeElement).not.toBe(document.body);

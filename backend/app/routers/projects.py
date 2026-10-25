@@ -292,12 +292,12 @@ def add_document(pid: str, body: NewDocument) -> dict:
 
 
 @router.post("/{pid}/documents/{doc}/commands")
-def run_command(pid: str, doc: str, body: RunCommand) -> dict:
+def run_command(pid: str, doc: str, body: RunCommand, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """One of the commands the canvas will use (5.4). A dry run is offered for
     DeleteEntity, returning the impact summary, and for ShareDomain, returning
     the reuse plan (attribute-reuse 5.2), with nothing changed either way."""
     with _errors():
-        return editing_service.command(pid, doc, body.command, body.args, dry_run=body.dryRun)
+        return editing_service.command(pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
 
 
 @router.get("/{pid}/documents/{doc}/source")

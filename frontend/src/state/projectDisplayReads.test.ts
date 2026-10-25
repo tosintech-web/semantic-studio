@@ -16,7 +16,7 @@ EXPECTED OUTPUT
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ReasoningResult, SnapshotListing, ValidationResult } from "../types";
 const api = vi.hoisted(() => ({ openProject:vi.fn(), closeProject:vi.fn(), listData:vi.fn(),
-  validateProject:vi.fn(), reasonProject:vi.fn(), getValidationResult:vi.fn(), getReasoningResult:vi.fn() }));
+  validateProject:vi.fn(), reasonProject:vi.fn(), getValidationResult:vi.fn(), getReasoningResult:vi.fn(), runCommand:vi.fn() }));
 vi.mock("../api", async original => ({ ...await original<typeof import("../api")>(), ...api }));
 import { projectStore } from "./projectStore";
 const PID="prj-0123456789ab";
@@ -146,4 +146,17 @@ it("ignores an older snapshot-read failure after a newer listing succeeds", asyn
   expect(projectStore.getSnapshot().data).toBe(current);
   expect(projectStore.getSnapshot().dataError).toBeNull();
   expect(projectStore.getSnapshot().announcement.id).toBe(notice);
+});
+
+
+it("issues commands in the chosen display language while retaining primary-language write arguments", async () => {
+  projectStore.setDisplayLanguage("ja");
+  const args = { iri: "https://synthetic.example/C", value: "Synthetic primary comment", lang: "en" };
+  api.runCommand.mockImplementation(async (_pid,_doc,_name,_args,language) => ({ revision:2,label:"Set comment of Class C (en)",
+    state:{...document,revision:2,dirty:true},
+    uiMessage:{code:"command.set_comment",args:{name:language === "ja" ? "分類C" : "Class C",language:"en"}} }));
+  await projectStore.command("SetComment",args);
+  expect(api.runCommand).toHaveBeenCalledWith(PID,"model","SetComment",args,"ja");
+  expect(projectStore.getSnapshot().announcement.detail).toMatchObject({ kind:"change",uiMessage:{args:{name:"分類C",language:"en"}} });
+  expect(projectStore.getSnapshot().project?.primaryLanguage).toBe("en");
 });

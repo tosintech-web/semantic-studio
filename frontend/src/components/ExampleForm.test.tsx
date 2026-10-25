@@ -156,7 +156,7 @@ describe("a class's Examples block (5.8)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add example" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateExample", { class: `${EX}Person`, label: "Bob" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateExample", { class: `${EX}Person`, label: "Bob" }, "en");
     expect(onSelect).toHaveBeenCalledWith(`${EX}bob`);
   });
 
@@ -204,7 +204,7 @@ describe("an example's form (5.8)", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetExampleValue", {
       iri: `${EX}bob`, property: `${EX}birthDate`, value: { kind: "typed", value: "1990-05-01", datatype: "xsd:date" },
-    });
+    }, "en");
   });
 
   it("links to an example of the end class, never offering one already linked", async () => {
@@ -218,7 +218,7 @@ describe("an example's form (5.8)", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "model", "AddExampleValue", {
       iri: `${EX}bob`, property: `${EX}memberOf`, value: { kind: "link", value: `${EX}initech` },
-    });
+    }, "en");
   });
 
   it("removes a value as one command and keeps focus in the field", async () => {
@@ -229,7 +229,7 @@ describe("an example's form (5.8)", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "model", "RemoveExampleValue", {
       iri: `${EX}bob`, property: `${EX}memberOf`, value: { kind: "link", value: `${EX}acme` },
-    });
+    }, "en");
     await settle();
     expect(document.activeElement).toBe(within(field).getByLabelText("Link to"));
   });
@@ -262,7 +262,7 @@ describe("an example's form: PR #51 review", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "model", "AddExampleValue", {
       iri: `${EX}bob`, property: `${EX}height`, value: { kind: "typed", value: "1.75", datatype: FLOAT },
-    });
+    }, "en");
   });
 
   it("starts a yes/no field at yes, ready to add (item 4)", async () => {
@@ -354,5 +354,5 @@ it("keeps an example value draft through a UI switch and sends the original type
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add birth date" })));
   expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetExampleValue", {
     iri: EX + "bob", property: BIRTH.property, value: { kind: "typed", value: "2026-10-01", datatype: "xsd:date" },
-  });
+  }, "en");
 });

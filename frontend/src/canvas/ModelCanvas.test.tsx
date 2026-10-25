@@ -223,7 +223,7 @@ const box = (label: string) =>
   [...document.querySelectorAll<HTMLElement>(".react-flow__node")].find(
     (n) => n.querySelector(".canvas-box-name")?.textContent === label,
   )!;
-const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2);
+const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2, 4);
 
 beforeEach(async () => {
   projectStore._reset();

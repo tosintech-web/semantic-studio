@@ -593,7 +593,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       await projectStore.createDraft();
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateConcept", { prefLabel: "Ice", broader: EX + "Water" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateConcept", { prefLabel: "Ice", broader: EX + "Water" }, "en");
   });
 
   it("adds a subclass from the menu under that class", async () => {
@@ -605,7 +605,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       await projectStore.createDraft();
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Delta", parent: EX + "Alpha" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Delta", parent: EX + "Alpha" }, "en");
   });
 
   it("renames in place in the primary language; Escape cancels and sends nothing", async () => {
@@ -626,7 +626,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       fireEvent.keyDown(field, { key: "Enter" });
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Alpha", value: "First", lang: "en" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Alpha", value: "First", lang: "en" }, "en");
   });
 
   it("treats Enter on an unchanged name as a cancel (found in review)", async () => {
@@ -665,7 +665,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Alpha", strategy: "reparent" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Alpha", strategy: "reparent" }, "en");
     expect(onDeleted).toHaveBeenCalledWith(EX + "Alpha");
   });
 
@@ -1381,7 +1381,7 @@ it("keeps a row rename draft and its primary RDF language across a UI switch", a
     expect(screen.getByRole("textbox", { name: "New name for Alpha" })).toBe(input);
     expect((input as HTMLInputElement).value).toBe("<b>新しい名前</b>");
     await act(async () => fireEvent.keyDown(input, { key: "Enter" }));
-    expect(runCommand).toHaveBeenCalledWith(pid, "model", "SetLabel", { iri: EX + "Alpha", value: "<b>新しい名前</b>", lang: "en" });
+    expect(runCommand).toHaveBeenCalledWith(pid, "model", "SetLabel", { iri: EX + "Alpha", value: "<b>新しい名前</b>", lang: "en" }, "en");
     expect(fetchHierarchy).toHaveBeenCalledTimes(1);
   } finally { view.unmount(); projectStore._reset(); }
 });

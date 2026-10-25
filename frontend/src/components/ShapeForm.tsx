@@ -4,6 +4,7 @@ FILE: frontend/src/components/ShapeForm.tsx
 ================================================================================
 
 SUMMARY
+    Read-only titles use displayName; the editable name and its draft remain original.
     Read names follow the selected dictionary language independently of UI locale.
     The form of the one selected shape (shacl-authoring 5.3, 5.4, 5.5): its
     sentence, what it applies to, its name, its rules -- each a sentence with
@@ -87,7 +88,7 @@ export default function ShapeForm({
 }: Props) {
   const { t, locale } = useI18n();
   const readingLanguage = useDictionaryDisplayLanguage();
-  const displayName = validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : shape.name;
+  const displayName = validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : (shape.displayName ?? shape.name);
   const runner = useRunner("shapes");
   const { busy, errors, run } = runner;
   const [suggestions, setSuggestions] = useState<ShapeSuggestions | null>(null);

@@ -4,6 +4,7 @@ FILE: backend/app/editing.py
 ================================================================================
 
 SUMMARY
+    Command read-name facts project a display language while lexical/RDF names stay original.
     Project view names accept an explicit read language without changing RDF languages.
     Unnamed-shape history/refusals preserve source ownership beside legacy names.
     The open project documents and every way one can change: typed commands
@@ -168,7 +169,7 @@ from typing import Callable, Iterable, Optional
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
-from .messages import MessageText, literal_part, make_message, word_part
+from .messages import DisplayName, MessageText, display_values, literal_part, make_message, word_part
 from .graph_builder import (
     lang_matches,
     name_in,
@@ -289,7 +290,7 @@ class AlreadyDefined(CommandError):
 
     def __init__(self, message: str, prop: dict, *, ui_message: dict | None = None):
         super().__init__(message, ui_message=ui_message)
-        self.property = prop
+        self.property = display_values(prop)
 
 
 class TurtleSyntaxError(ValueError):
@@ -678,11 +679,13 @@ class Context:
         doc: str = "model",
         model: Optional[Callable[[], Graph]] = None,
         imported_from: Optional[Callable[[], dict]] = None,
+        *, display_languages: Optional[Iterable[str]] = None,
     ):
         self.graph = graph
         self.manifest = manifest
         self.primary = manifest.get("primaryLanguage", "en")
         self.languages = [self.primary, *manifest.get("languages", [])]
+        self._display_languages = None if display_languages is None else tuple(display_languages)
         self.base = manifest["baseIri"]
         self.doc = doc
         self._imported = imported
@@ -784,8 +787,20 @@ class Context:
     def short(self, iri: URIRef) -> str:
         return prefixed(self.graph, iri)
 
+    @property
+    def reading_languages(self):
+        return self.languages if self._display_languages is None else self._display_languages
+
+    def read_name(self, graph: Graph, iri, languages=None, *, legacy: Optional[str] = None) -> str:
+        original = legacy
+        if original is None:
+            original = pick_label_in(graph, iri, self.languages if languages is None else languages)[0]
+        if self._display_languages is None:
+            return original
+        return DisplayName(original, pick_label_in(graph, iri, self._display_languages)[0])
+
     def name(self, iri: URIRef) -> str:
-        return pick_label_in(self.graph, iri, [self.primary])[0]
+        return self.read_name(self.graph, iri, [self.primary])
 
     def minted(self, args: dict, label: str, lower_first: bool) -> URIRef:
         """The IRI a create command gives: the one sent, else base + the
@@ -2320,9 +2335,9 @@ def cmd_create_example(ctx: Context, a: dict) -> Change:
     return _created(
         _change(
             ctx.graph,
-            f"Created example {label} of {pick_label_in(_class_graph(ctx), cls, ctx.languages)[0]}",
+            f"Created example {label} of {ctx.read_name(_class_graph(ctx), cls)}",
             adds,
-            ui_message=make_message("command.created_example", name=label, class_name=pick_label_in(_class_graph(ctx), cls, ctx.languages)[0]),
+            ui_message=make_message("command.created_example", name=label, class_name=ctx.read_name(_class_graph(ctx), cls)),
         ),
         iri,
     )
@@ -2360,7 +2375,7 @@ def _example_field(ctx: Context, a: dict) -> tuple[URIRef, URIRef, str, str]:
             f'{ctx.short(prop)} is not an attribute or a relationship of this model.',
             ui_message=make_message('editing.guard.example_property_required', name=ctx.short(prop)),
         )
-    return iri, prop, pick_label_in(classes, prop, ctx.languages)[0], what
+    return iri, prop, ctx.read_name(classes, prop), what
 
 
 def _example_value(ctx: Context, a: dict, key: str = "value") -> tuple[URIRef, URIRef, object, str]:
@@ -2383,8 +2398,8 @@ def _example_value(ctx: Context, a: dict, key: str = "value") -> tuple[URIRef, U
         # here too (PR #51 review). No end class, no check.
         end = classes.value(prop, RDFS.range)
         if isinstance(end, URIRef) and not set(classes.objects(term, RDF.type)) & examples.subclasses(classes, end):
-            target = pick_label_in(classes, term, ctx.languages)[0]
-            kind = pick_label_in(classes, end, ctx.languages)[0]
+            target = ctx.read_name(classes, term)
+            kind = ctx.read_name(classes, end)
             # A command's arguments are `a` here, so the article is reached
             # through its module.
             raise CommandError(
@@ -2438,7 +2453,7 @@ def _example_value(ctx: Context, a: dict, key: str = "value") -> tuple[URIRef, U
 
 def _linked(ctx: Context, iri: URIRef, term, name: str) -> str:
     """A link as the undo list reads it: *Bob to Acme by member of*."""
-    return f"{ctx.name(iri)} to {pick_label_in(_class_graph(ctx), term, ctx.languages)[0]} by {name}"
+    return f"{ctx.name(iri)} to {ctx.read_name(_class_graph(ctx), term)} by {name}"
 
 
 def _example_value_notice(ctx: Context, iri: URIRef, term, name: str, action: str) -> dict:
@@ -2447,7 +2462,7 @@ def _example_value_notice(ctx: Context, iri: URIRef, term, name: str, action: st
     if isinstance(term, URIRef):
         return make_message(
             "command.removed_example_link" if action == "remove" else "command.linked_example_value",
-            subject=subject, target=pick_label_in(_class_graph(ctx), term, ctx.languages)[0], property=name,
+            subject=subject, target=ctx.read_name(_class_graph(ctx), term), property=name,
         )
     return make_message(
         {"set": "command.set_example_value", "add": "command.added_example_value",
@@ -2559,7 +2574,7 @@ def _view(ctx: Context) -> Graph:
 
 
 def _rule_name(ctx: Context, iri) -> str:
-    return pick_label_in(_view(ctx), iri, ctx.languages)[0]
+    return ctx.read_name(_view(ctx), iri)
 
 
 def _rule_property(ctx: Context, value) -> tuple[URIRef, bool]:
@@ -2944,7 +2959,7 @@ def _shapes_ctx(ctx: Context) -> None:
 
 
 def _model_name(ctx: Context, iri) -> str:
-    return pick_label_in(ctx.model, iri, ctx.languages)[0]
+    return ctx.read_name(ctx.model, iri)
 
 
 def _closure(g: Graph, root) -> set:
@@ -2979,7 +2994,7 @@ def _shape(ctx: Context, a: dict, editable: bool = True):
             raise CommandError(
                 f"{shape['name']} is written in Turtle with parts the form cannot edit ({'; '.join(shape['unsupported'])}). Change it in the Turtle editor.",
                 ui_message=make_message('editing.guard.shape_readonly', name=([word_part(shape["nameUiMessage"]["code"])]
-                      if shape.get("nameUiMessage") else shape["name"]),
+                      if shape.get("nameUiMessage") else ctx.read_name(ctx.graph, node, legacy=shape["name"])),
                     count=len(shape['unsupported'])),
             )
     return node
@@ -2988,7 +3003,7 @@ def _shape(ctx: Context, a: dict, editable: bool = True):
 def _shape_label(ctx: Context, node) -> str:
     label = ctx.graph.value(node, RDFS.label)
     if label is not None:
-        return str(label)
+        return ctx.read_name(ctx.graph, node, legacy=str(label))
     if isinstance(node, URIRef):
         return ctx.short(node)
     return MessageText("the shape", "words.editing.the_shape")
@@ -3402,7 +3417,7 @@ def cmd_add_rule(ctx: Context, a: dict) -> Change:
         if not a.get("merge"):
             raise CommandError(
                 f"There is already a rule on {existing['pathLabel']}; edit that one.",
-                ui_message=make_message('editing.guard.shape_path_exists', path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+                ui_message=make_message('editing.guard.shape_path_exists', path=shapes_form.path_parts(ctx.model, path, ctx.reading_languages)),
             )
         rule = _merged(existing, rule)
         removes = _rules_on(ctx, node, path)
@@ -3413,7 +3428,7 @@ def cmd_add_rule(ctx: Context, a: dict) -> Change:
         f"Added a rule on {label} to {_shape_label(ctx, node)}",
         adds,
         removes,
-        ui_message=make_message("command.added_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+        ui_message=make_message("command.added_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, path, ctx.reading_languages)),
     )
 
 
@@ -3430,7 +3445,7 @@ def cmd_replace_rule(ctx: Context, a: dict) -> Change:
     if new_path != path and new_path in rules:
         raise CommandError(
             f"There is already a rule on {rules[new_path]['pathLabel']}; edit that one.",
-            ui_message=make_message('editing.guard.shape_path_exists', path=shapes_form.path_parts(ctx.model, new_path, ctx.languages)),
+            ui_message=make_message('editing.guard.shape_path_exists', path=shapes_form.path_parts(ctx.model, new_path, ctx.reading_languages)),
         )
     label = shapes_form.path_label(ctx.model, new_path, ctx.languages)
     return _change(
@@ -3438,7 +3453,7 @@ def cmd_replace_rule(ctx: Context, a: dict) -> Change:
         f"Changed the rule on {label} of {_shape_label(ctx, node)}",
         adds,
         _rules_on(ctx, node, path),
-        ui_message=make_message("command.changed_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, new_path, ctx.languages)),
+        ui_message=make_message("command.changed_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, new_path, ctx.reading_languages)),
     )
 
 
@@ -3456,7 +3471,7 @@ def cmd_remove_rule(ctx: Context, a: dict) -> Change:
         ctx.graph,
         f"Removed the rule on {label} from {_shape_label(ctx, node)}",
         removes=removes,
-        ui_message=make_message("command.removed_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, path, ctx.languages)),
+        ui_message=make_message("command.removed_rule", shape_name=_shape_name_ui(_shape_label(ctx, node)), path=shapes_form.path_parts(ctx.model, path, ctx.reading_languages)),
     )
 
 
@@ -3531,7 +3546,7 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
             if any(k in existing and existing[k] != v for k, v in plain.items()):
                 raise CommandError(
                     f'{shape_name} already checks {path_label} differently; change that rule in the Shapes view.',
-                    ui_message=make_message('editing.guard.check_path_conflict', name=_shape_name_ui(shape_name), path=shapes_form.path_parts(model, path, ctx.languages)),
+                    ui_message=make_message('editing.guard.check_path_conflict', name=_shape_name_ui(shape_name), path=shapes_form.path_parts(model, path, ctx.reading_languages)),
                 )
             rule = _merged(existing, plain)
             removes = _rules_on(ctx, node, path)
@@ -3553,7 +3568,7 @@ def cmd_check_in_data(ctx: Context, a: dict) -> Change:
         f"Added a check on {path_label} to {shape_name}",
         adds,
         removes,
-        ui_message=make_message("command.added_check", shape_name=_shape_name_ui(shape_name), path=shapes_form.path_parts(model, path, ctx.languages)),
+        ui_message=make_message("command.added_check", shape_name=_shape_name_ui(shape_name), path=shapes_form.path_parts(model, path, ctx.reading_languages)),
     )
 
 
@@ -3856,7 +3871,7 @@ class EditingService:
 
     # --- changing a document ----------------------------------------------------
 
-    def _context(self, document: OpenDocument) -> Context:
+    def _context(self, document: OpenDocument, lang: Optional[str] = None) -> Context:
         manifest = self.projects.manifest(document.pid)
 
         def imported() -> Optional[Graph]:
@@ -3873,7 +3888,8 @@ class EditingService:
         if document.doc != "model":
             model_doc = self._open[document.pid]["model"]
             model = lambda: self._model_view(model_doc)  # noqa: E731
-        return Context(document.graph, manifest, imported, document.doc, model, imported_from)
+        return Context(document.graph, manifest, imported, document.doc, model, imported_from,
+                       display_languages=None if lang is None else self.display_languages(document.pid, lang))
 
     @contextlib.contextmanager
     def model_reader(self, pid: str, lang: Optional[str] = None):
@@ -3911,7 +3927,7 @@ class EditingService:
             document.visual_since_save = True
         self._arm(document)
 
-    def command(self, pid: str, doc: str, name: str, args: dict, dry_run: bool = False) -> dict:
+    def command(self, pid: str, doc: str, name: str, args: dict, dry_run: bool = False, *, lang: Optional[str] = None) -> dict:
         handler = COMMANDS.get(name)
         if handler is None:
             raise CommandError(
@@ -3924,21 +3940,21 @@ class EditingService:
                 ui_message=make_message("editing.refusal.command_arguments_object"),
             )
         if doc == "shapes" and name in SHAPE_COMMANDS and pid in self._open and "shapes" not in self._open[pid]:
-            self._first_shapes_command(pid, handler, args, dry_run)
+            self._first_shapes_command(pid, handler, args, dry_run, lang)
         document = self.document(pid, doc)
         # A shape command reads the model (targets, paths, names) as well:
         # its lock too, always after the shapes document's, so a model edit
         # never changes what the command is checking against.
         model_lock = self._open[pid]["model"].lock if doc != "model" else contextlib.nullcontext()
         with document.lock, model_lock:
-            ctx = self._context(document)
+            ctx = self._context(document, lang)
             if name == "DeleteEntity":
                 change, impact = delete_plan(ctx, args)
                 if dry_run:
-                    return {"dryRun": True, "impact": impact, "revision": document.ontology.revision}
+                    return {"dryRun": True, "impact": display_values(impact), "revision": document.ontology.revision}
             elif name == "ShareDomain" and dry_run:
                 # The reuse plan (attribute-reuse 5.2): nothing changes.
-                return {"dryRun": True, "plan": share_plan(ctx, args), "revision": document.ontology.revision}
+                return {"dryRun": True, "plan": display_values(share_plan(ctx, args)), "revision": document.ontology.revision}
             else:
                 if dry_run:
                     raise CommandError(
@@ -3966,12 +3982,12 @@ class EditingService:
             if change.ui_message is not None:
                 result["uiMessage"] = change.ui_message
             if impact is not None:
-                result["impact"] = impact
+                result["impact"] = display_values(impact)
             if change.created is not None:
                 result["created"] = str(change.created)
             return result
 
-    def _first_shapes_command(self, pid: str, handler, args: dict, dry_run: bool) -> None:
+    def _first_shapes_command(self, pid: str, handler, args: dict, dry_run: bool, lang: Optional[str] = None) -> None:
         """The first shape command creates shapes.ttl (shacl-authoring 8) --
         only once it is known to succeed. It is checked first against an
         empty shapes document, so a refused command or a dry run leaves no
@@ -3985,7 +4001,8 @@ class EditingService:
         model_doc = self._open[pid]["model"]
         manifest = self.projects.manifest(pid)
         with model_doc.lock:
-            probe = Context(Graph(), manifest, lambda: None, "shapes", lambda: self._model_view(model_doc))
+            probe = Context(Graph(), manifest, lambda: None, "shapes", lambda: self._model_view(model_doc),
+                            display_languages=None if lang is None else self.display_languages(pid, lang))
             handler(probe, args)  # raises CommandError, the sentence, before anything is made
         with self._lock:
             if "shapes" in self._open.get(pid, {}):

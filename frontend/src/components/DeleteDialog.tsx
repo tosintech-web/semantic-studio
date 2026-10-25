@@ -52,6 +52,7 @@ EXPECTED OUTPUT
 
 import { undoAvailableNotice } from "../modeling/projectNotices";
 import { useI18n } from "../i18n/I18nProvider";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import type { Translator } from "../i18n/types";
 import { useEffect, useState } from "react";
 import { previewDelete } from "../api";
@@ -85,6 +86,7 @@ function propertySentence(properties: DeleteImpact["properties"], t: Translator)
 
 export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
   const { t } = useI18n();
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [impact, setImpact] = useState<DeleteImpact | null>(null);
   const [strategy, setStrategy] = useState<"reparent" | "orphan">("reparent");
   const [loadError, setLoadError] = useState<{ kind: "noProject" } | { kind: "preview"; error: unknown } | null>(null);
@@ -97,7 +99,9 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
       return;
     }
     let cancelled = false;
-    previewDelete(state.project.id, state.activeDoc, iri, "reparent")
+    const reading = dictionaryLanguage === undefined ? previewDelete(state.project.id, state.activeDoc, iri, "reparent")
+      : previewDelete(state.project.id, state.activeDoc, iri, "reparent", dictionaryLanguage);
+    reading
       .then((r) => !cancelled && setImpact(r.impact))
       .catch(
         (e: unknown) =>
@@ -107,7 +111,7 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [iri, label]);
+  }, [iri, label, dictionaryLanguage]);
 
   const answer = async (id: string) => {
     if (id !== "delete" || !impact) {
