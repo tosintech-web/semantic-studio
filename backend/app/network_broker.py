@@ -4,6 +4,7 @@ FILE: backend/app/network_broker.py
 ================================================================================
 
 SUMMARY
+    Approval reasons, sends and redirect facts remain separate from legacy text.
     Policy and connection refusals retain optional source-owned display facts.
     The one door from Semantic Studio to the internet. Every outbound request
     names what it is for (a capability), and goes out only if the user has
@@ -114,6 +115,28 @@ CAPABILITIES: dict[str, dict[str, str]] = {
         "sends": "The query text shown. Nothing else from your ontology.",
     },
 }
+
+
+def approval_metadata(capability: str, reason: str, previous_host: Optional[str] = None) -> dict:
+    """Source facts for the dialog, separate from its unchanged English fields.
+
+    A redirect extends the legacy sentence but does not erase the original
+    reason's facts. Unknown/custom reasons remain literal, never classified.
+    """
+    codes = {
+        "ontology:fetch": "network.sends.fetch",
+        "ontology:import": "network.sends.import",
+        "jsonld:context": "network.sends.context",
+        "sparql:service": "network.sends.service",
+    }
+    facts = {"sendsUiMessage": make_message(codes[capability])}
+    message = getattr(reason, "ui_message", None)
+    if message is not None:
+        facts["reasonUiMessage"] = message
+    if previous_host is not None:
+        facts["redirectUiMessage"] = make_message("network.reason.redirect", host=previous_host)
+    return facts
+
 
 GRANT_HEADER = "x-semantic-studio-grant"
 
@@ -644,6 +667,7 @@ class NetworkBroker:
                             "url": current,
                             "reason": why,
                             "sends": CAPABILITIES[capability]["sends"],
+                            **approval_metadata(capability, reason, previous_host),
                             "encrypted": current.lower().startswith("https:"),
                         }
                     ]

@@ -402,7 +402,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `load.dialog.dataTitle` | name | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.dialog.restored` | names | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.downloading` | — | `frontend/src/components/CatalogueList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.original` | — | `frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/OperationError.tsx`<br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.original` | — | `frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkApprovalDialog.tsx`<br>`frontend/src/components/OperationError.tsx`<br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.schemaorg.description` | — | `frontend/src/catalogue.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.schemaorg.size` | — | `frontend/src/catalogue.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.schemaorg.audience` | — | `frontend/src/catalogue.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -3289,3 +3289,16 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `imports.cache_failed` | — | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
 | `imports.cache_changed` | — | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
 | `imports.bundled_changed` | title | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+
+| `network.reason.context` | — | `backend/app/net_guard.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.reason.fetch` | — | `backend/app/routers/ontologies.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.reason.service` | — | `backend/app/sparql_service.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.reason.import_one` | name | `backend/app/imports.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.reason.import_many` | name, count | `backend/app/imports.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.reason.redirect` | host | `backend/app/network_broker.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.sends.fetch` | — | `backend/app/network_broker.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.sends.import` | — | `backend/app/network_broker.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.sends.context` | — | `backend/app/network_broker.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.sends.service` | — | `backend/app/network_broker.py` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `network.approval.declined` | hosts | `frontend/src/api.ts` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
+| `words.host_separator` | — | `frontend/src/api.ts` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |

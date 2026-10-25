@@ -4,6 +4,7 @@ FILE: frontend/src/components/NetworkApprovalDialog.tsx
 ================================================================================
 
 SUMMARY
+    Source-owned approval facts render at the current locale; custom text stays literal.
     The question Semantic Studio asks before it connects to a site: which site,
     why, what is sent, and what the site will see, with Allow and Don't allow
     and a choice between just this time and always. The one place a network
@@ -48,6 +49,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { englishTranslator } from "../i18n/format";
 import { useCallback, useRef, useState } from "react";
@@ -69,6 +71,15 @@ export default function NetworkApprovalDialog({ requests, onAnswer }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [remember, setRemember] = useState(true);
   const first = requests[0];
+  // An unknown redirect descriptor must not silently remove part of the
+  // purpose from the primary explanation. The complete legacy text is safe.
+  const knownReason = validWireMessage(first.reasonUiMessage)
+    && (first.redirectUiMessage == null || validWireMessage(first.redirectUiMessage));
+  const knownSends = validWireMessage(first.sendsUiMessage);
+  const reason = knownReason
+    ? [renderServerMessage(first.reasonUiMessage, first.reason, t),
+       validWireMessage(first.redirectUiMessage) ? renderServerMessage(first.redirectUiMessage, "", t) : ""].filter(Boolean).join(" ")
+    : first.reason;
   const hosts = [...new Set(requests.map((r) => r.host))];
   const texts = requests.filter((r) => r.text !== undefined);
   const heading = t(hosts.length === 1 ? "network.approval.headingOne" : "network.approval.headingMany", { hosts: hosts.join(t("common.listSeparator")) });
@@ -92,10 +103,16 @@ export default function NetworkApprovalDialog({ requests, onAnswer }: Props) {
 
         <dl className="approval-facts">
           <dt>{t("network.approval.why")}</dt>
-          <dd>{first.reason}</dd>
+          <dd>{reason}{knownReason && <details className="technical-details">
+            <summary>{t("common.original")}</summary><pre>{first.reason}</pre>
+          </details>}</dd>
           <dt>{t("network.approval.sent")}</dt>
           {texts.length === 0 ? (
-            <dd>{first.sends}</dd>
+            <dd>{knownSends ? renderServerMessage(first.sendsUiMessage, first.sends, t) : first.sends}
+              {knownSends && <details className="technical-details">
+                <summary>{t("common.original")}</summary><pre>{first.sends}</pre>
+              </details>}
+            </dd>
           ) : (
             <dd className="approval-sent">
               {texts.map((r, i) => (

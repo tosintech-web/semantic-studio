@@ -4,6 +4,7 @@ FILE: backend/app/sparql_service.py
 ================================================================================
 
 SUMMARY
+    Owned connection purposes carry optional facts without rewriting payloads.
     SERVICE failures carry source facts through queries and optional SILENT reports.
     SPARQL `SERVICE`, run by Semantic Studio rather than by rdflib
     (external-access Stage 3, backlog Q-10, decision D-069). Finds a query's
@@ -88,10 +89,11 @@ from rdflib import BNode, Literal, URIRef, Variable
 from rdflib.plugins.sparql import CUSTOM_EVALS
 from rdflib.plugins.sparql.sparql import FrozenBindings, QueryContext
 
-from .messages import MessageError, integer_arg, make_message
+from .messages import MessageText, MessageError, integer_arg, make_message
 from . import net_guard
 from .network_broker import (
     CAPABILITIES,
+    approval_metadata,
     ApprovalRequired,
     FetchFailed,
     HostBlocked,
@@ -163,7 +165,7 @@ ENDPOINT_UNRESOLVABLE_DETAIL = (
     "not call it. Check the endpoint address for a typo."
 )
 
-SERVICE_REASON = "Your query asks this site to answer part of it."
+SERVICE_REASON = MessageText("Your query asks this site to answer part of it.", "network.reason.service")
 
 
 class ServiceRefused(MessageError):
@@ -194,6 +196,7 @@ class ServiceBlock:
             "url": self.endpoint,
             "reason": SERVICE_REASON,
             "sends": CAPABILITIES[CAPABILITY]["sends"],
+            **approval_metadata(CAPABILITY, SERVICE_REASON),
             "encrypted": self.encrypted,
             "text": self.text,
         }

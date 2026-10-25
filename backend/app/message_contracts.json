@@ -1628,6 +1628,18 @@
     "imports.parse_failed": {},
     "imports.cache_failed": {},
     "imports.cache_changed": {},
-    "imports.bundled_changed": {"title": "string"}
+    "imports.bundled_changed": {"title": "string"},
+    "network.reason.context": {},
+    "network.reason.fetch": {},
+    "network.reason.service": {},
+    "network.reason.import_one": {"name": "string"},
+    "network.reason.import_many": {"name": "string", "count": ["number", "string"]},
+    "network.reason.redirect": {"host": "string"},
+    "network.sends.fetch": {},
+    "network.sends.import": {},
+    "network.sends.context": {},
+    "network.sends.service": {},
+    "network.approval.declined": {"hosts": "parts"},
+    "words.host_separator": {}
   }
 }

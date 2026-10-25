@@ -4,6 +4,7 @@ FILE: backend/app/net_guard.py
 ================================================================================
 
 SUMMARY
+    Owned connection purposes carry optional facts without rewriting payloads.
     Decides whether an address is one the server may connect to, and hands the
     requests rdflib makes on its own while parsing to the network broker. The
     address rule is a deny rule on ranges, not an allowlist of hosts: the
@@ -54,7 +55,7 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
-from .messages import MessageError, integer_arg, make_message
+from .messages import MessageText, MessageError, integer_arg, make_message
 
 import base64
 import contextvars
@@ -290,9 +291,10 @@ CONTEXT_FAILED_DETAIL = (
     "and it could not be downloaded: {reason}"
 )
 
-CONTEXT_REASON = (
+CONTEXT_REASON = MessageText(
     "The file you are opening defines its terms in a JSON-LD context "
-    "published on this site."
+    "published on this site.",
+    "network.reason.context",
 )
 
 # Contexts fetched during one parse, kept so the ontology can be re-parsed

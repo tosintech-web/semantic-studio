@@ -5,6 +5,7 @@ FILE: frontend/src/components/NetworkApprovalDialog.test.tsx
 ================================================================================
 
 SUMMARY
+    Current-locale source facts preserve raw names, payloads and disclosure focus.
     Tests for the approval dialog (external-access Stage 1): that it states
     what, where, why and what is sent in words; that it never shows a
     capability's own name; the two answers and two scopes; and Section 6's
@@ -26,6 +27,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import UiLanguageSelect from "./UiLanguageSelect";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
@@ -215,4 +217,53 @@ it("describes the approval decision in Japanese and preserves the destination UR
   expect(screen.getByText(REQUEST.url)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "許可しない" }));
   expect(onAnswer).toHaveBeenCalledWith(false, true);
+});
+
+
+it("translates approval facts while preserving authored names, disclosure and focus", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const name = "辞書 <img>{raw}";
+  const request: ApprovalRequest = { ...REQUEST, reason: `"${name}" imports 2 ontologies from this site. first.test redirected the request to this site.`,
+    reasonUiMessage: { code: "network.reason.import_many", args: { name, count: 2 } },
+    redirectUiMessage: { code: "network.reason.redirect", args: { host: "first.test" } },
+    sendsUiMessage: { code: "network.sends.context", args: {} } };
+  const onAnswer = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><NetworkApprovalDialog requests={[request]} onAnswer={onAnswer} /></I18nProvider>);
+  expect(screen.getByText(`「${name}」が、このサイトの2件のオントロジーを参照しています。 first.testからこのサイトにリダイレクトされました。`)).toBeTruthy();
+  expect(screen.getByText("コンテキストのダウンロード要求を送信します。ファイルやライブラリの内容は送信しません。")).toBeTruthy();
+  const original = screen.getByText(request.reason).closest("details")!;
+  expect(original.open).toBe(false);
+  fireEvent.click(original.querySelector("summary")!);
+  original.querySelector("summary")!.focus();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(original.open).toBe(true);
+  expect(document.activeElement).toBe(original.querySelector("summary"));
+  expect(screen.getAllByText(request.reason).length).toBe(2);
+  expect(document.querySelector("img")).toBeNull();
+  expect(onAnswer).not.toHaveBeenCalled();
+  fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Allow" }));
+});
+
+it("keeps SERVICE text exact through a language switch and retains literal unknown reasons", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const text = 'SELECT ?s WHERE { ?s ?p "日本語 <img>{raw}" }\n# original';
+  const reason = "Custom reason <img>{literal}";
+  render(<I18nProvider><UiLanguageSelect /><NetworkApprovalDialog requests={[{...REQUEST, reason,
+    reasonUiMessage: { code: "unknown", args: {} }, text }]} onAnswer={vi.fn()} /></I18nProvider>);
+  expect(screen.getByText(reason)).toBeTruthy();
+  const box = screen.getByRole("textbox") as HTMLTextAreaElement;
+  expect(box.value).toBe(text);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox")).toBe(box);
+  expect(box.value).toBe(text);
+  expect(screen.getByText(reason)).toBeTruthy();
+});
+
+it("keeps the complete literal purpose if redirect metadata cannot be understood", () => {
+  const reason = "Custom complete reason including a redirect <img>{raw}";
+  renderDialog({ ...REQUEST, reason,
+    reasonUiMessage: { code: "network.reason.context", args: {} },
+    redirectUiMessage: { code: "future.redirect", args: {} } });
+  expect(screen.getByRole("dialog").querySelector("dd")?.firstChild?.textContent).toBe(reason);
 });

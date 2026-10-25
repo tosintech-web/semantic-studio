@@ -1028,6 +1028,9 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "network.address_refused": {},
+  "network.approval.declined": {
+    "hosts": "parts"
+  },
   "network.grant_missing": {},
   "network.host_blocked": {
     "host": "string"
@@ -1035,7 +1038,27 @@ export const SERVER_CONTRACTS = {
   "network.host_unresolvable": {},
   "network.invalid_host": {},
   "network.offline": {},
+  "network.reason.context": {},
+  "network.reason.fetch": {},
+  "network.reason.import_many": {
+    "count": [
+      "number",
+      "string"
+    ],
+    "name": "string"
+  },
+  "network.reason.import_one": {
+    "name": "string"
+  },
+  "network.reason.redirect": {
+    "host": "string"
+  },
+  "network.reason.service": {},
   "network.redirect_refused": {},
+  "network.sends.context": {},
+  "network.sends.fetch": {},
+  "network.sends.import": {},
+  "network.sends.service": {},
   "network.unknown_capability": {
     "capability": "string"
   },
@@ -2013,6 +2036,7 @@ export const SERVER_CONTRACTS = {
   "words.field.thing": {},
   "words.field.value": {},
   "words.field.value_type": {},
+  "words.host_separator": {},
   "words.kind.annotationProperty": {},
   "words.kind.class": {},
   "words.kind.concept": {},
@@ -2398,12 +2422,23 @@ export interface ServerMessageArgs {
   "model.warning.symmetric.any": { "classes": string; "end": string; "name": string };
   "model.warning.symmetric.one": { "classes": string; "end": string; "name": string };
   "network.address_refused": undefined;
+  "network.approval.declined": { "hosts": string };
   "network.grant_missing": undefined;
   "network.host_blocked": { "host": string };
   "network.host_unresolvable": undefined;
   "network.invalid_host": undefined;
   "network.offline": undefined;
+  "network.reason.context": undefined;
+  "network.reason.fetch": undefined;
+  "network.reason.import_many": { "count": number | string; "name": string };
+  "network.reason.import_one": { "name": string };
+  "network.reason.redirect": { "host": string };
+  "network.reason.service": undefined;
   "network.redirect_refused": undefined;
+  "network.sends.context": undefined;
+  "network.sends.fetch": undefined;
+  "network.sends.import": undefined;
+  "network.sends.service": undefined;
   "network.unknown_capability": { "capability": string };
   "ontology.choose_other": undefined;
   "ontology.entity_not_drawn": { "iri": string };
@@ -2735,6 +2770,7 @@ export interface ServerMessageArgs {
   "words.field.thing": undefined;
   "words.field.value": undefined;
   "words.field.value_type": undefined;
+  "words.host_separator": undefined;
   "words.kind.annotationProperty": undefined;
   "words.kind.class": undefined;
   "words.kind.concept": undefined;

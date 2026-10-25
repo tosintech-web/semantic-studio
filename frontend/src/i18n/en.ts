@@ -15,6 +15,18 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "network.reason.context": "The file you are opening defines its terms in a JSON-LD context published on this site.",
+  "network.reason.fetch": "You asked Semantic Studio to load an ontology from this address.",
+  "network.reason.service": "Your query asks this site to answer part of it.",
+  "network.reason.import_one": "\"{name}\" imports an ontology from this site.",
+  "network.reason.import_many": "\"{name}\" imports {count} ontologies from this site.",
+  "network.reason.redirect": "{host} redirected the request to this site.",
+  "network.sends.fetch": "A download request for the file. Nothing from your library.",
+  "network.sends.import": "A download request for each file. Nothing from your library.",
+  "network.sends.context": "A download request for the context. Nothing from your file or library.",
+  "network.sends.service": "The query text shown. Nothing else from your ontology.",
+  "network.approval.declined": "Semantic Studio did not connect to {hosts}, so nothing was sent.",
+  "words.host_separator": ", ",
   "imports.stopped": "Stopped before this import was resolved.",
   "imports.depth_refused": "Not loaded: imports deeper than {limit} levels are not followed.",
   "imports.depth_limit": "Imports deeper than {limit} levels were not followed.",

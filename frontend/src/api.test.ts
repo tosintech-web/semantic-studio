@@ -4,6 +4,7 @@ FILE: frontend/src/api.test.ts
 ================================================================================
 
 SUMMARY
+    Declined approvals retain unique raw hosts as flat locale-independent facts.
     Proves every call in api.ts that changes something on the server sends the
     X-Semantic-Studio header, and that read-only calls are plain GETs. Also
     proves the approval round trip in `send` (external-access Stage 1): a 409
@@ -440,6 +441,20 @@ describe("approval round trip (external-access Stage 1)", () => {
     expect(error.message).toBe(
       "Semantic Studio did not connect to json-ld.org, so nothing was sent.",
     );
+    expect(recorded).toHaveLength(1);
+    expect(error.uiMessage).toEqual({ code: "network.approval.declined", args: { hosts: [{ text: "json-ld.org" }] } });
+  });
+
+  it("retains unique declined hosts as literal parts and a locale-dependent separator", async () => {
+    api.setApprovalHandler(async () => null);
+    const names = ["first.example", "second.<img>{raw}", "first.example"];
+    answers = [new Response(JSON.stringify({ detail: { code: "approval_required",
+      requests: names.map(host => ({ ...QUESTION, host })) } }), { status: 409 })];
+    const error = await api.getGraph("ont-1").catch(e => e);
+    expect(error.uiMessage).toEqual({ code: "network.approval.declined", args: { hosts: [
+      { text: names[0] }, { code: "words.host_separator", args: {} }, { text: names[1] },
+    ] } });
+    expect(error.message).toBe(`Semantic Studio did not connect to ${names[0]}, ${names[1]}, so nothing was sent.`);
     expect(recorded).toHaveLength(1);
   });
 

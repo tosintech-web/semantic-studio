@@ -2807,3 +2807,27 @@ shared library. Later import tests then resolved FOAF from that library instead
 of the bundled vocabulary. The HTTP test now removes only the library entries its
 lifespan added, preserving entries that existed before the test. The same ordered
 run now passes, including bundled integrity and resolution-priority assertions.
+
+### Approval purposes carry source facts (P1)
+
+Fixed fetch, context and SERVICE purposes and the per-import purpose retain
+source facts through MessageText; authored ontology names remain literal. The
+broker and the SERVICE plan's separate approval path both attach optional
+reasonUiMessage/sendsUiMessage fields. Redirect metadata stays separate, so
+extending the original reason sentence does not erase its original facts.
+Legacy reason/sends/text fields, capability definitions, grants, approval order,
+redirect limits, address judgement and outgoing payloads are unchanged.
+
+The dialog validates these optional descriptors at render time. Known reasons
+and sends use the current UI language; native disclosures retain escaped original
+text and preserve focus/open state through a language switch. Exact SERVICE text
+stays in its read-only textarea. Unknown/custom reasons and unknown sends stay
+literal, including an unknown reason that happens to equal a known English
+purpose. If supplied redirect metadata is unknown, the complete original purpose
+remains the primary explanation rather than losing its redirect clause.
+
+A declined approval retains unique raw hosts and a flat separator token beside
+the unchanged ApiError message/status. The explanation and host separator render
+in the current locale without another request. Recording-server tests prove a
+redirect target sees zero requests before approval. The full browser keyboard/AX
+check and stale-operation lifecycle checks remain part of the final P1 gate.

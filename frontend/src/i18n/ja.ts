@@ -15,6 +15,18 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "network.reason.context": "開こうとしているファイルは、このサイトで公開されているJSON-LDコンテキストで用語を定義しています。",
+  "network.reason.fetch": "指定されたアドレスからオントロジーを読み込みます。",
+  "network.reason.service": "クエリの一部を実行するため、このサイトに問い合わせます。",
+  "network.reason.import_one": "「{name}」が、このサイトのオントロジーを参照しています。",
+  "network.reason.import_many": "「{name}」が、このサイトの{count}件のオントロジーを参照しています。",
+  "network.reason.redirect": "{host}からこのサイトにリダイレクトされました。",
+  "network.sends.fetch": "ファイルのダウンロード要求を送信します。ライブラリの内容は送信しません。",
+  "network.sends.import": "各参照ファイルのダウンロード要求を送信します。ライブラリの内容は送信しません。",
+  "network.sends.context": "コンテキストのダウンロード要求を送信します。ファイルやライブラリの内容は送信しません。",
+  "network.sends.service": "表示されたクエリ本文を送信します。オントロジーの他の内容は送信しません。",
+  "network.approval.declined": "{hosts}への接続を許可しなかったため、この要求では何も送信していません。",
+  "words.host_separator": "、",
   "imports.stopped": "この参照を解決する前に停止しました。",
   "imports.depth_refused": "読み込んでいません。参照の深さが上限の{limit}階層を超えています。",
   "imports.depth_limit": "上限の{limit}階層を超える参照は読み込んでいません。",

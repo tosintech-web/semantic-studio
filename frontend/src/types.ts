@@ -4,6 +4,7 @@ FILE: frontend/src/types.ts
 ================================================================================
 
 SUMMARY
+    Approval facts optionally describe reasons, redirects and sent content.
     Import rows, limits and chosen-file failures carry optional source UI facts.
     Optional SERVICE error metadata remains additive to the original error string.
     The shared, app-wide TypeScript types that mirror the backend's JSON
@@ -63,7 +64,10 @@ export interface ApprovalRequest {
   host: string;
   url: string;
   reason: string;
+  reasonUiMessage?: WireMessage | null;
+  redirectUiMessage?: WireMessage | null;
   sends: string;
+  sendsUiMessage?: WireMessage | null;
   encrypted: boolean;
   // SPARQL SERVICE only: the exact query text that will be sent, which the
   // dialog shows in full (external-access Section 6).

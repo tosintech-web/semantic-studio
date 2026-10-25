@@ -2,6 +2,7 @@
 ================================================================================
 FILE: frontend/src/i18n/serverMessage.test.ts
 SUMMARY
+    Declined-host parts retain literal host names and render separators per locale.
     Validates and renders server message metadata under the current UI locale.
 BASIC IDEA
     Treat metadata as untrusted, preserving legacy text only as caller details.
@@ -292,4 +293,13 @@ it("preserves unknown and regional language tags as raw facts beside translated 
   } };
   expect(renderServerMessage(wire, "", translator("ja"))).toBe('「対象」の名前の値"値"@zz-Privateには言語zz-Privateが指定されています。このルールで使用できる言語英語 (en-US)には含まれていません。');
   expect(renderServerMessage(wire, "", translator("en"))).toContain("English (en-US)");
+});
+
+it("renders declined host facts in either language with literal names and a translated separator", () => {
+  const wire = { code: "network.approval.declined", args: { hosts: [
+    { text: "first.example" }, { code: "words.host_separator", args: {} }, { text: "second.<img>{raw}" },
+  ] } };
+  expect(validWireMessage(wire)).toBe(true);
+  expect(renderServerMessage(wire, "Legacy", translator("ja"))).toBe("first.example、second.<img>{raw}への接続を許可しなかったため、この要求では何も送信していません。");
+  expect(renderServerMessage(wire, "Legacy", translator("en"))).toBe("Semantic Studio did not connect to first.example, second.<img>{raw}, so nothing was sent.");
 });

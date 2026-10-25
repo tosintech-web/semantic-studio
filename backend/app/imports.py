@@ -822,8 +822,10 @@ class ImportsService:
         host = (urlsplit(iri).hostname or "").lower()
         same = 1 + sum(1 for p in pending if (urlsplit(p).hostname or "").lower() == host)
         if same == 1:
-            return f'"{own_name}" imports an ontology from this site.'
-        return f'"{own_name}" imports {same} ontologies from this site.'
+            return MessageText(f'"{own_name}" imports an ontology from this site.',
+                               "network.reason.import_one", name=own_name)
+        return MessageText(f'"{own_name}" imports {same} ontologies from this site.',
+                           "network.reason.import_many", name=own_name, count=integer_arg(same))
 
     def _find(self, iri, ontology, *, allow_network, refresh, parse_timeout, max_bytes, reason):
         """One import through the chain. Returns the found document, a failure,

@@ -4,6 +4,7 @@ FILE: frontend/src/api.ts
 ================================================================================
 
 SUMMARY
+    Declined approvals retain host facts beside their original failure text.
     Documentation downloads share the API error boundary and preserve UI facts.
     The single place the frontend talks to the backend. One thin wrapper per
     REST endpoint, each returning a typed Promise.
@@ -221,7 +222,15 @@ async function send(url: string, init?: RequestInit, transport?: Transport): Pro
     const requests = await approvalRequests(response);
     if (!requests) return response;
     const answer = await approvalHandler(requests);
-    if (answer === null) throw new ApiError(declinedMessage(requests), 409);
+    if (answer === null) {
+      const hosts = [...new Set(requests.map(request => request.host))];
+      const parts = hosts.flatMap((host, index) => [
+        ...(index ? [{ code: "words.host_separator", args: {} }] : []),
+        { text: host },
+      ]);
+      throw new ApiError(declinedMessage(requests), 409, undefined,
+        { code: "network.approval.declined", args: { hosts: parts } });
+    }
     grants = [...grants, ...answer];
   }
 }

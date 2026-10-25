@@ -258,6 +258,7 @@ before undoing a rule, and add a line here and an entry there when a build
 leaves one behind.
 
 **Security and network**
+- Approval purposes come from source facts; an unknown redirect descriptor keeps the complete original reason visible. [Approval purposes carry source facts]
 - Only `network_broker.py` connects out; policy is asked before any name resolves. [outbound connection]
 - The broker connects to the judged address (`_pinned_url`), the name in `Host` and SNI. [outbound connection]
 - Workers run in `contextvars.copy_context()`, or a just-once grant never reaches them. [outbound connection]

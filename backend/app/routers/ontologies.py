@@ -4,6 +4,7 @@ FILE: backend/app/routers/ontologies.py
 ================================================================================
 
 SUMMARY
+    Owned connection purposes carry optional facts without rewriting payloads.
     The main REST API surface. Every endpoint for loading, listing, deleting,
     viewing, exploring (graph + node details + search) and querying (schema +
     SPARQL execution) an ontology lives here, under the /api/ontologies prefix,
@@ -603,7 +604,7 @@ FETCH_HEADERS = {
 }
 
 
-FETCH_REASON = "You asked Semantic Studio to load an ontology from this address."
+FETCH_REASON = MessageText("You asked Semantic Studio to load an ontology from this address.", "network.reason.fetch")
 
 
 @router.post("/fetch")
