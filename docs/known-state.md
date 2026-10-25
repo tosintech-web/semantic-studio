@@ -3107,3 +3107,16 @@ it on a Query-tab exit clears that marker so returning retries; completed
 schema reads keep the existing cache behavior. A delete-preview language
 reread similarly clears the previous failure when starting and on success,
 without replacing the modal or its chosen strategy.
+
+### SHACL timeout test cleanup
+
+The API intentionally abandons a timed-out validation worker, which may still
+render its discarded result. A timeout test that merely slept left that worker
+running after monkeypatch teardown. In the faster non-perf CI subset, two late
+MinCount descriptors entered the next test's global metadata counter (202
+instead of its unchanged200 cap). The same file order reproduced it locally;
+thread-name tracing identified the two ThreadPoolExecutor calls beside the200
+MainThread calls. The timeout test now gates its worker with an event and joins
+that exact worker in finally. It also asserts the worker is still alive when
+the API reports stopped. The application's behavior and the200-call assertion
+stay unchanged; no delay, threshold relaxation or thread filtering masks work.

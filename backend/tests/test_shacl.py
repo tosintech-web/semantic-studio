@@ -15,6 +15,8 @@ BASIC IDEA
     Generated count, type, range and language violations add separate display
     facts through the actual API; legacy sentences and authored messages stay
     unchanged. Broken-shape errors retain the engine text and display facts.
+    The timeout case releases and joins its own abandoned worker at teardown,
+    so its later rendering cannot pollute another test's metadata counters.
 
     Through the HTTP API, as the frontend drives it. Shapes are made by the
     shape commands where the form can make them and written in Turtle where
@@ -35,6 +37,7 @@ EXPECTED OUTPUT
 from __future__ import annotations
 
 import gc
+import threading
 import time
 
 import pytest
@@ -492,19 +495,32 @@ def test_validate_refuses_a_dataset_as_data():
 
 def test_a_check_past_the_limit_is_stopped_with_its_size(pid, monkeypatch):
     real = shacl.pyshacl.validate
+    release = threading.Event()
+    workers = []
 
     def slow(*args, **kwargs):
-        time.sleep(0.6)
+        workers.append(threading.current_thread())
+        assert release.wait(10), "the test must release its validation worker"
         return real(*args, **kwargs)
 
     monkeypatch.setattr(shacl.pyshacl, "validate", slow)
     monkeypatch.setattr(shacl, "VALIDATE_TIMEOUT_SECONDS", 0.1)
     shape(pid, EX + "Person", {"path": [EX + "name"], "minCount": 1})
-    result = validate(pid)
-    assert result["stopped"] is True
-    assert result["shapes"] == []
-    assert result["shapeCount"] == 1
-    assert result["statements"] == len(editing_service.document(pid, "model").graph)
+    try:
+        result = validate(pid)
+        assert len(workers) == 1 and workers[0].is_alive()
+        assert result["stopped"] is True
+        assert result["shapes"] == []
+        assert result["shapeCount"] == 1
+        assert result["statements"] == len(editing_service.document(pid, "model").graph)
+    finally:
+        # The API deliberately abandons timed-out work. The test must still
+        # finish its own worker before restoring patches or counting another
+        # validation's metadata; a fixed sleep leaks work on faster suites.
+        release.set()
+        for worker in workers:
+            worker.join(timeout=10)
+        assert all(not worker.is_alive() for worker in workers)
 
 
 def test_a_shape_on_an_imported_class_finds_its_instances(pid):

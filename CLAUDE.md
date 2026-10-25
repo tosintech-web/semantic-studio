@@ -376,6 +376,7 @@ leaves one behind.
 - A warning carries its `block` and stands under it; only a warning a change brings is announced. [chaining rule]
 
 **SHACL**
+- Timeout tests release and join their own abandoned worker before restoring patches; late result formatting must not enter the next test's counters. [SHACL timeout test cleanup]
 - pySHACL runs with inference, Advanced Features, JavaScript and `owl:imports` off; a test asserts each (D-092). [SHACL validation]
 - The data checked is a plain `Graph`, never a `Dataset`: on a dataset rdflib follows a constraint's `FROM`, past the broker. [SHACL validation]
 - A refused run is repeated shape by shape, a blank-node shape under a temporary IRI: one broken shape never hides the others. [SHACL validation]
