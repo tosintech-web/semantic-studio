@@ -56,7 +56,7 @@ INPUTS / INPUT SOURCES
     - Remote RDF files fetched over HTTP for the /fetch endpoint.
     - The shared `store` and `saved_queries` singletons.
     - Source metadata captures byte/time limits and query/network failures
-      beside the original refusal status/detail.
+      beside the original refusal status/detail, including documentation limits.
     - Environment: SEMANTIC_STUDIO_MAX_UPLOAD_BYTES, SEMANTIC_STUDIO_MAX_FETCH_BYTES,
       SEMANTIC_STUDIO_PARSE_TIMEOUT and SEMANTIC_STUDIO_GRAPH_NODE_BUDGET
       override the default caps.
@@ -1074,8 +1074,8 @@ def get_documentation(oid: str, include_individuals: str = Query("false")) -> Re
         with ontology.reading():
             data = build_zip(ontology, include_individuals=include)
     except DocsExportError as exc:
-        # A part of the export is over its limit; the message names the number.
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        # The optional descriptor belongs to the refusal's actual source facts.
+        raise UiHTTPException(status_code=400, detail=str(exc), ui_message=exc.ui_message) from exc
     except ParseTimeout as exc:
         # Generation parses the ontology if it was not loaded yet.
         raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc

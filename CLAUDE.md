@@ -298,6 +298,7 @@ leaves one behind.
 
 **Sentences**
 - HTTP refusal metadata is attached at its source, preserving status and detail; an unknown Turtle line has a format-only descriptor, never an invented line. [Source-owned HTTP refusal metadata]
+- Binary download failures use the shared API error boundary before reading a blob; original detail and metadata must survive. [Documentation refusal facts]
 - Query/network errors retain source codes through parser and SERVICE layers; new UI classification never matches a completed English refusal. Query failures keep their cause and clear running before a retry. [Query and network failure facts]
 - One a/an rule and one verb rule per side, `sentences.py` and `modeling/sentences.ts`, tested with one table; no module defines its own (`test_sentences.py`, `sentences.test.ts` scan). [one a/an rule]
 - A standard term's definition lives in `explain/glossary.ts` alone; a SKOS mapping's in `MAPPINGS` (D-114). [explain panel]

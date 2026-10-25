@@ -3267,3 +3267,10 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `queryPanel.notUtf8` | — | `frontend/src/sparql/textQuery.ts` | クエリ本文・ファイルの拒否 | 11 | 元の文字列を保持し入力時の事実を記録 |
 | `frontend/src/components/OperationError.tsx` | エラーの現在言語表示と原文 | 11 | causeと型付き情報を保持 | — | 生成時の英語から分類しない |
 | `frontend/src/i18n/operationFailure.ts` | エラーの現在言語表示と原文 | 11 | causeと型付き情報を保持 | — | 生成時の英語から分類しない |
+
+| `export.graph_limit` | bytes, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
+| `export.node_limit` | count, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
+| `export.source_limit` | bytes, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
+| `export.page_limit` | bytes, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
+| `export.zip_limit` | bytes, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
+| `export.term_limit` | count, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |

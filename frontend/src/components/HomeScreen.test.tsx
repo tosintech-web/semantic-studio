@@ -5,6 +5,7 @@ FILE: frontend/src/components/HomeScreen.test.tsx
 ================================================================================
 
 SUMMARY
+    Documentation refusals retain raw details across UI language changes.
     The first test for HomeScreen. Covers the library's states, the search box
     and what it does and does not filter, the two layouts and the toggle that
     overrides them, the empty state, and the two render budgets; since
@@ -35,6 +36,7 @@ EXPECTED OUTPUT
 */
 
 import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -977,4 +979,24 @@ it("shows Japanese library routes and opens the full entity list from its card",
   fireEvent.click(screen.getByRole("button", { name: /の項目一覧$/ }));
   expect(enter).toHaveBeenCalledWith(summaries(1)[0].id, "entities");
   expect(screen.getByText("閲覧専用")).toBeTruthy();
+});
+
+it("translates an export limit from captured bytes without repeating a failed download", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const original = "Original documentation ZIP refusal <img>{bytes}";
+  downloadDocumentation.mockRejectedValue(Object.assign(new Error(original), { uiMessage: { code: "export.zip_limit", args: { bytes: 20971521, limit: 20971520 } } }));
+  render(<I18nProvider><UiLanguageSelect /><HomeScreen ontologies={[UPLOAD_ONTOLOGY]} loading={false} error={null} theme="dark" workingId={null} pendingMode={null}
+    onRetry={vi.fn()} onOpen={vi.fn()} onEnterMode={vi.fn()} onViewSource={vi.fn()} onRemove={vi.fn()} onOpenDialog={vi.fn()} /></I18nProvider>);
+  openMenu("In-house vocab");
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Download documentation" })));
+  expect(document.querySelector(".detail-error")?.textContent).toBe("The documentation ZIP contains 20,971,521 bytes, exceeding the 20,971,520 byte limit.");
+  const details = screen.getByText(original).closest("details")!;
+  expect(details.open).toBe(false);
+  details.open = true;
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(document.querySelector(".detail-error")?.textContent).toBe("文書ZIPの容量が20,971,521バイトあり、上限の20,971,520バイトを超えています。");
+  expect(screen.getByText(original).closest("details")).toBe(details);
+  expect(details.open).toBe(true);
+  expect(details.querySelector("img")).toBeNull();
+  expect(downloadDocumentation).toHaveBeenCalledTimes(1);
 });

@@ -4,6 +4,7 @@ FILE: backend/app/docs_export.py
 ================================================================================
 
 SUMMARY
+    Export refusals retain original messages and expose actual byte/count limits.
     Turns a loaded ontology into a self-contained documentation website and
     packs it into a zip the user drops into a repository and points GitHub
     Pages at. The zip carries an HTML page (prose + a term index), a live
@@ -82,6 +83,7 @@ from typing import Optional
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import DC, DCTERMS, OWL, RDF, RDFS, SKOS
 
+from .messages import MessageError, integer_arg, make_message
 from . import axioms
 from .graph_builder import (
     KIND_ANNOTATION_PROPERTY,
@@ -293,7 +295,7 @@ _INDEX_EQUIVALENT_NOTE = (
 )
 
 
-class DocsExportError(Exception):
+class DocsExportError(MessageError):
     """Base class for a refusal the router turns into an HTTP 400."""
 
 
@@ -310,7 +312,8 @@ class OversizeGraphError(DocsExportError):
         super().__init__(
             f"This ontology's graph is {mb:.1f} MB, too large to embed in a "
             "documentation page. Ontologies this size are usually already "
-            "published with their own documentation."
+            "published with their own documentation.",
+            ui_message=make_message('export.graph_limit', bytes=integer_arg(size_bytes), limit=integer_arg(MAX_GRAPH_JSON_BYTES)),
         )
 
 
@@ -323,7 +326,8 @@ class OversizeNodeCountError(DocsExportError):
             f"This ontology's graph has {count:,} entities, more than the "
             f"{GRAPH_MAX_NODES:,} an embedded documentation graph can show. "
             "Ontologies this size are usually already published with their own "
-            "documentation."
+            "documentation.",
+            ui_message=make_message('export.node_limit', count=integer_arg(count), limit=integer_arg(GRAPH_MAX_NODES)),
         )
 
 
@@ -336,7 +340,8 @@ class OversizeSourceError(DocsExportError):
         limit_mb = MAX_SOURCE_BYTES / (1024 * 1024)
         super().__init__(
             f"This ontology's source file is {mb:.1f} MB, over the "
-            f"{limit_mb:.0f} MB documentation limit."
+            f"{limit_mb:.0f} MB documentation limit.",
+            ui_message=make_message('export.source_limit', bytes=integer_arg(size_bytes), limit=integer_arg(MAX_SOURCE_BYTES)),
         )
 
 
@@ -349,7 +354,8 @@ class OversizeHtmlError(DocsExportError):
         limit_mb = MAX_HTML_BYTES / (1024 * 1024)
         super().__init__(
             f"The generated documentation page is {mb:.1f} MB, over the "
-            f"{limit_mb:.0f} MB limit."
+            f"{limit_mb:.0f} MB limit.",
+            ui_message=make_message('export.page_limit', bytes=integer_arg(size_bytes), limit=integer_arg(MAX_HTML_BYTES)),
         )
 
 
@@ -362,7 +368,8 @@ class OversizeZipError(DocsExportError):
         limit_mb = MAX_ZIP_BYTES / (1024 * 1024)
         super().__init__(
             f"The documentation zip is {mb:.1f} MB, over the "
-            f"{limit_mb:.0f} MB limit."
+            f"{limit_mb:.0f} MB limit.",
+            ui_message=make_message('export.zip_limit', bytes=integer_arg(size_bytes), limit=integer_arg(MAX_ZIP_BYTES)),
         )
 
 
@@ -373,7 +380,8 @@ class TermCountError(DocsExportError):
         self.count = count
         super().__init__(
             f"This ontology has {count:,} documentable terms, more than the "
-            f"{MAX_TERMS:,} a documentation page can list."
+            f"{MAX_TERMS:,} a documentation page can list.",
+            ui_message=make_message('export.term_limit', count=integer_arg(count), limit=integer_arg(MAX_TERMS)),
         )
 
 

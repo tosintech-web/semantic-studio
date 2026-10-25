@@ -742,7 +742,67 @@ export const SERVER_CONTRACTS = {
     "total": "number"
   },
   "entities.view_changed": {},
+  "export.graph_limit": {
+    "bytes": [
+      "number",
+      "string"
+    ],
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "export.node_limit": {
+    "count": [
+      "number",
+      "string"
+    ],
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "export.page_limit": {
+    "bytes": [
+      "number",
+      "string"
+    ],
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "export.source_limit": {
+    "bytes": [
+      "number",
+      "string"
+    ],
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "export.term_limit": {
+    "count": [
+      "number",
+      "string"
+    ],
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
   "export.too_frequent": {},
+  "export.zip_limit": {
+    "bytes": [
+      "number",
+      "string"
+    ],
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
   "fetch.connection_failed": {
     "url": "string"
   },
@@ -2216,7 +2276,13 @@ export interface ServerMessageArgs {
   "editing.value.unsupported_datatype": { "datatype": string };
   "entities.page_too_large": { "suggested_limit": number; "total": number };
   "entities.view_changed": undefined;
+  "export.graph_limit": { "bytes": number | string; "limit": number | string };
+  "export.node_limit": { "count": number | string; "limit": number | string };
+  "export.page_limit": { "bytes": number | string; "limit": number | string };
+  "export.source_limit": { "bytes": number | string; "limit": number | string };
+  "export.term_limit": { "count": number | string; "limit": number | string };
   "export.too_frequent": undefined;
+  "export.zip_limit": { "bytes": number | string; "limit": number | string };
   "fetch.connection_failed": { "url": string };
   "fetch.github_enterprise": undefined;
   "fetch.http_failed": { "status": number; "url": string };

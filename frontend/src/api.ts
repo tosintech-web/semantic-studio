@@ -4,6 +4,7 @@ FILE: frontend/src/api.ts
 ================================================================================
 
 SUMMARY
+    Documentation downloads share the API error boundary and preserve UI facts.
     The single place the frontend talks to the backend. One thin wrapper per
     REST endpoint, each returning a typed Promise.
 
@@ -639,16 +640,7 @@ export async function downloadDocumentation(
   // as excluded, so omitting it is the safe path.
   const query = includeIndividuals ? "?include_individuals=true" : "";
   const response = await send(`/api/ontologies/${id}/documentation${query}`);
-  if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const body = await response.json();
-      if (body.detail) detail = String(body.detail);
-    } catch {
-      /* keep statusText */
-    }
-    throw new ApiError(detail, response.status);
-  }
+  if (!response.ok) await handle(response);
   const blob = await response.blob();
   const filename =
     filenameFromDisposition(response.headers.get("content-disposition")) ?? `${id}-docs.zip`;

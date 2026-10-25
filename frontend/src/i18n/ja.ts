@@ -15,6 +15,12 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "export.graph_limit": "埋め込みグラフの容量が{bytes}バイトあり、上限の{limit}バイトを超えています。通常、この規模のオントロジーには独自のドキュメントが公開されています。",
+  "export.node_limit": "埋め込みグラフの項目数が{count}件あり、表示上限の{limit}件を超えています。通常、この規模のオントロジーには独自のドキュメントが公開されています。",
+  "export.source_limit": "元のソースファイルの容量が{bytes}バイトあり、文書出力の上限の{limit}バイトを超えています。",
+  "export.page_limit": "生成した文書ページの容量が{bytes}バイトあり、上限の{limit}バイトを超えています。",
+  "export.zip_limit": "文書ZIPの容量が{bytes}バイトあり、上限の{limit}バイトを超えています。",
+  "export.term_limit": "文書に含める用語が{count}件あり、上限の{limit}件を超えています。",
   "queryPanel.tooLargeRun": "クエリの容量が上限の{limit}バイトを超えているため、実行しませんでした。",
   "queryPanel.tooLargeOpen": "クエリファイルの容量が上限の{limit}バイトを超えているため、開きませんでした。",
   "queryPanel.notUtf8": "このファイルはUTF-8のテキストではないため、開きませんでした。",

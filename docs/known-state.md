@@ -2742,3 +2742,39 @@ query/network/parser functions retain identical branch predicates and loop
 inputs. A differential check of 167 result payloads matches the previous values
 or native error text/args. No comparison, RDF mutation or connection-policy
 algorithm was changed to obtain localization.
+
+
+### Documentation refusal facts (P1)
+
+The six documentation-export refusal constructors attach the actual bytes or
+term/entity count and the current corresponding limit. Their existing text,
+arguments, classes and attributes remain unchanged, including the older MB
+wording. Large integer facts cross JSON as exact decimal text. Generation,
+truncation refusals, rate limiting, original-source inclusion and the ZIP layout
+are unchanged by this message migration.
+
+The HTTP boundary forwards an optional descriptor with the original 400 detail.
+A manually constructed unknown DocsExportError remains a legacy-only refusal.
+The documentation download used a separate parser that discarded the original
+structured detail and UI metadata. It now calls the same error boundary as other
+binary downloads before reading a blob. Success, filename selection, headers and
+request flags are unchanged. Root/nested metadata and original payloads survive.
+
+Tests exercise all six constructors with current small/large caps through HTTP,
+check their original arguments and unchanged synthetic project state, preserve
+unknown refusals, and verify the real download client. The mounted Home screen
+switches language on a retained export refusal without another download, keeping
+its original details and disclosure state. Existing export tests continue to
+cover actual generation and each resource guard.
+
+
+### Picker search failure details (P1)
+
+EntityPicker already kept the search cause and translated its primary message,
+but discarded the original from the rendered view. It now uses OperationError
+for search failures while keeping the existing caller-supplied form error path.
+The input's aria-describedby points to the primary explanation alone, rather
+than a container containing the technical disclosure. UI language changes retain
+the same field, description id and open disclosure without another search.
+A mounted test covers hostile original text, the linked description, and the
+request count. Real keyboard/AX verification remains part of the P1 browser gate.

@@ -4,6 +4,7 @@ FILE: frontend/src/components/EntityPicker.tsx
 ================================================================================
 
 SUMMARY
+    Search failures retain escaped original details beside the linked explanation.
     A search field that picks one class, property or concept (visual-modeling
     5.1): the parent of a class, the range of a relationship, a broader
     concept. Matches come from the document and its resolved imports, one kind
@@ -42,6 +43,7 @@ import { useEntitySearch } from "../entities/useEntitySearch";
 import { useDictionaryView } from "../dictionary/DictionaryViewContext";
 import { renderServerError } from "../i18n/serverMessage";
 import { useI18n } from "../i18n/I18nProvider";
+import OperationError from "./OperationError";
 import type { SearchKind, VizNode } from "../types";
 
 interface Props {
@@ -178,10 +180,9 @@ export default function EntityPicker({
         </p>
       )}
       {search.more && !dismissed && <p className="detail-note">{t("search.narrow", { count: 25 })}</p>}
-      {shownError && (
-        <p id={errorId} className="edit-error">
-          {shownError}
-        </p>
+      {shownError && (error == null && search.error
+        ? <OperationError failure={{ cause: search.error }} className="edit-error" descriptionId={errorId} />
+        : <p id={errorId} className="edit-error">{shownError}</p>
       )}
     </div>
   );

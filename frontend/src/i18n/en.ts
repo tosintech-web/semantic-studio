@@ -15,6 +15,12 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "export.graph_limit": "The embedded graph contains {bytes} bytes, exceeding the {limit} byte limit. Ontologies this size are usually already published with their own documentation.",
+  "export.node_limit": "The embedded graph contains {count} entities, exceeding the {limit} entity limit. Ontologies this size are usually already published with their own documentation.",
+  "export.source_limit": "The source file contains {bytes} bytes, exceeding the {limit} byte documentation limit.",
+  "export.page_limit": "The generated documentation page contains {bytes} bytes, exceeding the {limit} byte limit.",
+  "export.zip_limit": "The documentation ZIP contains {bytes} bytes, exceeding the {limit} byte limit.",
+  "export.term_limit": "This ontology has {count} documentable terms, exceeding the {limit} term limit.",
   "queryPanel.tooLargeRun": "This query exceeds the {limit} byte limit and was not run.",
   "queryPanel.tooLargeOpen": "This query file exceeds the {limit} byte limit and was not opened.",
   "queryPanel.notUtf8": "This file is not UTF-8 text and was not opened.",

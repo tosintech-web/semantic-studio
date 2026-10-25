@@ -9,7 +9,8 @@ SUMMARY
     proves the approval round trip in `send` (external-access Stage 1): a 409
     asks the registered handler, Allow repeats the same request with the grant
     id, Don't allow fails with a sentence naming the host and sends nothing
-    more. Nested parser metadata survives both fetch and upload failures. Covers
+    more. Nested parser metadata survives both fetch and upload failures, and
+    documentation downloads retain both root and nested refusal metadata. Covers
     AC-4 of the external-access spec, Stage 0 (backlog S-6, decision D-065):
     the backend refuses a state-changing request without the header, so a
     mutating call that forgot it would break in the application while every
@@ -724,4 +725,17 @@ it("keeps nested parser metadata and original fields on fetch and upload errors"
     expect(error.detail).toEqual(detail);
     expect(error.uiMessage).toEqual(uiMessage);
   }
+});
+
+it.each(["root", "nested"])("keeps %s metadata and original detail on a documentation download refusal", async (placement) => {
+  const uiMessage = { code: "export.too_frequent", args: {} };
+  const detail = placement === "root" ? "Original export refusal <img>{limit}" : { message: "Original export refusal <img>{limit}", uiMessage };
+  const body = placement === "root" ? { detail, uiMessage } : { detail };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 400 })));
+  const error = await api.downloadDocumentation("ont-synthetic").catch(e => e);
+  expect(error).toBeInstanceOf(api.ApiError);
+  expect(error.status).toBe(400);
+  expect(error.detail).toEqual(detail);
+  expect(error.uiMessage).toEqual(uiMessage);
+  expect(error.message).toBe("Original export refusal <img>{limit}");
 });

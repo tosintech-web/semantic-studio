@@ -1608,6 +1608,12 @@
     "service.invalid_datatype": {"host": "string"},
     "service.unknown_result_type": {"host": "string", "kind": "string"},
     "request.foreign_host": {},
-    "request.foreign_page": {}
+    "request.foreign_page": {},
+    "export.graph_limit": {"bytes": ["number", "string"], "limit": ["number", "string"]},
+    "export.node_limit": {"count": ["number", "string"], "limit": ["number", "string"]},
+    "export.source_limit": {"bytes": ["number", "string"], "limit": ["number", "string"]},
+    "export.page_limit": {"bytes": ["number", "string"], "limit": ["number", "string"]},
+    "export.zip_limit": {"bytes": ["number", "string"], "limit": ["number", "string"]},
+    "export.term_limit": {"count": ["number", "string"], "limit": ["number", "string"]}
   }
 }
