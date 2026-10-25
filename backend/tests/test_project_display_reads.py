@@ -17,7 +17,7 @@ import json
 from urllib.parse import urlencode
 import pytest
 from fastapi.testclient import TestClient
-from rdflib import URIRef
+from rdflib import Literal, URIRef
 from rdflib.namespace import RDF, RDFS
 from app import reasoning
 from app.editing import editing_service
@@ -235,3 +235,77 @@ def test_late_validation_does_not_replace_a_new_owner_or_newer_check(monkeypatch
             assert found["shapes"][0]["focusCount"]==2
     finally:
         release.set();pool.shutdown(wait=True);editing_service.close_all()
+
+
+def test_data_preview_names_do_not_change_suggestions_choices_or_preview_rdf(project, monkeypatch):
+    from app import rml
+    original = rml.run
+    graphs = []
+    def capture(*args, **kwargs):
+        graph, report = original(*args, **kwargs)
+        graphs.append(set(graph))
+        return graph, report
+    monkeypatch.setattr(rml, "run", capture)
+    choices = {"classIri": EX+"C", "idColumn":"id", "columns": {"name":{"as":"name"}, "field":{"as":"attribute", "property":EX+"p"}}}
+    def preview(lang=None):
+        response = client.post(f"/api/projects/{project}/data/preview", params={} if lang is None else {"lang":lang},
+            files={"file":("synthetic.csv", "id,name,field\n1,実データではない名前,合成の値\n".encode(), "text/csv")},
+            data={"choices":json.dumps(choices)})
+        assert response.status_code == 200, response.text
+        return response.json()
+    legacy, en, ja, fallback = preview(), preview("en"), preview("ja"), preview("fr")
+    assert ja["className"] == "分類C"
+    assert next(field for field in ja["fields"] if field["property"]==EX+"p")["label"] == "項目p"
+    assert ja["rows"][0]["values"][0]["label"] == "項目p"
+    assert ja["rows"][0]["name"] == "実データではない名前"
+    assert ja["rows"][0]["values"][0]["value"] == "合成の値"
+    assert ja["suggestions"] == en["suggestions"] == legacy["suggestions"]
+    assert ja["report"] == en["report"]
+    assert en == legacy == fallback
+    assert len(graphs) == 4 and all(graph == graphs[0] for graph in graphs)
+    assert (URIRef(EX+"data/c/1"),RDFS.label, Literal("実データではない名前",lang="en")) in graphs[0]
+
+
+def test_preview_display_order_cannot_change_an_ambiguous_mapping_suggestion(project):
+    from app import tabular
+    from rdflib import Graph
+    from rdflib.namespace import OWL, XSD
+    model = Graph()
+    for triple in editing_service.document(project,"model").graph: model.add(triple)
+    q = URIRef(EX+"q")
+    for triple in [(q,RDF.type,OWL.DatatypeProperty), (q,RDFS.domain,URIRef(EX+"C")), (q,RDFS.range,XSD.string),
+                   (q,RDFS.label,Literal("field p",lang="en")), (q,RDFS.label,Literal("あ",lang="ja"))]:
+        model.add(triple)
+    table = tabular.read_file(b"id,field p\n1,synthetic\n", "synthetic.csv", {})
+    from app.graph_builder import pick_label_in
+    names = lambda iri: pick_label_in(model,iri,["en","ja"])[0]
+    arguments = dict(model=model, manifest=editing_service.projects.manifest(project), names=names, table=table,
+                     choices={"classIri":EX+"C", "idColumn":"id", "columns":{}})
+    en = editing_service.snapshots.preview(**arguments)
+    ja = editing_service.snapshots.preview(**arguments, display_languages=["ja","en"])
+    assert en["suggestions"]["field p"] == ja["suggestions"]["field p"] == {"as":"attribute", "property":EX+"p"}
+    assert [field["property"] for field in ja["fields"]] == [EX+"p",EX+"q"]
+    assert [field["label"] for field in ja["fields"]] == ["項目p","あ"]
+
+
+def test_preview_relationship_and_missing_target_names_use_the_read_language(project):
+    from app import tabular
+    from app.graph_builder import pick_label_in
+    from rdflib import Graph
+    from rdflib.namespace import OWL
+    model = Graph()
+    for triple in editing_service.document(project,"model").graph: model.add(triple)
+    prop = URIRef(EX+"link")
+    for triple in [(prop,RDF.type,OWL.ObjectProperty), (prop,RDFS.domain,URIRef(EX+"C")), (prop,RDFS.range,URIRef(EX+"D")),
+                   (prop,RDFS.label,Literal("link",lang="en")), (prop,RDFS.label,Literal("つながり",lang="ja"))]:
+        model.add(triple)
+    result = editing_service.snapshots.preview(model=model, manifest=editing_service.projects.manifest(project),
+        names=lambda iri: pick_label_in(model,iri,["en","ja"])[0],
+        table=tabular.read_file(b"id,link\n1,99\n", "synthetic.csv", {}),
+        choices={"classIri":EX+"C", "idColumn":"id", "columns":{"link":{"as":"relationship", "property":str(prop)}}},
+        display_languages=["ja","en"])
+    field = next(field for field in result["fields"] if field["property"]==str(prop))
+    assert field["label"] == "つながり" and field["rangeLabel"] == "分類D"
+    assert result["rows"][0]["values"][0]["label"] == "つながり"
+    assert result["report"]["unmatched"][0]["className"] == "分類D"
+    assert result["report"]["unmatched"][0]["classIri"] == EX+"D"

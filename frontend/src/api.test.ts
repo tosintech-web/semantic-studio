@@ -774,3 +774,15 @@ it("passes explicit project read languages without writing them into RDF actions
     for (const request of recorded) expect(new URL(request.url,"http://localhost").searchParams.get("lang")).toBe("ja");
   } finally { api.setDisplayLanguage(null); }
 });
+
+
+it("uses the explicit data-preview language while preserving the multipart mapping", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    const choices = { classIri: "https://synthetic.example/C", idColumn: "id", columns: { field: { as: "attribute" as const, property: "https://synthetic.example/p" } } };
+    await api.previewData("prj-one", { file: new File(["id,field\n1,synthetic"], "synthetic.csv") }, {}, choices, "ja");
+    expect(new URL(recorded[0].url,"http://localhost").searchParams.get("lang")).toBe("ja");
+    const form = vi.mocked(fetch).mock.calls[0][1]?.body as FormData;
+    expect(JSON.parse(String(form.get("choices")))).toEqual(choices);
+  } finally { api.setDisplayLanguage(null); }
+});

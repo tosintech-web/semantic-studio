@@ -4,6 +4,7 @@ FILE: backend/app/routers/data.py
 ================================================================================
 
 SUMMARY
+    Preview labels accept a read language without changing mapping decisions.
     Refused bodies carry current byte caps beside unchanged legacy detail.
     The HTTP surface for data snapshots in a project (csv-data-import Section
     8): inspect a file, preview a mapping, import, list, refresh, switch,
@@ -244,6 +245,7 @@ async def preview(
     options: Optional[str] = Form(default=None),
     choices: Optional[str] = Form(default=None),
     snapshot: Optional[str] = Form(default=None),
+    lang: Optional[str] = ontologies.LANG_PARAM,
 ) -> dict:
     """Steps 2 to 4 (5.3 to 5.5): the identifier checked, what each column
     can become, and the first rows as sentences with the report to expect."""
@@ -258,6 +260,7 @@ async def preview(
             with editing_service.model_reader(pid) as (model, manifest, names):
                 return editing_service.snapshots.preview(
                     model=model, manifest=manifest, names=names, table=table, choices=chosen, pid=pid,
+                    display_languages=editing_service.display_languages(pid, lang) if lang is not None else None,
                 )
 
     return await run_in_threadpool(_bounded, work)

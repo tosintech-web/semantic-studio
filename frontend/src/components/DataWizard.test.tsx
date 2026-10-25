@@ -36,6 +36,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { makeUiMessage } from "../i18n/uiMessage";
 import UiLanguageSelect from "./UiLanguageSelect";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 
 const { openProject, runCommand, inspectData, previewData, importData, fetchHierarchy, listData, updateData, refreshData } =
   vi.hoisted(() => ({
@@ -910,4 +911,41 @@ it("keeps a literal __proto__ header, its raw first cell and its saved mapping",
   ]) });
   const choices = importData.mock.calls[0][3];
   expect(Object.prototype.hasOwnProperty.call(JSON.parse(JSON.stringify(choices.columns)), key)).toBe(true);
+});
+
+
+it("rereads dictionary names while keeping chosen columns and the UI language", async () => {
+  await setup(); cleanup();
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const start: WizardStart = { kind: "refresh", snapshot: SNAPSHOT, file: FILE, options: {}, inspection: inspection(), missing: [],
+    choices: { classIri: `${X}Person`, idColumn: "id", columns: { name: { as: "name" }, born: { as: "attribute", property: `${X}birthDate` } } } };
+  const japanese = preview({ className: "人", fields: [{ property: `${X}birthDate`, label: "生年月日", kind: "attribute", datatype: "xsd:date", text: false }],
+    rows: [{ row: 1, subject: `${X}data/person/1`, name: "Bob", values: [{ column: "born", label: "生年月日", value: "yesterday", kind: "value", datatype: "date", fits: false }] }] });
+  let resolveOlder!: (value: DataPreview) => void;
+  const older = new Promise<DataPreview>(resolve => { resolveOlder = resolve; });
+  previewData.mockImplementation((_pid, _source, _options, _choices, lang) => lang === "fr" ? older : Promise.resolve(lang === "ja" ? japanese : preview()));
+  const draw = (lang: string) => <DictionaryLanguageContext.Provider value={lang}><I18nProvider><UiLanguageSelect />
+    <DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={false} start={start} onClose={onClose} />
+  </I18nProvider></DictionaryLanguageContext.Provider>;
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(draw("en")); });
+  const column = screen.getByLabelText("born") as HTMLSelectElement;
+  expect(column.value).toBe(`attribute ${X}birthDate`);
+  column.focus();
+  await act(async () => { view.rerender(draw("fr")); });
+  expect(document.activeElement).toBe(column);
+  await act(async () => { view.rerender(draw("ja")); });
+  await act(async () => { resolveOlder(preview()); });
+  expect(document.activeElement).toBe(column);
+  expect(within(column).getByRole("option", { name: "attribute: 生年月日" })).toBeTruthy();
+  expect(screen.getByLabelText("born")).toBe(column);
+  expect(column.value).toBe(`attribute ${X}birthDate`);
+  expect(screen.getByRole("heading", { name: "Step 3 of 4: the columns" })).toBeTruthy();
+  await press(next());
+  expect(screen.getByText(/Bob is a 人/)).toBeTruthy();
+  expect(screen.getByText(/生年月日/)).toBeTruthy();
+  const count = previewData.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(previewData).toHaveBeenCalledTimes(count);
+  expect(runCommand).not.toHaveBeenCalled(); expect(importData).not.toHaveBeenCalled();
 });

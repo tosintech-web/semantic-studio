@@ -389,6 +389,7 @@ leaves one behind.
 - The Small template ships starter shapes (D-095); a test needing a Small project without them uses `test_editing.py`'s `bare`. [example data]
 
 **Data snapshots**
+- Display-language preview names are projected after suggestions and planning; language-only reads retain controls and reject older responses. [Data-preview names cannot choose another mapping]
 - The engine stops at row 2,000 itself (`rml.run`); `MAX_ROWS` is no setting (D-098). [Data snapshots]
 - An edited mapping's `rml:source` is checked before anything is kept; the engine never opens a file. [Data snapshots]
 - A value that does not fit its type is a plain literal, never ill-typed; the rules are `lexical.py`'s (D-097). [Data snapshots]

@@ -1171,8 +1171,9 @@ export function previewData(
   source: DataSourceRef,
   options: DataOptions,
   choices: Partial<DataChoices>,
+  displayLanguage?: string,
 ): Promise<DataPreview> {
-  return postForm(projectUrl(pid, "/data/preview"), dataForm(source, { options, choices }));
+  return postForm(withLang(projectUrl(pid, "/data/preview"), displayLanguage ?? ""), dataForm(source, { options, choices }));
 }
 
 // Import: a new snapshot, switched on.

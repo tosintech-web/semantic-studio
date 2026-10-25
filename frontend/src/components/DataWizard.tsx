@@ -4,6 +4,7 @@ FILE: frontend/src/components/DataWizard.tsx
 ================================================================================
 
 SUMMARY
+    Dictionary-name reads follow their language without replacing column choices.
     The data import wizard (csv-data-import 5.2 to 5.5), four steps and the
     report: the file and what was detected in it, what a row is and which
     column identifies it, what each column becomes, and the preview as
@@ -184,6 +185,10 @@ export default function DataWizard({
   onDirtyChange,
 }: Props) {
   const { locale, t } = useI18n();
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
+  const readPreview = (source: DataSourceRef, options: DataOptions, choices: Partial<DataChoices>) =>
+    dictionaryLanguage === undefined ? previewData(projectId, source, options, choices)
+      : previewData(projectId, source, options, choices, dictionaryLanguage);
   // Where Back stops: a refresh through step 1 can go back to it.
   const firstStep = start.kind === "new" || (start.kind === "refresh" && (start.atFile || start.atFileMessage)) ? 1 : 2;
   const [step, setStep] = useState<Step>(
@@ -323,7 +328,11 @@ export default function DataWizard({
   const effectiveId = rowNumber ? null : idColumn;
   // The sheet and header row are part of the key: a reading of one sheet was
   // reused for another with a column of the same name (PR #54 review).
-  const basisKey = [classIri ?? "", effectiveId ?? "", options.sheet ?? "", options.headerRow ?? ""].join("|");
+  const basisKey = JSON.stringify([projectId, classIri, effectiveId, options.sheet ?? "", options.headerRow ?? ""]);
+  // A language-only read keeps the existing controls mounted and focused.
+  const readingKey = JSON.stringify([basisKey, dictionaryLanguage]);
+  const currentBasis = useRef(readingKey);
+  currentBasis.current = readingKey;
   const basis = classReading && classReading.key === basisKey ? classReading.preview : null;
 
   // Step 2 onwards: the identifier check, the fields of the row's class and
@@ -333,14 +342,14 @@ export default function DataWizard({
     let live = true;
     const key = basisKey;
     setBasisFailed(null);
-    previewData(projectId, source, options, { classIri, idColumn: effectiveId, columns: {} })
+    readPreview(source, options, { classIri, idColumn: effectiveId, columns: {} })
       .then((found) => live && setClassReading({ key, preview: found }))
       .catch((e: unknown) => live && setBasisFailed({ error: e }));
     return () => {
       live = false;
     };
     // `source` is derived from file and start; listing them keeps the key stable.
-  }, [step === 1, projectId, file, start, classIri, effectiveId, inspection, options, retry]);
+  }, [step === 1, projectId, file, start, classIri, effectiveId, inspection, options, retry, dictionaryLanguage]);
 
   // Step 3 starts from the suggestions, or the choices made before.
   useEffect(() => {
@@ -363,7 +372,7 @@ export default function DataWizard({
     let live = true;
     setPreview(null);
     setPreviewFailed(false);
-    previewData(projectId, source, options, choices)
+    readPreview(source, options, choices)
       .then((found) => live && setPreview(found))
       .catch((e: unknown) => {
         if (!live) return;
@@ -373,7 +382,7 @@ export default function DataWizard({
     return () => {
       live = false;
     };
-  }, [step, retry]);
+  }, [step, retry, dictionaryLanguage]);
 
   // Leaving now would lose a mapping: the dialog asks before its ✕ or a tab.
   useEffect(() => {
@@ -534,9 +543,10 @@ export default function DataWizard({
             setSuggested((current) => current.filter((c) => c !== column));
             if (source && classIri) {
               const key = basisKey;
-              void previewData(projectId, source, options, { classIri, idColumn: effectiveId, columns: {} })
-                .then((found) => setClassReading({ key, preview: found }))
-                .catch((e: unknown) => setError(external(e)));
+              const reading = readingKey;
+              void readPreview(source, options, { classIri, idColumn: effectiveId, columns: {} })
+                .then((found) => { if (currentBasis.current === reading) setClassReading({ key, preview: found }); })
+                .catch((e: unknown) => { if (currentBasis.current === reading) setError(external(e)); });
             }
           }}
           onError={(error) => setError(external(error))}

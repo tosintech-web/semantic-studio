@@ -588,7 +588,7 @@ UIの言語と辞書の表示言語は別々に選べます。辞書の表示言
 言語をもう一度押すと、名称の読み込みを再試行できます。
 
 APIでは、プロジェクトの `/shapes`、`/shapes/suggestions`、`/validate`、
-`/reasoning` と `/reasoning/why` に任意の `lang` クエリを指定できます。
+`/reasoning` と `/reasoning/why`、および `/data/preview` に任意の `lang` クエリを指定できます。
 省略時は従来の言語順序を保ちます。GET `/api/projects/{id}/validate` は
 最後の検証結果を返し、未検証なら `null` を返します。GETによる検証・推論
 結果の読み取りは、検証・推論そのものを実行しません。

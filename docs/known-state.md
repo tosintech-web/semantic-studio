@@ -2892,3 +2892,20 @@ discard replies from older owners, languages or result identities. Failed name
 reads retain the previous result and report an error with original details;
 selecting the current language again retries. Changing UI language only rerenders
 messages and does not trigger these reads. Browser checks remain in the P1 gate.
+
+### Data-preview names cannot choose another mapping (P1)
+
+POST `/api/projects/{pid}/data/preview` accepts optional `lang` for display
+labels. Suggestions, including their tie order for ambiguous column names,
+and RML planning keep the original project reading. Only the returned class,
+field, range, preview-row and unmatched-target names use the display choice.
+The same synthetic input produces identical RDF and suggestions in either
+language; literal cell values and primary-language annotations stay unchanged.
+
+The wizard rereads names when dictionary language changes. Its structural
+basis includes project, class, identifier, sheet and header row; a separate
+read identity includes language. A language-only refresh retains existing
+controls, chosen columns, inline drafts and focus until names arrive. Old
+responses cannot replace the latest reading, including a field-created
+callback. UI language changes only rerender messages and do not reread files,
+run previews or import data. Browser focus/AX checks remain in the P1 gate.

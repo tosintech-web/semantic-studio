@@ -4,6 +4,7 @@ FILE: backend/app/snapshots.py
 ================================================================================
 
 SUMMARY
+    Preview label projections preserve the original mapping suggestions and RDF.
     Data snapshots in a project (csv-data-import 5.3 to 5.7, D-096): what the
     wizard's steps 2 to 4 offer and preview, the import itself, and each
     snapshot's folder -- refresh, switch, change the mapping, edit it as RML,
@@ -95,6 +96,7 @@ from rdflib.namespace import RDF, RDFS, SKOS, XSD
 
 from . import lexical, rml, tabular
 from .examples import is_class
+from .graph_builder import pick_label_in
 from .projects import ProjectStore, _replace
 from .shapes_form import paths_for
 
@@ -701,7 +703,7 @@ class SnapshotService:
 
     def preview(
         self, *, model: Graph, manifest: dict, names: Names, table: tabular.Table, choices: dict,
-        pid: Optional[str] = None,
+        pid: Optional[str] = None, display_languages: Optional[list[str]] = None,
     ) -> dict:
         """Steps 2 to 4 (5.3 to 5.5): the identifier checked, the choices for
         each column with suggestions, and -- once something is mapped -- the
@@ -719,9 +721,16 @@ class SnapshotService:
             return result
         cls = URIRef(cls_raw)
         offered = fields(model, cls, kind, names, languages)
-        result["fields"] = offered
+        # Mapping suggestions and their tie order keep the original reading.
+        # The display projection below must never select a different property.
         result["suggestions"] = suggestions(model, table, offered, tabular.suggest_name(table))
-        result["className"] = "concept" if cls == SKOS.Concept else names(cls)
+        reading_names = names if display_languages is None else lambda iri: pick_label_in(model, iri, display_languages)[0]
+        shown = offered
+        if display_languages is not None:
+            by_iri = {field["property"]: field for field in fields(model, cls, kind, reading_names, display_languages)}
+            shown = [by_iri[field["property"]] for field in offered]
+        result["fields"] = shown
+        result["className"] = "concept" if cls == SKOS.Concept else reading_names(cls)
         metas: list = []
         patterns: dict = {}
         if pid is not None:
@@ -736,13 +745,16 @@ class SnapshotService:
         mapping = rml.read_graph(made.graph)
         work = _with_row_column(table, made.row_column)
         graph, out = rml.run(mapping, work)
-        labels = {f["property"]: f["label"] for f in offered}
+        labels = {f["property"]: f["label"] for f in shown}
         result["rows"] = preview_rows(work, mapping, graph, out["subjects"], labels, made.row_column)
         # The links are counted against the snapshots there now, and this
         # file's own rows, which a link may point at (5.9).
         known = _known(metas) | set(out["subjects"])
         report = dict(out["report"])
         report["unmatched"] = _unmatched(_links(made.links, out, mapping), known)
+        if display_languages is not None:
+            for link in report["unmatched"]:
+                link["className"] = reading_names(URIRef(link["classIri"]))
         if report["unmatched"]:
             report["clean"] = False
         result["report"] = report
