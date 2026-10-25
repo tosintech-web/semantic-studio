@@ -21,7 +21,7 @@ than typing.
 | RDF | rdflib, graphs held in memory |
 | Packaging | Docker and Docker Compose |
 
-Roughly 40,000 lines of source and 30,000 of tests. One FastAPI process
+One FastAPI process
 serves the API and, in production, the built frontend as static files.
 
 ## Running it
@@ -49,12 +49,13 @@ app writes into the real per-user ontology library.
 ## Testing
 
 ```bash
-cd backend  && python -m pytest tests    # 1489 tests (+2 marked `network`, deselected)
-cd frontend && npm run test              # 1763 tests, vitest
+cd backend  && python -m pytest tests    # full suite, including performance budgets
+cd frontend && npm run test              # full suite, including performance budgets
 ```
 
 Both suites must pass before any change is considered done, and locally both
-run everything, budgets included.
+run everything, budgets included. Dated P1 results live in `docs/p1-verification.md`,
+so test counts are not maintained as a second, easily stale copy here.
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to
 `main`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
@@ -62,8 +63,8 @@ run everything, budgets included.
 `vite build`) and `docker` (`docker build .`). `budgets` only reports. A build
 is not done until CI is green on its pull request.
 
-**Timing budgets are separated, not deleted.** Thirty-seven backend tests carry
-`@pytest.mark.perf`; eleven frontend tests have `[budget]` in their title. CI runs
+**Timing budgets are separated, not deleted.** Backend timing tests carry
+`@pytest.mark.perf`; frontend timing tests have `[budget]` in their title. CI runs
 them only in `budgets` (`-m "perf and not network"`, `npm run test:budgets`).
 A command-line `-m` *replaces* `pytest.ini`'s `-m "not network"`, so always name
 `network` again. Count-based budgets (renders, calls) are not timings and stay
@@ -488,6 +489,11 @@ leaves one behind.
 - `index.css`'s kind tokens and `canvas/kindColours.ts` say the same values; `kindColours.test.ts` checks both themes. [Edit page]
 - `HierarchyView` never imports from `canvas/`: App reaches `canvas/` only through `React.lazy`. [Edit page]
 - Canvas markers are sized in user space, one per line kind, coloured by CSS. [Edit page]
+
+**P1 read and distribution budgets**
+- Restriction recognition scans a subject once with the same duplicate/unsupported guards; graph label memoization lasts one read only. [P1 budget failures]
+- Alias predicate sweeps never reorder representative names for legacy no-language reads. [P1 budget failures]
+- Runtime notices come from actual emitted modules/installed versions, including generated helpers; unknown or changed originals fail distribution. [Actual distribution inventories]
 
 **Dictionary display language (P1)**
 - Completed import reports project only names from current lists, retaining operation counts and row facts. Old edit/save responses cannot modify a reopened project session. [Retained import reports]

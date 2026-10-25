@@ -3693,6 +3693,11 @@
           "original_path": "et_xmlfile-2.0.0.dist-info/LICENCE.rst",
           "text": "licenses/texts/0c84bb42f5d367e5ebf9fc2dde35b16141df5ee0fdc189250858bc6c5560f69e.txt",
           "sha256": "0c84bb42f5d367e5ebf9fc2dde35b16141df5ee0fdc189250858bc6c5560f69e"
+        },
+        {
+          "original_path": "et_xmlfile-2.0.0.dist-info/AUTHORS.txt",
+          "text": "licenses/texts/7f038029ea5463605dd2278d300099a381bce9e90dda83ccab2042346b6c8107.txt",
+          "sha256": "7f038029ea5463605dd2278d300099a381bce9e90dda83ccab2042346b6c8107"
         }
       ],
       "status": "text-collected"
@@ -3738,6 +3743,11 @@
           "original_path": "html5rdf-1.2.1.dist-info/LICENSE",
           "text": "licenses/texts/16a39991619e92f18680932da2a9199fdf7d95df3ecaedc52ea06218aabafd6f.txt",
           "sha256": "16a39991619e92f18680932da2a9199fdf7d95df3ecaedc52ea06218aabafd6f"
+        },
+        {
+          "original_path": "html5rdf-1.2.1.dist-info/AUTHORS.rst",
+          "text": "licenses/texts/c12e916bee25921ddb3ef632ab0574bc0cde055f89b14c82251efad68f1b7b7c.txt",
+          "sha256": "c12e916bee25921ddb3ef632ab0574bc0cde055f89b14c82251efad68f1b7b7c"
         }
       ],
       "status": "text-collected"

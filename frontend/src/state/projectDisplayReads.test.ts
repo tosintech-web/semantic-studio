@@ -16,7 +16,7 @@ EXPECTED OUTPUT
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ChangeResult, ReasoningResult, SnapshotListing, ValidationResult } from "../types";
 const api = vi.hoisted(() => ({ openProject:vi.fn(), closeProject:vi.fn(), listData:vi.fn(),
-  validateProject:vi.fn(), reasonProject:vi.fn(), getValidationResult:vi.fn(), getReasoningResult:vi.fn(), runCommand:vi.fn(), undoChange:vi.fn(), redoChange:vi.fn(), applyDocumentSource:vi.fn(), saveDocument:vi.fn() }));
+  validateProject:vi.fn(), reasonProject:vi.fn(), getValidationResult:vi.fn(), getReasoningResult:vi.fn(), runCommand:vi.fn(), undoChange:vi.fn(), redoChange:vi.fn(), applyDocumentSource:vi.fn(), saveDocument:vi.fn(), updateProject:vi.fn() }));
 vi.mock("../api", async original => ({ ...await original<typeof import("../api")>(), ...api }));
 import { projectStore } from "./projectStore";
 const PID="prj-0123456789ab";
@@ -242,4 +242,19 @@ it("retains the edit announcement when a background snapshot-name refresh fails"
   await vi.waitFor(() => expect(projectStore.getSnapshot().dataError).not.toBeNull());
   expect(projectStore.getSnapshot().data).toBe(listing);
   expect(projectStore.getSnapshot().announcement.detail).toMatchObject({kind:"change",label:"Renamed class"});
+});
+
+
+it.each(["reload", "languages"] as const)("ignores an old %s settings response after reopening", async operation => {
+  const old = deferred<unknown>();
+  if(operation === "reload") api.openProject.mockReturnValueOnce(old.promise);
+  else api.updateProject.mockReturnValueOnce(old.promise);
+  const pending = operation === "reload" ? projectStore.reload() : projectStore.setLanguages(["fr"]);
+  await projectStore.close(true); await projectStore.open(PID);
+  const before = projectStore.getSnapshot();
+  old.resolve(operation === "reload"
+    ? {project:{...project,name:"Old project reading"},documents:[{...document,revision:9}],recovery:{available:false,draftTime:null}}
+    : {...project,name:"Old language settings",languages:["fr"]});
+  await pending;
+  expect(projectStore.getSnapshot()).toBe(before);
 });

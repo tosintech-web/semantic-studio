@@ -16,6 +16,7 @@ BASIC IDEA
     ontology library. `api` is curl for the JSON endpoints. `ui` drives Chrome
     over raw CDP: Node 24 ships a global WebSocket, so the whole browser
     automation layer is a promise-keyed request/response map over one socket.
+    `p1` exercises Japanese dictionary/IME/list/editing acceptance.
     `smoke` chains all of it into one end-to-end flow and exits non-zero if any
     step fails.
 
@@ -28,7 +29,7 @@ INPUTS / INPUT SOURCES
     - backend/.venv/Scripts/python.exe (Windows) or backend/.venv/bin/python.
     - frontend/dist, built by `npm run build`, mounted by the backend at /.
     - examples/space-exploration.ttl as the ontology under test.
-    - Env: PORT, DATA_DIR, CHROME, HEADFUL, KEEP_DATA.
+    - Env: PORT, DATA_DIR, CHROME, HEADFUL, KEEP_DATA, SEMANTIC_STUDIO_PYTHON.
 
 EXPECTED OUTPUT
     - Progress lines on stdout, one per step, prefixed with the step name.
@@ -38,6 +39,7 @@ EXPECTED OUTPUT
 */
 
 import { spawn } from 'node:child_process';
+import { runP1 } from './p1.mjs';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -54,7 +56,7 @@ const CDP_PORT = Number(process.env.CDP_PORT || 9222);
 // A scratch library by default. The app persists every ontology it loads to
 // disk, so a smoke run against the default location would silently add rows to
 // whatever the developer has in their real dropdown.
-const DATA_DIR = process.env.DATA_DIR || join(tmpdir(), 'semantic-studio-driver-data');
+const DATA_DIR = process.env.DATA_DIR || join(tmpdir(), `semantic-studio-driver-${process.pid}`);
 
 // Every selector the UI flow depends on, in one place: these are the handles
 // that break when a component is restyled, and a driver that fails here is
@@ -79,6 +81,7 @@ const fail = (step, msg) => { console.error(`[${step}] FAILED: ${msg}`); process
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function pythonExe() {
+  if (process.env.SEMANTIC_STUDIO_PYTHON && existsSync(process.env.SEMANTIC_STUDIO_PYTHON)) return process.env.SEMANTIC_STUDIO_PYTHON;
   const win = join(ROOT, 'backend', '.venv', 'Scripts', 'python.exe');
   const nix = join(ROOT, 'backend', '.venv', 'bin', 'python');
   if (existsSync(win)) return win;
@@ -195,11 +198,16 @@ class Browser {
     this.profileDir = profileDir;
     this.nextId = 1;
     this.pending = new Map();
+    this.listeners = new Map();
     this.sessionId = null;
     ws.addEventListener('message', (ev) => {
       const msg = JSON.parse(ev.data);
+      if (msg.method && msg.sessionId === this.sessionId) {
+        for (const listener of this.listeners.get(msg.method) ?? []) listener(msg.params);
+      }
       if (msg.id && this.pending.has(msg.id)) {
-        const { resolve: res, reject } = this.pending.get(msg.id);
+        const { resolve: res, reject, timer } = this.pending.get(msg.id);
+        clearTimeout(timer);
         this.pending.delete(msg.id);
         if (msg.error) reject(new Error(JSON.stringify(msg.error)));
         else res(msg.result);
@@ -213,11 +221,27 @@ class Browser {
     if (useSession && this.sessionId) payload.sessionId = this.sessionId;
     this.ws.send(JSON.stringify(payload));
     return new Promise((res, reject) => {
-      this.pending.set(id, { resolve: res, reject });
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (this.pending.delete(id)) reject(new Error(`CDP timeout: ${method}`));
       }, 60_000);
+      this.pending.set(id, { resolve: res, reject, timer });
     });
+  }
+
+  on(method, listener) {
+    const listeners = this.listeners.get(method) ?? new Set();
+    listeners.add(listener);
+    this.listeners.set(method, listeners);
+    return () => listeners.delete(listener);
+  }
+
+  async select(selector, value) {
+    await this.eval(`(() => {
+      const element = document.querySelector(${JSON.stringify(selector)});
+      if (!element) throw new Error('Select not found');
+      element.value = ${JSON.stringify(value)};
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
   }
 
   static async launch() {
@@ -287,7 +311,7 @@ class Browser {
 
   // Poll rather than subscribe: the app has no single "ready" event, and every
   // interesting condition here is a DOM predicate anyway.
-  async waitFor(expression, timeoutMs = 20_000, label = expression) {
+  async waitFor(expression, timeoutMs = 20_000, label = expression, intervalMs = 200) {
     const deadline = Date.now() + timeoutMs;
     let last;
     while (Date.now() < deadline) {
@@ -295,7 +319,7 @@ class Browser {
         last = await this.eval(`!!(${expression})`);
         if (last) return true;
       } catch (e) { last = e.message; }
-      await sleep(200);
+      await sleep(intervalMs);
     }
     throw new Error(`waitFor timed out after ${timeoutMs}ms: ${label} (last=${last})`);
   }
@@ -304,6 +328,7 @@ class Browser {
     const box = await this.eval(`(() => {
       const el = document.querySelector(${JSON.stringify(selector)});
       if (!el) return null;
+      el.scrollIntoView({block:"center",inline:"center",behavior:"instant"});
       const r = el.getBoundingClientRect();
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     })()`);
@@ -328,6 +353,7 @@ class Browser {
       const el = [...document.querySelectorAll(${JSON.stringify(selector)})]
         .find(e => e.textContent.trim().toLowerCase().includes(want));
       if (!el) return null;
+      el.scrollIntoView({block:"center",inline:"center",behavior:"instant"});
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height) return null;   // present but not laid out
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
@@ -478,6 +504,9 @@ async function cmdSmoke() {
     // --- UI layer --------------------------------------------------------
     browser = await Browser.launch();
     await browser.goto(BASE);
+    await browser.waitFor('document.querySelector(".ui-language-select select")');
+    await browser.select('.ui-language-select select', 'en');
+    await browser.waitFor('document.documentElement.lang === "en"');
     log('ui', `loaded ${BASE}, title=${await browser.eval('document.title')}`);
 
     // The application opens on the chooser and renders nothing until asked, so
@@ -582,10 +611,11 @@ async function cmdSmoke() {
 // ---------------------------------------------------------------------------
 
 const [cmd, ...rest] = process.argv.slice(2);
-const commands = { serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke };
+const commands = { serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke, p1: () => runP1({ ROOT, DATA_DIR, BASE, Browser, api, uploadOntology, startServer, stopServer, waitForHealth, pythonExe, log, sleep }) };
 if (!commands[cmd]) {
-  console.error(`usage: node driver.mjs <smoke|serve|api|ui>
+  console.error(`usage: node driver.mjs <smoke|p1|serve|api|ui>
 
+  p1                           synthetic Japanese dictionary + editing/browser acceptance
   smoke                        start server, exercise API + UI, screenshot, exit
   serve                        start the server and hold it (Ctrl-C to stop)
   api <METHOD> <path> [json]   one request against a server already running

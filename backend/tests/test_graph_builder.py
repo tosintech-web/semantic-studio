@@ -4,6 +4,7 @@ FILE: backend/tests/test_graph_builder.py
 ================================================================================
 
 SUMMARY
+    Per-read label reuse remains fresh after edits in legacy and explicit language views.
     Unit tests for graph_builder: verifies that the demo ontology is turned
     into the right nodes (with correct kinds), the right structural/assertion
     edges, correct node-detail output, working search, and correct format
@@ -511,3 +512,38 @@ def test_indexed_labeler_preserves_language_predicate_and_literal_choices(langs)
     original = labeler(g, langs)
     indexed = labeler(g, langs, indexed=True)
     assert [indexed(node) for node in nodes] == [original(node) for node in nodes]
+
+
+@pytest.mark.parametrize("languages", [None, ["ja", "en"]])
+def test_rule_and_node_labels_are_projected_once_per_term_and_fresh_per_view(monkeypatch, languages):
+    from app import graph_builder
+    from rdflib import Literal, URIRef
+    graph = Graph().parse(data='''
+      @prefix ex: <https://example.org/name-budget/> .
+      @prefix owl: <http://www.w3.org/2002/07/owl#> .
+      @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+      ex:A a owl:Class; rdfs:subClassOf [a owl:Restriction; owl:onProperty ex:p; owl:someValuesFrom ex:C] .
+      ex:B a owl:Class; rdfs:subClassOf [a owl:Restriction; owl:onProperty ex:p; owl:someValuesFrom ex:C] .
+      ex:C a owl:Class; rdfs:label "target"@en, "対象"@ja .
+      ex:p a owl:ObjectProperty; rdfs:label "property"@en, "項目"@ja .
+    ''', format="turtle")
+    calls = Counter()
+    original = graph_builder.labeler
+    def counted(g, langs):
+        choose = original(g, langs)
+        def label(term):
+            calls[term] += 1
+            return choose(term)
+        return label
+    monkeypatch.setattr(graph_builder, "labeler", counted)
+    first = build_viz_graph(graph, languages)
+    assert len(_edges(first, "rule")) == 2
+    assert max(calls.values()) == 1
+    prop = URIRef("https://example.org/name-budget/p")
+    graph.set((prop, RDFS.label, Literal("changed", lang="en")))
+    calls.clear()
+    second = build_viz_graph(graph, languages)
+    expected = "changed (en)" if languages else "changed"
+    assert next(node for node in second["nodes"] if node["id"] == str(prop))["label"] == expected
+    assert all(edge["rule"]["propertyLabel"] == expected for edge in _edges(second, "rule"))
+    assert max(calls.values()) == 1

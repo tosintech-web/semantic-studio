@@ -2971,6 +2971,7 @@ export const ja: Catalog = {
   "about.modified": "非公式の改変版",
   "about.source": "改変版のソースコードと問い合わせ →",
   "about.scope": "データと依存ライブラリには、それぞれのライセンスが適用されます。",
+  "about.distributedNotices": "このビルドに同梱されたライセンス通知 →",
   "about.notices": "第三者ライセンスの通知 →",
   "about.author": "原作者：{name}",
   "about.upstream": "元アプリのソースコード →",

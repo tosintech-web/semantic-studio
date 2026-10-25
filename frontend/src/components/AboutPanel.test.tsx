@@ -341,3 +341,12 @@ it("explains the modified application in Japanese while preserving legal attribu
   expect(screen.getByRole("link", { name: "第三者ライセンスの通知 →" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "アプリについてを閉じる" })).toBeTruthy();
 });
+
+it("links to the notices shipped with a production frontend", () => {
+  vi.stubEnv("PROD", true);
+  try {
+    open();
+    const link = screen.getByRole("link", {name:"Notices included with this build →"});
+    expect(link.getAttribute("href")).toBe(new URL("/THIRD_PARTY_NOTICES.md", window.location.href).href);
+  } finally { vi.unstubAllEnvs(); }
+});

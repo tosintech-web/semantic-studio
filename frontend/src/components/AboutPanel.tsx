@@ -16,6 +16,7 @@ BASIC IDEA
     moment a newcomer most wants to know what they are looking at.
 
     Upstream attribution and unofficial fork links are shown separately.
+    Production builds link to their bundled runtime notices.
     Third-party notices apply to data and dependencies independently of MIT.
     The copy is exported as ABOUT rather than written inline, for two reasons:
     a test asserts the copyright holder and licence match the repository's
@@ -91,6 +92,7 @@ interface Props {
 
 export default function AboutPanel({ onClose }: Props) {
   const { t } = useI18n();
+  const distributedNoticesUrl = import.meta.env.PROD ? new URL("/THIRD_PARTY_NOTICES.md", window.location.href).href : null;
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -187,6 +189,10 @@ export default function AboutPanel({ onClose }: Props) {
           <a className="about-link" href={linkTarget("https://github.com/tosintech-web/semantic-studio/blob/main/THIRD_PARTY_NOTICES.md")} target="_blank" rel="noreferrer">
             {t("about.notices")}
           </a>
+          {import.meta.env.PROD && <a className="about-link"
+            href={linkTarget(distributedNoticesUrl)} target="_blank" rel="noreferrer">
+            {t("about.distributedNotices")}
+          </a>}
           <p className="about-author">{t("about.author", { name: "Imran Khan" })}</p>
           {/* rel="noreferrer" implies noopener, which is what stops the opened
               page reaching back through window.opener. Same pattern as the IRI

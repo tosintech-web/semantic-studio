@@ -2971,6 +2971,7 @@ export const en: Catalog = {
   "about.modified": "Unofficial modified version",
   "about.source": "Modified version source and issues →",
   "about.scope": "Data and dependencies retain their own licences.",
+  "about.distributedNotices": "Notices included with this build →",
   "about.notices": "Third-party notices →",
   "about.author": "Created by {name}",
   "about.upstream": "View source and report issues →",

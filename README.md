@@ -3,7 +3,7 @@
   Semantic Studio
 </h1>
 
-[![CI](https://github.com/imrankhan1984/semantic-studio/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imrankhan1984/semantic-studio/actions/workflows/ci.yml)
+[![CI](https://github.com/tosintech-web/semantic-studio/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tosintech-web/semantic-studio/actions/workflows/ci.yml)
 
 **An ontology workspace for RDF, RDFS, OWL and SKOS.**
 
@@ -15,6 +15,7 @@ them by clicking, without writing SPARQL by hand.
 
 これは [Imran Khan氏のSemantic Studio](https://github.com/imrankhan1984/semantic-studio) の
 非公式改変版です。日本語の辞書編集・閲覧を使いやすくするP1開発を進めています。
+[日本語の操作手順](docs/p1-user-guide.md)と[配布物のライセンス通知](docs/distribution-notices.md)を参照してください。
 現在の対応範囲と検証結果は [P1実装計画](docs/superpowers/plans/2026-10-24-p1-dictionary-workspace.md)
 を参照してください。改変版の問い合わせは
 [このリポジトリのIssues](https://github.com/tosintech-web/semantic-studio/issues) へお願いします。
@@ -588,6 +589,12 @@ UIの言語と辞書の表示言語は別々に選べます。辞書の表示言
 保持し、モデルの変更後も新しい検証結果として扱いません。名称の読み込みに
 失敗した場合は結果を保持してエラーを表示します。言語メニューで選択中の
 言語をもう一度押すと、名称の読み込みを再試行できます。
+
+一覧APIの GET `/api/ontologies/{id}/entities` は `q`、`kind`、`lang`、`offset`、
+`limit`、`sort` を受け取ります。既定50行、最大100行で、`items` と真の `total`、
+`offset`、`limit`、不透明な `revision` を返します。任意の表示用項目は
+`label_language`、`label_fallback`、`label_truncated`、`reference_only`、`match` です。
+既存 `/search` の配列形式は維持し、検索の一致理由を追加しています。
 
 APIでは、プロジェクトの `/shapes`、`/shapes/suggestions`、`/validate`、
 `/reasoning` と `/reasoning/why`、および `/data/preview` に任意の `lang` クエリを指定できます。

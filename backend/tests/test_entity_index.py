@@ -91,3 +91,31 @@ def test_uri_and_source_identifier_are_last_even_when_exact():
     graph.add((S.b, V.sourceOrgId, Literal('00001')))
     index = module().build_entity_index(graph, [])
     assert [m.iri for m in module().rank_matches(index, '00001', ('ja',))] == [str(S.a), str(S.b)]
+
+
+def test_alias_predicates_are_scanned_globally_while_legacy_name_order_stays_original(monkeypatch):
+    from app.graph_builder import LABEL_PREDICATES
+    graph = Graph()
+    for number in range(3):
+        iri = S[f"scan-{number}"]
+        graph.add((iri, RDFS.label, Literal(f"Premier {number}", lang="fr")))
+        graph.add((iri, RDFS.label, Literal(f"後名{number}", lang="ja")))
+        graph.add((iri, V.nameReading, Literal(f"よみ{number}")))
+        graph.add((iri, SKOS.altLabel, Literal(f"別名{number}")))
+    before = set(graph)
+    aliases = set(module().SEARCH_FIELDS) - set(LABEL_PREDICATES)
+    queries = []
+    original = graph.objects
+    def observed(subject=None, predicate=None, unique=False):
+        if subject is not None and predicate in aliases: queries.append((subject, predicate))
+        return original(subject, predicate, unique=unique)
+    monkeypatch.setattr(graph, "objects", observed)
+    index = module().build_entity_index(graph, [])
+    assert not queries, "Alias values should not probe absent predicates separately for every resource"
+    for number in range(3):
+        entity = index.entities[str(S[f"scan-{number}"])]
+        assert entity.display_name(None) == f"Premier {number}"
+        assert entity.display_name(("ja",)) == f"後名{number}"
+        match = module().rank_matches(index, f"よみ{number}", ("ja",))
+        assert len(match) == 1 and match[0].reason == "reading"
+    assert set(graph) == before

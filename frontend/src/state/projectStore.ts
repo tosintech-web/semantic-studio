@@ -601,7 +601,9 @@ export const projectStore = {
   /** Track a newly added document (shapes.ttl) from a fresh open. */
   async reload(): Promise<void> {
     const project = requireProject();
+    const owner = projectSession;
     const opened = await openProject(project.id);
+    if (owner !== projectSession) return;
     set({ project: opened.project, documents: opened.documents });
   },
 
@@ -983,7 +985,9 @@ export const projectStore = {
 
   async setLanguages(languages: string[]): Promise<void> {
     const project = requireProject();
+    const owner = projectSession;
     const updated = await updateProject(project.id, { languages });
+    if (owner !== projectSession) return;
     const display =
       snapshot.displayLanguage && [updated.primaryLanguage, ...updated.languages].includes(snapshot.displayLanguage)
         ? snapshot.displayLanguage

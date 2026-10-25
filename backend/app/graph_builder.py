@@ -59,6 +59,8 @@ EXPECTED OUTPUT
       states about it as structure, with every count bounded. The words are
       the frontend's (explain/explainSentences.ts).
     - search_nodes -> ranked node matches for the search box.
+    - Each graph build projects a term label once across rule edges and nodes;
+      the memo is discarded with that read, preserving subsequent label edits.
     - pick_label / prefixed are imported by query_schema.py and sparql_exec.py.
     - labeler / lang_matches choose a project document's names in its display
       language, falling back to the primary one marked "(en)" (D-085); a
@@ -70,6 +72,7 @@ EXPECTED OUTPUT
 from __future__ import annotations
 
 from collections import defaultdict
+from functools import cache
 from typing import Callable, Optional, Sequence
 
 
@@ -454,7 +457,9 @@ def build_viz_graph(graph: Graph, langs: Optional[Sequence[str]] = None) -> dict
     node is labelled in the display language and carries `names`, every label
     it has in any language, so search matches all of them whatever is shown.
     """
-    label = labeler(graph, langs)
+    # A term can name several rule ends and then its own node. Cache within
+    # this immutable read only; a later edit/language view must name it afresh.
+    label = cache(labeler(graph, langs))
     # kinds: every kind we have seen for each entity (collapsed later).
     kinds: dict[URIRef, set[str]] = defaultdict(set)
     # edges: a set (dedupes) of (source, edge-kind, target, label) tuples.
@@ -554,7 +559,6 @@ def build_viz_graph(graph: Graph, langs: Optional[Sequence[str]] = None) -> dict
         {
             "id": str(iri),
             "label": label(iri),
-            **label_metadata(graph, iri, langs),
             "kind": _best_kind(ks),
             "degree": degree.get(iri, 0),
         }
@@ -568,6 +572,7 @@ def build_viz_graph(graph: Graph, langs: Optional[Sequence[str]] = None) -> dict
             node["classType"] = "rdfs"
     if langs:
         for node, iri in zip(nodes, kinds):
+            node.update(label_metadata(graph, iri, langs))
             node["names"] = all_names(graph, iri)
     # Build the JSON edge list from the deduped edge tuples.
     edge_list = [

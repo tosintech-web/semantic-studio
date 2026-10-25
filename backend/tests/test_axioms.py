@@ -4,6 +4,7 @@ FILE: backend/tests/test_axioms.py
 ================================================================================
 
 SUMMARY
+    Restriction recognition preserves its subset with a single subject scan.
     axioms-and-reasoning Stage B on the server: the seven rule commands
     (AddRestriction, ReplaceRestriction, RemoveRestriction, AddDisjointWith,
     RemoveDisjointWith, AddEquivalentClass, RemoveEquivalentClass), each one
@@ -1066,3 +1067,27 @@ def test_only_axioms_and_editing_read_a_domain():
         if found:
             offenders[str(path.relative_to(APP))] = found
     assert offenders == {}
+
+
+@pytest.mark.parametrize("qualified", [False, True])
+def test_restriction_uses_one_subject_read_without_changing_its_interpretation(monkeypatch, qualified):
+    from rdflib import BNode, Graph, Literal, URIRef
+    from rdflib.namespace import OWL, RDF, XSD
+    from app.axioms import parse_restriction
+    graph = Graph()
+    node, prop, filler = BNode(), URIRef("https://example.org/one-read/p"), URIRef("https://example.org/one-read/C")
+    graph.add((node, RDF.type, OWL.Restriction)); graph.add((node, OWL.onProperty, prop))
+    if qualified:
+        graph.add((node, OWL.minQualifiedCardinality, Literal(2, datatype=XSD.nonNegativeInteger)))
+        graph.add((node, OWL.onClass, filler))
+    else:
+        graph.add((node, OWL.someValuesFrom, filler))
+    reads = []
+    original = graph.triples
+    def observed(pattern):
+        if pattern[0] == node: reads.append(pattern)
+        return original(pattern)
+    monkeypatch.setattr(graph, "triples", observed)
+    result = parse_restriction(graph, node)
+    assert result == (prop, "atLeast" if qualified else "some", filler, 2 if qualified else None)
+    assert len(reads) == 1

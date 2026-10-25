@@ -3010,3 +3010,73 @@ The first shapes command checks ownership again after reading the new document
 list. Save all stops before continuing into another session's documents.
 Successful reuse-plan name reads clear an earlier read error, making a language
 change a usable retry rather than leaving a successful response hidden forever.
+
+### P1 performance and real-browser layout
+
+Synthetic 1k/10k/40k entity budgets measure cold index construction separately
+from warm search/list reads, taking five medians with GC paused. The optimized isolated
+40k result is 1022.90ms raw index, 2193.07ms full cold view, 211.57ms search
+and 210.55ms list at factor1.
+The response-to-click UI budgets use seven samples after warm-up, and the real
+Chrome scenario measures the same boundary with actual page flips and clicks.
+Main/P1 graph comparisons retain identical bounded response bytes and remain
+inside the existing budget-selection limit; final full 40k construction measured
+1048.13/988.37ms for Main/P1. Timing observations are kept separate from budget assertions.
+The reproducible measurements and limitations are in docs/p1-verification.md.
+
+A real Chrome screenshot found what jsdom could not: the global button nowrap
+let a 200-character entity name paint over other columns, and the global fixed
+button height let wrapped text overlap its following report. Entity-open now
+bounds width and grows in height. The locale selectors and translated controls
+also need a wrapping header with a minimum height, rather than a fixed 58px
+row. Browser geometry tests enforce text/button bounds and header control bounds
+at 1000px and 80% CSS zoom. Both light and dark screenshots were inspected.
+
+### Actual distribution inventories (P1)
+
+Vite's output module graph identifies bundled package versions rather than
+assuming every production dependency or dev dependency is distributed. Generated
+preload/CommonJS helpers are attributed to Vite with its complete original
+license, which also includes its bundled CommonJS plugin notices. Unclassified
+generated modules and unconfirmed/mismatched package notices fail the build.
+Module identities are package-relative, never local machine paths. About links
+to the bundled notice index only for production builds.
+
+Docker checks the actual installed Python application packages against collected
+versions and raw notice bytes. A cached certifi2026.10.19 was correctly refused
+against the reviewed2026.10.23; the distribution constraints now hold the same
+35-package Linux/Python3.12 closure as the source inventory without adding a new
+dependency. The application inventory excludes base-image installer tooling;
+its own installed notices are retained. html5rdf/et_xmlfile author lists are
+also collected from the installed distributions. Source inventory byte checks
+are distinct from inspecting actual image/frontend/ZIP artifacts.
+
+The documentation ZIP carries the original MIT for generated viewer code and a
+separate NOTICE for data rights; index.html links to both. The exact original
+source remains in the ZIP even when the rendered page excludes individuals.
+Its website prose stays English in P1; the in-app export dialogs/errors follow
+UI language. Output-localization and sanitized public releases are not silently
+claimed by the P1 UI translation work.
+
+### P1 budget failures keep their original limits
+
+The final whole-suite rule-graph budget initially measured1015ms, and isolated
+execution1042ms against the unchanged1000ms limit. Profiling found repeated
+subject reads in restriction recognition and duplicate name projections across
+rule edges and nodes. A restriction now captures predicate/object pairs once,
+rejecting any repeated predicate before applying the same supported-form guards.
+The graph build memoizes its label function only inside that immutable read;
+subsequent edits and language reads get a new function. Empty language metadata
+is not merged into legacy nodes. Counter tests and every existing rule/Turtle
+refusal test preserve behavior; the new isolated rule median is827.33ms.
+
+Measuring raw index time separately exposed a3081.78ms cold40k view, above the
+unchanged3000ms limit. Alias fields now sweep their predicates once, while
+representative-name reads keep their original per-resource value order for
+legacy compatibility. Search fields reuse those exact literal name pairs and
+retain canonical deduplication/sorting. The final cold40k view is2193.07ms.
+No threshold, corpus seed or budget factor was weakened to obtain these passes.
+
+Project reload and language-setting responses also check the project-session
+counter after their await. A late reading cannot replace a reopened project's
+manifest/documents or its current language settings, including the same id.

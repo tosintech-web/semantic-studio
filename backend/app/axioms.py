@@ -4,6 +4,7 @@ FILE: backend/app/axioms.py
 ================================================================================
 
 SUMMARY
+    Restriction reads share one subject scan without widening the recognized forms.
     A class's rules as the learner's form reads them (axioms-and-reasoning
     5.8, 5.9, D-105): its restrictions, in the two forms *every X ...* and
     *an X is exactly ...*, its disjoint classes and its equivalent classes,
@@ -184,13 +185,18 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
     uses, with one value each: anything more is Turtle's to show."""
     if not isinstance(node, BNode):
         return None
-    predicates = list(g.predicates(node, None))
-    if len(predicates) != len(set(predicates)):
-        return None  # a predicate written twice: not one sentence
-    present = set(predicates)
-    if RDF.type in present and set(g.objects(node, RDF.type)) != {OWL.Restriction}:
+    # A restriction has one value per predicate. Capture that one subject
+    # read instead of returning to the store for its type, property and filler.
+    # Duplicate predicates keep the same unsupported-form decision.
+    objects = {}
+    for predicate, value in g.predicate_objects(node):
+        if predicate in objects:
+            return None
+        objects[predicate] = value
+    present = set(objects)
+    if RDF.type in present and objects[RDF.type] != OWL.Restriction:
         return None
-    prop = _one(g, node, OWL.onProperty)
+    prop = objects.get(OWL.onProperty)
     if not isinstance(prop, URIRef):
         return None  # an inverse, or no property
     rest = present - {RDF.type, OWL.onProperty}
@@ -203,7 +209,7 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
         if rest != {predicate}:
             return None
         kind = _VALUE_PREDICATES[predicate]
-        filler = _one(g, node, predicate)
+        filler = objects.get(predicate)
         if kind == "value":
             return (prop, kind, filler, None) if isinstance(filler, (URIRef, Literal)) else None
         # A class, never a datatype or a nested expression.
@@ -212,7 +218,7 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
         return prop, kind, filler, None
     predicate = counts[0]
     kind, qualified = _COUNT_BY_PREDICATE[predicate]
-    n = _count(_one(g, node, predicate))
+    n = _count(objects.get(predicate))
     if n is None:
         return None
     if not qualified:
@@ -220,7 +226,7 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
     on = [p for p in (OWL.onClass, OWL.onDataRange) if p in rest]
     if len(on) != 1 or rest != {predicate, on[0]}:
         return None
-    filler = _one(g, node, on[0])
+    filler = objects.get(on[0])
     if not isinstance(filler, URIRef) or (on[0] == OWL.onClass) == is_datatype(filler):
         return None
     return prop, kind, filler, n

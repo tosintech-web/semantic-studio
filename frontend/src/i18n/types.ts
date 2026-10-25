@@ -2242,6 +2242,7 @@ export interface MessageArgs extends ServerMessageArgs {
   "about.modified": undefined;
   "about.source": undefined;
   "about.scope": undefined;
+  "about.distributedNotices": undefined;
   "about.notices": undefined;
   "about.author": { name: string };
   "about.upstream": undefined;

@@ -152,6 +152,8 @@ def test_zip_contains_expected_entries():
         "source/original.ttl",
         "exports/ontology.ttl",
         "README.md",
+        "LICENSE",
+        "NOTICE.md",
         "assets/graph.js",
         "assets/styles.css",
         "assets/graph-data.json",
@@ -715,3 +717,13 @@ def test_the_documentation_names_a_union_domain_with_or():
     row = row[row.index("<th>Domain</th>"):]
     row = row[:row.index("</tr>")]
     assert "Employee</a> or <a" in row and "Contractor" in row
+
+
+def test_zip_viewer_includes_original_mit_and_distinguishes_data_rights():
+    from pathlib import Path
+    zf = _zip(OWL_TTL)
+    assert zf.read("LICENSE") == (Path(__file__).parents[2] / "LICENSE").read_bytes()
+    assert 'href="LICENSE"' in zf.read("index.html").decode()
+    notice = zf.read("NOTICE.md").decode()
+    assert "viewer" in notice and "ontology" in notice
+    assert "source/original" in notice

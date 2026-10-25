@@ -62,6 +62,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s scripts -p 'test_check_publication.py'
+      - run: python -m unittest discover -s scripts -p 'test_distribution_notices.py'
       - run: python scripts/generate_message_contracts.py --check
       - name: Check selected Git blobs
         env:
@@ -122,6 +123,7 @@ jobs:
         run: echo "SEMANTIC_STUDIO_DATA_DIR=${{ runner.temp }}/semantic-studio-data" >> "$GITHUB_ENV"
       - run: npm ci --no-fund --no-audit
       # Everything but the tests titled [budget]; see test:ci in package.json.
+      - run: node build/distributionNotices.check.mjs
       - run: npm run test:ci
       # `npm run build` is these two steps; split so a failure names which.
       - run: npx tsc -b

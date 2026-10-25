@@ -15,8 +15,10 @@
 基準：MainのPR #1マージ `dbb3576`。作成日：2026-10-24。
 本書はマージ済み仕様のP1を実装へ分解した計画。独立レビューの重要指摘は修正・再確認済み。
 2026-10-24：ユーザーの実装承認を受け、Task 1〜10の基盤・検索・一覧・構造化メッセージと共通画面の翻訳を実装済み。
-Task 11〜12の探索・編集・クエリ・検証等の翻訳、Task 13の
-性能・実ブラウザ・公開前確認、および実装全体の独立レビューは未完了。
+Task 11〜12の探索・編集・クエリ・検証等の翻訳も実装済み。
+Task 13では性能・実ブラウザ・配布物の検証を実施し、最終全体テストを確認中です。
+実装全体の独立レビュー、公開する履歴の確認、PRと必須CIの確認は未完了です。
+操作手順は `docs/p1-user-guide.md`、実測記録は `docs/p1-verification.md` を参照してください。
 部分的な日本語表示をP1全体の完成とは扱わない。
 問い合わせ先はユーザー指定により、このリポジトリのIssuesとする。改変部分の新しい
 著作権者名は未確認のため追加せず、元のMIT表示を維持する。
@@ -94,17 +96,17 @@ A〜Hごとにレビュー可能なPRへ分ける。P1の完成宣言はHの受�
 **Files / Interfaces:** 横断計画のTask 1・2・2aに定義済みのファイルとCLI・生成器を使う。
 P1専用の別検査器・別データ生成器を作らない。
 
-- [ ] 実行前に現在のブランチ/既存変更、元LICENSE、公開対象を確認し、必要な隔離作業環境を準備する。
+- [x] 実行前に現在のブランチ/既存変更、元LICENSE、公開対象を確認し、必要な隔離作業環境を準備する。
   本書の実行時には `superpowers:using-git-worktrees` を適用する。既存ローカル変更を持ち込まない。
-- [ ] `check_publication.py` とその回帰テスト、`publication-policy.json` を横断計画Task 2の契約で実装する。
+- [x] `check_publication.py` とその回帰テスト、`publication-policy.json` を横断計画Task 2の契約で実装する。
   指定Git blobと作業ツリーが異なるケース、改名した元データ、ZIP、失敗時の終了2も確認する。
-- [ ] `build_synthetic_organizations(count: int = 3035) -> Graph` をTask 2aに従って追加する。
+- [x] `build_synthetic_organizations(count: int = 3035) -> Graph` をTask 2aに従って追加する。
   名称・ID・コメントは元データから転用せず、個体3,035件、同名の意味2件、欠損説明、別名/読みを生成する。
-- [ ] 横断計画Task 1の帰属・第三者通知を整備する。権利者名が未確認なら元MITを維持し、
+- [x] 横断計画Task 1の帰属・第三者通知を整備する。権利者名が未確認なら元MITを維持し、
   自動で社名を書かない。未確認事項を配布条件として記録する。
-- [ ] backendで `python -m pytest tests/test_synthetic_dictionary.py`、repo rootで
+- [x] backendで `python -m pytest tests/test_synthetic_dictionary.py`、repo rootで
   `python -m unittest discover -s scripts -p 'test_check_publication.py'` を実行し、すべてPASSを確認する。
-- [ ] チェックアウトから `test_data/` を除いたCIでも通ることを確認して対象変更だけをコミットする。
+- [x] チェックアウトから `test_data/` を除いたCIでも通ることを確認して対象変更だけをコミットする。
 
 ## Task 2 — 日英UIの型付き基盤
 
@@ -119,17 +121,17 @@ P1専用の別検査器・別データ生成器を作らない。
 `formatDateTime(locale, iso): string` を純粋関数として公開する。
 保存キーは `semantic-studio.uiLocale.v1`。保存できないブラウザでもメモリ上で選択できる。
 
-- [ ] `defaults_to_ja_and_updates_document_lang`、`restores_en_after_remount`、
+- [x] `defaults_to_ja_and_updates_document_lang`、`restores_en_after_remount`、
   `invalid_or_unreadable_storage_defaults_to_ja` のテストを書き、未実装で失敗を確認する。
-- [ ] 純粋関数ではキー/引数の一致、`en`フォールバック、最終的な共通説明を検証する。
+- [x] 純粋関数ではキー/引数の一致、`en`フォールバック、最終的な共通説明を検証する。
   未知コードで生のキーを表示せず、`__proto__` 等をown-keyで判定する。
-- [ ] カタログは英語型の文断片連結ではなく文章単位で定義する。navigationの日本語は仕様の6語を使う。
+- [x] カタログは英語型の文断片連結ではなく文章単位で定義する。navigationの日本語は仕様の6語を使う。
   表示する引数はReactのテキストで扱い、HTMLにしない。日付は保存された瞬間を変えず、
   ブラウザのタイムゾーンでIntl表示し、無効日時は共通の未設定表示にする。
-- [ ] `I18nProvider` をErrorBoundaryの外側へ配置し、エラー画面も翻訳可能にする。
+- [x] `I18nProvider` をErrorBoundaryの外側へ配置し、エラー画面も翻訳可能にする。
   翻訳自体の失敗時はProviderに依存しない最小の安全な説明を残す。
-- [ ] 言語selectをヘッダーとエラー画面で利用可能にし、Tab・標準select操作・focus-visibleを維持する。
-- [ ] frontendで `npm run test -- src/i18n/format.test.ts src/i18n/I18nProvider.test.tsx src/components/UiLanguageSelect.test.tsx` を実行し、PASSを確認してコミットする。
+- [x] 言語selectをヘッダーとエラー画面で利用可能にし、Tab・標準select操作・focus-visibleを維持する。
+- [x] frontendで `npm run test -- src/i18n/format.test.ts src/i18n/I18nProvider.test.tsx src/components/UiLanguageSelect.test.tsx` を実行し、PASSを確認してコミットする。
 
 ## Task 3 — UIと独立した辞書表示言語
 
@@ -153,19 +155,19 @@ Projectは既存の言語設定を使う。閉じたProjectの言語を次のLib
 backendは必要なlang入力をquery-schema/query-node/sparqlにも追加し、
 `query_schema.py` / `sparql_exec.py` の表示ラベル選択に伝える。クエリ本文・結果値・実行制限は変えない。
 
-- [ ] `ui_switch_does_not_change_explicit_dictionary_language`、`project_language_does_not_leak_to_library`、
+- [x] `ui_switch_does_not_change_explicit_dictionary_language`、`project_language_does_not_leak_to_library`、
   `new_project_defaults_to_ui_locale_but_can_override` を書いて赤を確認する。
-- [ ] backendでLibraryの希望言語→無言語→他言語→IRI末尾、Projectの希望→主言語→同フォールバックを検証する。
+- [x] backendでLibraryの希望言語→無言語→他言語→IRI末尾、Projectの希望→主言語→同フォールバックを検証する。
   地域タグ、同じ優先度の複数ラベルは `(predicate priority, language, literal text)` の安定順とする。
   別名しかない資源に別名を代表名として自動採用しない。
-- [ ] `Ontology.label_langs` をLibraryの明示langにも対応させ、ラベル選択の共通規則を
+- [x] `Ontology.label_langs` をLibraryの明示langにも対応させ、ラベル選択の共通規則を
   graph/detail/hierarchyへ接続する。`label_language` と `label_fallback` の任意メタデータで
   実際の代替言語を伝え、表示文字列のサフィックスを後から解析しない。
-- [ ] 説明の選択は `skos:definition`、`rdfs:comment`、`dcterms:description` の順を同一言語内の優先順にする。
+- [x] 説明の選択は `skos:definition`、`rdfs:comment`、`dcterms:description` の順を同一言語内の優先順にする。
   表示言語選択のために保存グラフを変更しない。詳細には既存通り全ての値を残す。
-- [ ] `App` のGraph/Hierarchy/Detail、検索結果ラベル、Queryの表示ラベルに選択を渡す。
+- [x] `App` のGraph/Hierarchy/Detail、検索結果ラベル、Queryの表示ラベルに選択を渡す。
   query schema/results等の表示名経路も一覧化し、SPARQLの式や結果値そのものを翻訳しない。
-- [ ] backendで `python -m pytest tests/test_display_languages.py tests/test_node_detail.py tests/test_imports.py`、
+- [x] backendで `python -m pytest tests/test_display_languages.py tests/test_node_detail.py tests/test_imports.py`、
   frontendで `npm run test -- src/dictionary/useDictionaryLanguage.test.tsx src/api.test.ts` を実行し、PASS後コミットする。
 
 ## Task 4 — 全項目を扱う検索索引
@@ -180,19 +182,19 @@ backendは必要なlang入力をquery-schema/query-node/sparqlにも追加し、
 `EntityMatch` はIRI、reason (`name|alias|reading|search|identifier`)、完全な一致値、順位を保持する。
 内部索引にraw JSON、コメント、説明全文を入れない。
 
-- [ ] テストで `set(index.entities)` がURI主語と表示上限前graphノードの和集合に一致することを確認する。
+- [x] テストで `set(index.entities)` がURI主語と表示上限前graphノードの和集合に一致することを確認する。
   ラベルのみ・未宣言クラス個体は含み、空白主語・単なる値URL・未定義の述語だけのIRIは含めない。
-- [ ] 「犬」の別IRI2件、別名、読み、仕様にある組織名前空間の5プロパティ、全角英字を検証する。
+- [x] 「犬」の別IRI2件、別名、読み、仕様にある組織名前空間の5プロパティ、全角英字を検証する。
   RDF原文、元IDの先頭ゼロが変わらないこと、内部コメント/raw JSONでヒットしないことも確認する。
-- [ ] 読取プロパティ対応を `SEARCH_FIELDS` 定数一か所に置き、既存の全名称と
+- [x] 読取プロパティ対応を `SEARCH_FIELDS` 定数一か所に置き、既存の全名称と
   `skos:altLabel` / `skos:hiddenLabel` を追加する。略語・原語名はalias、sourceOrgIdとIRIはidentifier。
-- [ ] 順位は `(tier, normalized_display_label, iri)`。tierは名称完全0/名称前方1/
+- [x] 順位は `(tier, normalized_display_label, iri)`。tierは名称完全0/名称前方1/
   別名等完全または前方2/名称・別名等部分3/識別子4。同一IRIで複数一致なら最小tierを採用し、
   同tierの理由はname→alias→reading→search→identifier、値の辞書順で一意に決める。
-- [ ] kindは既存 `node_kind` と明示型を基にし、未宣言の一般クラス型を持つ資源はindividualとする。
+- [x] kindは既存 `node_kind` と明示型を基にし、未宣言の一般クラス型を持つ資源はindividualとする。
   型なしの主語はother。参照だけのノードには `reference_only=true` を持たせる。
   UIの種類を決めるためにrdf:typeを書き込まない。
-- [ ] `python -m pytest tests/test_entity_index.py tests/test_node_detail.py` で赤→緑を確認しコミットする。
+- [x] `python -m pytest tests/test_entity_index.py tests/test_node_detail.py` で赤→緑を確認しコミットする。
 
 ## Task 5 — 索引ビューのキャッシュ・世代・並行読み取り
 
@@ -204,17 +206,17 @@ backendは必要なlang入力をquery-schema/query-node/sparqlにも追加し、
 revision_tokenはP1の一覧専用の不透明な文字列。既存Projectの数値revisionを変更しない。
 新しいビューを作る度に新トークンを割り当て、再起動後のトークン継続は保証しない。
 
-- [ ] 編集→Undo→Redo、imports再解決、snapshot on/off、言語変更で古い結果を使わないテストを書く。
+- [x] 編集→Undo→Redo、imports再解決、snapshot on/off、言語変更で古い結果を使わないテストを書く。
   変更なしの再検索では索引構築回数が増えないことをカウントで検証する。
-- [ ] `imports_service.reading` / `view_graph` と同じデータ集合・由来を利用する。
+- [x] `imports_service.reading` / `view_graph` と同じデータ集合・由来を利用する。
   キャッシュキーはontology ID、revision、snapshot generation、importsフラグ、merged viewのidentity、
   言語順。graph参照も保持し、解放済みobject IDの再利用を同一ビューと見なさない。
-- [ ] own graphのin-place更新をrevisionで検出する。snapshotがなくなったケースも世代を比較する。
+- [x] own graphのin-place更新をrevisionで検出する。snapshotがなくなったケースも世代を比較する。
   Libraryは不変でもimports変更を拾う。read lockと既存のshapes→modelの順序を維持する。
-- [ ] 同一ontologyで保持する投影キャッシュは最大4件とし、言語を切り替え続けても増え続けない。
+- [x] 同一ontologyで保持する投影キャッシュは最大4件とし、言語を切り替え続けても増え続けない。
   重い索引構築と全走査をASGIイベントループ上で行わない。
-- [ ] 同時の編集/一覧読取で半分だけ更新された件数やラベルを返さず、レスポンス全体が同じトークンに属するテストを追加する。
-- [ ] `python -m pytest tests/test_entity_views.py tests/test_imports.py tests/test_editing.py` を実行し、PASS後コミットする。
+- [x] 同時の編集/一覧読取で半分だけ更新された件数やラベルを返さず、レスポンス全体が同じトークンに属するテストを追加する。
+- [x] `python -m pytest tests/test_entity_views.py tests/test_imports.py tests/test_editing.py` を実行し、PASS後コミットする。
 
 ## Task 6 — 一覧APIと既存検索APIの互換接続
 
@@ -233,17 +235,17 @@ frontendは `getEntities(id, params, signal?): Promise<EntityPage>` を追加す
 既存searchの各VizNodeに任意 `match` を加えるが、id/label/kind等の既存キーと配列を維持する。
 `/search` は従来のSearchKindを保持し、/entitiesのkind群を流用しない。
 
-- [ ] 3,035個体がoffset/limitで重複なくすべて取得でき、グラフbudgetを下げてもtotalが不変のテストを書く。
+- [x] 3,035個体がoffset/limitで重複なくすべて取得でき、グラフbudgetを下げてもtotalが不変のテストを書く。
   並べ替えはlabel→IRIまたはIRIのみ、フィルター適用後のtotalを返す。
-- [ ] URI主語だけの資源、参照のみ、空データ、無効ID/入力、limit 0/101と負offsetを試す。
+- [x] URI主語だけの資源、参照のみ、空データ、無効ID/入力、limit 0/101と負offsetを試す。
   legacy `/search` の型・pickerのkind動作と、1文字のサーバー検索を確認する。
-- [ ] APIは薄く保ち、`get_entity_view` とページ投影へ委譲する。indexのraw valueをレスポンスへ丸ごと返さない。
+- [x] APIは薄く保ち、`get_entity_view` とページ投影へ委譲する。indexのraw valueをレスポンスへ丸ごと返さない。
   両APIのmatch判断は同じ索引と順位を使う。個体等の新しい検索結果も既存VizNodeの必須キーを満たす。
-- [ ] compact JSONをUTF-8へ符号化した最終応答を256KiB以内に制限する。超過は400、
+- [x] compact JSONをUTF-8へ符号化した最終応答を256KiB以内に制限する。超過は400、
   `detail={code:'ENTITY_PAGE_TOO_LARGE',message:string,total:number,suggested_limit:number}`。
   limit=1ならsuggested_limit=1とし、詳細参照への案内を返す。IRIを切らず、無言で行を捨てない。
-- [ ] 絵文字を含む200文字、巨大IRI、長い名前、limit=1で拒否、真のtotalとインデックス保存のテストを行う。
-- [ ] `python -m pytest tests/test_entities_api.py` と `npm run test -- src/api.test.ts` を各ディレクトリで実行し、PASS後コミットする。
+- [x] 絵文字を含む200文字、巨大IRI、長い名前、limit=1で拒否、真のtotalとインデックス保存のテストを行う。
+- [x] `python -m pytest tests/test_entities_api.py` と `npm run test -- src/api.test.ts` を各ディレクトリで実行し、PASS後コミットする。
 
 ## Task 7 — 1文字・IME検索と一致理由
 
@@ -255,18 +257,18 @@ frontendは `getEntities(id, params, signal?): Promise<EntityPage>` を追加す
 `{results,loading,error,more}` を返す。既存候補25件のため26件を要求する。
 「項目一覧で全件を見る」は `onShowAll(query: string)` へ渡し、Query条件は変更しない。
 
-- [ ] compositionStart→入力→待機では0リクエスト、compositionEnd後299msでは0、300msで1回を検証する。
+- [x] compositionStart→入力→待機では0リクエスト、compositionEnd後299msでは0、300msで1回を検証する。
   日本語1文字/英字1文字、空欄、IME終了直後の二重発火を試す。
-- [ ] AbortControllerと検索世代を併用し、辞書/言語/ビュー世代変更後の旧結果を無視する。
+- [x] AbortControllerと検索世代を併用し、辞書/言語/ビュー世代変更後の旧結果を無視する。
   revision・imports・language・viewGenerationをeffectの依存に含める。
   viewGenerationは既存AppのimportsVersionとsnapshot更新通知を含む表示更新キーとし、
   Projectのrevisionやimportsのbooleanだけから算出しない。詳細の再取得にも同じキーを渡す。
   imports=true・revision不変の再解決で再取得し、再解決前の遅延応答を破棄するテストを追加する。
-- [ ] 候補に代表名・一致理由と値を表示する。25件超なら一覧入口、0件/失敗/読込を翻訳表示する。
+- [x] 候補に代表名・一致理由と値を表示する。25件超なら一覧入口、0件/失敗/読込を翻訳表示する。
   キーボード上下/Enter/Escape・aria-activedescendantとフォーカスを維持する。
-- [ ] 概念選択は既存 `selectFromOutsideGraph`、Queryでの候補選択は既存のステップ追加へ接続する。
+- [x] 概念選択は既存 `selectFromOutsideGraph`、Queryでの候補選択は既存のステップ追加へ接続する。
   型が未知の参照のみ資源をクリックしてもQueryへ無効なクラスを作らず、既存の拒否説明を使う。
-- [ ] `npm run test -- src/components/SearchBox.test.tsx src/entities/useEntitySearch.test.tsx src/components/EntityPicker.test.tsx` を実行し、PASS後コミットする。
+- [x] `npm run test -- src/components/SearchBox.test.tsx src/entities/useEntitySearch.test.tsx src/components/EntityPicker.test.tsx` を実行し、PASS後コミットする。
 
 ## Task 8 — 項目一覧・辞書コンテキスト・既存編集の連携
 
@@ -281,22 +283,22 @@ Task 7と同じviewGenerationを監視し、importsの同flag再解決・snapsho
 offset=0へ戻して再取得する。旧世代の一覧・詳細応答を破棄する契約と回帰テストを含める。
 `DictionaryContext` は名前、閲覧/編集、文書名、保存状態を受ける表示専用とする。
 
-- [ ] 一覧から同名の別IRIを区別して開けること、50行・総件数・範囲、6種類群とsortをテストする。
+- [x] 一覧から同名の別IRIを区別して開けること、50行・総件数・範囲、6種類群とsortをテストする。
   条件変更・辞書切替時の旧ページ応答を無視し、失敗時に別辞書の行を残さない。
   同じ条件でもサーバーのrevision tokenが変わったページは既存ページと継ぎ合わせず、
   offset=0へ戻して一度取り直す。更新が続く場合は更新中の説明と再試行操作を表示する。
-- [ ] 新モードをGraph/Queryの描画分岐と分離し、一覧を開くための `/graph` 取得を待たない。
+- [x] 新モードをGraph/Queryの描画分岐と分離し、一覧を開くための `/graph` 取得を待たない。
   既存のGraphノード集合はサーバー索引構築で必要になるが、ブラウザはgraph JSONを受信しない。
-- [ ] 行クリックは選択IRIと既存DetailPanelに接続する。参照のみでnode APIが404になる場合は
+- [x] 行クリックは選択IRIと既存DetailPanelに接続する。参照のみでnode APIが404になる場合は
   「参照のみ・定義なし」のパネルと完全IRIのコピーを表示し、編集フォームを出さない。
-- [ ] Projectの既存フォームを同じ詳細欄へ渡す。保存/Undo/Redoで一覧再取得、
+- [x] Projectの既存フォームを同じ詳細欄へ渡す。保存/Undo/Redoで一覧再取得、
   同一IRIの選択を維持するが結果から消えた行は一覧上で選択中と偽らない。
   Library/imported/fromDataの編集可否を独自に上書きしない。
-- [ ] 読み込み成功・失敗、Project/Library/文書切替のヘッダー表示と通知をテストする。
+- [x] 読み込み成功・失敗、Project/Library/文書切替のヘッダー表示と通知をテストする。
   長い名称の完全値確認、保存状態のテキスト、未保存確認を維持する。
-- [ ] 通常table+リンク/ボタンで構築し、Tab・見出しへのフォーカス・ページ範囲のpolite通知を確認する。
+- [x] 通常table+リンク/ボタンで構築し、Tab・見出しへのフォーカス・ページ範囲のpolite通知を確認する。
   stylesは既存トークンを利用し、フォーカスや種類色の新たな独自定義を作らない。
-- [ ] `npm run test -- src/components/EntityList.test.tsx src/components/DictionaryContext.test.tsx src/entities/useEntityPage.test.tsx src/App.test.tsx src/styles.test.ts` を実行し、PASS後コミットする。
+- [x] `npm run test -- src/components/EntityList.test.tsx src/components/DictionaryContext.test.tsx src/entities/useEntityPage.test.tsx src/App.test.tsx src/styles.test.ts` を実行し、PASS後コミットする。
 
 ## Task 9 — サーバーの構造化メッセージ契約
 
@@ -318,18 +320,18 @@ parse_errorの `message`（文字列）等の意味/型は変えない。
 `CommandError` 等は英語のstrを維持し、任意 `ui_message` を持てるようにする。
 フロントは `renderServerMessage(wire, legacyText, translator): string` を使う。
 
-- [ ] JSON契約はversion=1とcodesを持ち、各codeが引数型を宣言する。
+- [x] JSON契約はversion=1とcodesを持ち、各codeが引数型を宣言する。
   generatorの `--check` で生成済みTSと不一致なら非0終了、通常実行は決定的なTSを出力する。
   backend側JSONを唯一の定義とし、frontendのビルドはコミット済み生成物を利用する。
-- [ ] `parse.syntax`, `model.invalid_value`, `validation.min_count`, `reasoning.timeout`,
+- [x] `parse.syntax`, `model.invalid_value`, `validation.min_count`, `reasoning.timeout`,
   `entities.page_too_large` の代表例でコード/args、日英の引数一致を赤→緑で検証する。
-- [ ] 英語完成文のregex/置換からargsを推定しない。生成時に既存のIRI・数値等を渡す。
+- [x] 英語完成文のregex/置換からargsを推定しない。生成時に既存のIRI・数値等を渡す。
   保存済みの英語だけの結果は「過去の結果」等の翻訳された見出しと原文を表示する。
-- [ ] 未知コード・契約違反・外部エラーは共通の操作説明と原文詳細へフォールバックする。
+- [x] 未知コード・契約違反・外部エラーは共通の操作説明と原文詳細へフォールバックする。
   外部原文は日本語へ自動翻訳せず、名前の中のHTML/引用符もテキストのまま表示する。
-- [ ] `ApiError` に任意uiMessageを保持し、レンダリング時に現在のlocaleで表示する。
+- [x] `ApiError` に任意uiMessageを保持し、レンダリング時に現在のlocaleで表示する。
   エラーが出た後にUI言語を切り替えても、英語の完成文がReact stateへ固定されないようにする。
-- [ ] `python scripts/generate_message_contracts.py --check`、backendの
+- [x] `python scripts/generate_message_contracts.py --check`、backendの
   `python -m pytest tests/test_message_contracts.py`、frontendの
   `npm run test -- src/i18n/serverMessage.test.ts src/api.test.ts` を実行し、PASS後コミットする。
 
@@ -368,20 +370,20 @@ GraphViewのズーム・PNG出力等の操作案内と、SideTabsの共通タブ
 全体監査で見つかった`home/miniature.ts`の構成バーの種類名、`OntologyCard`の帯の説明、
 `Logo`の説明用タグラインも対象とする。製品名・マーク、図の配置・色・比率は保持する。
 
-- [ ] inventoryのTask 11対象を追加し、使用する全メッセージ/引数をカタログに定義する。
+- [x] inventoryのTask 11対象を追加し、使用する全メッセージ/引数をカタログに定義する。
   標準用語の意味の定義はglossaryを唯一の意味定義とし、日英の文章を同じキーへ結び付ける。
-- [ ] 名前に日本語、英語、不正なHTML様テキストがある関係文を日英で確認する。
+- [x] 名前に日本語、英語、不正なHTML様テキストがある関係文を日英で確認する。
   jaでは `a/an` や英語動詞変形を通さず、項目間の関係を文章全体で表す。
   既存の `sentences.table.json` はenの挙動確認として維持する。
-- [ ] ExplainBlockなどのリンク付き説明は既存の `Part[]` 形式を保ち、言語ごとの
+- [x] ExplainBlockなどのリンク付き説明は既存の `Part[]` 形式を保ち、言語ごとの
   文章テンプレートからテキストと参照を組み立てる。翻訳後の完成文を解析してIRIリンクを探さない。
-- [ ] kind/edgeラベルにlocaleを適用しても色トークンと未知kindのown-key判定を維持する。
+- [x] kind/edgeラベルにlocaleを適用しても色トークンと未知kindのown-key判定を維持する。
   層を越えて `canvas/` をeager importする変更をしない。
-- [ ] フォームの新規作成/削除確認、読み取り専用の説明、Query開始候補/結果/制限表示を翻訳する。
+- [x] フォームの新規作成/削除確認、読み取り専用の説明、Query開始候補/結果/制限表示を翻訳する。
   SPARQL本文・データ・埋め込みクエリの著者による説明は翻訳しない。
-- [ ] `RuleBuilder` / `RuleEditor` の関係説明、`WhyDisclosure` など共通表示も移行し、
+- [x] `RuleBuilder` / `RuleEditor` の関係説明、`WhyDisclosure` など共通表示も移行し、
   将来の翻訳追加で日本語固有ロジックを各コンポーネントへ散在させない。
-- [ ] `npm run test -- src/modeling/sentences.test.ts src/modeling/ruleSentences.test.ts src/explain/explainSentences.test.ts src/explain/glossary.test.ts src/components/DetailPanel.test.tsx src/components/QueryPanel.test.tsx src/theme/kinds.test.ts` と対象canvas/フォームの既存テストを実行し、PASS後コミットする。
+- [x] `npm run test -- src/modeling/sentences.test.ts src/modeling/ruleSentences.test.ts src/explain/explainSentences.test.ts src/explain/glossary.test.ts src/components/DetailPanel.test.tsx src/components/QueryPanel.test.tsx src/theme/kinds.test.ts` と対象canvas/フォームの既存テストを実行し、PASS後コミットする。
 
 ## Task 12 — 検証・推論・既存データ機能のメッセージ移行
 
@@ -394,22 +396,28 @@ InferredBlock,DataWizard,SnapshotList,ImportReport,RmlEditor,WhyDisclosure}.tsx`
 backendの `editing.py`、`modeling_checks.py`、`shacl.py`、`reasoning.py`、`parse_errors.py`、
 `shapes_form.py`、`snapshots.py`、`tabular.py`、`rml.py`、`projects.py`、router群と対応テスト。
 
-- [ ] inventoryでbackendの既知の拒否・警告・検証・推論結果の全生成箇所とcode/argsを対応付ける。
+- [x] inventoryでbackendの既知の拒否・警告・検証・推論結果の全生成箇所とcode/argsを対応付ける。
   metadata契約と生成TSを更新し、旧英語のdetail/textを保持して追加項目として出力する。
-- [ ] SHACL件数/型/言語/範囲違反、モデル循環・domain共有の拒否、推論timeout/問題説明、
+- [x] SHACL件数/型/言語/範囲違反、モデル循環・domain共有の拒否、推論timeout/問題説明、
   RDF構文失敗を各1件以上日英のフロント表示まで確認する。unknownの第三者エラーは原文詳細にする。
-- [ ] 比較・推論アルゴリズム、ネットワーク可否、元データの値を翻訳対応に合わせて変更しない。
+- [x] 比較・推論アルゴリズム、ネットワーク可否、元データの値を翻訳対応に合わせて変更しない。
   メッセージに使う名前は読取時の表示言語を尊重し、元IRIで追跡できる。
-- [ ] 既存CSV/Excel/RML機能の操作・エラーは翻訳するが、専用タグExcel/組織JSON仕様を追加しない。
-- [ ] `python scripts/generate_message_contracts.py --check`、backendで
+- [x] 既存CSV/Excel/RML機能の操作・エラーは翻訳するが、専用タグExcel/組織JSON仕様を追加しない。
+- [x] `python scripts/generate_message_contracts.py --check`、backendで
   `python -m pytest tests/test_message_contracts.py tests/test_shacl.py tests/test_reasoning.py tests/test_parse_errors.py tests/test_editing.py`、
   frontendで `npm run test -- src/modeling/shapeSentences.test.ts src/modeling/dataSentences.test.ts src/reasoning/reasonSentences.test.ts src/components/ShapesView.test.tsx src/components/ReasoningPanel.test.tsx src/i18n/coverage.test.ts` を実行し、PASS後コミットする。
 
 ## Task 13 — 統合・性能・実ブラウザ・公開前確認
 
 **Files:** 追加 `backend/tests/test_entity_budgets.py`、`frontend/src/components/EntityList.budget.test.tsx`。
-変更 `.claude/skills/run-semantic-viewer/driver.mjs`、`.github/workflows/ci.yml`、
+変更 `.claude/skills/run-semantic-viewer/{driver,p1}.mjs`、`.github/workflows/ci.yml`、
 `README.md`、`docs/known-state.md`、inventory。必要な配布通知は横断計画Task 4で定義済みの場所へ置く。
+
+2026-10-25補足：実測した予算未達を解消するため、`graph_builder.py`、`axioms.py`、
+`entity_index.py` と対応テストを追加対象とする。判定条件・RDF・既存上限を保ち、
+表示名・主語・別名述語の重複読取を同じ読取範囲で共有する。
+配布物の実照合には `frontend/build/`、`scripts/distribution_notices.py`、
+`backend/constraints-distribution.txt`、Dockerfile、文書ZIPの通知資産も含む。
 
 - [ ] 合成グラフ1k/10k/40kで索引構築と温まった検索/一覧の前後を測定する。
   10kは初回1秒/温200ms以内、40kは初回3秒/温500ms以内。中央値と既存予算係数を使う。

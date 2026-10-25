@@ -4,6 +4,7 @@ FILE: backend/app/entity_index.py
 SUMMARY
     Complete, immutable search values independently of the drawn graph budget.
 BASIC IDEA
+    Alias predicates are scanned once; legacy name reads keep original value order.
     Named subjects and pre-budget visual references form the entity set. Only
     explicitly approved name/alias/reading/identifier predicates are indexed.
     Normalized keys never replace RDF literals; tie-breaks are deterministic.
@@ -76,13 +77,24 @@ class EntityMatch:
 def build_entity_index(graph: Graph, graph_nodes: list[dict]) -> EntityIndex:
     subjects = {s for s in graph.subjects() if isinstance(s, URIRef)}
     drawn = {node['id']: node for node in graph_nodes if isinstance(node.get('id'), str) and not node['id'].startswith('_:')}
+    # Alias values are order-independent: fields are deduplicated and sorted
+    # below. Sweep these predicates once instead of probing every absent one
+    # on every resource. Representative names keep per-resource graph.objects
+    # order, because the legacy no-language view still uses its first value.
+    alias_values = {}
+    for predicate, reason in SEARCH_FIELDS.items():
+        if predicate in LABEL_PREDICATES:
+            continue
+        for subject, value in graph.subject_objects(predicate):
+            if isinstance(subject, URIRef) and isinstance(value, Literal):
+                alias_values.setdefault(subject, set()).add((reason, str(value)))
     entities = {}
     for iri in subjects | {URIRef(iri) for iri in drawn}:
         key = str(iri)
         names = tuple((i, value) for i, predicate in enumerate(LABEL_PREDICATES)
                       for value in graph.objects(iri, predicate) if isinstance(value, Literal))
-        values = {(reason, str(value)) for predicate, reason in SEARCH_FIELDS.items()
-                  for value in graph.objects(iri, predicate) if isinstance(value, Literal)}
+        values = {('name', str(value)) for _, value in names}
+        values.update(alias_values.get(iri, ()))
         values.add(('identifier', key))
         fields = tuple(SearchValue(reason, value, normalize_query(value)) for reason, value in sorted(values))
         # Most resources already have a kind from the full graph pass. Only
