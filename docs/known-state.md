@@ -3120,3 +3120,24 @@ MainThread calls. The timeout test now gates its worker with an event and joins
 that exact worker in finally. It also asserts the worker is still alive when
 the API reports stopped. The application's behavior and the200-call assertion
 stay unchanged; no delay, threshold relaxation or thread filtering masks work.
+
+## P2 foundation checkpoint — 2026-10-25
+
+The P2 work branch adds isolated team configuration, a typed RDF graph codec,
+SQLite resource revisions/audit/replay and server-owned authentication building
+blocks. These do not activate a shared runtime in the existing local application.
+`docs/p2-verification.md` tracks the integration boundary and remaining work.
+Team message contracts use the same Japanese/English catalogs as P1. Resource
+tombstones retain their version, and graph persistence must preserve blank-node
+identifiers, literal lexical forms, language tags and unknown RDF predicates.
+
+## P2 configurable identity — 2026-10-26
+
+Workspace membership uses a required server-configured domain allowlist with no
+deployment-specific default. Public fixtures/docs use reserved example domains;
+actual settings and session databases stay outside Git and Docker. Publication
+checks accept a private external value list without logging its values, even
+when they appear in paths, archives or approved binary metadata. Removing a value
+from the current tree does not erase existing Git or PR history. The integration
+status and privacy boundaries are documented separately in `docs/p2-verification.md`
+and `docs/team-configuration-privacy.md`.

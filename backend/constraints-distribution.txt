@@ -5,10 +5,13 @@ annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
 certifi==2026.10.23
+cffi==2.1.1
 click==8.5.0
+cryptography==50.0.2
 defusedxml==0.7.1
 et_xmlfile==2.0.0
 fastapi==0.162.0
+google-auth==2.62.0
 h11==0.16.0
 html5rdf==1.2.1
 httpcore==1.0.9
@@ -20,6 +23,9 @@ opentelemetry-api==1.45.1
 owlrl==7.6.2
 packaging==26.3
 prettytable==3.18.0
+pyasn1-modules==0.4.2
+pyasn1==0.6.4
+pycparser==3.12
 pydantic==2.14.1
 pydantic_core==2.50.1
 pyparsing==3.3.3

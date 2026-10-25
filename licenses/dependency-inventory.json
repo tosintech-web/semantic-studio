@@ -1,5 +1,5 @@
 {
-  "basis": "Local P1 preparation environment; regenerate for every distribution and dependency resolution. Includes development dependencies for traceability. text-collected is evidence of source notice collection, not a legal approval.",
+  "basis": "Local P1 preparation environment; regenerate for every distribution and dependency resolution. Includes development dependencies for traceability. text-collected is evidence of source notice collection, not a legal approval. P2 Google verification closure additionally collected from exact PyPI wheels, 2026-10-25.",
   "components": [
     {
       "ecosystem": "npm",
@@ -4233,6 +4233,106 @@
           "original_path": "websockets-17.3.dist-info/licenses/LICENSE",
           "text": "licenses/texts/3d6a0c050d8bec52fabad502e45fb25bd02bcadbd70dea34d447b6a0ff4e6da8.txt",
           "sha256": "3d6a0c050d8bec52fabad502e45fb25bd02bcadbd70dea34d447b6a0ff4e6da8"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "cffi",
+      "version": "2.1.1",
+      "source": "https://pypi.org/project/cffi/2.1.1/",
+      "license": "MIT-0",
+      "notices": [
+        {
+          "original_path": "cffi-2.1.1.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/5ba24ddc57067f9249add644c3afc41a5d6dc37e23433ef759d95df370b0af63.txt",
+          "sha256": "5ba24ddc57067f9249add644c3afc41a5d6dc37e23433ef759d95df370b0af63"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "cryptography",
+      "version": "50.0.2",
+      "source": "https://pypi.org/project/cryptography/50.0.2/",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "cryptography-50.0.2.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/3e0c7c091a948b82533ba98fd7cbb40432d6f1a9acbf85f5922d2f99a93ae6bb.txt",
+          "sha256": "3e0c7c091a948b82533ba98fd7cbb40432d6f1a9acbf85f5922d2f99a93ae6bb"
+        },
+        {
+          "original_path": "cryptography-50.0.2.dist-info/licenses/LICENSE.APACHE",
+          "text": "licenses/texts/aac73b3148f6d1d7111dbca32099f68d26c644c6813ae1e4f05f6579aa2663fe.txt",
+          "sha256": "aac73b3148f6d1d7111dbca32099f68d26c644c6813ae1e4f05f6579aa2663fe"
+        },
+        {
+          "original_path": "cryptography-50.0.2.dist-info/licenses/LICENSE.BSD",
+          "text": "licenses/texts/602c4c7482de6479dd2e9793cda275e5e63d773dacd1eca689232ab7008fb4fb.txt",
+          "sha256": "602c4c7482de6479dd2e9793cda275e5e63d773dacd1eca689232ab7008fb4fb"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "google-auth",
+      "version": "2.62.0",
+      "source": "https://pypi.org/project/google-auth/2.62.0/",
+      "license": "Apache-2.0",
+      "notices": [
+        {
+          "original_path": "google_auth-2.62.0.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4.txt",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pyasn1",
+      "version": "0.6.4",
+      "source": "https://pypi.org/project/pyasn1/0.6.4/",
+      "license": "BSD-2-Clause",
+      "notices": [
+        {
+          "original_path": "pyasn1-0.6.4.dist-info/licenses/LICENSE.rst",
+          "text": "licenses/texts/2aad5fc00f705c4a1addb83eed10a6a75d286a3779f0cf8519d87e62bc4735fd.txt",
+          "sha256": "2aad5fc00f705c4a1addb83eed10a6a75d286a3779f0cf8519d87e62bc4735fd"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pyasn1-modules",
+      "version": "0.4.2",
+      "source": "https://pypi.org/project/pyasn1-modules/0.4.2/",
+      "license": "BSD-2-Clause",
+      "notices": [
+        {
+          "original_path": "pyasn1_modules-0.4.2.dist-info/licenses/LICENSE.txt",
+          "text": "licenses/texts/2aad5fc00f705c4a1addb83eed10a6a75d286a3779f0cf8519d87e62bc4735fd.txt",
+          "sha256": "2aad5fc00f705c4a1addb83eed10a6a75d286a3779f0cf8519d87e62bc4735fd"
+        }
+      ],
+      "status": "text-collected"
+    },
+    {
+      "ecosystem": "python",
+      "name": "pycparser",
+      "version": "3.12",
+      "source": "https://pypi.org/project/pycparser/3.12/",
+      "license": "BSD-3-Clause",
+      "notices": [
+        {
+          "original_path": "pycparser-3.12.dist-info/licenses/LICENSE",
+          "text": "licenses/texts/0a9e78156ae8b96caf1b4f11ac2df424b83de29736f9e757630548a6272fdf90.txt",
+          "sha256": "0a9e78156ae8b96caf1b4f11ac2df424b83de29736f9e757630548a6272fdf90"
         }
       ],
       "status": "text-collected"

@@ -39,3 +39,8 @@ tokens/
 shots/
 screenshots/
 .superpowers/
+*.sqlite*
+*.db
+*.db-*
+*.db.*
+*.private-values

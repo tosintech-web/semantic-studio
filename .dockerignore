@@ -22,3 +22,8 @@
 **/screenshots
 **/*.log
 .superpowers
+**/*.sqlite*
+**/*.db
+**/*.db-*
+**/*.db.*
+**/*.private-values

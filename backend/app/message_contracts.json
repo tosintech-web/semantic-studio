@@ -1690,6 +1690,18 @@
     "network.approval.declined": {"hosts": "parts"},
     "words.host_separator": {},
     "words.editing.the_shape": {},
-    "project.result_names_failed": {}
+    "project.result_names_failed": {},
+    "team.auth_required": {},
+    "team.auth_expired": {},
+    "team.auth_failed": {},
+    "team.config_unavailable": {},
+    "team.forbidden": {},
+    "team.csrf": {},
+    "team.version_required": {},
+    "team.revision_conflict": {},
+    "team.request_mismatch": {},
+    "team.undo_forbidden": {},
+    "team.last_admin": {},
+    "team.disabled": {}
   }
 }

@@ -29,6 +29,8 @@ them by clicking, without writing SPARQL by hand.
 保護できません。公開前には `python scripts/check_publication.py --staged` または
 `--git-ref <対象コミット>` で実際のGit blobを検査します。結果0は定義済みルールの合格であり、
 未検出の秘密や未知の業務データがないという保証ではありません。
+Google認証の許可ドメインはサーバーの運用設定とし、実値をソースや公開例へ含めません。
+[認証設定と公開範囲](docs/team-configuration-privacy.md) に設定テンプレートと非公開値の検査手順を記載しています。
 データセットの追加は `publication-policy.json` に出典・条件・SHA-256を登録し、内容をレビューします。
 例外はパス・ルール・理由を限定してレビューしてください。
 

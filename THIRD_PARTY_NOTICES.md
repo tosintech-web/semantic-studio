@@ -59,3 +59,11 @@ Pythonは実際にインストールされたアプリ依存の版・原文を�
 Docker用の解決版を `backend/constraints-distribution.txt` で固定します。
 実物のファイル位置と検査範囲は [配布物別の通知](docs/distribution-notices.md)を参照してください。
 html5rdf 1.2.1とet_xmlfile 2.0.0の著者一覧も、実際の配布物から原文のまま収集しています。
+
+## P2のGoogle認証ライブラリ
+
+Google公式検証にはgoogle-auth 2.62.0（Apache-2.0）を使用します。
+固定した依存はcryptography 50.0.2（Apache-2.0 OR BSD-3-Clause）、cffi 2.1.1（MIT-0）、
+pyasn1 0.6.4とpyasn1-modules 0.4.2（BSD-2-Clause）、pycparser 3.12（BSD-3-Clause）です。
+各PyPI wheelの実物からライセンス原文を収集し、上記台帳で元パスとSHA-256を対応付けました。
+これらのライセンスをアプリ本体のMITへ置き換えません。配布時の実物照合はP1と同じ検査を使います。

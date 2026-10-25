@@ -503,6 +503,9 @@ leaves one behind.
 - Command display-name carriers keep their legacy string value; only message arguments and read-only previews project the selected name. Never use the display language for RDF writes. [command display names]
 - A shape's `displayName` is a read-only title; its original `name` remains the editable value. [command display names]
 
+**Team deployment privacy (P2)**
+- Deployment-specific Workspace domains have no code default and stay in server configuration; use reserved example domains in tests/docs and external private inputs for publication checks. [P2 configurable identity]
+
 ## Skills
 
 Project skills live in `.claude/skills/` and load automatically.
