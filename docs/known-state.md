@@ -2837,7 +2837,7 @@ check and stale-operation lifecycle checks remain part of the final P1 gate.
 The canvas's read, layout-save and shown-set failures retain their original
 cause. Save failures carry a typed client context; a known server reason appears
 in the current UI language beside it, and original details stay escaped in a
-native disclosure. Language changes do not fetch, save or move boxes. A new
+native disclosure. UI language changes do not fetch, save or move boxes. A new
 failure resets its disclosure; changing the language preserves the current
 failure's disclosure and focus. The save notice's polite live container exists
 before the message arrives.
@@ -2869,3 +2869,26 @@ A differential check of 38 synthetic command/refusal cases against the previous
 commit finds identical legacy text/codes and isomorphic resulting RDF, including
 Japanese label/message writes. The model, graph comparisons and command deltas
 are unchanged.
+
+### Recorded results keep their checked basis when names change (P1)
+
+The optional project-view `lang` parameter chooses display labels independently
+of UI language and the project's primary/required RDF languages. Shape suggestions
+use the choice for names only; their suggested language constraints retain the
+configured project languages. An omitted parameter keeps the old reading order.
+
+GET `/api/projects/{pid}/validate` returns null before a check and otherwise reads
+the recorded check. Its private checked graphs and report can be formatted in
+another label language without rerunning validation or reading a newer model.
+The original revisions, duration and counts remain the basis of that result. A
+late check cannot replace a newer check or a closed-and-reopened project's result.
+Recorded reasoning similarly shares the stated/closure indexes and fact
+membership, rebuilding only labels, sentences and display order. Names still
+come from stated facts only, preserving the owl:sameAs label rule.
+
+Changing dictionary language reads existing results through GET requests. It
+does not issue Validate or Reason again. The store and paged/disclosed results
+discard replies from older owners, languages or result identities. Failed name
+reads retain the previous result and report an error with original details;
+selecting the current language again retries. Changing UI language only rerenders
+messages and does not trigger these reads. Browser checks remain in the P1 gate.

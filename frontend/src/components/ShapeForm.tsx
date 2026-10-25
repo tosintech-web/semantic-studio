@@ -4,6 +4,7 @@ FILE: frontend/src/components/ShapeForm.tsx
 ================================================================================
 
 SUMMARY
+    Read names follow the selected dictionary language independently of UI locale.
     The form of the one selected shape (shacl-authoring 5.3, 5.4, 5.5): its
     sentence, what it applies to, its name, its rules -- each a sentence with
     Edit and Remove, and one rule editor at a time -- the rules the model
@@ -52,6 +53,7 @@ EXPECTED OUTPUT
 */
 
 import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getShapeSuggestions } from "../api";
@@ -84,6 +86,7 @@ export default function ShapeForm({
   onEditInTurtle,
 }: Props) {
   const { t, locale } = useI18n();
+  const readingLanguage = useDictionaryDisplayLanguage();
   const displayName = validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : shape.name;
   const runner = useRunner("shapes");
   const { busy, errors, run } = runner;
@@ -117,7 +120,7 @@ export default function ShapeForm({
       return;
     }
     let live = true;
-    getShapeSuggestions(projectId, target, shape.id)
+    (readingLanguage === undefined ? getShapeSuggestions(projectId, target, shape.id) : getShapeSuggestions(projectId, target, shape.id, readingLanguage))
       .then((s) => {
         if (!live) return;
         setSuggestions(s);
@@ -127,7 +130,7 @@ export default function ShapeForm({
     return () => {
       live = false;
     };
-  }, [projectId, target, shape.id, shape.editable, revisions]);
+  }, [projectId, target, shape.id, shape.editable, revisions, readingLanguage]);
 
   // The paths the rule editor offers, with any a rule already uses (a rule
   // written in Turtle may be on a path the model does not suggest).

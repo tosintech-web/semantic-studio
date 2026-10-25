@@ -1514,7 +1514,7 @@ describe("inferred lines and boxes (axioms-and-reasoning 5.7)", () => {
 
   it("asks for them, draws the line dashed and labelled inferred, and says so on the box", async () => {
     await renderInferred({ imports: false });
-    expect(getCanvas).toHaveBeenCalledWith(PID, "model", { imports: false });
+    expect(getCanvas).toHaveBeenCalledWith(PID, "model", { imports: false }, "en");
     const line = inferredLine();
     expect(line.ariaLabel).toBe("Invoice (en) is a kind of Agent, inferred");
     // The word, always shown, and the dash: never colour alone.
@@ -1558,7 +1558,7 @@ describe("inferred lines and boxes (axioms-and-reasoning 5.7)", () => {
     );
     expect(inferredLine()).toBeUndefined();
     expect(within(box("Document")).queryByText("can never have members")).toBeNull();
-    expect(getCanvas).toHaveBeenLastCalledWith(PID, "model", null);
+    expect(getCanvas).toHaveBeenLastCalledWith(PID, "model", null, "en");
   });
 });
 

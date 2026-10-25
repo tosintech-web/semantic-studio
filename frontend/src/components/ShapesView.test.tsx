@@ -54,6 +54,7 @@ vi.mock("../api", async (importOriginal) => ({
   searchNodes,
 }));
 
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 import { ApiError } from "../api";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
@@ -883,4 +884,21 @@ it.each([true, false])("shows read-only reason facts (known: %s), keeps the orig
   expect(props.onEditInTurtle).toHaveBeenCalledWith(readonly);
   expect(document.querySelector(".shape-unsupported b, .shape-unsupported img")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rereads shape and suggestion names for the dictionary language without editing RDF", async () => {
+  await setup([PERSON]);cleanup();getShapes.mockClear();getShapeSuggestions.mockClear();
+  const japanese={...PERSON,target:{...PERSON.target!,label:"人"},rules:PERSON.rules.map(rule=>({...rule,pathLabel:"呼称"}))};
+  getShapes.mockImplementation((_pid,language)=>Promise.resolve(listing([language==="ja"?japanese:PERSON])));
+  getShapeSuggestions.mockResolvedValue(SUGGESTIONS);
+  const draw=(language:string)=><DictionaryLanguageContext.Provider value={language}><ShapesView projectId={PID} kind="ontology" languages={["en","ja"]} modelOntologyId={`${PID}-model`} {...props}/></DictionaryLanguageContext.Provider>;
+  let view!:ReturnType<typeof render>;
+  await act(async()=>{view=render(draw("en"));});
+  expect(document.querySelector(".shape-form")?.textContent).toContain("Person");
+  await act(async()=>{view.rerender(draw("ja"));});
+  expect(document.querySelector(".shape-form")?.textContent).toContain("人");
+  expect(document.querySelector(".shape-rules")?.textContent).toContain("呼称");
+  expect(getShapes).toHaveBeenLastCalledWith(PID,"ja");
+  expect(getShapeSuggestions).toHaveBeenLastCalledWith(PID,`${X}Person`,PERSON.id,"ja");
+  expect(runCommand).not.toHaveBeenCalled();
 });

@@ -33,7 +33,7 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData, validateProject, reasonProject, recoverProject, runCommand } =
+const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData, validateProject, reasonProject, recoverProject, runCommand, getValidationResult, getReasoningResult } =
   vi.hoisted(() => ({
     openProject: vi.fn(),
     undoChange: vi.fn(),
@@ -42,6 +42,8 @@ const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, up
     getLanguageReport: vi.fn(),
     updateProject: vi.fn(),
     listData: vi.fn(),
+    getValidationResult: vi.fn(),
+    getReasoningResult: vi.fn(),
     validateProject: vi.fn(),
     reasonProject: vi.fn(),
     recoverProject: vi.fn(),
@@ -58,6 +60,8 @@ vi.mock("../api", async (importOriginal) => ({
   updateProject,
   listData,
   validateProject,
+  getValidationResult,
+  getReasoningResult,
   reasonProject,
   recoverProject,
   runCommand,
@@ -146,7 +150,10 @@ async function fromMenu(name: string | RegExp) {
 }
 const live = () => document.querySelector("[role=status]")!.textContent;
 
-beforeEach(() => { projectStore._reset(); listData.mockResolvedValue({ generation: 1, snapshots: [] }); });
+beforeEach(() => { projectStore._reset(); listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  getValidationResult.mockImplementation(async()=>projectStore.getSnapshot().validation);
+  getReasoningResult.mockImplementation(async()=>projectStore.getSnapshot().reasoning);
+});
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -662,4 +669,22 @@ it("keeps compound rule descriptors and the active shapes document intact across
   expect(openProject).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("status").querySelector("img,b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("reports a name-read error once and retries by reselecting the current dictionary language", async () => {
+  getLanguageReport.mockResolvedValue({entities:1,languages:["en","fr"],missing:{en:0,fr:0}});
+  await renderHeader();
+  const result:ValidationResult={stopped:false,statements:1,shapeCount:0,shapes:[],durationMs:1,revisions:{model:3,shapes:null}};
+  validateProject.mockResolvedValueOnce(result);await act(async()=>{await projectStore.validate();});
+  getValidationResult.mockRejectedValueOnce(new Error("Original names failure <img>{raw}"));
+  await fromMenu("Language: en…");
+  await act(async()=>{fireEvent.click(screen.getByRole("radio",{name:/^fr/}));});
+  expect(handlers.onError).toHaveBeenCalledTimes(1);
+  const error=handlers.onError.mock.calls[0][0] as Error;
+  expect(error.message).toBe("Original names failure <img>{raw}");
+  await act(async()=>{fireEvent.click(screen.getByRole("radio",{name:/^fr/}));});
+  expect(getValidationResult).toHaveBeenCalledTimes(2);
+  expect(projectStore.getSnapshot().resultReadError).toBeNull();
+  expect(handlers.onError).toHaveBeenCalledTimes(1);
+  expect(validateProject).toHaveBeenCalledTimes(1);
 });

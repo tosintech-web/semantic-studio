@@ -1689,6 +1689,7 @@
     "network.sends.service": {},
     "network.approval.declined": {"hosts": "parts"},
     "words.host_separator": {},
-    "words.editing.the_shape": {}
+    "words.editing.the_shape": {},
+    "project.result_names_failed": {}
   }
 }

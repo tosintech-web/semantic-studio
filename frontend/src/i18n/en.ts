@@ -15,6 +15,7 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "project.result_names_failed": "The result names could not be updated. The affected result keeps its previous display. Select the display language again to retry.",
   "words.editing.the_shape": "the shape",
   "canvasUI.layoutFailed": "The canvas layout could not be saved. Your boxes stay where they are.",
   "canvasUI.shownFailed": "The canvas could not change what it shows.",

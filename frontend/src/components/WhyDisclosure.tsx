@@ -4,6 +4,7 @@ FILE: frontend/src/components/WhyDisclosure.tsx
 ================================================================================
 
 SUMMARY
+    Read names follow the selected dictionary language independently of UI locale.
     **Why?** for one concluded fact (axioms-and-reasoning 5.6, AC-5): a
     disclosure button whose reason -- one step, the facts and rules it used
     -- opens in place below it as a list, each line marked *stated* or
@@ -39,9 +40,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useI18n } from "../i18n/I18nProvider";
 import { renderServerError } from "../i18n/serverMessage";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { getWhy } from "../api";
 import { premiseMark } from "../reasoning/reasonSentences";
 import type { ReasoningPremise, WhyReason } from "../types";
@@ -64,26 +66,25 @@ export default function WhyDisclosure(props: Props) {
 
 function Disclosure({ projectId, fact, label, onSelect }: Props) {
   const { t } = useI18n();
+  const readingLanguage = useDictionaryDisplayLanguage();
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<WhyReason | null>(null);
-  const [error, setError] = useState<{ cause: unknown } | null>(null);
-  const alive = useRef(true);
-  useEffect(() => {
-    alive.current = true;
-    return () => { alive.current = false; };
-  }, []);
+  const [heldReason, setReason] = useState<{ language: string | undefined; value: WhyReason } | null>(null);
+  const [failure, setError] = useState<{ language: string | undefined; cause: unknown } | null>(null);
+  const reason = heldReason && heldReason.language === readingLanguage ? heldReason.value : null;
+  const error = failure && failure.language === readingLanguage ? failure : null;
   const listId = useId();
-
-  const toggle = () => {
-    const next = !open;
-    setOpen(next);
-    if (next && reason === null) {
-      setError(null);
-      getWhy(projectId, fact)
-        .then((found) => { if (alive.current) setReason(found); })
-        .catch((cause: unknown) => { if (alive.current) setError({ cause }); });
-    }
-  };
+  useEffect(() => {
+    if (!open || reason !== null) return;
+    let live = true;
+    setError(null);
+    const read = readingLanguage === undefined ? getWhy(projectId, fact) : getWhy(projectId, fact, readingLanguage);
+    read.then(value => { if (live) setReason({ language: readingLanguage, value }); })
+      .catch((cause: unknown) => { if (live) setError({ language: readingLanguage, cause }); });
+    return () => { live = false; };
+    // Project/fact identity is the outer key. A cached reason stays through
+    // close/reopen; a dictionary-language change rereads names while staying open.
+  }, [open, readingLanguage]);
+  const toggle = () => setOpen(value => !value);
 
   return (
     <span className="why">

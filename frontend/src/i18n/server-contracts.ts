@@ -1167,6 +1167,7 @@ export const SERVER_CONTRACTS = {
   "project.document_not_found": {},
   "project.not_found": {},
   "project.not_open": {},
+  "project.result_names_failed": {},
   "project.snapshot_not_found": {},
   "project.unsaved": {},
   "projects.base_iri": {},
@@ -2514,6 +2515,7 @@ export interface ServerMessageArgs {
   "project.document_not_found": undefined;
   "project.not_found": undefined;
   "project.not_open": undefined;
+  "project.result_names_failed": undefined;
   "project.snapshot_not_found": undefined;
   "project.unsaved": undefined;
   "projects.base_iri": undefined;

@@ -15,6 +15,7 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "project.result_names_failed": "結果の名称表示を更新できませんでした。更新できなかった結果は、変更前の表示を保持しています。表示言語を選び直して再試行してください。",
   "words.editing.the_shape": "この検証ルール",
   "canvasUI.layoutFailed": "キャンバスの配置を保存できませんでした。図の位置は維持されています。",
   "canvasUI.shownFailed": "キャンバスに表示する項目を変更できませんでした。",

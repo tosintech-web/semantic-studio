@@ -32,6 +32,7 @@ EXPECTED OUTPUT
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
 import type { WhyReason } from "../types";
@@ -281,4 +282,20 @@ it.each(["stated", "unsupported", "future"])("renders a retained %s reason with 
     : "Check the original reasoning details for this statement.")).toBeTruthy();
   expect(screen.getByText(original).closest("details")).toBe(details); expect(details.open).toBe(true);
   expect(getWhy).toHaveBeenCalledTimes(1); localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps Why open and rereads only its names when the dictionary language changes", async () => {
+  const fact={s:X+"alice",p:T,o:X+"Person"};
+  getWhy.mockImplementation((_pid,_fact,language)=>Promise.resolve({family:"stated",sentence:"Original reason",premises:[],
+    uiMessage:{code:"reasoning.reason.stated",args:{s:[{text:language==="ja"?"対象":"Subject"}],p:[{text:"is a"}],o:[{text:"Person"}]}}}));
+  const draw=(language:string)=><DictionaryLanguageContext.Provider value={language}><WhyDisclosure projectId="one" fact={fact} label="Fact" /></DictionaryLanguageContext.Provider>;
+  const view=render(draw("en"));
+  await open(screen.getByRole("button",{name:"Why? Fact"}));
+  expect(document.querySelector(".why-plain")?.textContent).toContain("Subject");
+  await act(async()=>{view.rerender(draw("ja"));});
+  expect(screen.getByRole("button",{name:"Why? Fact"}).getAttribute("aria-expanded")).toBe("true");
+  expect(document.querySelector(".why-plain")?.textContent).toContain("対象");
+  expect(getWhy).toHaveBeenLastCalledWith("one",fact,"ja");
+  await open(screen.getByRole("button",{name:"Why? Fact"}));await open(screen.getByRole("button",{name:"Why? Fact"}));
+  expect(getWhy).toHaveBeenCalledTimes(2);
 });

@@ -3174,7 +3174,7 @@ describe("App Shapes view (shacl-authoring Stage A)", () => {
     projectStore._reset();
     await openShapes();
     expect(tab("Shapes").getAttribute("aria-selected")).toBe("true");
-    expect(getShapes).toHaveBeenCalledWith(PROJECT.id);
+    expect(getShapes).toHaveBeenCalledWith(PROJECT.id, "en");
     expect(screen.getByRole("heading", { level: 2, name: "Shapes" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Validate" })).toBeTruthy();
   });
@@ -3209,7 +3209,7 @@ describe("App Shapes view (shacl-authoring Stage A)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Validate" }));
     });
-    expect(validateProject).toHaveBeenCalledWith(PROJECT.id);
+    expect(validateProject).toHaveBeenCalledWith(PROJECT.id, "en");
     fireEvent.click(screen.getByRole("button", { name: /Fails\. Person rules/ }));
     getNodeDetails.mockResolvedValue({ iri: "http://example.org/invoices#bob", label: "Bob", outgoing: [], incoming: [] });
     await act(async () => {
@@ -3543,7 +3543,7 @@ describe("App Edit page (edit-page-rework)", () => {
       await act(async () => {
         fireEvent.click(within(panel).getByRole("button", { name: "Reason" }));
       });
-      expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, true, true);
+      expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, true, true, "en");
     } finally {
       localStorage.removeItem("semantic-studio-include-imports");
     }
@@ -3560,7 +3560,7 @@ describe("App Edit page (edit-page-rework)", () => {
     await act(async () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Reason" }));
     });
-    expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, false, false);
+    expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, false, false, "en");
     // An edit while it runs: the model moves to revision 1.
     await act(async () => {
       projectStore.applied({ state: docState({ revision: 1, dirty: true }), label: "Renamed Instrument" } as Parameters<

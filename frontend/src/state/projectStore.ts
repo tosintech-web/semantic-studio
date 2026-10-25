@@ -4,6 +4,7 @@ FILE: frontend/src/state/projectStore.ts
 ================================================================================
 
 SUMMARY
+    Name-only result reads are scoped to their issuing owner, language and result.
     The open project and its documents, as a small external store read through
     useSyncExternalStore (D-084): which project is open, each document's
     revision and dirty flag, the undo and redo labels, the save status, the
@@ -110,6 +111,8 @@ import {
   undoChange,
   updateProject,
   validateProject,
+  getValidationResult,
+  getReasoningResult,
 } from "../api";
 import { legacyNoticeText, type ProjectNoticeInput, reasoningNotice, renderProjectAnnouncement, validationNotice, type ProjectAnnouncement, type ProjectNotice, type ProjectNoticeDetail } from "../modeling/projectNotices";
 export type { ProjectNotice } from "../modeling/projectNotices";
@@ -134,6 +137,10 @@ export interface ProjectSnapshot {
   activeDoc: ProjectDocName;
   saving: boolean;
   displayLanguage: string | null;
+  /** A failed name-only read keeps its result and original diagnostic. */
+  resultReadError: Error | null;
+  /** Result presentation changed, while the inference run token stays put. */
+  reasoningNamesToken: number;
   recovery: { draftTime: string } | null;
   /** A save is waiting on the one-time comments question (5.6). */
   commentsWarning: { doc: ProjectDocName; backup: string } | null;
@@ -233,6 +240,8 @@ const EMPTY: ProjectSnapshot = {
   activeDoc: "model",
   saving: false,
   displayLanguage: null,
+  resultReadError: null,
+  reasoningNamesToken: 0,
   recovery: null,
   commentsWarning: null,
   editorDraft: null,
@@ -264,6 +273,7 @@ let snapshot: ProjectSnapshot = EMPTY;
 // Which validation is the current one. Opening, closing or forgetting a
 // project moves it on, so a check still running for the old project is
 // ignored when it answers (shacl-authoring Stage A follow-up 3).
+let resultReadRun = 0;
 let validationRun = 0;
 // The same for reasoning: a run that outlives its project is ignored.
 let reasoningRun = 0;
@@ -328,6 +338,40 @@ function set(changes: Partial<ProjectSnapshot>): void {
     setApiLanguage(snapshot.project ? snapshot.displayLanguage : null);
   }
   for (const listener of listeners) listener();
+}
+
+async function refreshResultNames(): Promise<void> {
+  const run = ++resultReadRun;
+  const project = snapshot.project;
+  if (!project) return;
+  const language = snapshot.displayLanguage ?? project.primaryLanguage;
+  const validation = snapshot.validation;
+  const result = snapshot.reasoning;
+  const stale = () => run !== resultReadRun || snapshot.project?.id !== project.id
+    || (snapshot.displayLanguage ?? snapshot.project?.primaryLanguage) !== language;
+  const reads: Promise<void>[] = [];
+  if (validation) reads.push(Promise.resolve().then(() => getValidationResult(project.id, language)).then(found => {
+    if (!found) throw new Error("The recorded validation result is no longer available.");
+    if (!stale() && snapshot.validation === validation) set({ validation: found });
+  }).catch(error => {
+    if (!stale() && snapshot.validation === validation) throw error;
+  }));
+  if (result) reads.push(Promise.resolve().then(() => getReasoningResult(project.id, result.imports, language)).then(found => {
+    if (!found) throw new Error("The recorded reasoning result is no longer available.");
+    if (!stale() && snapshot.reasoning === result) set({ reasoning: found, reasoningNamesToken: snapshot.reasoningNamesToken + 1 });
+  }).catch(error => {
+    if (!stale() && snapshot.reasoning === result) throw error;
+  }));
+  const settled = await Promise.allSettled(reads);
+  if (stale()) return;
+  const failure = settled.find((item): item is PromiseRejectedResult => item.status === "rejected");
+  if (failure) {
+    const cause: unknown = failure.reason;
+    const error = Object.assign(new Error(cause instanceof Error ? cause.message : String(cause)), {
+      uiMessage: { code: "project.result_names_failed", args: {} }, cause,
+    });
+    set({ resultReadError: error });
+  }
 }
 
 function subscribe(listener: () => void): () => void {
@@ -443,6 +487,7 @@ export const projectStore = {
     const opened = await openProject(pid);
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
     set({
       ...EMPTY,
       announcement: snapshot.announcement,
@@ -500,6 +545,7 @@ export const projectStore = {
     if (project) await closeProject(project.id, discard);
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -509,6 +555,7 @@ export const projectStore = {
   reset(): void {
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -577,17 +624,18 @@ export const projectStore = {
    *  reads the summary (Section 6). */
   async validate(): Promise<ValidationResult | null> {
     const project = requireProject();
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
     // One check at a time: a second press while one runs is not a second
     // request (Stage A follow-up 3).
     if (snapshot.validating) return null;
     const run = ++validationRun;
-    set({ validating: true });
+    set({ validating: true, resultReadError: null });
     announce(makeUiMessage("projectNotice.validating"));
     const stale = () => run !== validationRun || snapshot.project?.id !== project.id;
     try {
       let result: ValidationResult;
       try {
-        result = await validateProject(project.id);
+        result = await validateProject(project.id, language);
       } catch (e) {
         // Nor does its failure reach the next project's error bar.
         if (stale()) return null;
@@ -598,6 +646,8 @@ export const projectStore = {
       if (stale()) return null;
       set({ validation: result });
       announceDetail(validationNotice(result));
+      if ((snapshot.displayLanguage ?? project.primaryLanguage) !== language) await refreshResultNames();
+      if (stale()) return null;
       return result;
     } finally {
       if (run === validationRun) set({ validating: false });
@@ -615,15 +665,16 @@ export const projectStore = {
     importsNow: () => boolean = () => imports,
   ): Promise<ReasoningResult | null> {
     const project = requireProject();
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
     if (snapshot.reasoningSince !== null) return null;
     const run = ++reasoningRun;
-    set({ reasoningSince: Date.now(), reasoningError: null, reasoningErrorCause: null });
+    set({ reasoningSince: Date.now(), reasoningError: null, reasoningErrorCause: null, resultReadError: null });
     announce(makeUiMessage("projectNotice.reasoningStarted"));
     const stale = () => run !== reasoningRun || snapshot.project?.id !== project.id;
     try {
       let result: ReasoningResult;
       try {
-        result = await reasonProject(project.id, includeData, imports);
+        result = await reasonProject(project.id, includeData, imports, language);
       } catch (e) {
         if (stale()) return null;
         // Said once: the Reasoning panel's alert reads it, and a live-region
@@ -650,6 +701,8 @@ export const projectStore = {
         imports: importsNow(),
       };
       announceDetail(reasoningNotice(result, now));
+      if ((snapshot.displayLanguage ?? project.primaryLanguage) !== language) await refreshResultNames();
+      if (stale()) return null;
       return result;
     } finally {
       if (run === reasoningRun) set({ reasoningSince: null, reasoningStopping: false });
@@ -873,8 +926,9 @@ export const projectStore = {
   },
 
   setDisplayLanguage(lang: string): void {
-    set({ displayLanguage: lang });
+    set({ displayLanguage: lang, resultReadError: null });
     announce(makeUiMessage("projectNotice.language", { language: lang }));
+    void refreshResultNames();
   },
 
   async setLanguages(languages: string[]): Promise<void> {
@@ -884,7 +938,9 @@ export const projectStore = {
       snapshot.displayLanguage && [updated.primaryLanguage, ...updated.languages].includes(snapshot.displayLanguage)
         ? snapshot.displayLanguage
         : updated.primaryLanguage;
-    set({ project: updated, displayLanguage: display });
+    const previous = snapshot.displayLanguage;
+    set({ project: updated, displayLanguage: display, resultReadError: null });
+    if (display !== previous) void refreshResultNames();
   },
 
   /** Register a pending-write flush, awaited before the project closes.
@@ -903,6 +959,7 @@ export const projectStore = {
   _reset(): void {
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
     creatingFrom = null;
     snapshot = EMPTY;
     setApiLanguage(null);

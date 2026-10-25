@@ -4,6 +4,7 @@ FILE: backend/app/reasoning.py
 ================================================================================
 
 SUMMARY
+    Recorded results offer isolated label-language views without running inference.
     Reasoning on demand for a project (axioms-and-reasoning Stage A, 5.1 to
     5.7, D-102 to D-104): OWL 2 RL through OWL-RL in a process of its own,
     under a 30-second limit and a 200,000-statement ceiling, one run per
@@ -403,6 +404,46 @@ class Outcome:
         self.problems = problems or []
         self.never = never or set()
         self.shown = {f["t"] for listed in self.facts.values() for f in listed}
+        # Only analyse supplies the source events needed to reword a result.
+        # Custom/manual outcomes retain their legacy behavior.
+        self._display_languages: Optional[tuple] = None
+        self._problem_sources: Optional[tuple] = None
+        self._display_views: dict[tuple, Outcome] = {}
+        self._display_lock = threading.RLock()
+
+    def for_languages(self, languages: Iterable[str]) -> "Outcome":
+        """A cached read view of the same result, without another reasoner run.
+
+        Indexes and membership stay with the original result. Only labels,
+        sentences and their display order are rebuilt from recorded facts and
+        problem events; another reader cannot change this result's names.
+        """
+        chosen = tuple(languages)
+        if self.status != "done" or self._display_languages is None or chosen == self._display_languages:
+            return self
+        with self._display_lock:
+            found = self._display_views.get(chosen)
+            if found is not None:
+                return found
+            names = _name_reader(self.stated, chosen)
+            facts = {}
+            for kind, listed in self.facts.items():
+                rows = [{**fact, **triple_json(fact["t"], names),
+                         "sentence": fact_sentence(fact["t"], names)} for fact in listed]
+                rows.sort(key=lambda fact: (_natural(fact["sentence"]), fact["s"], fact["o"]))
+                facts[kind] = rows
+            errors, probe_errors, probes = self._problem_sources
+            problems, never = _problem_rows(errors, probe_errors, probes, self.stated, self.closure, names)
+            found = Outcome(
+                self.status, self.key, statements=self.statements, duration_ms=self.duration_ms,
+                message=self.message, stated=self.stated, closure=self.closure, names=names,
+                facts=facts, problems=problems, never=never, limit_seconds=self.limit_seconds,
+            )
+            found._display_languages = chosen
+            found._problem_sources = self._problem_sources
+            self._display_views[chosen] = found
+            return found
+
 
     # --- what the routes answer ---
 
@@ -1177,6 +1218,68 @@ _IRI = re.compile(r"(?:https?|urn|file|tag):[^\s,()'\"]+")
 _PROBE_IN = re.compile(re.escape(PROBE) + r"(\d+)")
 
 
+def _name_reader(stated: Index, languages: Iterable[str]) -> Callable:
+    """Read labels from stated facts only, with a private per-view cache."""
+    languages = tuple(languages)
+    label_cache: dict = {}
+
+    # Names come from the stated facts only: OWL-RL copies a label across
+    # owl:sameAs, and Anne would be named Ann.
+    def names(term) -> str:
+        found = label_cache.get(term)
+        if found is None:
+            if isinstance(term, Literal):
+                found = str(term)
+            elif isinstance(term, URIRef):
+                found = pick_label_in(stated, term, languages)[0]
+            else:
+                found = "something"
+            label_cache[term] = found
+        return found
+
+    return names
+
+
+def _problem_rows(errors, probe_errors, probes, stated: Index, closure: Index, names: Callable):
+    """Format the original recorded problem events without running inference."""
+    main_errors = set(errors)
+    problems: list = []
+    reported: set = set()
+    for message in errors:
+        problem = _problem(message, stated, closure, names)
+        if problem is None or problem["id"] in reported:
+            continue
+        reported.add(problem["id"])
+        problems.append(problem)
+    never: set = set()
+    for message in probe_errors:
+        found = [int(m) for m in _PROBE_IN.findall(message)]
+        if not found:
+            # A probe that met a contradiction through another thing (5.5),
+            # once: one already in the model's own run is not new.
+            if message in main_errors:
+                continue
+            problem = _reasoner_words(message, names)
+            if problem["id"] not in reported:
+                reported.add(problem["id"])
+                problems.append(problem)
+            continue
+        for index in found:
+            if index >= len(probes):
+                continue
+            cls = URIRef(probes[index])
+            if cls in never:
+                continue
+            never.add(cls)
+            problems.append(_never_members(cls, message, stated, names, probes))
+    # A class can never have members before a thing's contradiction: it is
+    # what the learner fixes first.
+    problems.sort(key=lambda pr: (pr["kind"] != "neverMembers", pr["sentence"].casefold()))
+    for problem in problems:
+        problem.pop("id", None)
+    return problems, never
+
+
 def analyse(
     stated_triples: Iterable[tuple],
     raw: RawResult,
@@ -1193,21 +1296,7 @@ def analyse(
     closure = stated.copy()
     for t in raw.added:
         closure.add(t)
-    label_cache: dict = {}
-
-    # Names come from the stated facts only: OWL-RL copies a label across
-    # owl:sameAs, and Anne would be named Ann.
-    def names(term) -> str:
-        found = label_cache.get(term)
-        if found is None:
-            if isinstance(term, Literal):
-                found = str(term)
-            elif isinstance(term, URIRef):
-                found = pick_label_in(stated, term, languages)[0]
-            else:
-                found = "something"
-            label_cache[term] = found
-        return found
+    names = _name_reader(stated, languages)
 
     imported = imported or set()
     properties = {
@@ -1247,45 +1336,14 @@ def analyse(
     for listed in facts.values():
         listed.sort(key=lambda f: (_natural(f["sentence"]), f["s"], f["o"]))
 
-    main_errors = set(raw.errors)
-    problems: list = []
-    reported: set = set()
-    for message in raw.errors:
-        problem = _problem(message, stated, closure, names)
-        if problem is None or problem["id"] in reported:
-            continue
-        reported.add(problem["id"])
-        problems.append(problem)
-    never: set = set()
-    for message in raw.probe_errors:
-        found = [int(m) for m in _PROBE_IN.findall(message)]
-        if not found:
-            # A probe that met a contradiction through another thing (5.5),
-            # once: one already in the model's own run is not new.
-            if message in main_errors:
-                continue
-            problem = _reasoner_words(message, names)
-            if problem["id"] not in reported:
-                reported.add(problem["id"])
-                problems.append(problem)
-            continue
-        for index in found:
-            if index >= len(probes):
-                continue
-            cls = URIRef(probes[index])
-            if cls in never:
-                continue
-            never.add(cls)
-            problems.append(_never_members(cls, message, stated, names, probes))
-    # A class can never have members before a thing's contradiction: it is
-    # what the learner fixes first.
-    problems.sort(key=lambda pr: (pr["kind"] != "neverMembers", pr["sentence"].casefold()))
-    for problem in problems:
-        problem.pop("id", None)
-    return Outcome(
+    problems, never = _problem_rows(raw.errors, raw.probe_errors, probes, stated, closure, names)
+    outcome = Outcome(
         "done", key, statements=statements, duration_ms=raw.duration_ms, stated=stated, closure=closure,
         names=names, facts=facts, problems=problems, never=never,
     )
+    outcome._display_languages = tuple(languages)
+    outcome._problem_sources = (tuple(raw.errors), tuple(raw.probe_errors), tuple(probes))
+    return outcome
 
 
 def _natural(text: str) -> tuple:

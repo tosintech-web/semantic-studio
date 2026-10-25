@@ -184,7 +184,7 @@ export function useCanvasData(
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    getCanvas(projectId, doc, inferred ? { imports: inferred.imports } : null)
+    getCanvas(projectId, doc, inferred ? { imports: inferred.imports } : null, language ?? "")
       .then((fetched) => {
         if (cancelled) return;
         const local = layout.current;

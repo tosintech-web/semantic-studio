@@ -4,6 +4,7 @@ FILE: frontend/src/api.ts
 ================================================================================
 
 SUMMARY
+    Explicit label-language reads reuse recorded validation and reasoning results.
     Declined approvals retain host facts beside their original failure text.
     Documentation downloads share the API error boundary and preserve UI facts.
     The single place the frontend talks to the backend. One thin wrapper per
@@ -948,11 +949,12 @@ export function getCanvas(
   pid: string,
   doc: ProjectDocName,
   inferred: { imports: boolean } | null = null,
+  displayLanguage?: string,
 ): Promise<CanvasView> {
   // With a current reasoning result: its kind-of lines and the boxes that can
   // never have members (axioms-and-reasoning 5.7).
   const query = inferred ? `?inferred=true${inferred.imports ? "&imports=true" : ""}` : "";
-  return send(withLang(documentUrl(pid, doc, "/canvas") + query)).then((r) => handle<CanvasView>(r));
+  return send(withLang(documentUrl(pid, doc, "/canvas") + query, displayLanguage)).then((r) => handle<CanvasView>(r));
 }
 
 export function getLayout(pid: string, doc: ProjectDocName): Promise<CanvasLayout> {
@@ -1064,30 +1066,41 @@ export function getLanguageReport(pid: string, doc: ProjectDocName): Promise<Lan
 }
 
 // The shapes in shapes.ttl in the form's structure (shacl-authoring 5.1, 5.5).
-export function getShapes(pid: string): Promise<ShapesListing> {
-  return send(projectUrl(pid, "/shapes")).then((r) => handle<ShapesListing>(r));
+export function getShapes(pid: string, displayLanguage?: string): Promise<ShapesListing> {
+  return send(withLang(projectUrl(pid, "/shapes"), displayLanguage ?? "")).then((r) => handle<ShapesListing>(r));
 }
 
 // What a rule can be about for a target, and what the model suggests (5.4).
-export function getShapeSuggestions(pid: string, target: string, shape?: string): Promise<ShapeSuggestions> {
+export function getShapeSuggestions(pid: string, target: string, shape?: string, displayLanguage?: string): Promise<ShapeSuggestions> {
   const params = new URLSearchParams({ target });
   if (shape) params.set("shape", shape);
-  return send(projectUrl(pid, `/shapes/suggestions?${params}`)).then((r) => handle<ShapeSuggestions>(r));
+  return send(withLang(projectUrl(pid, `/shapes/suggestions?${params}`), displayLanguage ?? "")).then((r) => handle<ShapeSuggestions>(r));
 }
 
 // Validate on demand (5.6). A POST that changes nothing; it carries the
 // client header because local_guard asks it of every POST.
-export function validateProject(pid: string): Promise<ValidationResult> {
-  return send(projectUrl(pid, "/validate"), { method: "POST", headers: { ...CLIENT_HEADER } }).then((r) =>
+export function validateProject(pid: string, displayLanguage?: string): Promise<ValidationResult> {
+  return send(withLang(projectUrl(pid, "/validate"), displayLanguage ?? ""), { method: "POST", headers: { ...CLIENT_HEADER } }).then((r) =>
     handle<ValidationResult>(r),
   );
+}
+
+/** Read the recorded check, changing names only; null before a check exists. */
+export function getValidationResult(pid: string, displayLanguage?: string): Promise<ValidationResult | null> {
+  return send(withLang(projectUrl(pid, "/validate"), displayLanguage ?? "")).then(r => handle<ValidationResult | null>(r));
+}
+
+/** Read the recorded reasoning result without another worker run. */
+export function getReasoningResult(pid: string, imports: boolean, displayLanguage?: string): Promise<ReasoningResult> {
+  const query = imports ? "?imports=true" : "";
+  return send(withLang(projectUrl(pid, "/reasoning") + query, displayLanguage ?? "")).then(r => handle<ReasoningResult>(r));
 }
 
 /* --- reasoning (axioms-and-reasoning Stage A) -------------------------------- */
 
 /** One run; it blocks until the run ends, and is 409 while another runs. */
-export function reasonProject(pid: string, includeData: boolean, imports: boolean): Promise<ReasoningResult> {
-  return send(projectUrl(pid, "/reasoning"), {
+export function reasonProject(pid: string, includeData: boolean, imports: boolean, displayLanguage?: string): Promise<ReasoningResult> {
+  return send(withLang(projectUrl(pid, "/reasoning"), displayLanguage ?? ""), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...CLIENT_HEADER },
     body: JSON.stringify({ includeData, imports }),
@@ -1107,21 +1120,22 @@ export function getReasoningPage(
   group: ReasoningGroupKind,
   offset: number,
   imports: boolean,
+  displayLanguage?: string,
 ): Promise<ReasoningPage> {
   const query = `?group=${group}&offset=${offset}${imports ? "&imports=true" : ""}`;
-  return send(projectUrl(pid, `/reasoning${query}`)).then((r) => handle<ReasoningPage>(r));
+  return send(withLang(projectUrl(pid, `/reasoning${query}`), displayLanguage ?? "")).then((r) => handle<ReasoningPage>(r));
 }
 
 /** The last result's facts about one entity, for the detail panel. */
-export function getReasoningAbout(pid: string, iri: string, imports: boolean): Promise<ReasoningAbout> {
+export function getReasoningAbout(pid: string, iri: string, imports: boolean, displayLanguage?: string): Promise<ReasoningAbout> {
   const query = `?about=${encodeURIComponent(iri)}${imports ? "&imports=true" : ""}`;
-  return send(projectUrl(pid, `/reasoning${query}`)).then((r) => handle<ReasoningAbout>(r));
+  return send(withLang(projectUrl(pid, `/reasoning${query}`), displayLanguage ?? "")).then((r) => handle<ReasoningAbout>(r));
 }
 
 /** One fact's one-step reason (5.6). */
-export function getWhy(pid: string, fact: { s: string; p: string; o: string }): Promise<WhyReason> {
+export function getWhy(pid: string, fact: { s: string; p: string; o: string }, displayLanguage?: string): Promise<WhyReason> {
   const query = ["s", "p", "o"].map((k) => `${k}=${encodeURIComponent(fact[k as "s" | "p" | "o"])}`).join("&");
-  return send(projectUrl(pid, `/reasoning/why?${query}`)).then((r) => handle<WhyReason>(r));
+  return send(withLang(projectUrl(pid, `/reasoning/why?${query}`), displayLanguage ?? "")).then((r) => handle<WhyReason>(r));
 }
 
 /* --- data snapshots (csv-data-import) ---------------------------------------- */

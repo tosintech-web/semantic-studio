@@ -4,6 +4,7 @@ FILE: backend/app/shapes_form.py
 ================================================================================
 
 SUMMARY
+    Suggestion labels can use a read language while required languages stay unchanged.
     SHACL shapes as the learner's form sees them (shacl-authoring 5.3 to
     5.5): which node shapes a shapes document lists, each one read into the
     form's structure -- target, name, severity, message and one rule per
@@ -590,10 +591,12 @@ def suggestions(
     existing_rules: list[dict],
     names: Names,
     languages: list,
+    *, label_languages: Optional[list[str]] = None,
 ) -> dict:
     """The paths a rule can be about, and the rules the model suggests (5.4),
     without those an existing rule already says."""
-    paths = paths_for(model, target, names, languages)
+    reading_languages = languages if label_languages is None else label_languages
+    paths = paths_for(model, target, names, reading_languages)
     primary = languages[0] if languages else "en"
     by_path = {tuple(r["path"]): r for r in existing_rules}
     out: list[dict] = []
@@ -630,7 +633,7 @@ def suggestions(
     for item in out:
         known = labels.get(tuple(item["rule"]["path"]))
         item["rule"]["pathLabel"] = known["label"] if known else path_label(
-            model, tuple(URIRef(p) for p in item["rule"]["path"]), languages)
+            model, tuple(URIRef(p) for p in item["rule"]["path"]), reading_languages)
         item["rule"]["pathKind"] = known["kind"] if known else "other"
     return {"paths": paths, "suggestions": out}
 

@@ -409,6 +409,7 @@ leaves one behind.
 - Links to no row are counted when asked, against the switched-on snapshots, never stored. [Excel workbooks]
 
 **Reasoning**
+- Display-language result reads keep the checked graphs, revisions and owning project; they never rerun validation or inference. [Recorded results keep their checked basis]
 - Capture reasoning display facts at page/about/Why read boundaries; bulk explanation traversal keeps its legacy core, and public causes retain metadata. [Reasoning display facts]
 - One-step reasons and definition noun parts capture metadata only at public Why; keep all legacy candidate expressions and ordering intact. [One-step reasoning descriptions]
 - A Why disclosure owns state for its exact project and RDF fact; translated labels never change that identity. Read failures retain source objects and escaped details across UI locale changes. [Reasoning disclosure targets]

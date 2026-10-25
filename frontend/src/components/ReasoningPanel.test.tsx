@@ -39,12 +39,13 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectKind, ReasoningGroup, ReasoningResult } from "../types";
 
-const { openProject, listData, reasonProject, stopReasoning, getReasoningPage, getWhy } = vi.hoisted(() => ({
+const { openProject, listData, reasonProject, stopReasoning, getReasoningPage, getWhy, getReasoningResult } = vi.hoisted(() => ({
   openProject: vi.fn(),
   listData: vi.fn(),
   reasonProject: vi.fn(),
   stopReasoning: vi.fn(),
   getReasoningPage: vi.fn(),
+  getReasoningResult: vi.fn(),
   getWhy: vi.fn(),
 }));
 
@@ -55,13 +56,15 @@ vi.mock("../api", async (importOriginal) => ({
   reasonProject,
   stopReasoning,
   getReasoningPage,
+  getReasoningResult,
   getWhy,
 }));
 
 import { ApiError } from "../api";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
-import { projectStore } from "../state/projectStore";
+import { projectStore, useProjectSelector } from "../state/projectStore";
 import ReasoningPanel, { ReasonControls } from "./ReasoningPanel";
 
 const PID = "prj-0123456789ab";
@@ -189,7 +192,7 @@ describe("Reason and the results panel (Section 6)", () => {
     button.focus();
     await press("Reason");
     expect(said()).toBe("Reasoning started.");
-    expect(reasonProject).toHaveBeenCalledWith(PID, false, false);
+    expect(reasonProject).toHaveBeenCalledWith(PID, false, false, "en");
     // One button whose name changes: focus is still on it.
     expect(button.textContent).toBe("Stop");
     expect(document.activeElement).toBe(button);
@@ -297,7 +300,7 @@ describe("Reason and the results panel (Section 6)", () => {
     expect(screen.getByText("The model changed after this run.")).toBeTruthy();
     const again = pending();
     await press("Reason again");
-    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, true);
+    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, true, "en");
     await again.answer(result({ basis: { revision: 3, generation: 0, imports: true } }));
     expect(screen.queryByText("The model changed after this run.")).toBeNull();
   });
@@ -315,7 +318,7 @@ describe("Reason and the results panel (Section 6)", () => {
     expect(screen.getByText(/slower: about a second per 1,000 rows/)).toBeTruthy();
     const first = pending();
     await press("Reason");
-    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, false);
+    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, false, "en");
     await first.answer(result());
     await act(async () => {
       fireEvent.click(box);
@@ -323,7 +326,7 @@ describe("Reason and the results panel (Section 6)", () => {
     expect(box.checked).toBe(true);
     const second = pending();
     await press("Reason");
-    expect(reasonProject).toHaveBeenLastCalledWith(PID, true, false);
+    expect(reasonProject).toHaveBeenLastCalledWith(PID, true, false, "en");
     await second.answer(result());
   });
 
@@ -681,4 +684,31 @@ it.each([true, false])("renders result facts, problems and causes from metadata 
   expect(reasonProject).toHaveBeenCalledTimes(1); expect(getReasoningPage).not.toHaveBeenCalled();
   expect(container.querySelector(".reasoning img, .reasoning b")).toBeNull();
   localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("restarts result pages for new read names and ignores the old language page", async () => {
+  openProject.mockResolvedValueOnce({project:{id:PID,name:"Bilingual",createdAt:"",updatedAt:"",baseIri:X,prefix:"x",primaryLanguage:"en",languages:["ja"],documents:[],counts:{},kind:"ontology"},
+    documents:[{doc:"model",ontologyId:PID+"-model",revision:3,dirty:false,canUndo:false,canRedo:false,undoLabel:null,redoLabel:null,triples:39}],recovery:{available:false,draftTime:null}});
+  await projectStore.open(PID);onSelect=vi.fn();
+  const named=(id:string,name:string)=>({...fact(id,"Person",`${name} is a Person`),sLabel:name,
+    uiMessage:{code:"reasoning.fact.type",args:{s:[{text:name}],o:[{text:"Person"}]}}});
+  const english=Array.from({length:200},(_,i)=>named(`n${i}`,`English${i}`));
+  const japanese=Array.from({length:200},(_,i)=>named(`n${i}`,`日本語${i}`));
+  const en=result({problems:[],groups:[group("memberships",english,201)]});
+  const ja=result({problems:[],groups:[group("memberships",japanese,201)]});
+  reasonProject.mockResolvedValueOnce(en);getReasoningResult.mockResolvedValueOnce(ja);
+  function Display(){const language=useProjectSelector(s=>s.displayLanguage)??"en";return <DictionaryLanguageContext.Provider value={language}>{view("ontology",NOW)}</DictionaryLanguageContext.Provider>;}
+  render(<Display/>);await press("Reason");
+  let finish!:(value:unknown)=>void;
+  getReasoningPage.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+  await press("Show more");
+  await act(async()=>{projectStore.setDisplayLanguage("ja");});
+  expect(screen.getByRole("button",{name:"日本語0 is an instance of Person."})).toBeTruthy();
+  await act(async()=>{finish({...group("memberships",[named("late","Old language page")],201),offset:200,stale:false});});
+  expect(screen.queryByRole("button",{name:/Old language page/})).toBeNull();
+  getReasoningPage.mockResolvedValueOnce({...group("memberships",[named("late","日本語末尾")],201),offset:200,stale:false});
+  await press("Show more");
+  expect(getReasoningPage).toHaveBeenLastCalledWith(PID,"memberships",200,false,"ja");
+  expect(screen.getByRole("button",{name:"日本語末尾 is an instance of Person."})).toBeTruthy();
+  expect(reasonProject).toHaveBeenCalledTimes(1);
 });

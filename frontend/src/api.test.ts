@@ -211,6 +211,8 @@ const CALLS: Record<string, () => Promise<unknown>> = {
   // axioms-and-reasoning: a run, its Stop, a page, the facts about one
   // entity and one fact's reason.
   reasonProject: () => api.reasonProject("prj-1", false, false),
+  getValidationResult: () => api.getValidationResult("prj-1"),
+  getReasoningResult: () => api.getReasoningResult("prj-1", false),
   stopReasoning: () => api.stopReasoning("prj-1"),
   getReasoningPage: () => api.getReasoningPage("prj-1", "memberships", 200, false),
   getReasoningAbout: () => api.getReasoningAbout("prj-1", "http://example.org/A", false),
@@ -753,4 +755,22 @@ it.each(["root", "nested"])("keeps %s metadata and original detail on a document
   expect(error.detail).toEqual(detail);
   expect(error.uiMessage).toEqual(uiMessage);
   expect(error.message).toBe("Original export refusal <img>{limit}");
+});
+
+it("passes explicit project read languages without writing them into RDF actions or using a global preference", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    await api.getShapes("prj-one","ja");
+    await api.getShapeSuggestions("prj-one","https://synthetic.example/C",undefined,"ja");
+    await api.validateProject("prj-one","ja");
+    await api.reasonProject("prj-one",false,false,"ja");
+    await api.getReasoningPage("prj-one","memberships",200,false,"ja");
+    await api.getReasoningAbout("prj-one","https://synthetic.example/a",false,"ja");
+    await api.getWhy("prj-one",{s:"https://synthetic.example/a",p:"https://synthetic.example/p",o:"https://synthetic.example/C"},"ja");
+    await api.getCanvas("prj-one","model",null,"ja");
+    await api.getValidationResult("prj-one","ja");
+    await api.getReasoningResult("prj-one",false,"ja");
+    expect(recorded).toHaveLength(10);
+    for (const request of recorded) expect(new URL(request.url,"http://localhost").searchParams.get("lang")).toBe("ja");
+  } finally { api.setDisplayLanguage(null); }
 });

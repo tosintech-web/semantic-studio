@@ -4,6 +4,7 @@ FILE: frontend/src/components/ShapesView.tsx
 ================================================================================
 
 SUMMARY
+    Read names follow the selected dictionary language independently of UI locale.
     The Shapes view of a project (shacl-authoring 5.1, 5.2), in two columns
     (load-and-shapes 5.3): on the left the list of shapes, each a short
     sentence with its last result as a word and a coloured dot, with
@@ -64,6 +65,7 @@ EXPECTED OUTPUT
 */
 
 import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { getShapes } from "../api";
@@ -100,6 +102,7 @@ export default function ShapesView({
   onError,
 }: Props) {
   const { t, locale } = useI18n();
+  const readingLanguage = useDictionaryDisplayLanguage();
   const documents = useProjectSelector((s) => s.documents);
   const validation = useProjectSelector((s) => s.validation);
   const validating = useProjectSelector((s) => s.validating);
@@ -117,7 +120,7 @@ export default function ShapesView({
 
   useEffect(() => {
     let live = true;
-    getShapes(projectId)
+    (readingLanguage === undefined ? getShapes(projectId) : getShapes(projectId, readingLanguage))
       .then((l) => {
         if (!live) return;
         setListing(l);
@@ -127,7 +130,7 @@ export default function ShapesView({
     return () => {
       live = false;
     };
-  }, [projectId, revisions]);
+  }, [projectId, revisions, readingLanguage]);
 
   const shapes = listing?.shapes ?? [];
   // The selection is kept by id even while the list does not hold it: an

@@ -3307,3 +3307,5 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `canvasUI.shownFailed` | — | `frontend/src/canvas/useCanvasData.ts` | 表示項目変更失敗 | 11 | 以前の表示集合と原文を保持 |
 
 | `words.editing.the_shape` | — | `backend/app/editing.py` | 名前のない検証ルールの履歴・拒否 | 12 | 登録名は元の文字列を保持し所有する既定名だけ翻訳 |
+
+| `project.result_names_failed` | — | `frontend/src/state/projectStore.ts` | 結果表示名の読み替え失敗 | 12 | 元の結果・原因を保持し、操作を再実行しない |

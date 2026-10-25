@@ -4,6 +4,7 @@ FILE: frontend/src/components/InferredBlock.tsx
 ================================================================================
 
 SUMMARY
+    Read names follow the selected dictionary language independently of UI locale.
     The detail panel's **Inferred** block (axioms-and-reasoning 5.7): what a
     current reasoning result concluded about the selected entity -- its new
     kinds, memberships and links, each with **Why?** -- and, for a class,
@@ -35,6 +36,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useI18n } from "../i18n/I18nProvider";
 import { renderServerError } from "../i18n/serverMessage";
 import { useEffect, useState } from "react";
@@ -55,11 +57,12 @@ interface Props {
 }
 
 export default function InferredBlock({ projectId, iri, imports, resultKey, revision, label, onSelect }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const readingLanguage = useDictionaryDisplayLanguage();
   // The facts are kept with what they were fetched for, and shown only for
   // that: after a new run the last run's facts showed until the new ones
   // came (PR #55 review).
-  const key = [projectId, iri, imports, resultKey, revision].join("|");
+  const key = JSON.stringify([projectId, iri, imports, resultKey, revision, readingLanguage]);
   const [held, setHeld] = useState<{ key: string; about: ReasoningAbout } | null>(null);
   const [failure, setFailure] = useState<{ key: string; cause: unknown } | null>(null);
   const error = failure?.key === key ? failure : null;
@@ -68,7 +71,7 @@ export default function InferredBlock({ projectId, iri, imports, resultKey, revi
   useEffect(() => {
     let cancelled = false;
     setFailure(null);
-    getReasoningAbout(projectId, iri, imports)
+    (readingLanguage === undefined ? getReasoningAbout(projectId, iri, imports) : getReasoningAbout(projectId, iri, imports, readingLanguage))
       .then((found) => !cancelled && setHeld({ key, about: found }))
       .catch((cause: unknown) => !cancelled && setFailure({ key, cause }));
     return () => {
@@ -89,7 +92,7 @@ export default function InferredBlock({ projectId, iri, imports, resultKey, revi
   return (
     <section className="detail-inferred" aria-label={t("inferred.about", { name: label })}>
       <h3>
-        {t("inferred.title")} <span className="count">{about.facts.length}</span>
+        {t("inferred.title")} <span className="count">{new Intl.NumberFormat(locale).format(about.facts.length)}</span>
       </h3>
       {about.neverMembers && <p className="detail-note">{t("inferred.never", { name: label })}</p>}
       {about.facts.length === 0 && !about.neverMembers && (

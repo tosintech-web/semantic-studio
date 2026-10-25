@@ -4,6 +4,7 @@ FILE: backend/app/editing.py
 ================================================================================
 
 SUMMARY
+    Project view names accept an explicit read language without changing RDF languages.
     Unnamed-shape history/refusals preserve source ownership beside legacy names.
     The open project documents and every way one can change: typed commands
     producing triple deltas, a whole-document Turtle apply, undo and redo,
@@ -3703,6 +3704,8 @@ class EditingService:
         self.projects = projects
         self.store = store
         self._open: dict[str, dict[str, OpenDocument]] = {}
+        self._validation_runs: dict[str, object] = {}
+        self._validation_readings: dict[str, tuple[dict, shacl.ResultReading]] = {}
         self._lock = threading.Lock()
         # How many drafts the timer has written; the autosave tests read it.
         self.drafts_written = 0
@@ -3812,6 +3815,8 @@ class EditingService:
             raise Dirty(pid)
         with self._lock:
             self._open.pop(pid, None)
+            self._validation_runs.pop(pid, None)
+            self._validation_readings.pop(pid, None)
         for document in documents.values():
             with document.lock:
                 self._cancel(document)
@@ -4333,12 +4338,24 @@ class EditingService:
             raise NotOpen(pid)
         return documents
 
-    def shapes_view(self, pid: str) -> dict:
+    def display_languages(self, pid: str, lang: Optional[str] = None) -> list[str]:
+        """Read preference only; project primary and required languages stay put.
+
+        An omitted parameter keeps the legacy project read order. Explicit
+        choices use the same chosen/primary fallback as the other views.
+        """
+        documents = self._project_documents(pid)
+        manifest = self.projects.manifest(pid)
+        if lang is None:
+            return [manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
+        return list(documents["model"].ontology.label_langs(lang))
+
+    def shapes_view(self, pid: str, lang: Optional[str] = None) -> dict:
         """Every listed shape in the form's structure (5.1, 5.5). An empty
         list, not an error, while the project has no shapes.ttl."""
         documents = self._project_documents(pid)
         manifest = self.projects.manifest(pid)
-        languages = [manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
+        languages = self.display_languages(pid, lang)
         model_doc = documents["model"]
         shapes_doc = documents.get("shapes")
         if shapes_doc is None:
@@ -4358,12 +4375,13 @@ class EditingService:
                 "shapes": shapes,
             }
 
-    def shape_suggestions(self, pid: str, target: Optional[str], shape: Optional[str] = None) -> dict:
+    def shape_suggestions(self, pid: str, target: Optional[str], shape: Optional[str] = None, *, lang: Optional[str] = None) -> dict:
         """What a rule can be about for a target, and the rules the model
         suggests that the shape does not already have (5.4)."""
         documents = self._project_documents(pid)
         manifest = self.projects.manifest(pid)
         languages = [manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
+        reading_languages = self.display_languages(pid, lang)
         model_doc = documents["model"]
         shapes_doc = documents.get("shapes")
         # The shapes document's lock before the model's, the order every
@@ -4373,15 +4391,15 @@ class EditingService:
             model = self._model_view(model_doc)
             ctx = Context(model_doc.graph, manifest, lambda: None)
             target_iri = ctx.iri(target, "class")
-            names = lambda iri: pick_label_in(model, iri, languages)[0]  # noqa: E731
+            names = lambda iri: pick_label_in(model, iri, reading_languages)[0]  # noqa: E731
             existing: list = []
             if shape and shapes_doc is not None:
                 node = shapes_form.find_shape(shapes_doc.graph, shape)
                 if node is not None:
-                    existing = shapes_form.read_rules(shapes_doc.graph, node, model, names, languages)[0]
-            return shapes_form.suggestions(model, target_iri, existing, names, languages)
+                    existing = shapes_form.read_rules(shapes_doc.graph, node, model, names, reading_languages)[0]
+            return shapes_form.suggestions(model, target_iri, existing, names, languages, label_languages=reading_languages)
 
-    def validate(self, pid: str, timeout: Optional[float] = None) -> dict:
+    def validate(self, pid: str, timeout: Optional[float] = None, *, lang: Optional[str] = None) -> dict:
         """Check the model, unsaved changes and resolved imports included,
         against every shape (5.6). Copies are taken under each document's
         lock, one at a time, and checked outside both, so a long check never
@@ -4390,8 +4408,12 @@ class EditingService:
         The switched-on data snapshots are checked too (csv-data-import
         5.6), and each panel says which of them it found individuals in."""
         documents = self._project_documents(pid)
+        run = object()
+        with self._lock:
+            if self._open.get(pid) is documents:
+                self._validation_runs[pid] = run
         manifest = self.projects.manifest(pid)
-        languages = [manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
+        languages = self.display_languages(pid, lang)
         model_doc = documents["model"]
         data = Graph()
         with model_doc.lock:
@@ -4415,10 +4437,28 @@ class EditingService:
                 for t in shapes_doc.graph:
                     shapes.add(t)
                 shapes_revision = shapes_doc.ontology.revision
-        result = shacl.validate(data, shapes, languages, timeout, sources=sources)
+        captured = []
+        result = shacl.validate(data, shapes, languages, timeout, sources=sources, on_reading=captured.append)
         result["revisions"] = {"model": model_revision, "shapes": shapes_revision, "data": generation}
         result["dataSources"] = [info for _, info in snapshots]
+        reading = captured[0] if captured else shacl.ResultReading(result, languages)
+        with self._lock:
+            # A close/reopen or a later check owns its own result. A late
+            # completion may answer its caller but cannot replace that result.
+            if self._open.get(pid) is documents and self._validation_runs.get(pid) is run:
+                self._validation_readings[pid] = (documents, reading)
         return result
+
+    def validation_reading(self, pid: str, lang: Optional[str] = None) -> Optional[dict]:
+        """The recorded check in a read language, preserving its revision basis."""
+        documents = self._project_documents(pid)
+        languages = self.display_languages(pid, lang)
+        with self._lock:
+            found = self._validation_readings.get(pid)
+            if found is None or found[0] is not documents:
+                return None
+            reading = found[1]
+        return reading.for_languages(languages)
 
     # --- reasoning (axioms-and-reasoning Stage A, 5.1 to 5.7) ---------------------------
 
@@ -4429,7 +4469,7 @@ class EditingService:
         view = imports_service.merged(ontology) if imports and load_state(ontology) else None
         return reasoning.Key(ontology.revision, self.snapshots.generation(pid), imports, include_data, view)
 
-    def reason(self, pid: str, include_data: bool, imports: bool, limit: Optional[float] = None) -> dict:
+    def reason(self, pid: str, include_data: bool, imports: bool, limit: Optional[float] = None, *, lang: Optional[str] = None) -> dict:
         """One run over the model with its examples, its imports when the
         switch is on, and its snapshots when asked (5.2). Copies are taken
         under the model's lock and reasoned over outside it, so the model
@@ -4440,7 +4480,7 @@ class EditingService:
         manifest = self.projects.manifest(pid)
         if manifest.get("kind") == "taxonomy":
             raise ReasoningRefused("Reasoning is for ontology projects.", ui_message=make_message("reasoning.ontology_only"))
-        languages = [manifest.get("primaryLanguage", "en"), *manifest.get("languages", [])]
+        languages = self.display_languages(pid, lang)
         model_doc = documents["model"]
         handle = reasoning.service.begin(pid)
         outcome = None

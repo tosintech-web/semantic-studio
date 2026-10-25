@@ -4,6 +4,7 @@ FILE: backend/app/routers/projects.py
 ================================================================================
 
 SUMMARY
+    Display-language parameters choose read names without changing project languages.
     The HTTP surface for projects and editing (authoring-foundations): list,
     create, rename, duplicate, trash and export projects, and change their
     kind, ontology or taxonomy (relationships 5.1); open and close them;
@@ -423,38 +424,46 @@ def recover(pid: str, body: Recover) -> dict:
 
 
 @router.get("/{pid}/shapes")
-def get_shapes(pid: str) -> dict:
+def get_shapes(pid: str, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """Every shape in shapes.ttl in the form's structure, those the form
     cannot edit marked read-only with why (shacl-authoring 5.1, 5.5)."""
     with _errors():
-        return editing_service.shapes_view(pid)
+        return editing_service.shapes_view(pid, lang)
 
 
 @router.get("/{pid}/shapes/suggestions")
-def get_shape_suggestions(pid: str, target: Optional[str] = None, shape: Optional[str] = None) -> dict:
+def get_shape_suggestions(pid: str, target: Optional[str] = None, shape: Optional[str] = None,
+                          lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """What a rule can be about for a target class, and the rules the model
     suggests that `shape` does not already have (5.4). `target` is checked
     after the project, so an id not issued is 404 like everywhere else."""
     with _errors():
-        return editing_service.shape_suggestions(pid, target, shape)
+        return editing_service.shape_suggestions(pid, target, shape, lang=lang)
+
+
+@router.get("/{pid}/validate")
+def get_validation(pid: str, lang: Optional[str] = ontologies.LANG_PARAM) -> Optional[dict]:
+    """Read the last check's names in another language; never run a check."""
+    with _errors():
+        return editing_service.validation_reading(pid, lang)
 
 
 @router.post("/{pid}/validate")
-def validate(pid: str) -> dict:
+def validate(pid: str, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """Check the model with its unsaved changes and resolved imports against
     every shape, on demand only (5.6, D-094). Reads; changes nothing."""
     with _errors():
-        return editing_service.validate(pid)
+        return editing_service.validate(pid, lang=lang)
 
 
 @router.post("/{pid}/reasoning")
-def reason(pid: str, body: Optional[Reason] = None) -> dict:
+def reason(pid: str, body: Optional[Reason] = None, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """One run of the reasoner (axioms-and-reasoning 5.2). Blocks until the
     run ends, as Validate does; 409 while another runs for the project.
     Reads; changes nothing in the model, its revision or its history."""
     body = body or Reason()
     with _errors():
-        return editing_service.reason(pid, body.includeData, body.imports)
+        return editing_service.reason(pid, body.includeData, body.imports, lang=lang)
 
 
 @router.delete("/{pid}/reasoning")
@@ -485,11 +494,12 @@ def get_reasoning(
     offset: int = 0,
     about: Optional[str] = None,
     imports: bool = ontologies.IMPORTS_PARAM,
+    lang: Optional[str] = ontologies.LANG_PARAM,
 ) -> dict:
     """The last result: whole, a page of one group, or the facts about one
     entity; each says whether it is stale for the view asking (5.3)."""
     with _errors():
-        outcome = _last(pid)
+        outcome = _last(pid).for_languages(editing_service.display_languages(pid, lang))
         current = editing_service.reasoning_key(pid, imports)
         if about is not None:
             return outcome.about(about, current)
@@ -506,12 +516,13 @@ def get_reasoning(
 
 
 @router.get("/{pid}/reasoning/why")
-def why(pid: str, s: Optional[str] = None, p: Optional[str] = None, o: Optional[str] = None) -> dict:
+def why(pid: str, s: Optional[str] = None, p: Optional[str] = None, o: Optional[str] = None,
+        lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """One fact's one-step reason (5.6); 404 for a fact the result does not
     hold. The fact is optional to FastAPI so that an id the server never
     issued is 404 before anything about the query is said."""
     with _errors():
-        outcome = _last(pid)
+        outcome = _last(pid).for_languages(editing_service.display_languages(pid, lang))
         if s is None or p is None or o is None:
             raise UiHTTPException(
                 status_code=422,

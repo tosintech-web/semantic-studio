@@ -4,6 +4,7 @@ FILE: backend/app/shacl.py
 ================================================================================
 
 SUMMARY
+    Recorded validation reports can be read in another label language without a new check.
     Validation on demand (shacl-authoring 5.6, 5.7, D-092, D-094): a
     project's data -- its model with unsaved changes and its resolved
     imports -- checked against every shape in its shapes document with
@@ -78,6 +79,7 @@ from __future__ import annotations
 
 from .messages import literal_part, make_message, word_part, MessageText
 import contextvars
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeout
@@ -926,9 +928,33 @@ def panels(
     return out
 
 
+class ResultReading:
+    """The last check's display views; formatting never checks the model again.
+
+    The renderer closes over the private checked graphs and recorded report.
+    Returned API values remain ordinary dictionaries with the original basis.
+    """
+    def __init__(self, result: dict, languages, render: Optional[Callable] = None):
+        self.result = result
+        self.languages = tuple(languages)
+        self.render = render
+        self._views: dict = {}
+        self._lock = threading.Lock()
+
+    def for_languages(self, languages) -> dict:
+        chosen = tuple(languages)
+        if self.render is None or chosen == self.languages:
+            return self.result
+        with self._lock:
+            if chosen not in self._views:
+                self._views[chosen] = {**self.result, "shapes": self.render(list(chosen))}
+            return self._views[chosen]
+
+
 def validate(
     data: Graph, shapes: Graph, languages: list, timeout: Optional[float] = None,
     sources: Optional[dict] = None,
+    *, on_reading: Optional[Callable[[ResultReading], None]] = None,
 ) -> dict:
     """Check the data against every shape, under the time limit (5.6)."""
     # A plain Graph, never a Dataset: rdflib follows a SPARQL constraint's
@@ -941,26 +967,31 @@ def validate(
     listed = listed_shapes(shapes)
     started = time.perf_counter()
 
-    def work() -> list:
+    def work():
         named, run_listed, ids = named_shapes(shapes, listed)
         results, errors = run_shapes(data, named, run_listed) if listed else ([], {})
-        return panels(data, named, run_listed, results, errors, languages, ids, sources)
+        def render(chosen):
+            return panels(data, named, run_listed, results, errors, chosen, ids, sources)
+        return render(languages), render
 
     base = {"statements": len(data), "shapeCount": len(listed)}
     pool = ThreadPoolExecutor(max_workers=1)
     try:
         future = pool.submit(contextvars.copy_context().run, work)
         try:
-            shown = future.result(timeout=limit)
+            shown, render = future.result(timeout=limit)
         except FuturesTimeout:
             # rdflib and pySHACL cannot be interrupted; the thread is left to
             # finish on its own and its answer is dropped, as SPARQL's is.
             return {**base, "stopped": True, "shapes": [], "durationMs": round(limit * 1000)}
     finally:
         pool.shutdown(wait=False, cancel_futures=True)
-    return {
+    result = {
         **base,
         "stopped": False,
         "shapes": shown,
         "durationMs": round((time.perf_counter() - started) * 1000, 1),
     }
+    if on_reading is not None:
+        on_reading(ResultReading(result, languages, render))
+    return result

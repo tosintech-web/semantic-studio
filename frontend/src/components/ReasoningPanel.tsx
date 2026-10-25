@@ -4,6 +4,7 @@ FILE: frontend/src/components/ReasoningPanel.tsx
 ================================================================================
 
 SUMMARY
+    Read names follow the selected dictionary language independently of UI locale.
     Reasoning on the Edit page (axioms-and-reasoning 5.1 to 5.7, Section 6;
     edit-page-rework 5.4, 5.6): **Reason**, which becomes **Stop** while a
     run goes, and **Show inferred**, in the canvas toolbar (and in the side
@@ -62,6 +63,7 @@ EXPECTED OUTPUT
 */
 
 import { renderServerError } from "../i18n/serverMessage";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { getReasoningPage } from "../api";
@@ -302,6 +304,8 @@ function Results({
   onSelect: (iri: string) => void;
 }) {
   const { t, locale } = useI18n();
+  const namesToken = useProjectSelector(s => s.reasoningNamesToken);
+  const readingLanguage = useDictionaryDisplayLanguage();
   if (result.status !== "done") {
     const ending = finishedLine(result, locale);
     return <>
@@ -320,7 +324,7 @@ function Results({
           <h4>{t("reasonUI.problems", { count: result.problems.length })}</h4>
           <ul>
             {result.problems.map((problem, i) => (
-              <Problem key={`${problem.kind}|${problem.subject}|${i}`} projectId={projectId} problem={problem} onSelect={onSelect} />
+              <Problem key={JSON.stringify([projectId, token, namesToken, readingLanguage, problem.kind, problem.subject, i])} projectId={projectId} problem={problem} onSelect={onSelect} />
             ))}
           </ul>
         </section>
@@ -328,7 +332,7 @@ function Results({
       {result.groups.map((group) =>
         group.total > 0 ? (
           <Group
-            key={`${token}|${group.kind}`}
+            key={JSON.stringify([projectId, token, namesToken, readingLanguage, group.kind])}
             projectId={projectId}
             group={group}
             imports={imports}
@@ -338,7 +342,7 @@ function Results({
         ) : null,
       )}
       {result.importedFacts.total > 0 && (
-        <Imported key={`${token}|imported`} projectId={projectId} group={result.importedFacts} imports={imports} onSelect={onSelect} />
+        <Imported key={JSON.stringify([projectId, token, namesToken, readingLanguage, "imported"])} projectId={projectId} group={result.importedFacts} imports={imports} onSelect={onSelect} />
       )}
     </>
   );
@@ -417,6 +421,7 @@ function Problem({
 /** The pages of one group: the first came with the result, Show more asks
  *  for the next 200. */
 function usePages(projectId: string, group: ReasoningGroup, imports: boolean) {
+  const readingLanguage = useDictionaryDisplayLanguage();
   const [items, setItems] = useState<ReasoningFact[]>(group.items);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{ error: unknown } | null>(null);
@@ -425,7 +430,7 @@ function usePages(projectId: string, group: ReasoningGroup, imports: boolean) {
   const more = () => {
     setLoading(true);
     setError(null);
-    getReasoningPage(projectId, group.kind, items.length, imports)
+    (readingLanguage === undefined ? getReasoningPage(projectId, group.kind, items.length, imports) : getReasoningPage(projectId, group.kind, items.length, imports, readingLanguage))
       .then((page) =>
         setItems((current) => {
           from.current = current.length;

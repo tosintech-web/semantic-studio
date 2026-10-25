@@ -4,6 +4,7 @@ FILE: frontend/src/components/ProjectHeader.tsx
 ================================================================================
 
 SUMMARY
+    Failed name-only result reads report once and can retry the selected language.
     The header's context row while a project is open (authoring-foundations
     5.2, 5.4.2; edit-page-rework 5.2): one row, never wrapped -- the
     project's name, a document switcher, the save status as a dot and a
@@ -112,6 +113,11 @@ export default function ProjectHeader({
   const { t, locale } = useI18n();
   const state = useProjectStore();
   const project = state.project!;
+  const readErrorTarget = useRef(onError);
+  readErrorTarget.current = onError;
+  useEffect(() => {
+    if (state.resultReadError) readErrorTarget.current(state.resultReadError);
+  }, [state.resultReadError]);
   const current = activeDocument(state);
   const status = saveStatus(state);
   const [langOpen, setLangOpen] = useState(false);
@@ -392,6 +398,9 @@ export default function ProjectHeader({
                       name="project-display-language"
                       checked={display === lang}
                       onChange={() => projectStore.setDisplayLanguage(lang)}
+                      onClick={() => {
+                        if (display === lang && state.resultReadError) projectStore.setDisplayLanguage(lang);
+                      }}
                     />
                     {lang}
                     {lang === project.primaryLanguage ? t("projectHeader.primary") : ""}

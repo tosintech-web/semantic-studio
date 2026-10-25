@@ -18,6 +18,7 @@ EXPECTED OUTPUT
 */
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 import { I18nProvider } from "../i18n/I18nProvider";
 import UiLanguageSelect from "./UiLanguageSelect";
 import InferredBlock from "./InferredBlock";
@@ -65,4 +66,21 @@ it("translates retained about facts and selects the opposite original IRI", asyn
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(screen.getByRole("button", { name: "対象 is linked to 相手 by 関係." })).toBe(link);
   fireEvent.click(link); expect(select).toHaveBeenCalledWith(fact.o); expect(getReasoningAbout).toHaveBeenCalledTimes(1);
+});
+
+it("reads about names for a changed dictionary language while retaining original IRIs", async () => {
+  const record = (language: string | undefined): ReasoningAbout => ({ iri: props.iri, neverMembers: false, stale: false, facts: [{
+    s: props.iri, p: "https://example.org/p", o: "https://example.org/b", sentence: "original about",
+    sLabel: language === "ja" ? "対象" : "Subject", pLabel: "関係", oLabel: "相手",
+    uiMessage: { code: "reasoning.fact.link", args: { s: [{ text: language === "ja" ? "対象" : "Subject" }], p: [{text:"関係"}], o:[{text:"相手"}] } },
+  }] });
+  getReasoningAbout.mockImplementation((_pid,_iri,_imports,language) => Promise.resolve(record(language)));
+  const select=vi.fn();
+  const draw=(language:string)=><DictionaryLanguageContext.Provider value={language}><InferredBlock {...props} onSelect={select}/></DictionaryLanguageContext.Provider>;
+  const view=render(draw("en"));
+  await screen.findByRole("button",{name:"Subject is linked to 相手 by 関係."});
+  await act(async()=>{view.rerender(draw("ja"));});
+  const link=screen.getByRole("button",{name:"対象 is linked to 相手 by 関係."});
+  fireEvent.click(link);expect(select).toHaveBeenCalledWith("https://example.org/b");
+  expect(getReasoningAbout).toHaveBeenLastCalledWith(props.projectId,props.iri,false,"ja");
 });
