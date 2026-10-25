@@ -300,6 +300,7 @@ leaves one behind.
 - Managed SPARQL basic patterns check their scoped stop between bindings through `CUSTOM_EVALS`, using rdflib's own ordering/evaluator; outside interruption and the SERVICE broker remain required. [P1 stop inside basic-pattern evaluation]
 
 **Sentences**
+- Partial graph-result notes retain typed counts and render in the current UI language; they never capture an English sentence. [Partial graph result notes keep typed counts]
 - HTTP refusal metadata is attached at its source, preserving status and detail; an unknown Turtle line has a format-only descriptor, never an invented line. [Source-owned HTTP refusal metadata]
 - Binary download failures use the shared API error boundary before reading a blob; original detail and metadata must survive. [Documentation refusal facts]
 - Query/network errors retain source codes through parser and SERVICE layers; new UI classification never matches a completed English refusal. Query failures keep their cause and clear running before a retry. [Query and network failure facts]

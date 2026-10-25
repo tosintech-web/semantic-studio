@@ -2580,6 +2580,7 @@ export const ja: Catalog = {
   "app.expansion.one.partial": "{added}件を追加しました。全{neighbors}件のつながりのうち、つながりの多い{budget}件を表示します。全{total}件中{drawn}件を描画しています。",
   "app.expansion.many.complete": "{added}件を追加しました。全{total}件中{drawn}件を描画しています。",
   "app.expansion.many.partial": "{added}件を追加しました。全{neighbors}件のつながりのうち、つながりの多い{budget}件を表示します。全{total}件中{drawn}件を描画しています。",
+  "query.undrawn": "グラフには、未描画だった検索結果{total}件のうち{drawn}件を表示しています。",
   "query.shownOnGraph.one": "検索結果{count}件をグラフに表示しました。",
   "query.shownOnGraph.many": "検索結果{count}件をグラフに表示しました。",
   "app.kindOntology": "「{name}」をオントロジーとして扱います。モデルの内容は保持されています。",

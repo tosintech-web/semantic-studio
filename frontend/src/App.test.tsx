@@ -3865,6 +3865,29 @@ describe("App: the graph frames the results (query-page-rework 5.2)", () => {
     expect(liveRegion()).toContain("200 results shown on the graph.");
   });
 
+  it("rewords the retained partial graph result count without rerunning or changing explicit dictionary language", async () => {
+    localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+    const hidden = Array.from({ length: 1340 }, (_, i) => `http://x/H${i}`);
+    queryAnswer.results = rows(hidden);
+    getGraph.mockResolvedValue(DRAWN);
+    getResultNodes.mockResolvedValue({ nodes: hidden.slice(0, 200).map(id => ({ id, label: id, kind: "class", degree: 1 })), edges: [], total: 1340, drawn: 200 });
+    try {
+      await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+      await act(async () => { fireEvent.click(cardVerb("Explore", "FIBO")); });
+      await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Apply display language" })); });
+      await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Query" })); });
+      await click("fake explicit run");
+      expect(screen.getByTestId("results-note").textContent).toBe("The graph shows 200 of the 1,340 results it had not drawn.");
+      const graphCalls = getGraph.mock.calls.length;
+      const expansionCalls = getResultNodes.mock.calls.length;
+      await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } }); });
+      expect(screen.getByTestId("results-note").textContent).toBe("グラフには、未描画だった検索結果1,340件のうち200件を表示しています。");
+      expect(getGraph).toHaveBeenCalledTimes(graphCalls);
+      expect(getResultNodes).toHaveBeenCalledTimes(expansionCalls);
+      expect((screen.getByRole("combobox", { name: "辞書の表示言語" }) as HTMLInputElement).value).toBe("en");
+    } finally { localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+  });
+
   it("an answer for a run already cleared draws nothing", async () => {
     queryAnswer.results = rows(["http://x/Coupon"]);
     let resolve!: (v: VizNodes) => void;

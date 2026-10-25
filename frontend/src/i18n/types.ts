@@ -1851,6 +1851,7 @@ export interface MessageArgs extends ServerMessageArgs {
   "app.expansion.one.partial": { added: number; budget: number; neighbors: number; drawn: number; total: number };
   "app.expansion.many.complete": { added: number; drawn: number; total: number };
   "app.expansion.many.partial": { added: number; budget: number; neighbors: number; drawn: number; total: number };
+  "query.undrawn": { drawn: number; total: number };
   "query.shownOnGraph.one": { count: number };
   "query.shownOnGraph.many": { count: number };
   "app.kindOntology": { name: string };

@@ -2580,6 +2580,7 @@ export const en: Catalog = {
   "app.expansion.one.partial": "Added {added} entity. Showing the {budget} most connected of {neighbors} connections. {drawn} of {total} drawn.",
   "app.expansion.many.complete": "Added {added} entities. {drawn} of {total} drawn.",
   "app.expansion.many.partial": "Added {added} entities. Showing the {budget} most connected of {neighbors} connections. {drawn} of {total} drawn.",
+  "query.undrawn": "The graph shows {drawn} of the {total} results it had not drawn.",
   "query.shownOnGraph.one": "{count} result shown on the graph.",
   "query.shownOnGraph.many": "{count} results shown on the graph.",
   "app.kindOntology": "{name} is now an ontology. Nothing in the model was changed.",

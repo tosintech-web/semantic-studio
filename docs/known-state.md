@@ -2909,3 +2909,17 @@ controls, chosen columns, inline drafts and focus until names arrive. Old
 responses cannot replace the latest reading, including a field-created
 callback. UI language changes only rerender messages and do not reread files,
 run previews or import data. Browser focus/AX checks remain in the P1 gate.
+
+### Partial graph result notes keep typed counts (P1)
+
+A partial query-result expansion keeps its drawn/total counts as a typed
+notice rather than a completed English sentence. The results header renders
+it with the current UI translator, including numeric grouping, without
+requesting result nodes again or moving the camera. The legacy pure sentence
+helper keeps its default English contract. A mounted test covers a 200-of-1,340
+result through a UI-language switch with no new graph/expansion request,
+while the explicitly selected dictionary language stays English.
+
+The existing Library language rule remains as specified: an unselected
+dictionary follows UI language, while an explicit per-dictionary choice
+survives UI-language changes and reloads.

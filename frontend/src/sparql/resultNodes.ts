@@ -128,7 +128,11 @@ export function shownOnGraph(count: number, t: Translator = englishTranslator): 
 
 /** The results header's sentence when more were hidden than were drawn
  *  (house rule 6: the true total), or null when every one was drawn. */
-export function undrawnSentence(drawn: number, total: number): string | null {
-  if (total <= drawn) return null;
-  return `The graph shows ${drawn.toLocaleString()} of the ${total.toLocaleString()} results it had not drawn.`;
+export function undrawnNotice(drawn: number, total: number): UiMessage | null {
+  return total > drawn ? makeUiMessage("query.undrawn", { drawn, total }) : null;
+}
+
+export function undrawnSentence(drawn: number, total: number, t: Translator = englishTranslator): string | null {
+  const notice = undrawnNotice(drawn, total);
+  return notice ? renderUiMessage(notice, t) : null;
 }

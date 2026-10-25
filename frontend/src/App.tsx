@@ -256,7 +256,7 @@ import type {
   VizGraph,
   VizNeighborhood,
 } from "./types";
-import { resultIris, sendable, shownOnGraphNotice, undrawnSentence } from "./sparql/resultNodes";
+import { resultIris, sendable, shownOnGraphNotice, undrawnNotice } from "./sparql/resultNodes";
 
 // The modeling canvas (visual-modeling 5.4, D-086): its own chunk, React Flow
 // with it, fetched from the local server the first time a canvas opens in a
@@ -514,7 +514,7 @@ export default function App() {
   // no camera); and the header's sentence when more were hidden than drawn.
   const [queryResults, setQueryResults] = useState<ReadonlySet<string>>(NO_RESULTS);
   const [frameTick, setFrameTick] = useState(0);
-  const [resultsNote, setResultsNote] = useState<string | null>(null);
+  const [resultsNote, setResultsNote] = useState<UiMessage | null>(null);
   // Which run is current, so a /nodes answer for one replaced by a newer
   // run, or cleared, draws and says nothing.
   const resultsRun = useRef(0);
@@ -1378,7 +1378,7 @@ export default function App() {
         if (answer.nodes.length > 0) {
           setExpansion((prev) => ({ data: answer, token: (prev?.token ?? 0) + 1 }));
         }
-        setResultsNote(undrawnSentence(answer.drawn, answer.total));
+        setResultsNote(undrawnNotice(answer.drawn, answer.total));
         finish(shown + answer.drawn);
       })
       .catch(() => {
@@ -2418,7 +2418,7 @@ export default function App() {
               onResults={onQueryResults}
               resultsOnGraph={resultsOnGraph}
               onFrameResults={frameResults}
-              resultsNote={resultsNote}
+              resultsNote={resultsNote ? renderUiMessage(resultsNote, t) : null}
               questions={exampleQuestions}
             />
           ) : mode === "explore" ? (
