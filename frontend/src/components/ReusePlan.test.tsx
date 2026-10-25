@@ -229,3 +229,22 @@ it("drops an old target's plan and parent draft while the next target is being r
   expect(screen.getByRole("textbox",{name:"What is every Next employee and Team? For example, Worker"})).toBe(current);
   localStorage.removeItem("semantic-studio.uiLocale.v1");
 });
+
+it("recovers a failed name read when the dictionary language is changed", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en"); planShare.mockReset();
+  const property = {iri:"https://synthetic.example/p",label:"hasName"};
+  planShare.mockRejectedValueOnce(new Error("Original read failure")).mockResolvedValue({revision:2,plan:{
+    case:"D",property:{...property,kind:"attribute"},domain:{form:"one",classes:[{iri:"https://synthetic.example/C",label:"従業員",type:"rdfs"}]},
+    choices:{subclass:false,union:false,parent:true,up:[]},imported:[],turtle:null,
+  }});
+  const draw = (language:string) => <DictionaryLanguageContext.Provider value={language}><I18nProvider>
+    <ReusePlan pid="prj-synthetic" ontologyId="model" property={property} cls={{iri:"https://synthetic.example/D",label:"Team"}}
+      runner={{busy:false,errors:{},run:vi.fn(),clear:vi.fn(),alive:()=>true}} onDone={vi.fn()} onCancel={vi.fn()} />
+    </I18nProvider></DictionaryLanguageContext.Provider>;
+  const view = render(draw("en"));
+  await screen.findByText("Original read failure", {selector:"pre"});
+  await act(async () => { view.rerender(draw("ja")); });
+  expect(screen.queryByText("Original read failure", {selector:"pre"})).toBeNull();
+  expect(screen.getByRole("textbox",{name:"What is every 従業員 and Team? For example, Worker"})).toBeTruthy();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});

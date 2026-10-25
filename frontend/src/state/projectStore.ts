@@ -4,6 +4,7 @@ FILE: frontend/src/state/projectStore.ts
 ================================================================================
 
 SUMMARY
+    Project sessions fence old edit/save responses; model changes refresh data names.
     Name-only result and snapshot reads are scoped to their owner, language and request.
     The open project and its documents, as a small external store read through
     useSyncExternalStore (D-084): which project is open, each document's
@@ -273,7 +274,9 @@ let snapshot: ProjectSnapshot = EMPTY;
 // Which validation is the current one. Opening, closing or forgetting a
 // project moves it on, so a check still running for the old project is
 // ignored when it answers (shacl-authoring Stage A follow-up 3).
+let projectSession = 0;
 let dataReadRun = 0;
+let dataReadPending = false;
 let resultReadRun = 0;
 let validationRun = 0;
 // The same for reasoning: a run that outlives its project is ignored.
@@ -461,8 +464,20 @@ function withDocument(next: ProjectDocumentState): ProjectDocumentState[] {
   return snapshot.documents.map((d) => (d.doc === next.doc ? next : d));
 }
 
+function refreshDataNames(state: ProjectDocumentState): void {
+  if (state.doc !== "model") return;
+  const needed = dataReadPending || Boolean(snapshot.data?.snapshots.length);
+  dataReadRun++;
+  dataReadPending = false;
+  // Empty known lists have no names to update. A pending first read still
+  // needs a replacement, so a revision change cannot strand the Data tab.
+  // Background failures stay visible in that tab, preserving the edit notice.
+  if (needed) void projectStore.loadData(false).catch(() => undefined);
+}
+
 function afterChange(result: ChangeResult, operation: "applied" | "undo" | "redo"): void {
   set({ documents: withDocument(result.state) });
+  refreshDataNames(result.state);
   const status = saveStatus(snapshot);
   const verb = operation === "undo" ? "Undid: " : operation === "redo" ? "Redid: " : "";
   announceDetail({ kind: "change", label: result.label, uiMessage: result.uiMessage, operation, status },
@@ -486,10 +501,12 @@ export const projectStore = {
   /** Open a project and make it current. Returns the model's ontology id. */
   async open(pid: string): Promise<string> {
     const opened = await openProject(pid);
+    projectSession++;
     validationRun++;
     reasoningRun++;
     resultReadRun++;
     dataReadRun++;
+    dataReadPending = false;
     set({
       ...EMPTY,
       announcement: snapshot.announcement,
@@ -510,11 +527,14 @@ export const projectStore = {
 
   /** Fetch the open project's data snapshots. Kept only if the project
    *  asked about is still the open one. */
-  async loadData(): Promise<SnapshotListing | null> {
+  async loadData(announceFailure = true): Promise<SnapshotListing | null> {
     const project = requireProject();
     const run = ++dataReadRun;
+    dataReadPending = true;
     const language = snapshot.displayLanguage ?? project.primaryLanguage;
-    const stale = () => run !== dataReadRun || snapshot.project?.id !== project.id
+    const revision = snapshot.documents.find(d => d.doc === "model")?.revision;
+    const stale = () => revision !== snapshot.documents.find(d => d.doc === "model")?.revision
+      || run !== dataReadRun || snapshot.project?.id !== project.id
       || (snapshot.displayLanguage ?? snapshot.project?.primaryLanguage) !== language;
     let listing: SnapshotListing;
     try {
@@ -525,8 +545,10 @@ export const projectStore = {
       // read "Reading the project's data…" for ever (PR #53 review).
       const text = `The data snapshots could not be read: ${failureReason(e)}`;
       set({ dataError: text, dataErrorCause: { error: e } });
-      announce(makeUiMessage("dataSnapshot.readFailed"), text);
+      if (announceFailure) announce(makeUiMessage("dataSnapshot.readFailed"), text);
       throw e;
+    } finally {
+      if (run === dataReadRun) dataReadPending = false;
     }
     if (stale()) return null;
     set({ data: listing, dataError: null, dataErrorCause: null });
@@ -549,10 +571,12 @@ export const projectStore = {
     const project = snapshot.project;
     await flushAll();
     if (project) await closeProject(project.id, discard);
+    projectSession++;
     validationRun++;
     reasoningRun++;
     resultReadRun++;
     dataReadRun++;
+    dataReadPending = false;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -560,10 +584,12 @@ export const projectStore = {
   /** Forget the open project without telling the server: for a project that
    *  was deleted or failed to open. */
   reset(): void {
+    projectSession++;
     validationRun++;
     reasoningRun++;
     resultReadRun++;
     dataReadRun++;
+    dataReadPending = false;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -583,13 +609,17 @@ export const projectStore = {
     const project = requireProject();
     // The editor's unapplied text is not touched here: the header asks
     // "Apply, discard, or stay?" before an undo, as every other exit does.
+    const owner = projectSession;
     const result = await undoChange(project.id, snapshot.activeDoc);
+    if (owner !== projectSession) return;
     afterChange(result, "undo");
   },
 
   async redo(): Promise<void> {
     const project = requireProject();
+    const owner = projectSession;
     const result = await redoChange(project.id, snapshot.activeDoc);
+    if (owner !== projectSession) return;
     afterChange(result, "redo");
   },
 
@@ -611,16 +641,20 @@ export const projectStore = {
   ): Promise<ChangeResult> {
     const project = requireProject();
     const target = doc ?? snapshot.activeDoc;
+    const owner = projectSession;
     const language = snapshot.displayLanguage ?? project.primaryLanguage;
     const result = await runCommand(project.id, target, name, args, language);
+    if (owner !== projectSession) return result;
     if (!snapshot.documents.some((d) => d.doc === target)) {
       // The first shape command made shapes.ttl (shacl-authoring 8): track
       // it from a fresh open, as Add shapes.ttl does.
       const opened = await openProject(project.id);
+      if (owner !== projectSession) return result;
       set({ project: opened.project, documents: opened.documents });
     }
     if (announcement) {
       set({ documents: withDocument(result.state) });
+      refreshDataNames(result.state);
       announceInput(announcement(result));
     } else {
       afterChange(result, "applied");
@@ -870,7 +904,9 @@ export const projectStore = {
     const project = requireProject();
     const text = snapshot.editorDraft;
     if (text === null) return;
+    const owner = projectSession;
     const result = await applyDocumentSource(project.id, snapshot.activeDoc, text);
+    if (owner !== projectSession) return;
     set({ editorDraft: null });
     afterChange(result, "applied");
   },
@@ -881,10 +917,12 @@ export const projectStore = {
   async save(confirmRewrite = false, doc?: ProjectDocName): Promise<"saved" | "warning"> {
     const project = requireProject();
     doc = doc ?? (confirmRewrite ? snapshot.commentsWarning?.doc : undefined) ?? snapshot.activeDoc;
+    const owner = projectSession;
     set({ saving: true, commentsWarning: null });
     announce(makeUiMessage("projectNotice.saving"));
     try {
       const result = await saveDocument(project.id, doc, confirmRewrite);
+      if (owner !== projectSession) return "saved";
       if ("needsCommentsWarning" in result) {
         set({ commentsWarning: { doc, backup: result.backup } });
         return "warning";
@@ -897,7 +935,7 @@ export const projectStore = {
       );
       return "saved";
     } finally {
-      set({ saving: false });
+      if (owner === projectSession) set({ saving: false });
     }
   },
 
@@ -906,7 +944,9 @@ export const projectStore = {
   // document the views were not showing when a save stopped part way (found
   // in review).
   async saveAll(): Promise<"saved" | "warning"> {
+    const owner = projectSession;
     for (const d of snapshot.documents.filter((x) => x.dirty)) {
+      if (owner !== projectSession) return "saved";
       if ((await projectStore.save(false, d.doc)) === "warning") return "warning";
     }
     return "saved";
@@ -970,10 +1010,12 @@ export const projectStore = {
 
   /** For tests: back to nothing open. */
   _reset(): void {
+    projectSession++;
     validationRun++;
     reasoningRun++;
     resultReadRun++;
     dataReadRun++;
+    dataReadPending = false;
     creatingFrom = null;
     snapshot = EMPTY;
     setApiLanguage(null);

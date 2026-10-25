@@ -949,3 +949,32 @@ it("rereads dictionary names while keeping chosen columns and the UI language", 
   expect(previewData).toHaveBeenCalledTimes(count);
   expect(runCommand).not.toHaveBeenCalled(); expect(importData).not.toHaveBeenCalled();
 });
+
+
+it("refreshes completed report names without replacing operation counts or importing again", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  await setup(true); await chooseFile(); await press(next());
+  await act(async () => { fireEvent.change(screen.getByLabelText("Each row is"), {target:{value:`${X}Person`}}); });
+  await press(next()); await press(next());
+  const made = {...SNAPSHOT,report:{...REPORT,unmatched:[{column:"org",classIri:`${X}Organization`,className:"Organization",count:12,rows:[3,9]}]}};
+  importData.mockResolvedValue({snapshot:made,generation:2});
+  listData.mockImplementation((_pid,language) => Promise.resolve({generation:2,snapshots:[language === "ja"
+    ? {...made,className:"人",report:{...made.report,individuals:999,unmatched:[{column:"org",classIri:`${X}Organization`,className:"組織",count:999,rows:[99]}]}}
+    : made]}));
+  await press(screen.getByRole("button",{name:"Import"}));
+  const status = screen.getByRole("status");
+  expect(status.textContent).toBe("1 row, 1 Person");
+  const done = screen.getByRole("button",{name:"Done"}); done.focus();
+  await act(async () => { projectStore.setDisplayLanguage("ja"); });
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status.textContent).toBe("1 row, 1 人");
+  expect(screen.getByText("org: 12 values match no 組織 row (rows 3, 9 and 10 more)")).toBeTruthy();
+  expect(document.activeElement).toBe(done);
+  const requests = listData.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox",{name:"UI language"}),{target:{value:"ja"}});
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status.textContent).toBe("1行、人を1件");
+  expect(listData).toHaveBeenCalledTimes(requests);
+  expect(importData).toHaveBeenCalledTimes(1);
+  expect(runCommand).not.toHaveBeenCalled();
+});

@@ -490,6 +490,7 @@ leaves one behind.
 - Canvas markers are sized in user space, one per line kind, coloured by CSS. [Edit page]
 
 **Dictionary display language (P1)**
+- Completed import reports project only names from current lists, retaining operation counts and row facts. Old edit/save responses cannot modify a reopened project session. [Retained import reports]
 - Command display-name carriers keep their legacy string value; only message arguments and read-only previews project the selected name. Never use the display language for RDF writes. [command display names]
 - A shape's `displayName` is a read-only title; its original `name` remains the editable value. [command display names]
 

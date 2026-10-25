@@ -104,7 +104,11 @@ function ReusePlanTarget({ pid, ontologyId, property, cls, runner, onDone, onCan
     const reading = dictionaryLanguage === undefined ? planShare(pid, property.iri, cls?.iri)
       : planShare(pid, property.iri, cls?.iri, dictionaryLanguage);
     reading
-      .then((answer) => live && setPlan(answer.plan))
+      .then((answer) => {
+        if (!live) return;
+        setPlan(answer.plan);
+        setFailed(null);
+      })
       .catch((e: unknown) => live && setFailed({ cause: e, message: e instanceof Error ? e.message : String(e) }));
     return () => {
       live = false;

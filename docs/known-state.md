@@ -2989,3 +2989,24 @@ Reuse plans are owned by project/property/class, with a new key for a new target
 Late responses cannot fill another target's form. A language reread keeps its
 choice and custom-parent draft, and initial focus runs only once per target.
 Delete previews likewise reread selected names while keeping the chosen strategy.
+
+### Retained import reports and project sessions (P1)
+
+A completed wizard keeps the operation's counts, source and row facts. It takes
+only class names, keyed by IRI, from the current snapshot listing. Changing the
+dictionary language updates those names without importing again or replacing
+historical unmatched-row counts with the listing's current counts. The status
+region and its sibling controls retain their identity across both language changes.
+Model edits, undo/redo and Turtle apply refresh snapshot names; each list read is
+also tied to the model revision so an older list cannot restore an obsolete name.
+Known empty lists need no new GET per edit. Pending lists get a replacement;
+a background name-read failure retains the edit announcement and exposes its
+error and retry in the Data tab.
+
+Each opened project session has its own counter, including reopen of the same
+project id. Command, undo/redo, Turtle apply and save responses from a previous
+session do not change documents, drafts, warnings, busy state or announcements.
+The first shapes command checks ownership again after reading the new document
+list. Save all stops before continuing into another session's documents.
+Successful reuse-plan name reads clear an earlier read error, making a language
+change a usable retry rather than leaving a successful response hidden forever.

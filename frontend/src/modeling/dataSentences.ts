@@ -4,6 +4,7 @@ FILE: frontend/src/modeling/dataSentences.ts
 ================================================================================
 
 SUMMARY
+    Completed reports may refresh names without replacing their operation facts.
     The words the data import says (csv-data-import 5.2 to 5.7): the label
     every place puts on snapshot data (*from people.csv, imported 2 October
     2026; sample: first 2,000 of 12,480 rows*), the preview's rows as
@@ -47,7 +48,7 @@ import type { WireMessage } from "../i18n/server-contracts";
 import type { Translator, UiLocale } from "../i18n/types";
 import { a } from "./sentences";
 import { plural } from "./shapeSentences";
-import type { DataInspection, DataSource, IdCheck, ImportReportData, PreviewRow, RowList } from "../types";
+import type { DataInspection, DataSource, IdCheck, ImportReportData, PreviewRow, RowList, SnapshotSummary } from "../types";
 
 const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
@@ -198,4 +199,24 @@ export function rowLimitSentence(inspection: Pick<DataInspection, "format" | "to
   return tFor(locale)(inspection.format === "xlsx" ? "dataImport.limit.sheet" : "dataImport.limit.file", {
     total: inspection.total, limit: inspection.limit,
   });
+}
+
+
+/** Project only names from a current listing; counts and row facts belong to the import. */
+export function snapshotDisplayNames(saved: SnapshotSummary, current?: SnapshotSummary): SnapshotSummary {
+  if (!current || current.id !== saved.id) return saved;
+  const names = new Map<string, string>();
+  if (current.classIri && current.className !== null) names.set(current.classIri, current.className);
+  for (const item of current.report.unmatched ?? []) names.set(item.classIri, item.className);
+  return {
+    ...saved,
+    ...(current.classIri === saved.classIri
+      ? { className: current.className, classNameUiMessage: current.classNameUiMessage } : {}),
+    report: {
+      ...saved.report,
+      ...(saved.report.unmatched ? { unmatched: saved.report.unmatched.map(item => ({
+        ...item, className: names.get(item.classIri) ?? item.className,
+      })) } : {}),
+    },
+  };
 }

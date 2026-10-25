@@ -4,6 +4,7 @@ FILE: frontend/src/components/DataWizard.tsx
 ================================================================================
 
 SUMMARY
+    Completed reports reread display names while retaining import counts and rows.
     Dictionary-name reads follow their language without replacing column choices.
     The data import wizard (csv-data-import 5.2 to 5.5), four steps and the
     report: the file and what was detected in it, what a row is and which
@@ -97,9 +98,10 @@ import {
   rowLimitSentence,
   sampleWords,
   sheetOption,
+  snapshotDisplayNames,
   unmatchedLines,
 } from "../modeling/dataSentences";
-import { projectStore } from "../state/projectStore";
+import { projectStore, useProjectSelector } from "../state/projectStore";
 import type {
   ColumnChoice,
   DataChoices,
@@ -187,6 +189,7 @@ export default function DataWizard({
 }: Props) {
   const { locale, t } = useI18n();
   const dictionaryLanguage = useDictionaryDisplayLanguage();
+  const snapshotListing = useProjectSelector(s => s.project?.id === projectId ? s.data : null);
   const readPreview = (source: DataSourceRef, options: DataOptions, choices: Partial<DataChoices>) =>
     dictionaryLanguage === undefined ? previewData(projectId, source, options, choices)
       : previewData(projectId, source, options, choices, dictionaryLanguage);
@@ -555,7 +558,7 @@ export default function DataWizard({
       )}
       {step === 4 && <PreviewStep preview={preview} inspection={inspection} busy={busy} />}
       {step === "report" && done && (
-        <ImportReport snapshot={done} announce onValidate={onValidate} onShowData={onShowData} />
+        <ImportReport snapshot={snapshotDisplayNames(done, snapshotListing?.snapshots.find(item => item.id === done.id))} announce onValidate={onValidate} onShowData={onShowData} />
       )}
 
       {retryShown && (
