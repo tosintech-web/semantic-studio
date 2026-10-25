@@ -4,6 +4,7 @@ FILE: frontend/src/components/QueryPanel.tsx
 ================================================================================
 
 SUMMARY
+    Query failures retain their causes and render in the current UI language.
     The right-hand panel shown in Query mode. It ties the whole visual query
     builder together: the guided start, the path bar, the per-chip menus, the
     live plain-English + SPARQL preview, the toolbar (Auto/Paths/Distinct/
@@ -75,6 +76,9 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
+import { makeUiMessage } from "../i18n/uiMessage";
+import { originalError, type OperationFailure } from "../i18n/operationFailure";
+import OperationError from "./OperationError";
 import { englishTranslator } from "../i18n/format";
 import type { Translator } from "../i18n/types";
 import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
@@ -203,6 +207,8 @@ export function embeddedOptions(query: EmbeddedQuery) {
     name: query.label,
     runBlocked: query.form !== "SELECT" ? ONLY_SELECT : query.truncated ? CUT_SHORT : null,
     note: query.shaclVariables ? SHACL_VARIABLES_NOTE : null,
+    runBlockedUi: query.form !== "SELECT" ? makeUiMessage("queryPanel.onlySelect") : query.truncated ? makeUiMessage("queryPanel.cutShort") : undefined,
+    noteUi: query.shaclVariables ? makeUiMessage("queryPanel.shaclVariables") : undefined,
   };
 }
 
@@ -267,7 +273,7 @@ export default function QueryPanel({
   const [frozen, setFrozen] = useState<string | null>(null);
   const [results, setResults] = useState<SparqlResults | null>(null);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<OperationFailure | null>(null);
   const [copyState, setCopyState] = useState<"copied" | "failed" | null>(null);
   const [saved, setSaved] = useState<SavedQuery[]>([]);
   const [saveName, setSaveName] = useState("");
@@ -280,7 +286,7 @@ export default function QueryPanel({
   const [returnFocus, setReturnFocus] = useState(false);
   const [embeddedOpen, setEmbeddedOpen] = useState(false);
   const [embedded, setEmbedded] = useState<EmbeddedQueries | null>(null);
-  const [embeddedError, setEmbeddedError] = useState<string | null>(null);
+  const [embeddedError, setEmbeddedError] = useState<unknown | null>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const newButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -414,7 +420,9 @@ export default function QueryPanel({
     } catch (e: unknown) {
       if (run !== latest.current) return;
       show(null, false);
-      setError(e instanceof Error ? e.message : String(e));
+      // Clearing invalidates this run's token; finally cannot settle it now.
+      setRunning(false);
+      setError({ cause: e });
     } finally {
       if (run === latest.current) setRunning(false);
     }
@@ -500,7 +508,7 @@ export default function QueryPanel({
       setSaveName("");
       refreshSaved();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError({ cause: e });
     }
   };
 
@@ -532,7 +540,7 @@ export default function QueryPanel({
     // Refused here with a sentence rather than sent for a 422, and counted in
     // bytes, which is the stricter of the two measures.
     if (byteLength(text) > MAX_QUERY_BYTES) {
-      setError(TOO_LARGE_TO_RUN);
+      setError({ cause: TOO_LARGE_TO_RUN, message: makeUiMessage("queryPanel.tooLargeRun", { limit: MAX_QUERY_BYTES }) });
       return;
     }
     await runExplicit(text);
@@ -556,9 +564,9 @@ export default function QueryPanel({
   };
 
   const openFile = async (file: File) => {
-    const read = await readQueryFile(file);
+    const read = await readQueryFile(file, true);
     if (!read.ok) {
-      setError(read.error);
+      setError({ cause: read.error, message: read.uiMessage });
       return;
     }
     if (!mayDiscard()) return;
@@ -617,7 +625,7 @@ export default function QueryPanel({
     const current = () => embeddedKeyRef.current === requestedFor;
     getEmbeddedQueries(ontologyId, includeImports)
       .then((listing) => current() && setEmbedded(listing))
-      .catch((e: unknown) => current() && setEmbeddedError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => current() && setEmbeddedError(e));
   };
 
   // A question opens as a text query, its title the query's name, and runs
@@ -726,7 +734,7 @@ export default function QueryPanel({
         </p>
       ))}
       {loadingSchema && <div className="detail-note">{t("queryPanel.analysing")}</div>}
-      {schemaError && <p className="detail-error">{schemaError}</p>}
+      {schemaError != null && <OperationError failure={{ cause: schemaError }} />}
 
       {/* The toolbar, the save prompt and the query text are one sticky
           block, and it comes first (explore-and-query-layout 5.4): the
@@ -877,7 +885,8 @@ export default function QueryPanel({
             initialText={textRef.current}
             namespaces={schema?.namespaces ?? {}}
             running={running}
-            error={error}
+            error={error ? originalError(error.cause) : null}
+            errorFailure={error}
             saveLabel={t(openQuery ? "queryPanel.update" : "editParts.save")}
             saveTitle={openQuery ? t("queryPanel.updateHint", { name: openQuery.name }) : t("queryPanel.saveHint")}
             onFork={(text, baseline) => {
@@ -925,7 +934,7 @@ export default function QueryPanel({
 
       {/* With the editor open its errors are shown above it, where the text
           that caused them is. */}
-      {!editorShown && error && <p className="detail-error">{error}</p>}
+      {!editorShown && error && <OperationError failure={error} />}
       {results && (
         <>
           {isPreview && (
@@ -997,7 +1006,7 @@ export default function QueryPanel({
           </h3>
           {embeddedOpen && (
             <div id="embedded-query-list">
-              {embeddedError && <p className="detail-error">{embeddedError}</p>}
+              {embeddedError !== null && <OperationError failure={{ cause: embeddedError }} />}
               {!embedded && !embeddedError && <p className="detail-note">{t("queryPanel.reading")}</p>}
               {embedded?.truncated && (
                 <p className="detail-note">

@@ -16,6 +16,9 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "queryPanel.tooLargeRun": { limit: number };
+  "queryPanel.tooLargeOpen": { limit: number };
+  "queryPanel.notUtf8": undefined;
   "shapeWords.problem.precision": { limit: number };
   "warning.unknown": undefined;
   "projectNotice.relationshipCompleted": { name: string; from: string; to: string };

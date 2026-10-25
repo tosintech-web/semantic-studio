@@ -6,7 +6,8 @@ FILE: frontend/src/components/ResultsTable.test.tsx
 
 SUMMARY
     Tests for ResultsTable. Covers paging: that one page and only one page of
-    rows reaches the document, that the sort runs over the whole result set
+    rows reaches the document, that SERVICE failure details remain escaped while
+    their source descriptors re-render, that the sort runs over the whole result set
     before the slice, that the pagination controls move and disable and
     announce correctly, and that the truncation notice and the clear control
     survive all of it. Also covers the per-row "view in source" control: that
@@ -695,7 +696,7 @@ describe("result UI language", () => {
     expect(triggerDownload).toHaveBeenCalledTimes(1);
   });
 
-  it("translates SERVICE summary and row limits with host names and raw failure detail intact", () => {
+  it("translates SERVICE summary and row limits with a neutral explanation for unknown failures", () => {
     const ja = ((key, args) => translate("ja", key, args)) as Translator;
     expect(describeServices([
       { endpoint: "https://example.org/sparql", host: "example.org", rows: 1500, truncated: true, ms: 5, error: null },
@@ -703,7 +704,22 @@ describe("result UI language", () => {
     ], ja)).toEqual([
       "example.orgからの結果を含みます。",
       "example.orgからの応答は1,500行で打ち切られました。",
-      "SERVICE SILENTによりfailed.example.orgの結果を省略して続行しました：<raw failure>",
+      "SERVICE SILENTによりfailed.example.orgの結果を省略して続行しました：操作を完了できませんでした。詳細を確認してください。",
     ]);
   });
+});
+
+it("translates a retained SERVICE SILENT failure and keeps its raw detail separately", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const error = "synthetic.example answered with HTTP 451 <img>{status}";
+  const results = { ...resultsWith(0), services: [{ endpoint: "https://synthetic.example/sparql", host: "synthetic.example", rows: 0, truncated: false, ms: 0, error,
+    errorUiMessage: { code: "service.http_failed", args: { host: "synthetic.example", status: 451 } } }] } as SparqlResults;
+  render(<I18nProvider><UiLanguageSelect /><ResultsTable results={results} onPickIri={vi.fn()} onViewInSource={vi.fn()} onClear={vi.fn()} /></I18nProvider>);
+  expect(document.querySelector(".results-services")?.textContent).toContain("SERVICEの接続先「synthetic.example」がHTTP 451を返しました。");
+  const details = document.querySelector<HTMLDetailsElement>(".results-services details")!;
+  expect(details.open).toBe(false);
+  expect(details.querySelector("pre")?.textContent).toBe(error);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".results-services")?.textContent).toContain("The SERVICE endpoint synthetic.example answered with HTTP 451.");
+  expect(details.querySelector("img")).toBeNull();
 });

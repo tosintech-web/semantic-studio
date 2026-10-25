@@ -4,6 +4,7 @@ FILE: frontend/src/components/ResultsTable.tsx
 ================================================================================
 
 SUMMARY
+    SERVICE failures render source metadata with untouched original details.
     Renders SPARQL query results as a sortable, paged table: a column per
     variable, a row count, duration and page position, a truncation notice,
     Export CSV / Export JSON controls, a control that empties the results area,
@@ -52,6 +53,7 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
+import { renderServerMessage } from "../i18n/serverMessage";
 import { englishTranslator, formatNumber } from "../i18n/format";
 import type { Translator } from "../i18n/types";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
@@ -111,7 +113,9 @@ function sortValue(term: SparqlTerm | null): string | number {
  * which failed and were skipped under SERVICE SILENT. Hosts rather than full
  * endpoint addresses, because the host is what the user approved.
  */
-export function describeServices(services: ServiceCall[], t: Translator = englishTranslator): string[] {
+export function describeServices(services: ServiceCall[], translator?: Translator): string[] {
+  // Direct legacy callers keep their strings; the UI always passes its locale.
+  const t = translator ?? englishTranslator;
   const answered = [...new Set(services.filter((s) => !s.error).map((s) => s.host))];
   const lines: string[] = [];
   if (answered.length > 0) lines.push(t("results.services", { hosts: answered.join(", ") }));
@@ -119,7 +123,7 @@ export function describeServices(services: ServiceCall[], t: Translator = englis
     if (s.truncated) {
       lines.push(t("results.serviceCap", { host: s.host, count: s.rows }));
     }
-    if (s.error) lines.push(t("results.serviceSkipped", { host: s.host, error: s.error }));
+    if (s.error) lines.push(t("results.serviceSkipped", { host: s.host, error: translator ? renderServerMessage(s.errorUiMessage, s.error, t) : s.error }));
   }
   return lines;
 }
@@ -130,6 +134,11 @@ function ServiceNotes({ services }: { services: ServiceCall[] }) {
     <div className="results-services">
       {describeServices(services, t).map((line, i) => (
         <p key={i}>{line}</p>
+      ))}
+      {services.filter(service => service.error).map((service, index) => (
+        <details className="technical-details" key={`${service.endpoint}|${index}`}>
+          <summary>{t("common.original")}</summary><pre>{service.error}</pre>
+        </details>
       ))}
     </div>
   );

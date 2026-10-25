@@ -11,6 +11,9 @@ SUMMARY
     ontology binds, Add PREFIX (query-page-rework 5.3).
 
 BASIC IDEA
+    Failures and owned restriction/note facts re-render without changing the raw
+    error used by the existing Add PREFIX helper, query text or editor session.
+
     It opens in one of two conditions. Opened on the builder's query, it shows
     the generated text and the query is still visual; the first change calls
     onFork and from then on the text is the query (D-071). Opened as a text
@@ -49,6 +52,9 @@ EXPECTED OUTPUT
 */
 
 import { useI18n } from "../i18n/I18nProvider";
+import { renderUiMessage } from "../i18n/uiMessage";
+import type { OperationFailure } from "../i18n/operationFailure";
+import OperationError from "./OperationError";
 import { englishTranslator } from "../i18n/format";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
@@ -62,6 +68,7 @@ interface Props {
   namespaces: Record<string, string>;
   running: boolean;
   error: string | null;
+  errorFailure?: OperationFailure | null;
   /** "Save", or "Update" when a saved query is open. */
   saveLabel: string;
   saveTitle: string;
@@ -84,6 +91,7 @@ export default function SparqlEditor({
   namespaces,
   running,
   error,
+  errorFailure = null,
   saveLabel,
   saveTitle,
   onFork,
@@ -104,7 +112,7 @@ export default function SparqlEditor({
   // the graph shows up here too. After the fork this component owns it.
   const value = textQuery ? text : generated;
   const readOnly = !!textQuery?.runBlocked;
-  const runReason = textQuery?.runBlocked ?? null;
+  const runReason = textQuery?.runBlockedUi ? renderUiMessage(textQuery.runBlockedUi, t) : textQuery?.runBlocked ?? null;
 
   // Focus enters the editor when it opens (AC-15), the caret at the end:
   // after a new query's prefixes, on the line where the query goes
@@ -170,11 +178,11 @@ export default function SparqlEditor({
         </div>
       )}
       {textQuery?.name && <p className="sparql-editor-name">{textQuery.name}</p>}
-      {textQuery?.note && <p className="query-hint">{textQuery.note}</p>}
+      {textQuery?.note && <p className="query-hint">{textQuery.noteUi ? renderUiMessage(textQuery.noteUi, t) : textQuery.note}</p>}
       {runReason && <p className="query-hint">{runReason}</p>}
-      {error && (
+      {(errorFailure || error) && (
         <div className="detail-error sparql-error">
-          <p>{error}</p>
+          <OperationError failure={errorFailure ?? { cause: error }} className="operation-error" />
           {missing !== null && missingNs !== null && (
             <button ref={addRef} className="ghost add-prefix" onClick={addPrefix}>
               {t("sparql.editor.prefix", { prefix: missing })}

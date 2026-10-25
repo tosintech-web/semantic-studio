@@ -402,7 +402,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `load.dialog.dataTitle` | name | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.dialog.restored` | names | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.downloading` | — | `frontend/src/components/CatalogueList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.original` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.original` | — | `frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/OperationError.tsx`<br>`frontend/src/components/ResultsTable.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.schemaorg.description` | — | `frontend/src/catalogue.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.schemaorg.size` | — | `frontend/src/catalogue.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `catalogue.schemaorg.audience` | — | `frontend/src/catalogue.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -3221,3 +3221,49 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `imports.total_file_limit` | limit | `backend/app/routers/ontologies.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
 | `parse.file_timeout` | seconds | `backend/app/store.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
 | `parse.text_timeout` | seconds | `backend/app/editing.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+
+| `query.too_deep` | limit | `backend/app/sparql_exec.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `query.select_only` | — | `backend/app/sparql_exec.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `query.parse_failed` | — | `backend/app/sparql_exec.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `query.evaluation_failed` | — | `backend/app/sparql_exec.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `query.still_stopping` | — | `backend/app/sparql_exec.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `query.time_limit` | seconds | `backend/app/sparql_exec.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `network.address_refused` | — | `backend/app/net_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `network.redirect_refused` | — | `backend/app/net_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `network.host_unresolvable` | — | `backend/app/net_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `network.offline` | — | `backend/app/network_broker.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `network.host_blocked` | host | `backend/app/network_broker.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `fetch.redirect_missing` | url | `backend/app/network_broker.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `fetch.connection_failed` | url | `backend/app/network_broker.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `fetch.time_limit` | url | `backend/app/network_broker.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `fetch.redirect_limit` | url, limit | `backend/app/network_broker.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `fetch.response_limit` | url, limit | `backend/app/network_broker.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `context.address_refused` | url | `backend/app/net_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `context.response_limit` | url, limit | `backend/app/net_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `context.fetch_failed` | url | `backend/app/net_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.nested` | — | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.unmatched` | — | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.fixed_endpoint` | — | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.endpoint_not_public` | endpoint | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.too_many_blocks` | limit | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.http_failed` | host, status | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.address_refused` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.redirect_refused` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.host_unresolvable` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.response_limit` | host, limit | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.connection_failed` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.time_limit` | host, seconds | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.runner_required` | — | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.invalid_results` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.invalid_row` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.invalid_cell` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.invalid_language` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.invalid_datatype` | host | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `service.unknown_result_type` | host, kind | `backend/app/sparql_service.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `request.foreign_host` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/local_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `request.foreign_page` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/local_guard.py` | クエリ・外部接続の拒否と失敗 | 12 | 元のテキスト・条件を保持し生成元の事実を渡す |
+| `queryPanel.tooLargeRun` | limit | `frontend/src/components/QueryPanel.tsx` | クエリ本文・ファイルの拒否 | 11 | 元の文字列を保持し入力時の事実を記録 |
+| `queryPanel.tooLargeOpen` | limit | `frontend/src/sparql/textQuery.ts` | クエリ本文・ファイルの拒否 | 11 | 元の文字列を保持し入力時の事実を記録 |
+| `queryPanel.notUtf8` | — | `frontend/src/sparql/textQuery.ts` | クエリ本文・ファイルの拒否 | 11 | 元の文字列を保持し入力時の事実を記録 |
+| `frontend/src/components/OperationError.tsx` | エラーの現在言語表示と原文 | 11 | causeと型付き情報を保持 | — | 生成時の英語から分類しない |
+| `frontend/src/i18n/operationFailure.ts` | エラーの現在言語表示と原文 | 11 | causeと型付き情報を保持 | — | 生成時の英語から分類しない |

@@ -45,6 +45,7 @@ EXPECTED OUTPUT
     - explain(...): the 422 detail, {code: "parse_error", message, line,
       format, technical, uiMessage}. Legacy values are unchanged; UI metadata
       captures source facts for rendering in the current client language.
+      A context refusal can forward its original source descriptor unchanged.
     - format_from_content_type(value): a parser name or None.
     - FORMAT_NAMES / format_name: the formats as people write them, the same
       table as the frontend's statusWords.ts.
@@ -231,13 +232,17 @@ def explain(
     head: bytes,
     filename: Optional[str],
     technical: str,
+    ui_message: Optional[dict] = None,
 ) -> dict:
     """The 422 detail for a load that no parser could read."""
     if not attempts:
         # A refusal raised mid-parse (a blocked address) already carries the
         # server's own sentence, not a parser's; there is nothing to choose.
-        return {"code": "parse_error", "message": technical, "line": None,
-                "format": None, "technical": None}
+        detail = {"code": "parse_error", "message": technical, "line": None,
+                  "format": None, "technical": None}
+        if ui_message is not None:
+            detail["uiMessage"] = ui_message
+        return detail
     head = head[:1024]
     fmt, raw = _chosen(attempts, suggested)
     line = line_of(raw)

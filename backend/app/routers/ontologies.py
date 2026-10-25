@@ -55,7 +55,8 @@ INPUTS / INPUT SOURCES
     - Uploaded files (multipart) and JSON fetch/sparql request bodies.
     - Remote RDF files fetched over HTTP for the /fetch endpoint.
     - The shared `store` and `saved_queries` singletons.
-    - Source metadata captures current byte/time limits beside legacy refusals.
+    - Source metadata captures byte/time limits and query/network failures
+      beside the original refusal status/detail.
     - Environment: SEMANTIC_STUDIO_MAX_UPLOAD_BYTES, SEMANTIC_STUDIO_MAX_FETCH_BYTES,
       SEMANTIC_STUDIO_PARSE_TIMEOUT and SEMANTIC_STUDIO_GRAPH_NODE_BUDGET
       override the default caps.
@@ -583,6 +584,7 @@ def _load_failure(exc: ParseError, data: bytes, filename: Optional[str],
         head=data[:1024],
         filename=filename,
         technical=str(exc),
+        ui_message=exc.ui_message,
     )
 
 
@@ -651,17 +653,17 @@ async def fetch_ontology(request: FetchRequest) -> dict:
             )
         except BlockedAddress as exc:
             # Refused before any connection was made to the address in question.
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=400, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         except TooLarge as exc:
             raise HTTPException(
                 status_code=413,
                 detail=too_large_detail(MAX_FETCH_BYTES, "SEMANTIC_STUDIO_MAX_FETCH_BYTES"),
             ) from exc
         except TooManyRedirects as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=502, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         except FetchFailed as exc:
             # Connection/timeout/DNS failure.
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=502, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         if response.status >= 400:
             # The remote server returned an error status (404, 403, ...).
             raise UiHTTPException(
@@ -910,9 +912,17 @@ def get_node(
 
 def _entity_refusal(error: Exception):
     if isinstance(error, EntityPageTooLarge):
-        raise UiHTTPException(status_code=400, ui_message=make_message("entities.page_too_large", total=error.total, suggested_limit=error.suggested_limit), detail={"code": "ENTITY_PAGE_TOO_LARGE", "message": str(error),
-                            "total": error.total, "suggested_limit": error.suggested_limit}) from error
-    raise UiHTTPException(status_code=409, ui_message=make_message("entities.view_changed"), detail={"code": "ENTITY_VIEW_CHANGED", "message": "The dictionary is updating. Try again."}) from error
+        raise UiHTTPException(
+            status_code=400,
+            ui_message=make_message("entities.page_too_large", total=error.total, suggested_limit=error.suggested_limit),
+            detail={"code": "ENTITY_PAGE_TOO_LARGE", "message": str(error),
+                            "total": error.total, "suggested_limit": error.suggested_limit},
+        ) from error
+    raise UiHTTPException(
+        status_code=409,
+        ui_message=make_message("entities.view_changed"),
+        detail={"code": "ENTITY_VIEW_CHANGED", "message": "The dictionary is updating. Try again."},
+    ) from error
 
 
 @router.get("/{oid}/entities")
@@ -1184,11 +1194,11 @@ def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM, 
             result["dataSources"] = view["snapshots"]
         return result
     except QueryTimeout as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=504, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
     except QueryBusy as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=409, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
     except QueryError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=400, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
 
 
 # ---------------------------------------------------------------------------

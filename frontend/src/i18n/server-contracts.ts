@@ -257,6 +257,19 @@ export const SERVER_CONTRACTS = {
     "characteristic": "parts",
     "name": "string"
   },
+  "context.address_refused": {
+    "url": "string"
+  },
+  "context.fetch_failed": {
+    "url": "string"
+  },
+  "context.response_limit": {
+    "limit": [
+      "number",
+      "string"
+    ],
+    "url": "string"
+  },
   "data.change_required": {},
   "data.file_limit": {
     "limit": [
@@ -730,9 +743,32 @@ export const SERVER_CONTRACTS = {
   },
   "entities.view_changed": {},
   "export.too_frequent": {},
+  "fetch.connection_failed": {
+    "url": "string"
+  },
   "fetch.github_enterprise": {},
   "fetch.http_failed": {
     "status": "number",
+    "url": "string"
+  },
+  "fetch.redirect_limit": {
+    "limit": [
+      "number",
+      "string"
+    ],
+    "url": "string"
+  },
+  "fetch.redirect_missing": {
+    "url": "string"
+  },
+  "fetch.response_limit": {
+    "limit": [
+      "number",
+      "string"
+    ],
+    "url": "string"
+  },
+  "fetch.time_limit": {
     "url": "string"
   },
   "fetch.web_only": {},
@@ -881,8 +917,15 @@ export const SERVER_CONTRACTS = {
     "end": "string",
     "name": "string"
   },
+  "network.address_refused": {},
   "network.grant_missing": {},
+  "network.host_blocked": {
+    "host": "string"
+  },
+  "network.host_unresolvable": {},
   "network.invalid_host": {},
+  "network.offline": {},
+  "network.redirect_refused": {},
   "network.unknown_capability": {
     "capability": "string"
   },
@@ -972,9 +1015,22 @@ export const SERVER_CONTRACTS = {
   },
   "projects.viewport": {},
   "query.builder_required": {},
+  "query.evaluation_failed": {},
   "query.name_required": {},
   "query.node_not_queryable": {},
   "query.not_found": {},
+  "query.parse_failed": {},
+  "query.select_only": {},
+  "query.still_stopping": {},
+  "query.time_limit": {
+    "seconds": "number"
+  },
+  "query.too_deep": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
   "reasoning.already_running": {},
   "reasoning.characteristic.asymmetric": {
     "s": "parts"
@@ -1267,6 +1323,8 @@ export const SERVER_CONTRACTS = {
     ],
     "variable": "string"
   },
+  "request.foreign_host": {},
+  "request.foreign_page": {},
   "request.invalid": {},
   "request.layout_limit": {
     "limit": [
@@ -1329,6 +1387,65 @@ export const SERVER_CONTRACTS = {
   "rml.unsupported": {
     "name": "string"
   },
+  "service.address_refused": {
+    "host": "string"
+  },
+  "service.connection_failed": {
+    "host": "string"
+  },
+  "service.endpoint_not_public": {
+    "endpoint": "string"
+  },
+  "service.fixed_endpoint": {},
+  "service.host_unresolvable": {
+    "host": "string"
+  },
+  "service.http_failed": {
+    "host": "string",
+    "status": "number"
+  },
+  "service.invalid_cell": {
+    "host": "string"
+  },
+  "service.invalid_datatype": {
+    "host": "string"
+  },
+  "service.invalid_language": {
+    "host": "string"
+  },
+  "service.invalid_results": {
+    "host": "string"
+  },
+  "service.invalid_row": {
+    "host": "string"
+  },
+  "service.nested": {},
+  "service.redirect_refused": {
+    "host": "string"
+  },
+  "service.response_limit": {
+    "host": "string",
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "service.runner_required": {},
+  "service.time_limit": {
+    "host": "string",
+    "seconds": "number"
+  },
+  "service.too_many_blocks": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "service.unknown_result_type": {
+    "host": "string",
+    "kind": "string"
+  },
+  "service.unmatched": {},
   "shape.readonly.additional_types": {
     "types": "parts"
   },
@@ -1918,6 +2035,9 @@ export interface ServerMessageArgs {
   "command.shared_parent": { "names": string; "property": string };
   "command.swapped_ends": { "name": string };
   "command.unmarked_characteristic": { "characteristic": string; "name": string };
+  "context.address_refused": { "url": string };
+  "context.fetch_failed": { "url": string };
+  "context.response_limit": { "limit": number | string; "url": string };
   "data.change_required": undefined;
   "data.file_limit": { "limit": number | string };
   "data.file_required": undefined;
@@ -2097,8 +2217,13 @@ export interface ServerMessageArgs {
   "entities.page_too_large": { "suggested_limit": number; "total": number };
   "entities.view_changed": undefined;
   "export.too_frequent": undefined;
+  "fetch.connection_failed": { "url": string };
   "fetch.github_enterprise": undefined;
   "fetch.http_failed": { "status": number; "url": string };
+  "fetch.redirect_limit": { "limit": number | string; "url": string };
+  "fetch.redirect_missing": { "url": string };
+  "fetch.response_limit": { "limit": number | string; "url": string };
+  "fetch.time_limit": { "url": string };
   "fetch.web_only": undefined;
   "imports.total_file_limit": { "limit": number | string };
   "load.already_running": undefined;
@@ -2142,8 +2267,13 @@ export interface ServerMessageArgs {
   "model.warning.symmetric.all": { "classes": string; "end": string; "name": string };
   "model.warning.symmetric.any": { "classes": string; "end": string; "name": string };
   "model.warning.symmetric.one": { "classes": string; "end": string; "name": string };
+  "network.address_refused": undefined;
   "network.grant_missing": undefined;
+  "network.host_blocked": { "host": string };
+  "network.host_unresolvable": undefined;
   "network.invalid_host": undefined;
+  "network.offline": undefined;
+  "network.redirect_refused": undefined;
   "network.unknown_capability": { "capability": string };
   "ontology.choose_other": undefined;
   "ontology.entity_not_drawn": { "iri": string };
@@ -2189,9 +2319,15 @@ export interface ServerMessageArgs {
   "projects.template": { "name": string };
   "projects.viewport": undefined;
   "query.builder_required": undefined;
+  "query.evaluation_failed": undefined;
   "query.name_required": undefined;
   "query.node_not_queryable": undefined;
   "query.not_found": undefined;
+  "query.parse_failed": undefined;
+  "query.select_only": undefined;
+  "query.still_stopping": undefined;
+  "query.time_limit": { "seconds": number };
+  "query.too_deep": { "limit": number | string };
   "reasoning.already_running": undefined;
   "reasoning.characteristic.asymmetric": { "s": string };
   "reasoning.characteristic.functional": { "s": string };
@@ -2265,6 +2401,8 @@ export interface ServerMessageArgs {
   "request.field_json": { "field": string };
   "request.field_object": { "field": string };
   "request.file_limit": { "limit": number | string; "variable": string };
+  "request.foreign_host": undefined;
+  "request.foreign_page": undefined;
   "request.invalid": undefined;
   "request.layout_limit": { "limit": number | string };
   "request.nodes_limit": { "limit": number | string };
@@ -2289,6 +2427,25 @@ export interface ServerMessageArgs {
   "rml.template_close": { "template": string };
   "rml.template_open": { "template": string };
   "rml.unsupported": { "name": string };
+  "service.address_refused": { "host": string };
+  "service.connection_failed": { "host": string };
+  "service.endpoint_not_public": { "endpoint": string };
+  "service.fixed_endpoint": undefined;
+  "service.host_unresolvable": { "host": string };
+  "service.http_failed": { "host": string; "status": number };
+  "service.invalid_cell": { "host": string };
+  "service.invalid_datatype": { "host": string };
+  "service.invalid_language": { "host": string };
+  "service.invalid_results": { "host": string };
+  "service.invalid_row": { "host": string };
+  "service.nested": undefined;
+  "service.redirect_refused": { "host": string };
+  "service.response_limit": { "host": string; "limit": number | string };
+  "service.runner_required": undefined;
+  "service.time_limit": { "host": string; "seconds": number };
+  "service.too_many_blocks": { "limit": number | string };
+  "service.unknown_result_type": { "host": string; "kind": string };
+  "service.unmatched": undefined;
   "shape.readonly.additional_types": { "types": string };
   "shape.readonly.allowed_list": undefined;
   "shape.readonly.allowed_type": undefined;

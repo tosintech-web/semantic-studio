@@ -4,6 +4,7 @@ FILE: backend/app/sparql_service.py
 ================================================================================
 
 SUMMARY
+    SERVICE failures carry source facts through queries and optional SILENT reports.
     SPARQL `SERVICE`, run by Semantic Studio rather than by rdflib
     (external-access Stage 3, backlog Q-10, decision D-069). Finds a query's
     SERVICE blocks before anything runs, decides the exact text each one will
@@ -87,6 +88,7 @@ from rdflib import BNode, Literal, URIRef, Variable
 from rdflib.plugins.sparql import CUSTOM_EVALS
 from rdflib.plugins.sparql.sparql import FrozenBindings, QueryContext
 
+from .messages import MessageError, integer_arg, make_message
 from . import net_guard
 from .network_broker import (
     CAPABILITIES,
@@ -164,11 +166,11 @@ ENDPOINT_UNRESOLVABLE_DETAIL = (
 SERVICE_REASON = "Your query asks this site to answer part of it."
 
 
-class ServiceRefused(Exception):
+class ServiceRefused(MessageError):
     """The query's SERVICE use is not allowed. Nothing was sent."""
 
 
-class ServiceFailed(Exception):
+class ServiceFailed(MessageError):
     """A call to an endpoint failed and the block was not SILENT."""
 
 
@@ -357,7 +359,7 @@ def refuse_nested(query: str) -> None:
     """
     for block in find_service_blocks(query) or ():
         if find_service_blocks(block.body):
-            raise ServiceRefused(NESTED_DETAIL)
+            raise ServiceRefused(NESTED_DETAIL, ui_message=make_message('service.nested'))
 
 
 # ---------------------------------------------------------------------------
@@ -480,12 +482,12 @@ def match_blocks(query: str, parsed) -> MatchedBlocks:
         return MatchedBlocks([], None, [])
     found = find_service_blocks(query)
     if found is None or len(found) != len(parse_nodes):
-        raise ServiceRefused(UNMATCHED_DETAIL)
+        raise ServiceRefused(UNMATCHED_DETAIL, ui_message=make_message('service.unmatched'))
     for written, node in zip(found, parse_nodes):
         # Read with `in`: CompValue.get returns the key itself when it is
         # missing, so node.get("silent") is truthy on every node.
         if written.silent != ("silent" in node) or not _term_agrees(written.term, node["term"]):
-            raise ServiceRefused(UNMATCHED_DETAIL)
+            raise ServiceRefused(UNMATCHED_DETAIL, ui_message=make_message('service.unmatched'))
     base, prefixes = _prologue(parsed)
     return MatchedBlocks(list(zip(found, parse_nodes)), base, prefixes)
 
@@ -498,20 +500,23 @@ def plan_services(matched: MatchedBlocks, algebra_nodes: list) -> ServicePlan:
     another order; anything else is refused rather than guessed at.
     """
     if {id(node) for node in algebra_nodes} != {id(node) for _, node in matched.pairs}:
-        raise ServiceRefused(UNMATCHED_DETAIL)
+        raise ServiceRefused(UNMATCHED_DETAIL, ui_message=make_message('service.unmatched'))
     blocks: dict[tuple[str, str], ServiceBlock] = {}
     by_node: dict[int, tuple[ServiceBlock, bool]] = {}
     for written, node in matched.pairs:
         term = node["term"]
         if isinstance(term, Variable):
-            raise ServiceRefused(VARIABLE_ENDPOINT_DETAIL)
+            raise ServiceRefused(VARIABLE_ENDPOINT_DETAIL, ui_message=make_message('service.fixed_endpoint'))
         if not isinstance(term, URIRef):
-            raise ServiceRefused(UNMATCHED_DETAIL)
+            raise ServiceRefused(UNMATCHED_DETAIL, ui_message=make_message('service.unmatched'))
         endpoint = str(term)
         try:
             host = broker.check_url(endpoint)
         except net_guard.BlockedAddress:
-            raise ServiceRefused(NOT_PUBLIC_DETAIL.format(endpoint=endpoint)) from None
+            raise ServiceRefused(
+                NOT_PUBLIC_DETAIL.format(endpoint=endpoint),
+                ui_message=make_message("service.endpoint_not_public", endpoint=endpoint),
+            ) from None
         block = ServiceBlock(
             endpoint=endpoint,
             host=host,
@@ -521,7 +526,10 @@ def plan_services(matched: MatchedBlocks, algebra_nodes: list) -> ServicePlan:
         block = blocks.setdefault(block.key, block)
         by_node[id(node)] = (block, written.silent)
     if len(blocks) > MAX_SERVICE_BLOCKS:
-        raise ServiceRefused(TOO_MANY_BLOCKS_DETAIL)
+        raise ServiceRefused(
+            TOO_MANY_BLOCKS_DETAIL,
+            ui_message=make_message('service.too_many_blocks', limit=integer_arg(MAX_SERVICE_BLOCKS)),
+        )
     return ServicePlan(list(blocks.values()), by_node, [node for _, node in matched.pairs])
 
 
@@ -554,10 +562,44 @@ def check_before_running(plan: ServicePlan) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _term_from_json(cell) -> object:
+def _result_error(text: str, *, code: str, host: Optional[str], **facts) -> ValueError:
+    """Keep the original parser error; UI context exists only for an actual call."""
+    error = ValueError(text)
+    error.ui_message = make_message(code, host=host, **facts) if host is not None else None
+    return error
+
+
+def _service_address_message(exc, host: str) -> dict:
+    # The legacy sentence below retains its existing selection. The UI reason
+    # follows the source gate's code, never a match on that finished sentence.
+    wire = getattr(exc, "ui_message", None)
+    code = wire.get("code") if isinstance(wire, dict) else None
+    reason = {
+        "network.host_unresolvable": "service.host_unresolvable",
+        "network.redirect_refused": "service.redirect_refused",
+        "network.address_refused": "service.address_refused",
+    }.get(code, "service.connection_failed")
+    return make_message(reason, host=host)
+
+
+def _service_connection_message(exc, host: str) -> dict:
+    wire = getattr(exc, "ui_message", None)
+    if isinstance(wire, dict) and wire.get("code") == "fetch.time_limit":
+        return make_message("service.time_limit", host=host, seconds=CALL_TIMEOUT_SECONDS)
+    return make_message("service.connection_failed", host=host)
+
+
+def _report_error(entry: dict, exc) -> None:
+    entry["error"] = str(exc)
+    wire = getattr(exc, "ui_message", None)
+    if wire is not None:
+        entry["errorUiMessage"] = wire
+
+
+def _term_from_json(cell, *, host: Optional[str] = None) -> object:
     """One cell of a SPARQL JSON result, or ValueError."""
     if not isinstance(cell, dict) or not isinstance(cell.get("value"), str):
-        raise ValueError("a result cell is not in the SPARQL JSON results shape")
+        raise _result_error("a result cell is not in the SPARQL JSON results shape", code='service.invalid_cell', host=host)
     kind, value = cell.get("type"), cell["value"]
     if kind == "uri":
         return URIRef(value)
@@ -567,31 +609,31 @@ def _term_from_json(cell) -> object:
         lang = cell.get("xml:lang")
         datatype = cell.get("datatype")
         if lang is not None and not isinstance(lang, str):
-            raise ValueError("a language tag is not a string")
+            raise _result_error("a language tag is not a string", code='service.invalid_language', host=host)
         if datatype is not None and not isinstance(datatype, str):
-            raise ValueError("a datatype is not a string")
+            raise _result_error("a datatype is not a string", code='service.invalid_datatype', host=host)
         if lang:
             return Literal(value, lang=lang)
         return Literal(value, datatype=URIRef(datatype) if datatype else None)
-    raise ValueError(f"a result cell has an unknown type {kind!r}")
+    raise _result_error(f"a result cell has an unknown type {kind!r}", code="service.unknown_result_type", host=host, kind=repr(kind))
 
 
-def _parse_results(body: bytes) -> tuple[list[dict], bool]:
+def _parse_results(body: bytes, *, host: Optional[str] = None) -> tuple[list[dict], bool]:
     try:
         data = json.loads(body)
         names = data["head"]["vars"]
         bindings = data["results"]["bindings"]
     except (ValueError, KeyError, TypeError) as exc:
-        raise ValueError("the answer was not SPARQL JSON results") from exc
+        raise _result_error("the answer was not SPARQL JSON results", code='service.invalid_results', host=host) from exc
     if not isinstance(names, list) or not isinstance(bindings, list):
-        raise ValueError("the answer was not SPARQL JSON results")
+        raise _result_error("the answer was not SPARQL JSON results", code='service.invalid_results', host=host)
     truncated = len(bindings) > MAX_ROWS_PER_CALL
     rows = []
     for binding in bindings[:MAX_ROWS_PER_CALL]:
         if not isinstance(binding, dict):
-            raise ValueError("a result row is not an object")
+            raise _result_error("a result row is not an object", code='service.invalid_row', host=host)
         rows.append(
-            {Variable(name): _term_from_json(cell) for name, cell in binding.items()
+            {Variable(name): _term_from_json(cell, host=host) for name, cell in binding.items()
              if isinstance(name, str)}
         )
     return rows, truncated
@@ -645,11 +687,17 @@ class ServiceRun:
                 total_timeout=CALL_TIMEOUT_SECONDS,
             )
             if response.status != 200:
-                raise ServiceFailed(f"{block.host} answered with HTTP {response.status}.")
+                raise ServiceFailed(
+                    f"{block.host} answered with HTTP {response.status}.",
+                    ui_message=make_message("service.http_failed", host=block.host, status=response.status),
+                )
             try:
-                rows, truncated = _parse_results(response.body)
+                rows, truncated = _parse_results(response.body, host=block.host)
             except ValueError as exc:
-                raise ServiceFailed(f"{block.host}: {exc}.") from exc
+                raise ServiceFailed(
+                    f"{block.host}: {exc}.",
+                    ui_message=getattr(exc, "ui_message", None) or make_message("service.invalid_results", host=block.host),
+                ) from exc
             entry.update(rows=len(rows), truncated=truncated)
             return _Outcome(rows)
         except ApprovalRequired:
@@ -657,7 +705,7 @@ class ServiceRun:
             # SILENT or not; the question goes back to the user.
             raise
         except (ServiceFailed, NetworkDecision) as exc:
-            entry["error"] = str(exc)
+            _report_error(entry, exc)
             return _Outcome([], exc)
         except net_guard.BlockedAddress as exc:
             # Told apart by the broker's sentence, the only thing that says
@@ -666,18 +714,22 @@ class ServiceRun:
                 net_guard.UNRESOLVABLE_HOST_DETAIL: ENDPOINT_UNRESOLVABLE_DETAIL,
                 net_guard.BLOCKED_REDIRECT_DETAIL: ENDPOINT_REDIRECT_DETAIL,
             }.get(str(exc), ENDPOINT_NOT_PUBLIC_DETAIL)
-            error = ServiceFailed(detail.format(host=block.host))
-            entry["error"] = str(error)
+            error = ServiceFailed(detail.format(host=block.host), ui_message=_service_address_message(exc, block.host))
+            _report_error(entry, error)
             return _Outcome([], error)
         except TooLarge:
             error = ServiceFailed(
-                f"{block.host} sent more than {MAX_BYTES_PER_CALL // (1024 * 1024)} MB."
+                f"{block.host} sent more than {MAX_BYTES_PER_CALL // (1024 * 1024)} MB.",
+                ui_message=make_message("service.response_limit", host=block.host, limit=integer_arg(MAX_BYTES_PER_CALL)),
             )
-            entry["error"] = str(error)
+            _report_error(entry, error)
             return _Outcome([], error)
         except FetchFailed as exc:
-            error = ServiceFailed(f"{block.host} could not be reached: {exc}")
-            entry["error"] = str(error)
+            error = ServiceFailed(
+                f"{block.host} could not be reached: {exc}",
+                ui_message=_service_connection_message(exc, block.host),
+            )
+            _report_error(entry, error)
             return _Outcome([], error)
         finally:
             entry["ms"] = round((time.perf_counter() - started) * 1000, 1)
@@ -732,10 +784,13 @@ def evaluate_service(ctx: QueryContext, part) -> Iterator[FrozenBindings]:
 def _evaluate(ctx: QueryContext, part) -> Iterator[FrozenBindings]:
     run = _current_run.get()
     if run is None:
-        raise ServiceFailed("SERVICE runs only through Semantic Studio's query runner.")
+        raise ServiceFailed(
+            "SERVICE runs only through Semantic Studio's query runner.",
+            ui_message=make_message("service.runner_required"),
+        )
     planned = run.plan.by_node.get(id(part))
     if planned is None:
-        raise ServiceFailed(UNMATCHED_DETAIL)
+        raise ServiceFailed(UNMATCHED_DETAIL, ui_message=make_message("service.unmatched"))
     block, silent = planned
     outcome = run.outcome(block)
     if outcome.error is not None:
@@ -745,7 +800,7 @@ def _evaluate(ctx: QueryContext, part) -> Iterator[FrozenBindings]:
             return
         if isinstance(outcome.error, NetworkDecision):
             raise outcome.error
-        raise ServiceFailed(str(outcome.error))
+        raise ServiceFailed(str(outcome.error), ui_message=getattr(outcome.error, "ui_message", None))
     # The local side may already have bound some of the block's variables (a
     # join evaluated row by row, an OPTIONAL); only rows that agree with those
     # bindings join. This is where the join happens instead of in a VALUES

@@ -4,6 +4,7 @@ FILE: backend/app/network_broker.py
 ================================================================================
 
 SUMMARY
+    Policy and connection refusals retain optional source-owned display facts.
     The one door from Semantic Studio to the internet. Every outbound request
     names what it is for (a capability), and goes out only if the user has
     allowed that capability for that host, the application is not offline, and
@@ -89,6 +90,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
 
+from .messages import MessageError, integer_arg, make_message
 from . import net_guard
 
 # What each capability is for, in the words the dialog uses. The capability
@@ -157,19 +159,19 @@ def blocked_detail(host: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-class NetworkDecision(Exception):
+class NetworkDecision(MessageError):
     """A request the policy stopped. Parsers must not treat this as "wrong
     format, try the next one" -- store._parse_rdf_blocking re-raises it."""
 
 
 class Offline(NetworkDecision):
     def __init__(self) -> None:
-        super().__init__(OFFLINE_DETAIL)
+        super().__init__(OFFLINE_DETAIL, ui_message=make_message("network.offline"))
 
 
 class HostBlocked(NetworkDecision):
     def __init__(self, host: str) -> None:
-        super().__init__(blocked_detail(host))
+        super().__init__(blocked_detail(host), ui_message=make_message("network.host_blocked", host=host))
         self.host = host
 
 
@@ -184,20 +186,21 @@ class ApprovalRequired(NetworkDecision):
         return {"code": "approval_required", "requests": self.requests}
 
 
-class TooLarge(Exception):
+class TooLarge(MessageError):
     """The response passed max_bytes and was abandoned while reading."""
 
     def __init__(self, url: str, limit: int) -> None:
-        super().__init__(f"{url} is larger than the {limit // (1024 * 1024)} MB limit.")
+        super().__init__(f"{url} is larger than the {limit // (1024 * 1024)} MB limit.",
+                         ui_message=make_message("fetch.response_limit", url=url, limit=integer_arg(limit)))
         self.url = url
         self.limit = limit
 
 
-class FetchFailed(Exception):
+class FetchFailed(MessageError):
     """The connection could not be made or completed (not an HTTP status)."""
 
-    def __init__(self, url: str, reason: str) -> None:
-        super().__init__(f"Fetching {url} failed: {reason}")
+    def __init__(self, url: str, reason: str, *, ui_message: dict | None = None) -> None:
+        super().__init__(f"Fetching {url} failed: {reason}", ui_message=ui_message)
         self.url = url
 
 
@@ -207,6 +210,7 @@ class TooManyRedirects(FetchFailed):
             self, f"That URL redirected more than {MAX_REDIRECTS} times and was not followed."
         )
         self.url = url
+        self.ui_message = make_message("fetch.redirect_limit", url=url, limit=integer_arg(MAX_REDIRECTS))
 
 
 @dataclass
@@ -540,15 +544,15 @@ class NetworkBroker:
         detail = net_guard.BLOCKED_REDIRECT_DETAIL if after_redirect else net_guard.BLOCKED_ADDRESS_DETAIL
         parts = urlsplit(url)
         if parts.scheme not in ("http", "https"):
-            raise net_guard.BlockedAddress(detail)
+            raise net_guard.BlockedAddress(detail, ui_message=net_guard.address_message(after_redirect))
         host = _host_of(url)
         if not host:
-            raise net_guard.BlockedAddress(detail)
+            raise net_guard.BlockedAddress(detail, ui_message=net_guard.address_message(after_redirect))
         if host in _LOCAL_NAMES or host.endswith(_LOCAL_SUFFIXES):
-            raise net_guard.BlockedAddress(detail)
+            raise net_guard.BlockedAddress(detail, ui_message=net_guard.address_message(after_redirect))
         literal = net_guard._literal_address(host)
         if literal is not None and net_guard.is_blocked_address(literal):
-            raise net_guard.BlockedAddress(detail)
+            raise net_guard.BlockedAddress(detail, ui_message=net_guard.address_message(after_redirect))
         return host
 
     def _resolve_and_judge(self, host: str, after_redirect: bool):
@@ -558,10 +562,11 @@ class NetworkBroker:
             addresses = net_guard.resolve_host(host)
         except net_guard.BlockedAddress:
             raise net_guard.BlockedAddress(
-                detail if after_redirect else net_guard.UNRESOLVABLE_HOST_DETAIL
+                detail if after_redirect else net_guard.UNRESOLVABLE_HOST_DETAIL,
+                ui_message=net_guard.resolution_message(after_redirect),
             ) from None
         if any(net_guard.is_blocked_address(ip) for ip in addresses):
-            raise net_guard.BlockedAddress(detail)
+            raise net_guard.BlockedAddress(detail, ui_message=net_guard.address_message(after_redirect))
         return addresses[0]
 
     def check_url(self, url: str) -> str:
@@ -657,7 +662,11 @@ class NetworkBroker:
             if response.status in _REDIRECT_CODES:
                 location = response.headers.get("location")
                 if not location:
-                    raise FetchFailed(current, "redirect without a location")
+                    raise FetchFailed(
+                        current,
+                        "redirect without a location",
+                        ui_message=make_message("fetch.redirect_missing", url=current),
+                    )
                 previous_host = host
                 # A Location may be relative to the URL that sent it.
                 current = urljoin(response.url, location)
@@ -742,13 +751,21 @@ class NetworkBroker:
                         chunks.append(chunk)
                         if deadline is not None and time.monotonic() > deadline:
                             self._log(capability, url, "timeout", response.status_code, received)
-                            raise FetchFailed(url, "it took longer than the time allowed")
+                            raise FetchFailed(
+                                url,
+                                "it took longer than the time allowed",
+                                ui_message=make_message("fetch.time_limit", url=url),
+                            )
                     outcome = "ok" if response.status_code < 400 else "http-error"
                     self._log(capability, url, outcome, response.status_code, received)
                     return BrokerResponse(url, response.status_code, response.headers, b"".join(chunks))
         except httpx.HTTPError as exc:
             self._log(capability, url, "failed", 0, received)
-            raise FetchFailed(url, str(exc) or type(exc).__name__) from exc
+            raise FetchFailed(
+                url,
+                str(exc) or type(exc).__name__,
+                ui_message=make_message("fetch.connection_failed", url=url),
+            ) from exc
 
 
 def _remaining(timeout: float, deadline: Optional[float], url: str) -> float:
@@ -757,7 +774,11 @@ def _remaining(timeout: float, deadline: Optional[float], url: str) -> float:
         return timeout
     left = deadline - time.monotonic()
     if left <= 0:
-        raise FetchFailed(url, "it took longer than the time allowed")
+        raise FetchFailed(
+            url,
+            "it took longer than the time allowed",
+            ui_message=make_message("fetch.time_limit", url=url),
+        )
     return min(timeout, left)
 
 

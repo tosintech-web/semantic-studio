@@ -66,8 +66,8 @@ EXPECTED OUTPUT
       third, `data_cache`, holds a project model's views with its data
       snapshots joined (csv-data-import 5.6).
     - Raises ParseError for unparseable input, carrying every attempt's
-      message, and ParseTimeout with source metadata when a bounded parse runs
-      out of time; the router maps them to HTTP 422 (explained by
+      message and source-owned context refusals, and ParseTimeout with source
+      metadata when a bounded parse runs out of time; the router maps them to HTTP 422 (explained by
       parse_errors.py) and 504.
       LoadCancelled, before anything is written, for a load whose mark was
       set (D-115); the router answers 409.
@@ -173,10 +173,12 @@ class ParseError(Exception):
         message: str,
         attempts: Optional[list[tuple[str, str]]] = None,
         suggested: Optional[str] = None,
+        *, ui_message: dict | None = None,
     ) -> None:
         super().__init__(message)
         self.attempts: list[tuple[str, str]] = list(attempts or [])
         self.suggested = suggested
+        self.ui_message = ui_message
 
 
 class ParseTimeout(Exception):
@@ -263,7 +265,7 @@ def _parse_rdf_blocking(data: bytes, fmt: Optional[str]) -> tuple[Graph, str]:
             # for the parser to act on the document and ask for a resource we
             # refused, so trying the remaining formats would only bury the one
             # message that explains what happened. Stop and lead with it.
-            raise ParseError(str(exc)) from exc
+            raise ParseError(str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         except Exception as exc:  # rdflib raises many parser-specific errors
             # Record why this candidate failed and keep trying the next one.
             errors.append((candidate, str(exc)))

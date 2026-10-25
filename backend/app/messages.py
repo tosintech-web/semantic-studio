@@ -8,6 +8,7 @@ BASIC IDEA
     English remains intact; clients choose their own UI locale at render time.
     String carriers preserve legacy check signatures; HTTP boundaries forward
     their metadata beside unchanged detail, including structured refusals.
+    Domain exceptions carry optional metadata without changing their arguments.
 INPUTS / INPUT SOURCES
     Stable code and facts available at the point a message is created.
 EXPECTED OUTPUT
@@ -76,6 +77,18 @@ def make_message(code: str, **args) -> dict:
         for key, value in args.items()
     }
     return {"code": code, "args": captured}
+
+
+class MessageError(Exception):
+    """Legacy exception arguments with optional source-created UI facts.
+
+    Unknown/manual errors keep no descriptor; their text is never classified.
+    Arguments remain untouched, so subclasses keep their original str/args.
+    """
+    def __init__(self, *args, ui_message: dict | None = None):
+        super().__init__(*args)
+        self.ui_message = ui_message
+
 
 class MessageText(str):
     """A legacy string carrying validated facts, without another graph read.

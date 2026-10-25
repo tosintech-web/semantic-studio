@@ -16,6 +16,9 @@ SUMMARY
     PREFIX (5.3), and a ready-made question opened and run (5.4).
 
 BASIC IDEA
+    Retained failures/restrictions switch language without re-running or changing
+    the editor text, selection, prefix helper or authored query name.
+
     Rendered through the real useQueryBuilder hook and the real QueryPanel,
     not a hand-built builder, because the property most worth defending is
     the hook and the panel agreeing: that the fork leaves the builder's state
@@ -44,8 +47,10 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import { renderEn as render } from "../testutils/i18n";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import QueryPanel, { CUT_SHORT, DISCARD_TEXT, ONLY_SELECT, SHACL_VARIABLES_NOTE } from "./QueryPanel";
+import QueryPanel, { CUT_SHORT, DISCARD_TEXT, ONLY_SELECT, SHACL_VARIABLES_NOTE, embeddedOptions } from "./QueryPanel";
 import { FORK_NOTICE } from "./SparqlEditor";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { generateSparql } from "../sparql/generate";
 import { MAX_QUERY_BYTES, NOT_UTF8, RUN_HELP, STARTED_HELP, TOO_LARGE_TO_OPEN } from "../sparql/textQuery";
 import { useQueryBuilder } from "../sparql/useQueryBuilder";
@@ -883,4 +888,89 @@ describe("the help line and Add PREFIX at their edges (query-page-rework 5.3)", 
     });
     expect(textarea().value).toBe(`PREFIX : <${EX}>\nSELECT ?b WHERE { ?b a :Bond }`);
   });
+});
+
+it("re-renders an editor failure while preserving its text, selection and original prefix helper", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const raw = "Unknown namespace prefix : ex";
+  api.runSparql.mockRejectedValue(Object.assign(new Error(raw), { uiMessage: { code: "query.parse_failed", args: {} } }));
+  render(<I18nProvider><UiLanguageSelect /><Harness /></I18nProvider>);
+  await waitFor(() => expect(builder.schema).not.toBeNull());
+  act(() => builder.setState(STATE));
+  fireEvent.click(screen.getByRole("button", { name: "テキストとして編集" }));
+  const area = screen.getByRole("textbox", { name: "SPARQLクエリ本文" }) as HTMLTextAreaElement;
+  fireEvent.change(area, { target: { value: "SELECT * WHERE { ?s ex:p ?o }" } });
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /実行.*Ctrl/ })));
+  expect(document.querySelector(".operation-explanation")?.textContent).toContain("SPARQLクエリを解析できませんでした");
+  const prefix = screen.getByRole("button", { name: "PREFIX ex: を追加" });
+  area.setSelectionRange(3, 9);
+  const language = screen.getByRole("combobox", { name: "UIの言語" });
+  language.focus();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "SPARQL query text" })).toBe(area);
+  expect(area.value).toBe("SELECT * WHERE { ?s ex:p ?o }");
+  expect(area.selectionStart).toBe(3);
+  expect(area.selectionEnd).toBe(9);
+  expect(document.querySelector(".operation-explanation")?.textContent).toContain("The SPARQL query could not be parsed");
+  expect(document.querySelector("details.technical-details pre")?.textContent).toBe(raw);
+  expect(screen.getByRole("button", { name: "Add PREFIX ex:" })).toBe(prefix);
+  expect(document.activeElement).toBe(language);
+  expect(api.runSparql).toHaveBeenCalledTimes(1);
+});
+
+it("translates source-owned embedded restrictions and notes without translating the authored query name", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><Harness /></I18nProvider>);
+  await waitFor(() => expect(builder.schema).not.toBeNull());
+  const query = { label: "Authored <img>{note}", form: "ASK", truncated: false, shaclVariables: true } as EmbeddedQuery;
+  act(() => builder.openTextQuery("ASK {}", embeddedOptions(query)));
+  expect(screen.getByText("ここではSELECTクエリだけを実行できます。")).toBeTruthy();
+  expect(screen.getByText("このクエリはSHACLエンジンが設定する$thisまたは$valueを使用しています。ここで実行する場合は通常の変数として扱われます。")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "実行。ここではSELECTクエリだけを実行できます。" }).hasAttribute("disabled")).toBe(true);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(ONLY_SELECT)).toBeTruthy();
+  expect(screen.getByText(query.label)).toBeTruthy();
+  expect(document.querySelector(".sparql-editor-name img")).toBeNull();
+  expect(api.runSparql).not.toHaveBeenCalled();
+});
+
+it("captures a local query byte refusal and re-renders it without sending the oversized text", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><Harness /></I18nProvider>);
+  await waitFor(() => expect(builder.schema).not.toBeNull());
+  const text = "x".repeat(MAX_QUERY_BYTES + 1);
+  act(() => builder.openTextQuery(text));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /実行.*Ctrl/ })));
+  expect(document.querySelector(".operation-explanation")?.textContent).toBe("クエリの容量が上限の102,400バイトを超えているため、実行しませんでした。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".operation-explanation")?.textContent).toBe("This query exceeds the 102,400 byte limit and was not run.");
+  expect((screen.getByRole("textbox", { name: "SPARQL query text" }) as HTMLTextAreaElement).value).toBe(text);
+  expect(api.runSparql).not.toHaveBeenCalled();
+});
+
+it("retains a schema-read failure and translates it without requesting the schema again", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  api.getQuerySchema.mockRejectedValue(Object.assign(new Error("Original missing dictionary <img>"), { uiMessage: { code: "ontology.not_found", args: {} } }));
+  render(<I18nProvider><UiLanguageSelect /><Harness /></I18nProvider>);
+  await waitFor(() => expect(document.querySelector(".operation-explanation")?.textContent).toBe("指定された辞書は見つかりません。"));
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".operation-explanation")?.textContent).toBe("The ontology could not be found.");
+  expect(document.querySelector("details.technical-details pre")?.textContent).toBe("Original missing dictionary <img>");
+  expect(document.querySelector("details.technical-details img")).toBeNull();
+  expect(api.getQuerySchema).toHaveBeenCalledTimes(1);
+});
+
+it.each(["large", "encoding"] as const)("retains a local %s file refusal in the current language without replacing query text", async (kind) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><Harness /></I18nProvider>);
+  await waitFor(() => expect(builder.schema).not.toBeNull());
+  act(() => builder.openTextQuery("SELECT * WHERE {}"));
+  const file = kind === "large" ? new File(["x".repeat(MAX_QUERY_BYTES + 1)], "large.rq") : new File([new Uint8Array([0xff, 0xfe, 0x00, 0xd8])], "encoding.rq");
+  await act(async () => fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } }));
+  const ja = kind === "large" ? "クエリファイルの容量が上限の102,400バイトを超えているため、開きませんでした。" : "このファイルはUTF-8のテキストではないため、開きませんでした。";
+  expect(document.querySelector(".operation-explanation")?.textContent).toBe(ja);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".operation-explanation")?.textContent).toBe(kind === "large" ? "This query file exceeds the 102,400 byte limit and was not opened." : "This file is not UTF-8 text and was not opened.");
+  expect((screen.getByRole("textbox", { name: "SPARQL query text" }) as HTMLTextAreaElement).value).toBe("SELECT * WHERE {}");
+  expect(api.runSparql).not.toHaveBeenCalled();
 });

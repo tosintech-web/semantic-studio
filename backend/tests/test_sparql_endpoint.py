@@ -15,6 +15,7 @@ SUMMARY
     schema/query-node/saved-query endpoints behave. A pattern also stops
     cooperatively if every asynchronous stop is lost in a finalizer.
     SERVICE to a public endpoint (D-069) is test_sparql_service.py's.
+    Real query timeouts also retain their actual duration as UI metadata.
 
 BASIC IDEA
     Uploads the demo ontology through the HTTP layer, then runs known queries
@@ -553,6 +554,7 @@ def test_a_timed_out_query_stops_at_its_next_row(graph):
     timed_out = time.perf_counter()
     # The sentence and the cap are unchanged by the stop.
     assert "exceeded the 0s time limit" in str(excinfo.value)
+    assert excinfo.value.ui_message == {"code": "query.time_limit", "args": {"seconds": 0.3}}
     time.sleep(0.5)
     # Many more rows were there to read; at most the one in hand when the
     # timeout fired was read after it.
@@ -585,6 +587,7 @@ def test_a_query_while_an_abandoned_one_runs_is_refused(ontology_id, monkeypatch
         first = client.post(f"/api/ontologies/{ontology_id}/sparql", json={"query": EVERYTHING})
         assert first.status_code == 504
         assert first.json()["detail"].startswith("The query exceeded the")
+        assert first.json()["uiMessage"] == {"code": "query.time_limit", "args": {"seconds": 0.2}}
 
         second = client.post(f"/api/ontologies/{ontology_id}/sparql", json={"query": PLANETS})
         assert second.status_code == 409

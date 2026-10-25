@@ -45,7 +45,8 @@ EXPECTED OUTPUT
     - HTTP 400 or 403 for a request that did not come from the application's
       own page (local_guard.py), before any other middleware or route runs.
     - HTTP 409, 403 or 503 when the network broker needs the user's approval,
-      finds the host blocked, or is offline (network_broker.py, D-066).
+      finds the host blocked, or is offline (network_broker.py, D-066), with
+      source-owned UI metadata beside the unchanged legacy detail.
 ================================================================================
 """
 
@@ -243,12 +244,12 @@ async def _approval_required(_request: Request, exc: ApprovalRequired) -> JSONRe
 
 @app.exception_handler(HostBlocked)
 async def _host_blocked(_request: Request, exc: HostBlocked) -> JSONResponse:
-    return JSONResponse(status_code=403, content={"detail": str(exc)})
+    return JSONResponse(status_code=403, content=detail_body(str(exc), getattr(exc, "ui_message", None)))
 
 
 @app.exception_handler(Offline)
 async def _offline(_request: Request, exc: Offline) -> JSONResponse:
-    return JSONResponse(status_code=503, content={"detail": str(exc)})
+    return JSONResponse(status_code=503, content=detail_body(str(exc), getattr(exc, "ui_message", None)))
 
 
 # A trivial liveness probe. Deployment tooling (and our own scripts) hit this

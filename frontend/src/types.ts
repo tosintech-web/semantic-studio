@@ -4,6 +4,7 @@ FILE: frontend/src/types.ts
 ================================================================================
 
 SUMMARY
+    Optional SERVICE error metadata remains additive to the original error string.
     The shared, app-wide TypeScript types that mirror the backend's JSON
     shapes (ontology summaries, graph, node details, query schema, SPARQL
     results, saved queries, the network broker's policy and activity), plus the theme-aware colour palettes and label
@@ -213,6 +214,8 @@ export interface SparqlResults {
 // the endpoint's answer passed the 10,000-row per-call cap; `error` is set
 // when the call failed and SERVICE SILENT let the query carry on without it.
 export interface ServiceCall {
+  /** Additive source facts; original error remains available for disclosure. */
+  errorUiMessage?: WireMessage | null;
   endpoint: string;
   host: string;
   rows: number;

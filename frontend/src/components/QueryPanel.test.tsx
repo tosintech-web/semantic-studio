@@ -5,6 +5,7 @@ FILE: frontend/src/components/QueryPanel.test.tsx
 ================================================================================
 
 SUMMARY
+    Retained failures re-render without new work; a failed run can be retried.
     The first test for QueryPanel, and it covers exactly one thing: that the
     results area can be emptied without destroying the query, and that the
     control which does it cannot be mistaken for the path bar's Clear path.
@@ -736,4 +737,49 @@ it("updates snapshot provenance in the same view without reloading data", async 
     expect(runSparql).not.toHaveBeenCalled();
     expect(listSavedQueries).toHaveBeenCalledTimes(queries);
   } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});
+
+it("retains a query error for both UI languages without running or fetching again", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const cause = Object.assign(new Error("Original timeout <img>{seconds}"), { uiMessage: { code: "query.time_limit", args: { seconds: 1234.5 } } });
+  runSparql.mockRejectedValue(cause);
+  render(<I18nProvider><UiLanguageSelect /><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /実行/ })));
+  const explanation = document.querySelector(".operation-explanation")!;
+  expect(explanation.textContent).toContain("制限時間の1,234.5秒を超えました");
+  const details = document.querySelector<HTMLDetailsElement>("details.technical-details")!;
+  expect(details.querySelector("pre")?.textContent).toBe(cause.message);
+  expect(details.open).toBe(false);
+  details.open = true;
+  const reads = listSavedQueries.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(explanation.textContent).toContain("The query exceeded 1,234.5 seconds");
+  expect(document.querySelector("details.technical-details")).toBe(details);
+  expect(details.open).toBe(true);
+  expect(details.querySelector("img")).toBeNull();
+  expect(runSparql).toHaveBeenCalledTimes(1);
+  expect(listSavedQueries).toHaveBeenCalledTimes(reads);
+});
+
+it("puts an unknown query error under original details with a localized operation explanation", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  runSparql.mockRejectedValue(new Error("External unknown <img>{query}"));
+  render(<I18nProvider><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /実行/ })));
+  expect(document.querySelector(".operation-explanation")?.textContent).toBe("操作を完了できませんでした。詳細を確認してください。");
+  const details = document.querySelector<HTMLDetailsElement>("details.technical-details")!;
+  expect(details.open).toBe(false);
+  expect(details.querySelector("pre")?.textContent).toBe("External unknown <img>{query}");
+  expect(details.querySelector("img")).toBeNull();
+});
+
+it("allows a corrected query to run after a failed explicit request", async () => {
+  runSparql.mockRejectedValueOnce(new Error("Synthetic failure")).mockResolvedValueOnce(RESULTS);
+  render(<QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} />);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /Execute/ })));
+  const run = document.querySelector<HTMLButtonElement>("button.primary")!;
+  expect(run.disabled).toBe(false);
+  await act(async () => fireEvent.click(run));
+  expect(runSparql).toHaveBeenCalledTimes(2);
+  expect(document.querySelector(".results-table")).not.toBeNull();
 });

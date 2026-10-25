@@ -2701,3 +2701,44 @@ existing real-worker and allocation tests continue to verify the limits. An AST
 comparison confirms the same branch predicates and loop inputs in twelve guard
 and parser functions. The SPARQL timeout path is separate and is not covered by
 this migration.
+
+
+### Query and network failure facts (P1)
+
+Query refusals, broker decisions, address gates and SERVICE errors keep their
+original exception classes, arguments, statuses and detail strings. Optional
+source-created descriptors now cross the existing exception boundaries. A
+JSON-LD context refusal retains its descriptor through ParseError and the
+no-attempt load explanation. Manually constructed unknown errors keep no
+descriptor; equality with a known English sentence does not identify a cause.
+
+The new SERVICE address explanation follows the address gate's code, not its
+English text. The legacy sentence retains the old mapping for compatibility.
+SPARQL JSON result validation keeps native ValueError, its messages and args;
+the actual endpoint supplies optional display context. Failed SILENT calls add
+errorUiMessage beside the original report error. Success, joins, grants,
+SELECT-only enforcement, limits, pinning and cancellation are unchanged.
+
+QueryPanel and the schema reader retain causes rather than locale-specific
+strings. OperationError renders a known frame or the common explanation with a
+native, initially closed disclosure of escaped original text. A locale change
+keeps that disclosure, editor selection and query text, without running the
+query again. The existing Add PREFIX helper still reads the unchanged original
+parser error. Embedded query restrictions/SHACL notes carry optional source
+descriptors; authored names and notes remain literal. Direct legacy file-reading
+and SERVICE-summary callers keep their original returns; the UI explicitly asks
+for current-language facts and presents raw SERVICE errors separately.
+
+A failed explicit query cleared its results through show(null), which advanced
+the request token. Its finally then could not clear running, leaving Run
+disabled. A regression test failed on that disabled button before the fix:
+the current catch now settles running after clearing, and a corrected query can
+run. Stale-run checks still precede the catch's state changes.
+
+Verification includes real HTTP gates and query execution, controlled broker
+responses, context parsing, SILENT/non-SILENT propagation and zero private-hop
+requests, plus mounted language-switch/retry/editor/file tests. Twenty-two
+query/network/parser functions retain identical branch predicates and loop
+inputs. A differential check of 167 result payloads matches the previous values
+or native error text/args. No comparison, RDF mutation or connection-policy
+algorithm was changed to obtain localization.

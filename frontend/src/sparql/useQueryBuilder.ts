@@ -4,6 +4,7 @@ FILE: frontend/src/sparql/useQueryBuilder.ts
 ================================================================================
 
 SUMMARY
+    Schema failures retain their source objects; text-query facts remain locale-free.
     The React hook that owns all query-builder state and behaviour. It fetches
     the ontology's query schema, holds the current QueryState, derives the live
     SPARQL and the graph highlighting, and exposes the actions the UI calls to
@@ -46,6 +47,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { UiMessage } from "../i18n/uiMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getQueryNode, getQuerySchema } from "../api";
 import type { QueryNodeInfo, QuerySchema } from "../types";
@@ -180,6 +182,9 @@ export interface TextQuery {
   runBlocked: string | null;
   /** A one-line note shown above the editor, e.g. about $this. */
   note: string | null;
+  /** Optional source descriptors; absent notes/reasons remain authored text. */
+  runBlockedUi?: UiMessage;
+  noteUi?: UiMessage;
   /** A new text query, started from the prefixes the ontology uses
    *  (query-page-rework 5.3): its help line says they are at the top. */
   fresh: boolean;
@@ -204,7 +209,7 @@ export function useQueryBuilder(
   viewGeneration = "",
 ) {
   const [schema, setSchema] = useState<QuerySchema | null>(null);      // class-level schema
-  const [schemaError, setSchemaError] = useState<string | null>(null); // schema fetch error
+  const [schemaError, setSchemaError] = useState<unknown | null>(null); // schema fetch error
   const [loadingSchema, setLoadingSchema] = useState(false);
   const [state, setState] = useState<QueryState>(emptyQueryState);     // the query being built
   const [hint, setHint] = useState<string | null>(null);               // transient user guidance
@@ -243,13 +248,14 @@ export function useQueryBuilder(
     if (!active || !ontologyId || requestedFor.current === key) return;
     requestedFor.current = key;
     setLoadingSchema(true);
+    setSchemaError(null);
     let cancelled = false;
     getQuerySchema(ontologyId, imports, displayLanguage)
       .then((result) => !cancelled && setSchema(result))
       .catch((e: unknown) => {
         if (cancelled) return;
         requestedFor.current = null;
-        setSchemaError(e instanceof Error ? e.message : String(e));
+        setSchemaError(e);
       })
       .finally(() => !cancelled && setLoadingSchema(false));
     return () => {
@@ -582,7 +588,7 @@ export function useQueryBuilder(
   const openTextQuery = useCallback(
     (
       text: string,
-      options: Partial<Pick<TextQuery, "forkedFrom" | "name" | "runBlocked" | "note" | "fresh">> & {
+      options: Partial<Pick<TextQuery, "forkedFrom" | "name" | "runBlocked" | "note" | "fresh" | "runBlockedUi" | "noteUi">> & {
         /** The saved text query being opened, if it is one. */
         opened?: { id: string; name: string } | null;
       } = {},
@@ -599,6 +605,8 @@ export function useQueryBuilder(
         baseline: text,
         runBlocked: options.runBlocked ?? null,
         note: options.note ?? null,
+        runBlockedUi: options.runBlockedUi,
+        noteUi: options.noteUi,
         fresh: options.fresh ?? false,
         session: sessionRef.current,
         resume,
