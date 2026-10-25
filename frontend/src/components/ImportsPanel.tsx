@@ -4,6 +4,7 @@ FILE: frontend/src/components/ImportsPanel.tsx
 ================================================================================
 
 SUMMARY
+    Saved refusal facts render in the current UI language with original details.
     The imports panel (external-access Stage 2, Section 6): the ontologies this
     one imports, where each came from or why it did not load, the controls that
     resolve them, the choose-a-file fallback for any import the network could
@@ -49,6 +50,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import OperationError from "./OperationError";
 import { useI18n } from "../i18n/I18nProvider";
 import { englishTranslator } from "../i18n/format";
 import type { Translator, UiLocale } from "../i18n/types";
@@ -150,6 +152,7 @@ export default function ImportsPanel({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [error, setError] = useState<unknown>(null);
+  const [invalidFiles, setInvalidFiles] = useState<ImportFilesResult["invalid"]>([]);
   const headingRef = useRef<HTMLButtonElement>(null);
   const filesRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement | null>(null);
@@ -164,6 +167,7 @@ export default function ImportsPanel({
     let live = true;
     setListing(null);
     setMessages([]);
+    setInvalidFiles([]);
     setError(null);
     listImports(ontologyId)
       .then((l) => live && setListing(l))
@@ -190,6 +194,7 @@ export default function ImportsPanel({
   const settle = useCallback((next: ImportsListing, said: UiMessage[]) => {
     setListing(next);
     setMessages(said);
+    setInvalidFiles([]);
     onChangedRef.current?.(next);
     // The control pressed may be gone now (Resolve, once nothing is left to
     // resolve). Wherever focus fell, the heading is where it is picked up.
@@ -279,6 +284,7 @@ export default function ImportsPanel({
           }
         }
         settle(result.imports, reportFiles(result));
+        setInvalidFiles(result.invalid);
       } catch (e) {
         await fail(e);
       } finally {
@@ -360,7 +366,11 @@ export default function ImportsPanel({
         {listing.offline && (
           <p className="imports-note">{t("imports.offline")}</p>
         )}
-        {listing.limit && <p className="imports-note">{listing.limit}</p>}
+        {invalidFiles.map((bad, index) => <div key={index} className="imports-error">
+          <p>{t("imports.invalidFile", { file: bad.file })}</p>
+          <OperationError className="imports-reason" failure={{ cause: { message: bad.error, uiMessage: bad.errorUiMessage } }} />
+        </div>)}
+        {listing.limit && <OperationError className="imports-note" failure={{ cause: { message: listing.limit, uiMessage: listing.limitUiMessage } }} />}
         {!!error && <div className="imports-error">{renderServerError(error, t)}<details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details></div>}
 
         <div className="imports-actions">
@@ -427,7 +437,7 @@ export default function ImportsPanel({
                   {row.iri}
                 </span>
                 <span className="imports-status">{statusText(row, t, locale)}</span>
-                {row.error && <span className="imports-reason">{row.error}</span>}
+                {row.error && <OperationError className="imports-reason" failure={{ cause: { message: row.error, uiMessage: row.errorUiMessage } }} />}
                 {failed && (
                   <span className="imports-row-actions">
                     <button className="ghost" onClick={() => void resolve("resolve")}>

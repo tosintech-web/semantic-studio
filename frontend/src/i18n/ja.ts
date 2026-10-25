@@ -15,6 +15,20 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "imports.stopped": "この参照を解決する前に停止しました。",
+  "imports.depth_refused": "読み込んでいません。参照の深さが上限の{limit}階層を超えています。",
+  "imports.depth_limit": "上限の{limit}階層を超える参照は読み込んでいません。",
+  "imports.document_refused": "読み込んでいません。参照文書数の上限の{limit}件に達しました。",
+  "imports.document_limit": "最初の{limit}件の参照文書を読み込みました。上限に達したため、残りは読み込んでいません。",
+  "imports.bytes_refused": "読み込んでいません。参照文書の合計容量が上限の{limit}バイトを超えます。",
+  "imports.bytes_limit": "参照文書の合計容量の上限（{limit}バイト）まで読み込みました。",
+  "imports.permission_required": "読み込んでいません。{host}への接続には許可が必要です。",
+  "imports.source_gone": "この参照の読み込み元が見つかりません。参照をもう一度解決してください。",
+  "imports.http_failed": "参照先からHTTP {status}が返されました。",
+  "imports.parse_failed": "この参照文書をRDFとして読み込めませんでした。原文の詳細を確認してください。",
+  "imports.cache_failed": "この参照文書の保存済みコピーを読み込めませんでした。原文の詳細を確認してください。",
+  "imports.cache_changed": "この参照文書のキャッシュがディスク上で変更されています。",
+  "imports.bundled_changed": "同梱の{title}が記録されたチェックサムと一致しないため、使用しませんでした。",
   "export.graph_limit": "埋め込みグラフの容量が{bytes}バイトあり、上限の{limit}バイトを超えています。通常、この規模のオントロジーには独自のドキュメントが公開されています。",
   "export.node_limit": "埋め込みグラフの項目数が{count}件あり、表示上限の{limit}件を超えています。通常、この規模のオントロジーには独自のドキュメントが公開されています。",
   "export.source_limit": "元のソースファイルの容量が{bytes}バイトあり、文書出力の上限の{limit}バイトを超えています。",

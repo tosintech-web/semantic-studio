@@ -832,6 +832,56 @@ export const SERVER_CONTRACTS = {
     "url": "string"
   },
   "fetch.web_only": {},
+  "imports.bundled_changed": {
+    "title": "string"
+  },
+  "imports.bytes_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "imports.bytes_refused": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "imports.cache_changed": {},
+  "imports.cache_failed": {},
+  "imports.depth_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "imports.depth_refused": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "imports.document_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "imports.document_refused": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "imports.http_failed": {
+    "status": "number"
+  },
+  "imports.parse_failed": {},
+  "imports.permission_required": {
+    "host": "string"
+  },
+  "imports.source_gone": {},
+  "imports.stopped": {},
   "imports.total_file_limit": {
     "limit": [
       "number",
@@ -2291,6 +2341,20 @@ export interface ServerMessageArgs {
   "fetch.response_limit": { "limit": number | string; "url": string };
   "fetch.time_limit": { "url": string };
   "fetch.web_only": undefined;
+  "imports.bundled_changed": { "title": string };
+  "imports.bytes_limit": { "limit": number | string };
+  "imports.bytes_refused": { "limit": number | string };
+  "imports.cache_changed": undefined;
+  "imports.cache_failed": undefined;
+  "imports.depth_limit": { "limit": number | string };
+  "imports.depth_refused": { "limit": number | string };
+  "imports.document_limit": { "limit": number | string };
+  "imports.document_refused": { "limit": number | string };
+  "imports.http_failed": { "status": number };
+  "imports.parse_failed": undefined;
+  "imports.permission_required": { "host": string };
+  "imports.source_gone": undefined;
+  "imports.stopped": undefined;
   "imports.total_file_limit": { "limit": number | string };
   "load.already_running": undefined;
   "load.cancelled": undefined;

@@ -15,6 +15,20 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "imports.stopped": "Stopped before this import was resolved.",
+  "imports.depth_refused": "Not loaded: imports deeper than {limit} levels are not followed.",
+  "imports.depth_limit": "Imports deeper than {limit} levels were not followed.",
+  "imports.document_refused": "Not loaded: the {limit}-document limit was reached.",
+  "imports.document_limit": "Only the first {limit} imported documents were loaded.",
+  "imports.bytes_refused": "Not loaded: the imports together would exceed {limit} bytes.",
+  "imports.bytes_limit": "Imports were loaded up to the {limit} byte total limit.",
+  "imports.permission_required": "Not loaded: this needs your permission to connect to {host}.",
+  "imports.source_gone": "What this import was resolved from is no longer available. Resolve imports again.",
+  "imports.http_failed": "The site answered HTTP {status} for this import.",
+  "imports.parse_failed": "This import could not be read as RDF. Check the original details.",
+  "imports.cache_failed": "The saved copy of this import could not be read. Check the original details.",
+  "imports.cache_changed": "The cached copy of this import has changed on disk.",
+  "imports.bundled_changed": "The bundled copy of {title} does not match its recorded checksum, so it was not used.",
   "export.graph_limit": "The embedded graph contains {bytes} bytes, exceeding the {limit} byte limit. Ontologies this size are usually already published with their own documentation.",
   "export.node_limit": "The embedded graph contains {count} entities, exceeding the {limit} entity limit. Ontologies this size are usually already published with their own documentation.",
   "export.source_limit": "The source file contains {bytes} bytes, exceeding the {limit} byte documentation limit.",

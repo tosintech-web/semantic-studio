@@ -1614,6 +1614,20 @@
     "export.source_limit": {"bytes": ["number", "string"], "limit": ["number", "string"]},
     "export.page_limit": {"bytes": ["number", "string"], "limit": ["number", "string"]},
     "export.zip_limit": {"bytes": ["number", "string"], "limit": ["number", "string"]},
-    "export.term_limit": {"count": ["number", "string"], "limit": ["number", "string"]}
+    "export.term_limit": {"count": ["number", "string"], "limit": ["number", "string"]},
+    "imports.stopped": {},
+    "imports.depth_refused": {"limit": ["number", "string"]},
+    "imports.depth_limit": {"limit": ["number", "string"]},
+    "imports.document_refused": {"limit": ["number", "string"]},
+    "imports.document_limit": {"limit": ["number", "string"]},
+    "imports.bytes_refused": {"limit": ["number", "string"]},
+    "imports.bytes_limit": {"limit": ["number", "string"]},
+    "imports.permission_required": {"host": "string"},
+    "imports.source_gone": {},
+    "imports.http_failed": {"status": "number"},
+    "imports.parse_failed": {},
+    "imports.cache_failed": {},
+    "imports.cache_changed": {},
+    "imports.bundled_changed": {"title": "string"}
   }
 }

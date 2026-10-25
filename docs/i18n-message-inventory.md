@@ -3274,3 +3274,18 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `export.page_limit` | bytes, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
 | `export.zip_limit` | bytes, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
 | `export.term_limit` | count, limit | `backend/app/docs_export.py` | 文書出力の容量・項目数超過 | 12 | 実際の数値を生成元で保持し制限・原文を維持 |
+
+| `imports.stopped` | — | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.depth_refused` | limit | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.depth_limit` | limit | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.document_refused` | limit | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.document_limit` | limit | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.bytes_refused` | limit | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.bytes_limit` | limit | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.permission_required` | host | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.source_gone` | — | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.http_failed` | status | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.parse_failed` | — | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.cache_failed` | — | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.cache_changed` | — | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |
+| `imports.bundled_changed` | title | `backend/app/imports.py` | 参照文書の読み込み・制限 | 12 | 元の状態・原文を保持し生成元の事実を保存 |

@@ -4,6 +4,7 @@ FILE: frontend/src/types.ts
 ================================================================================
 
 SUMMARY
+    Import rows, limits and chosen-file failures carry optional source UI facts.
     Optional SERVICE error metadata remains additive to the original error string.
     The shared, app-wide TypeScript types that mirror the backend's JSON
     shapes (ontology summaries, graph, node details, query schema, SPARQL
@@ -895,6 +896,7 @@ export interface ImportRow {
   sourceName: string | null;
   fetchedAt: string | null;
   error: string | null;
+  errorUiMessage?: WireMessage | null;
   documentCount: number;
   depth: number;
   importedBy: string | null;
@@ -907,6 +909,7 @@ export interface ImportRow {
 export interface ImportsListing {
   imports: ImportRow[];
   limit: string | null;
+  limitUiMessage?: WireMessage | null;
   resolving: { done: number; total: number } | null;
   offline: boolean;
 }
@@ -917,7 +920,7 @@ export interface ImportFilesResult {
   matched: { iri: string; file: string }[];
   unmatched: string[];
   mismatch: { file: string; declares: string | null; forIri: string }[];
-  invalid: { file: string; error: string }[];
+  invalid: { file: string; error: string; errorUiMessage?: WireMessage | null }[];
   imports: ImportsListing;
 }
 

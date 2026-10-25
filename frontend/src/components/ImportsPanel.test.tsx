@@ -5,6 +5,7 @@ FILE: frontend/src/components/ImportsPanel.test.tsx
 ================================================================================
 
 SUMMARY
+    Saved refusal explanations switch locale without replaying import operations.
     Tests for the imports panel (external-access Stage 2): the listing and its
     states (AC-16, AC-19), the Resolve control, the failure actions and the
     folder picker (AC-40), a mismatched file asked about once (AC-42), the
@@ -446,4 +447,54 @@ describe("imports UI language", () => {
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "リンクをコピー" })); });
     expect(screen.getByRole("status").textContent).toBe("リンクをコピーできませんでした。");
   });
+});
+
+it("translates saved import refusal facts while preserving original details and focus", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const legacy = "The site answered HTTP 451 for this import. <img>{raw}";
+  listImports.mockResolvedValue(listing([row(REMOTE, {
+    status: "failed", error: legacy,
+    errorUiMessage: { code: "imports.http_failed", args: { status: 451 } },
+  })], {
+    limit: "Only the first 100 imported documents were loaded.",
+    limitUiMessage: { code: "imports.document_limit", args: { limit: 100 } },
+  }));
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ImportsPanel ontologyId="ont-1" library={[]} includeImports={false} onIncludeImportsChange={vi.fn()} /></I18nProvider>);
+  });
+  fireEvent.click(screen.getByRole("button", { name: "参照オントロジー" }));
+  expect(screen.getByText("参照先からHTTP 451が返されました。")).toBeTruthy();
+  expect(screen.getByText("最初の100件の参照文書を読み込みました。上限に達したため、残りは読み込んでいません。")).toBeTruthy();
+  const original = screen.getByText(legacy).closest("details")!;
+  expect(original.open).toBe(false);
+  fireEvent.click(original.querySelector("summary")!);
+  original.querySelector("summary")!.focus();
+  const calls = listImports.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("The site answered HTTP 451 for this import.")).toBeTruthy();
+  expect(original.open).toBe(true);
+  expect(document.activeElement).toBe(original.querySelector("summary"));
+  expect(screen.getByText(legacy)).toBeTruthy();
+  expect(document.querySelector("img")).toBeNull();
+  expect(listImports.mock.calls.length).toBe(calls);
+});
+
+it("retains a chosen file failure for current-language explanation and original disclosure", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const legacy = "Original parser detail <img>{value}";
+  chooseImportFiles.mockResolvedValue({ matched: [], unmatched: [], mismatch: [],
+    invalid: [{ file: "synthetic.ttl", error: legacy, errorUiMessage: { code: "imports.parse_failed", args: {} } }], imports: UNRESOLVED });
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ImportsPanel ontologyId="ont-1" library={[]} includeImports={false} onIncludeImportsChange={vi.fn()} /></I18nProvider>);
+  });
+  fireEvent.click(screen.getByRole("button", { name: "参照オントロジー" }));
+  const input = screen.getByTestId("imports-folder");
+  await act(async () => { fireEvent.change(input, { target: { files: [new File(["invalid"], "synthetic.ttl")] } }); });
+  expect(screen.getByText("この参照文書をRDFとして読み込めませんでした。原文の詳細を確認してください。")).toBeTruthy();
+  const details = screen.getByText(legacy).closest("details")!;
+  fireEvent.click(details.querySelector("summary")!);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("This import could not be read as RDF. Check the original details.")).toBeTruthy();
+  expect(details.open).toBe(true);
+  expect(chooseImportFiles).toHaveBeenCalledTimes(1);
 });

@@ -250,6 +250,8 @@ in a module.
 
 ## Load-bearing rules
 
+- Import message carriers need explicit sibling metadata before JSON persistence; local-only retries keep that metadata with the saved failure. [Import refusal facts persist]
+
 Each line is a rule that was broken once or measured to matter. The reason is
 in `docs/known-state.md`; the bracket is a phrase to search for there. Read it
 before undoing a rule, and add a line here and an entry there when a build

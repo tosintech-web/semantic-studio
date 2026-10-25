@@ -2778,3 +2778,32 @@ than a container containing the technical disclosure. UI language changes retain
 the same field, description id and open disclosure without another search.
 A mounted test covers hostile original text, the linked description, and the
 request count. Real keyboard/AX verification remains part of the P1 browser gate.
+
+### Import refusal facts persist beside legacy text (P1)
+
+Import row errors and the first closure-limit notice retain source-created facts
+beside their original text. JSON string serialization discards attributes, so the
+resolver explicitly projects optional errorUiMessage/limitUiMessage fields before
+saving. Listing forwards the saved facts without parsing, connecting or rewriting
+state. A local-only retry retains a previous failure's descriptor along with its
+status and text. A missing library/cache source gets a fresh descriptor only on
+the returned listing. Depth, document and byte predicates and resolution order
+are unchanged; byte metadata names the actual configured limit while the original
+150 MB legacy text remains untouched.
+
+Network exception metadata survives the download and parser boundaries. Cache
+and import parsing add context-specific fallback descriptions without identifying
+an exception by its English text. Bundled/cache checksum failures capture facts
+where they are raised. Chosen-file failures keep the original first line and
+optional facts. The panel retains those failures as data and renders them in the
+current UI language, with escaped original details in native disclosures. Opening
+a disclosure and changing language does not repeat a request or lose focus.
+Approval reason/sends translation and stale operation lifecycle checks remain
+separate outstanding P1 work.
+
+An explicitly ordered test run exposed a fixture leak: the message-contract HTTP
+test started the application lifespan and left its seeded FOAF example in the
+shared library. Later import tests then resolved FOAF from that library instead
+of the bundled vocabulary. The HTTP test now removes only the library entries its
+lifespan added, preserving entries that existed before the test. The same ordered
+run now passes, including bundled integrity and resolution-priority assertions.

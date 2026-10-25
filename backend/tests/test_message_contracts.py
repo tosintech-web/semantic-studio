@@ -5,7 +5,8 @@ SUMMARY
     Shared message contract, generator and additive HTTP metadata.
 BASIC IDEA
     Validate primitive arguments and flat literal/word groups at their source,
-    copy mutable parts, reject nested structures and inspect a real API error.
+    copy mutable parts, reject nested structures and inspect a real API error,
+    restoring examples seeded by the test lifespan for subsequent import tests.
 INPUTS / INPUT SOURCES
     Representative contracts, invalid arguments and controlled exceptions.
 EXPECTED OUTPUT
@@ -21,6 +22,7 @@ from fastapi.testclient import TestClient
 from app.messages import make_message, UiHTTPException
 from app.editing import CommandError
 from app.main import app
+from app.store import store
 ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.mark.parametrize("code,args", [
@@ -66,12 +68,18 @@ def test_http_metadata_is_additive_and_legacy_detail_keeps_its_type():
         raise UiHTTPException(status_code=400, detail="Original English detail.", ui_message=make_message("reasoning.timeout", seconds=10))
     route = app.router.routes.pop()
     app.router.routes.insert(0, route)  # Before the production catch-all static mount.
+    # The lifespan seeds bundled examples; leave the shared test library as
+    # it was so later import tests can still distinguish bundled from library.
+    before = {ontology.id for ontology in store.list()}
     try:
         with TestClient(app, base_url="http://localhost", headers={"X-Semantic-Studio": "1"}) as client:
             response = client.get(path)
         assert response.status_code == 400
         assert response.json() == {"detail": "Original English detail.", "uiMessage": {"code": "reasoning.timeout", "args": {"seconds": 10}}}
     finally:
+        for ontology in store.list():
+            if ontology.id not in before:
+                store.remove(ontology.id)
         app.router.routes[:] = [route for route in app.router.routes if getattr(route, "path", None) != path]
 
 def test_generator_check_detects_stale_output_without_overwriting_it(tmp_path, monkeypatch):
