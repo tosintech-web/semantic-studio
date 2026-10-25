@@ -2949,3 +2949,22 @@ Snapshot summaries and previews now attach classNameUiMessage for that source
 identity, without changing className or persisting a new field. The shared
 name renderer in preview, report and list translates valid metadata; authored
 identical names and unknown descriptors keep their original text.
+
+### Third-party notices preserve original bytes (P1)
+
+License notice paths are content addresses: each inventory SHA-256 must match
+the actual notice bytes. A complete check found four copied texts normalized
+to LF while their source hashes described CRLF: @asamuzakjp/css-color 6.0.5,
+@asamuzakjp/dom-selector 8.3.0, decimal.js 10.6.0 and TypeScript 5.6.3. The
+installed packages match those exact inventory versions, and their raw license
+files match the recorded hashes. Copying those bytes restores the originals
+without changing the inventory hashes. Text-mode copies must not normalize
+license originals; the existing binary Git attributes preserve them afterward.
+
+The saxes 6.0.0 registry metadata identifies source commit
+211fa0ebec9b628affc09219199639887174bfc3. Its upstream LICENSE is retained
+verbatim, with its source URL and byte hash in the inventory. This is marked
+upstream-text-collected to distinguish it from collection out of an installed
+package. All 227 notice references match their files after collection/repair.
+This byte check does not approve another version or prove what is distributed:
+actual frontend/Docker/ZIP notice inclusion remains a separate P1 gate.

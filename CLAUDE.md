@@ -250,6 +250,8 @@ in a module.
 
 ## Load-bearing rules
 
+- Third-party originals are raw bytes keyed by inventory hashes; text-mode normalization breaks their provenance. [Third-party notices preserve original bytes]
+
 - Import message carriers need explicit sibling metadata before JSON persistence; local-only retries keep that metadata with the saved failure. [Import refusal facts persist]
 
 Each line is a rule that was broken once or measured to matter. The reason is
