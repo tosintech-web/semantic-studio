@@ -50,6 +50,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { renderServerMessage, renderServerError } from "../i18n/serverMessage";
+import type { WireMessage } from "../i18n/server-contracts";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { TurtleError, getDocumentSource } from "../api";
 import { projectStore, useProjectSelector } from "../state/projectStore";
@@ -61,7 +64,7 @@ interface Props {
   doc: ProjectDocName;
   revision: number;
   onSelectEntity?: (iri: string) => void;
-  onError?: (message: string) => void;
+  onError?: (error: unknown) => void;
 }
 
 const NOTHING = () => undefined;
@@ -70,6 +73,8 @@ const FILES: Record<ProjectDocName, string> = { model: "model.ttl", shapes: "sha
 
 interface ParseProblem {
   message: string;
+  uiMessage?: WireMessage;
+  syntax?: boolean;
   line: number | null;
   column: number | null;
   detail: string;
@@ -87,11 +92,12 @@ function offsetOf(text: string, line: number, column: number): number {
 }
 
 export default function TurtleEditor({ projectId, doc, revision, onSelectEntity = NOTHING, onError = NOTHING }: Props) {
+  const { t } = useI18n();
   const editorDraft = useProjectSelector((s) => s.editorDraft);
   const editorTarget = useProjectSelector((s) => s.editorTarget);
   const shownTarget = useRef(0);
   const [base, setBase] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [applying, setApplying] = useState(false);
   const [problem, setProblem] = useState<ParseProblem | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -112,7 +118,7 @@ export default function TurtleEditor({ projectId, doc, revision, onSelectEntity 
     setLoadError(null);
     getDocumentSource(projectId, doc)
       .then((source) => live && setBase(source.text))
-      .catch((e: unknown) => live && setLoadError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setLoadError(e));
     return () => {
       live = false;
     };
@@ -150,7 +156,7 @@ export default function TurtleEditor({ projectId, doc, revision, onSelectEntity 
       setBase(applied);
     } catch (e: unknown) {
       if (e instanceof TurtleError) {
-        setProblem({ message: e.message, line: e.line, column: e.column, detail: e.detail });
+        setProblem({ message: e.message, uiMessage: e.uiMessage, syntax: true, line: e.line, column: e.column, detail: e.detail });
         // Put the caret where rdflib stopped, so the fix starts there.
         const area = textRef.current;
         if (area && e.line !== null && e.column !== null) {
@@ -186,12 +192,12 @@ export default function TurtleEditor({ projectId, doc, revision, onSelectEntity 
   };
 
   const state = applying
-    ? "Applying…"
+    ? t("editor.applying")
     : problem
-      ? "Not applied: the text has an error."
+      ? t("editor.invalid")
       : edited
-        ? "Edited — not applied yet."
-        : "Matches the document.";
+        ? t("editor.edited")
+        : t("editor.clean");
 
   return (
     <section className="source-view turtle-editor" aria-labelledby="source-view-heading">
@@ -207,35 +213,34 @@ export default function TurtleEditor({ projectId, doc, revision, onSelectEntity 
           className="ghost"
           aria-disabled={!edited || applying}
           onClick={discard}
-          title={edited ? "Return the text to the document" : "Nothing to discard"}
-        >
-          Discard edits
-        </button>
+          title={edited ? t("editor.discardHelp") : t("editor.noDiscard")}
+        >{t("editor.discard")}</button>
         <button
           className="primary"
           aria-disabled={!edited || applying}
           onClick={() => void apply()}
-          title={edited ? "Parse the text and replace the document (Ctrl+Enter)" : "Nothing to apply"}
+          title={edited ? t("editor.applyHelp") : t("editor.noApply")}
         >
-          {applying ? "Applying…" : "Apply  Ctrl+Enter"}
+          {applying ? t("editor.applying") : t("editor.apply")}
         </button>
         {doc === "shapes" && (
-          <ValidateButton onError={onError} blocked={edited ? "Apply the text first, so what is checked is what you see." : null} />
+          <ValidateButton onError={onError} blocked={edited ? t("editor.applyFirst") : null} />
         )}
       </div>
 
       {problem && (
         <div className="turtle-error" role="alert">
-          <p>{problem.message}</p>
-          {problem.detail && (
+          <p>{problem.uiMessage ? renderServerMessage(problem.uiMessage, problem.message, t) : problem.syntax ? t("editor.parseLocation", { line: problem.line, column: problem.column }) : t("common.error")}</p>
+          {(problem.detail || problem.message) && (
             <details>
-              <summary>rdflib's message</summary>
-              <pre>{problem.detail}</pre>
+              <summary>{t("editor.parser")}</summary>
+              <p>{problem.message}</p>
+              {problem.detail && <pre>{problem.detail}</pre>}
             </details>
           )}
         </div>
       )}
-      {loadError && <p className="detail-error">{loadError}</p>}
+      {!!loadError && <><p className="detail-error">{renderServerError(loadError, t)}</p><details><summary>{t("common.details")}</summary><pre>{loadError instanceof Error ? loadError.message : String(loadError)}</pre></details></>}
 
       <div className="turtle-body">
         <div className="turtle-gutter" ref={gutterRef} aria-hidden="true">
@@ -248,7 +253,7 @@ export default function TurtleEditor({ projectId, doc, revision, onSelectEntity 
         <textarea
           ref={textRef}
           className="turtle-textarea"
-          aria-label={`Turtle source of ${FILES[doc]}`}
+          aria-label={t("editor.name", { file: FILES[doc] })}
           aria-describedby="turtle-editor-help"
           aria-invalid={problem ? true : undefined}
           value={text}
@@ -266,11 +271,10 @@ export default function TurtleEditor({ projectId, doc, revision, onSelectEntity 
         />
       </div>
       <p id="turtle-editor-help" className="hint turtle-help">
-        Press Ctrl+Enter to apply. Tab moves to the next control. An apply is one step of Undo.
-        A relative IRI such as &lt;owns&gt; is read as the project&apos;s base IRI followed by owns.
+        {t("editor.help")}
       </p>
       {doc === "shapes" && (
-        <section className="turtle-results" aria-label="Validation results">
+        <section className="turtle-results" aria-label={t("editor.results")}>
           <ResultPanels onSelect={onSelectEntity} />
         </section>
       )}

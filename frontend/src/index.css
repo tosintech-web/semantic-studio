@@ -404,12 +404,15 @@ select:focus {
   border-bottom: 1px solid var(--border);
 }
 
+/* The locale controls and translated navigation can need a second line.
+   Let the header grow so controls remain visible above the context row. */
 .nav-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 4px;
   padding: 0 14px;
-  height: 58px;
+  min-height: 58px;
 }
 
 .brand {
@@ -1156,7 +1159,6 @@ select:focus {
   color: var(--error-text);
   padding: 8px 14px;
   border-bottom: 1px solid var(--error-border);
-  cursor: pointer;
   white-space: pre-wrap;
 }
 
@@ -1182,7 +1184,7 @@ select:focus {
   padding: 8px 14px;
   border-bottom: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  cursor: pointer;
+  padding-right: 46px;
 }
 
 /* The partial-graph notice. Informational, so it deliberately does not borrow
@@ -6637,3 +6639,27 @@ kbd {
   flex: none;
   padding: 4px 12px;
 }
+
+/* Complete dictionary pages remain bounded by the server page size; long IRIs
+   wrap without changing their values or creating page-wide horizontal scroll. */
+.entity-workspace { display: flex; min-height: 0; }
+.entity-browser { flex: 1; min-width: 0; overflow: auto; }
+.dictionary-context { display: flex; flex-wrap: wrap; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
+.dictionary-context strong { overflow-wrap: anywhere; }
+.entity-list { padding: 1rem; }
+.entity-list-controls, .entity-list-pages { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+.entity-list-controls label { display: flex; flex-direction: column; gap: .25rem; }
+.entity-table-scroll { overflow-x: auto; }
+.entity-list table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.entity-list td, .entity-list th { text-align: left; vertical-align: top; padding: .5rem; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.entity-list-pages { margin-top: 1rem; }
+/* The global button's nowrap would let a long authored name paint over the
+   following columns. Keep its hit area and text inside the table cell. */
+.entity-open { max-width: 100%; height: auto; min-height: var(--btn-md); padding: 6px 12px; white-space: normal; text-align: left; }
+.entity-open, .reference-iri, .result-match { overflow-wrap: anywhere; }
+.result-match { display: block; }
+
+/* The status region stays mounted; its separate real close button does not
+   become part of the text announced by the live region. */
+.notice-container { position: relative; flex: none; }
+.notice-close { position: absolute; top: 4px; right: 8px; }

@@ -22,7 +22,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NetworkActivity, NetworkPolicy } from "../types";
 import NetworkPanel from "./NetworkPanel";
@@ -198,4 +201,13 @@ describe("NetworkPanel", () => {
     const text = screen.getByRole("dialog").textContent ?? "";
     expect(text).not.toMatch(/proxy|certificate/i);
   });
+});
+it("keeps the network state facts and translates an existing announcement on language change", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1"); setNetworkOffline.mockResolvedValue({ offline: true });
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><NetworkPanel onClose={vi.fn()} /></I18nProvider>); });
+  await act(async () => { fireEvent.click(screen.getByRole("switch", { name: "オフラインで作業" })); });
+  expect(screen.getByRole("status").textContent).toContain("オフラインで作業中");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("status").textContent).toContain("Working offline.");
+  expect(screen.getByRole("switch", { name: "Work offline" }).getAttribute("aria-checked")).toBe("true");
 });

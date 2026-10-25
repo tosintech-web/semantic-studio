@@ -14,7 +14,9 @@ BASIC IDEA
     The checks read the document's graph and nothing else, so the same
     function serves a command before it runs (editing.py) and the form after
     (the node route, through warnings()). Every sentence is built from the
-    learner's own names, never from OWL terms.
+    learner's own names, never from OWL terms. Refusals remain strings with
+    validated display facts; warning records forward those facts explicitly.
+    No additional graph walk or translated sentence is stored.
 
     Refusals: two characteristics that contradict each other, a relationship
     made its own inverse, *related to* between two concepts one of which is
@@ -60,9 +62,9 @@ INPUTS / INPUT SOURCES
       gives an entity's display name.
 
 EXPECTED OUTPUT
-    - *_refusal(...) -> the sentence, or None.
-    - warnings(graph, prop, name) -> [{"text", "fix"?}] for one property.
-    - never_members(graph, cls, name) -> [{"text", "disjoint"?}] for one class.
+    - *_refusal(...) -> a compatible string with ui_message facts, or None.
+    - warnings(graph, prop, name) -> legacy text/fix plus optional uiMessage.
+    - never_members(graph, cls, name) -> legacy text/disjoint plus uiMessage.
 ================================================================================
 """
 
@@ -75,8 +77,25 @@ from rdflib.namespace import OWL, RDF, RDFS, SKOS
 
 from .axioms import class_type, defined, disjoint_pairs, disjoint_with, domain_of, named_pairs
 from .sentences import article, verb
+from .messages import integer_arg, MessageText, literal_part, make_message, word_part
 
 Name = Callable[[URIRef], str]
+
+
+def _warning(sentence: MessageText, **fields) -> dict:
+    # Ordinary strings stay in the old JSON field. Descriptors are additive;
+    # neither the form nor a command has to repeat a graph walk to get them.
+    return {"text": str(sentence), "uiMessage": sentence.ui_message, **fields}
+
+
+def _class_parts(classes: Iterable, name: Name, form: str) -> list[dict]:
+    parts = []
+    for cls in classes:
+        if parts:
+            parts.append(word_part("words.list.and" if form == "separate" else "words.list.or"))
+        parts.append(literal_part(name(cls)))
+    return parts
+
 
 # The seven characteristics a learner is offered (5.6), by the name the
 # command takes, with the words the form shows.
@@ -109,6 +128,12 @@ CONFLICTS = [
 ]
 
 
+CONFLICT_CODES = {
+    "symmetric": "model.conflict.symmetric_asymmetric",
+    "reflexive": "model.conflict.reflexive_irreflexive",
+}
+
+
 def characteristics(graph: Graph, prop: URIRef) -> set[str]:
     types = set(graph.objects(prop, RDF.type))
     return {name for name, iri in CHARACTERISTICS.items() if iri in types}
@@ -124,7 +149,7 @@ def characteristic_refusal(
     has = characteristics(graph, prop)
     for a, b, sentence in CONFLICTS:
         if (name == a and b in has) or (name == b and a in has):
-            return sentence
+            return MessageText(sentence, CONFLICT_CODES[a])
     return _Facts(graph).refusal(prop, label, lambda f: f.chars.setdefault(prop, set()).add(name))
 
 
@@ -232,25 +257,25 @@ def chaining_sentence(prop, name: str, why: tuple, label: Name, subject=None) ->
     source, how = why
     if name == "counted":
         if how == "self":
-            return (f"A rule counts {label(prop)}, and OWL 2 does not allow counting a relationship "
-                    'that chains. Remove the count, or leave "Chains" off.')
+            return (MessageText(f"A rule counts {label(prop)}, and OWL 2 does not allow counting a relationship "
+                    'that chains. Remove the count, or leave "Chains" off.', "model.chain.counted_self", name=label(prop)))
         where = "is under it" if how == "under" else "is its other way round"
-        return (f"A rule counts {label(prop)}, and {label(source)} chains and {where}; "
-                "OWL 2 does not allow counting it then.")
+        return (MessageText(f"A rule counts {label(prop)}, and {label(source)} chains and {where}; "
+                "OWL 2 does not allow counting it then.", "model.chain.counted_under" if how == "under" else "model.chain.counted_inverse", name=label(prop), source=label(source)))
     word = WORDS[name]
     if how == "self":
         return (
-            f'A relationship that chains cannot also be "{word}" in OWL 2; '
-            "reasoners such as HermiT reject the file. Choose one."
+            MessageText(f'A relationship that chains cannot also be "{word}" in OWL 2; '
+            "reasoners such as HermiT reject the file. Choose one.", "model.chain.self", characteristic=[word_part(f"words.characteristic.{name}")])
         )
     if subject is not None and prop != subject:
         # The change made a chaining relationship the child or the other way
         # round of one that has one of the four (the third row).
         where = "above a chaining one" if how == "under" else "that is the other way round of a chaining one"
-        return f'{label(source)} chains, and {label(prop)} is "{word}"; in OWL 2 a relationship {where} cannot be.'
+        return MessageText(f'{label(source)} chains, and {label(prop)} is "{word}"; in OWL 2 a relationship {where} cannot be.', "model.chain.changed_under" if how == "under" else "model.chain.changed_inverse", name=label(prop), source=label(source), characteristic=[word_part(f"words.characteristic.{name}")])
     if how == "under":
-        return f'{label(prop)} has a relationship under it that chains, so it cannot also be "{word}" in OWL 2.'
-    return f'The other way round of {label(prop)} chains, so it cannot also be "{word}" in OWL 2.'
+        return MessageText(f'{label(prop)} has a relationship under it that chains, so it cannot also be "{word}" in OWL 2.', "model.chain.under", name=label(prop), characteristic=[word_part(f"words.characteristic.{name}")])
+    return MessageText(f'The other way round of {label(prop)} chains, so it cannot also be "{word}" in OWL 2.', "model.chain.inverse", name=label(prop), characteristic=[word_part(f"words.characteristic.{name}")])
 
 
 def subproperty_chaining_refusal(graph: Graph, child: URIRef, parent: URIRef, label: Name) -> Optional[str]:
@@ -280,10 +305,10 @@ def counting_refusal(graph: Graph, prop: URIRef, label: Name) -> Optional[str]:
     source, how = why
     tail = 'Use "has at least one" instead.'
     if how == "self":
-        return f"{label(prop)} chains, so OWL 2 does not allow counting it. {tail}"
+        return MessageText(f"{label(prop)} chains, so OWL 2 does not allow counting it. {tail}", "model.count.self", name=label(prop))
     if how == "under":
-        return f"{label(source)} chains and is under {label(prop)}, so OWL 2 does not allow counting {label(prop)}. {tail}"
-    return f"The other way round of {label(prop)} chains, so OWL 2 does not allow counting it. {tail}"
+        return MessageText(f"{label(source)} chains and is under {label(prop)}, so OWL 2 does not allow counting {label(prop)}. {tail}", "model.count.under", name=label(prop), source=label(source))
+    return MessageText(f"The other way round of {label(prop)} chains, so OWL 2 does not allow counting it. {tail}", "model.count.inverse", name=label(prop))
 
 
 def _noun(prop_label: str, many: bool) -> str:
@@ -300,12 +325,12 @@ def count_conflict_refusal(cls_name: str, prop_label: str, low: int, high: int) 
     """*At least* above *at most* on one class and property (5.10)."""
     if low <= high:
         return None
-    return f"{cls_name} cannot have at least {low} and at most {high} {_noun(prop_label, True)}."
+    return MessageText(f"{cls_name} cannot have at least {low} and at most {high} {_noun(prop_label, True)}.", "model.count.conflict", name=cls_name, property=prop_label, low=integer_arg(low), high=integer_arg(high))
 
 
 def own_inverse_refusal(prop: URIRef, inverse: URIRef, name: str) -> Optional[str]:
     if prop == inverse:
-        return f'{name} cannot be its own other way round. Use "Works both ways" instead.'
+        return MessageText(f'{name} cannot be its own other way round. Use "Works both ways" instead.', "model.inverse.self", name=name)
     return None
 
 
@@ -349,13 +374,13 @@ def broader_loop_refusal(graph: Graph, concept: URIRef, broader: URIRef, name: N
     """Making `concept` narrower than `broader` closes a loop when `broader`
     is already `concept` or narrower than it."""
     if concept == broader or concept in _above(_broader(graph), broader):
-        return f"That would make {name(concept)} narrower than itself."
+        return MessageText(f"That would make {name(concept)} narrower than itself.", "model.loop.broader", name=name(concept))
     return None
 
 
 def subproperty_loop_refusal(graph: Graph, child: URIRef, parent: URIRef, name: Name) -> Optional[str]:
     if child == parent or child in _above(_parents(graph, RDFS.subPropertyOf), parent):
-        return f"That would make {name(child)} a more specific kind of itself."
+        return MessageText(f"That would make {name(child)} a more specific kind of itself.", "model.loop.property", name=name(child))
     return None
 
 
@@ -370,8 +395,8 @@ def related_refusal(graph: Graph, a: URIRef, b: URIRef, name: Name) -> Optional[
     else:
         return None
     return (
-        f"{name(narrow)} is already narrower than {name(broad)}; "
-        "SKOS does not allow them to be related as well."
+        MessageText(f"{name(narrow)} is already narrower than {name(broad)}; "
+        "SKOS does not allow them to be related as well.", "model.related.broader", narrow=name(narrow), broad=name(broad))
     )
 
 
@@ -392,8 +417,8 @@ def broader_related_refusal(graph: Graph, concept: URIRef, broader: URIRef, name
         low, high = (a, b) if a in below else (b, a)
         if low in below and high in above:
             return (
-                f"{name(low)} is related to {name(high)}; SKOS does not allow one to be "
-                "narrower than the other as well."
+                MessageText(f"{name(low)} is related to {name(high)}; SKOS does not allow one to be "
+                "narrower than the other as well.", "model.broader.related", narrow=name(low), broad=name(high))
             )
     return None
 
@@ -406,12 +431,12 @@ def pair_refusal(graph: Graph, a: URIRef, b: URIRef, predicate: URIRef, name: Na
     the same as one class: each is refused before it is written."""
     disjoint = predicate == OWL.disjointWith
     if a == b:
-        return "A class cannot be disjoint with itself." if disjoint else "A class cannot mean the same as itself."
+        return MessageText("A class cannot be disjoint with itself." if disjoint else "A class cannot mean the same as itself.", "model.class.disjoint_self" if disjoint else "model.class.equivalent_self")
     if disjoint and b in named_pairs(graph, a, OWL.equivalentClass):
-        return f"{name(a)} cannot be disjoint with {name(b)} and mean the same as it."
+        return MessageText(f"{name(a)} cannot be disjoint with {name(b)} and mean the same as it.", "model.class.disjoint_equivalent", first=name(a), second=name(b))
     # Disjoint by owl:AllDisjointClasses too (PR #56 review).
     if not disjoint and b in disjoint_with(graph, a):
-        return f"{name(a)} cannot mean the same as {name(b)} and be disjoint with it."
+        return MessageText(f"{name(a)} cannot mean the same as {name(b)} and be disjoint with it.", "model.class.equivalent_disjoint", first=name(a), second=name(b))
     return None
 
 
@@ -434,7 +459,7 @@ def never_members(graph: Graph, cls: URIRef, name: Name) -> list[dict]:
     out: list[dict] = []
     if (cls, OWL.disjointWith, cls) in graph:
         # Written in Turtle only (the command refuses it): still said.
-        out.append({"text": f"{name(cls)} can never have members: it is disjoint with itself."})
+        out.append(_warning(MessageText(f"{name(cls)} can never have members: it is disjoint with itself.", "model.members.self", name=name(cls))))
     if not pairs:
         return out
     above = {cls} | _above(parents, cls)
@@ -443,13 +468,10 @@ def never_members(graph: Graph, cls: URIRef, name: Name) -> list[dict]:
             continue
         if cls in (x, y):
             other = y if cls == x else x
-            out.append({
-                "text": f"{name(cls)} can never have members: it is a kind of {name(other)} and disjoint with it.",
-                "disjoint": str(other),
-            })
+            out.append(_warning(MessageText(f"{name(cls)} can never have members: it is a kind of {name(other)} and disjoint with it.", "model.members.parent", name=name(cls), parent=name(other)), disjoint=str(other)))
         else:
             first, second = sorted((name(x), name(y)), key=str.casefold)
-            out.append({"text": f"{name(cls)} can never have members: it would be a kind of {first} and of {second}."})
+            out.append(_warning(MessageText(f"{name(cls)} can never have members: it would be a kind of {first} and of {second}.", "model.members.both", name=name(cls), first=first, second=second)))
     children: dict = {}
     for child, ups in parents.items():
         for up in ups:
@@ -463,11 +485,11 @@ def never_members(graph: Graph, cls: URIRef, name: Name) -> list[dict]:
             if under == cls:
                 continue  # cls below the other: said above, from cls's side
             if under == other:
-                text = f"{name(other)} can never have members: it is a kind of {name(cls)} and disjoint with it."
+                text = MessageText(f"{name(other)} can never have members: it is a kind of {name(cls)} and disjoint with it.", "model.members.parent", name=name(other), parent=name(cls))
             else:
                 first, second = sorted((name(cls), name(other)), key=str.casefold)
-                text = f"{name(under)} can never have members: it would be a kind of {first} and of {second}."
-            out.append({"text": text, "disjoint": str(other)})
+                text = MessageText(f"{name(under)} can never have members: it would be a kind of {first} and of {second}.", "model.members.both", name=name(under), first=first, second=second)
+            out.append(_warning(text, disjoint=str(other)))
     return out
 
 
@@ -493,11 +515,11 @@ def warnings(graph: Graph, prop: URIRef, name: Name) -> list[dict]:
     # `block` is where the form shows it: under the block it concerns.
     for a, b, sentence in CONFLICTS:
         if a in has and b in has:
-            out.append({"text": sentence, "block": "characteristics"})
+            out.append(_warning(MessageText(sentence, CONFLICT_CODES[a]), block="characteristics"))
     # The chaining rule, for a combination written in Turtle (D-089).
     for bad, what, why in _Facts(graph).violations():
         if bad == prop:
-            out.append({"text": chaining_sentence(bad, what, why, name), "block": "characteristics"})
+            out.append(_warning(chaining_sentence(bad, what, why, name), block="characteristics"))
     # The domain as axioms.domain_of reads it (attribute-reuse 5.3): every
     # class of a union, *or*; every class of two domain lines, *and*.
     reading = domain_of(graph, prop)
@@ -511,19 +533,11 @@ def warnings(graph: Graph, prop: URIRef, name: Name) -> list[dict]:
         # one reads the name as written, as the "identifies its start"
         # example does, so no grammar is guessed.
         end = name(rng)
-        out.append({
-            "block": "characteristics",
-            "text": (
-                f"Works both ways means {article(end)} {end} can also be linked by {label} "
-                f"to {starts}. Usually start and end are the same class."
-            )
-        })
+        out.append(_warning(MessageText(f"Works both ways means {article(end)} {end} can also be linked by {label} "
+                f"to {starts}. Usually start and end are the same class.", "model.warning.symmetric." + ("all" if reading.form == "separate" else "one" if reading.form == "one" else "any"), name=label, end=end, classes=_class_parts(classes, name, reading.form)), block="characteristics"))
     if "reflexive" in has and classes:
-        out.append({
-            "block": "characteristics",
-            "text": f'"Always to itself" makes every thing {starts}. '
-            "This is rarely what is meant."
-        })
+        out.append(_warning(MessageText(f'"Always to itself" makes every thing {starts}. '
+            "This is rarely what is meant.", "model.warning.reflexive." + ("all" if reading.form == "separate" else "one" if reading.form == "one" else "any"), classes=_class_parts(classes, name, reading.form)), block="characteristics"))
     # The inverse's ends are checked against one class only: a range is
     # read as one class (shared ranges are a follow-up), so the other way
     # round of a shared start cannot be written with SetEnds.
@@ -534,7 +548,7 @@ def warnings(graph: Graph, prop: URIRef, name: Name) -> list[dict]:
             ends = (other.classes[0] if other.form == "one" else None, _named(graph.objects(inverse, RDFS.range)))
             if ends == (rng, domain):
                 continue
-            warning = {"text": f"{name(inverse)} should go from {name(rng)} to {name(domain)}.", "block": "inverse"}
+            warning = _warning(MessageText(f"{name(inverse)} should go from {name(rng)} to {name(domain)}.", "model.warning.inverse_ends", name=name(inverse), from_name=name(rng), to_name=name(domain)), block="inverse")
             # Fixed here only when it is this document's: an imported one is
             # changed where it is defined.
             if (inverse, RDF.type, OWL.ObjectProperty) in graph:
@@ -542,6 +556,7 @@ def warnings(graph: Graph, prop: URIRef, name: Name) -> list[dict]:
                     "command": "SetEnds",
                     "args": {"property": str(inverse), "domain": str(rng), "range": str(domain)},
                     "label": f"Set {name(inverse)} from {name(rng)} to {name(domain)}",
+                    "uiMessage": make_message("model.fix.inverse_ends", name=name(inverse), from_name=name(rng), to_name=name(domain)),
                 }
             out.append(warning)
     return out
@@ -564,23 +579,18 @@ def domain_warning(view: Graph, own: Graph, prop: URIRef, name: Name) -> Optiona
         f"whatever {verb(label)} something" if (prop, RDF.type, OWL.ObjectProperty) in view
         else f"whatever has {label}"
     )
-    warning = {
-        "block": "domain",
-        "code": "separate",
-        "text": (
-            f"{label} lists {listed} separately. In RDFS and OWL that means {subject} is both {every}. "
-            "To mean either one, share it."
-        ),
-    }
+    warning = _warning(MessageText(f"{label} lists {listed} separately. In RDFS and OWL that means {subject} is both {every}. "
+            "To mean either one, share it.", "model.warning.domain.relationship" if (prop, RDF.type, OWL.ObjectProperty) in view else "model.warning.domain.attribute", name=label, classes=_class_parts(reading.classes, name, "separate")), block="domain", code="separate")
     if domain_of(own, prop).form != "separate":
         return warning
     owl = all(class_type(view, c) == "owl" for c in reading.classes)
     if owl:
-        warning["fix"] = {"command": "ShareDomain", "args": {"property": str(prop), "how": "union"}, "label": "Share it"}
+        warning["fix"] = {"command": "ShareDomain", "args": {"property": str(prop), "how": "union"}, "label": "Share it", "uiMessage": make_message("model.fix.share")}
     elif all(defined(own, c) for c in reading.classes):
         # A shared parent needs its name: the form asks for it first.
         warning["fix"] = {
             "command": "ShareDomain", "args": {"property": str(prop), "how": "parent"},
             "label": "Share it", "needs": "parentName",
+            "uiMessage": make_message("model.fix.share"),
         }
     return warning

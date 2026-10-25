@@ -18,18 +18,27 @@ BASIC IDEA
     new file still has.
 
     Kept out of the component so the rules are tested without rendering,
-    as dataSentences.ts is for the words.
+    as dataSentences.ts is for the words. Explicit UI locale changes display
+    labels and blocking reasons, never saved choice values or inferred types.
+    Header-keyed records have no prototype and incoming maps use own keys,
+    so names such as __proto__ and constructor remain literal column names.
 
 INPUTS / INPUT SOURCES
     - The server's inspection (column profiles) and preview (suggestions).
 
 EXPECTED OUTPUT
     - initialColumns, withChoice, choiceValue, parseChoice, suggestedType,
-      NEW_TYPES, stepBlocked.
+      NEW_TYPES (English compatibility), newTypes, stepBlocked.
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+
 import type { ColumnChoice, ColumnProfile, DataInspection, DataOptions } from "../types";
+
+const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
 
 const XSD = "http://www.w3.org/2001/XMLSchema#";
 const LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
@@ -38,15 +47,21 @@ const LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
 export const NEW_ATTRIBUTE = "new";
 
 /** The types a new attribute can have, as the attribute form offers them. */
-export const NEW_TYPES: { key: string; label: string; datatype: string }[] = [
-  { key: "text", label: "Text", datatype: LANG_STRING },
-  { key: "integer", label: "Whole number", datatype: `${XSD}integer` },
-  { key: "decimal", label: "Number", datatype: `${XSD}decimal` },
-  { key: "date", label: "Date", datatype: `${XSD}date` },
-  { key: "dateTime", label: "Date and time", datatype: `${XSD}dateTime` },
-  { key: "boolean", label: "True or false", datatype: `${XSD}boolean` },
-  { key: "string", label: "Text without a language", datatype: `${XSD}string` },
-];
+export function newTypes(locale: UiLocale = "en"): { key: string; label: string; datatype: string }[] {
+  const t = tFor(locale);
+  return [
+    { key: "text", label: t("dataChoices.type.text"), datatype: LANG_STRING },
+    { key: "integer", label: t("dataChoices.type.integer"), datatype: `${XSD}integer` },
+    { key: "decimal", label: t("dataChoices.type.decimal"), datatype: `${XSD}decimal` },
+    { key: "date", label: t("dataChoices.type.date"), datatype: `${XSD}date` },
+    { key: "dateTime", label: t("dataChoices.type.dateTime"), datatype: `${XSD}dateTime` },
+    { key: "boolean", label: t("dataChoices.type.boolean"), datatype: `${XSD}boolean` },
+    { key: "string", label: t("dataChoices.type.string"), datatype: `${XSD}string` },
+  ];
+}
+
+/** English compatibility for callers that use the stable type identities. */
+export const NEW_TYPES = newTypes();
 
 /** A new attribute's type, suggested from its column's values (5.4): all
  *  whole numbers make an integer, all dates a date. */
@@ -65,12 +80,12 @@ export function initialColumns(
   suggestions: Record<string, ColumnChoice>,
   previous?: Record<string, ColumnChoice> | null,
 ): { columns: Record<string, ColumnChoice>; suggested: string[] } {
-  const out: Record<string, ColumnChoice> = {};
+  const out: Record<string, ColumnChoice> = Object.create(null);
   const suggested: string[] = [];
   for (const column of columns) {
-    const earlier = previous?.[column];
+    const earlier = previous && own(previous, column) ? previous[column] : undefined;
     if (earlier) out[column] = earlier;
-    else if (suggestions[column]) {
+    else if (own(suggestions, column) && suggestions[column]) {
       out[column] = suggestions[column];
       suggested.push(column);
     } else out[column] = { as: "ignore" };
@@ -80,7 +95,7 @@ export function initialColumns(
 
 function withOneName(columns: Record<string, ColumnChoice>): Record<string, ColumnChoice> {
   let named = false;
-  const out: Record<string, ColumnChoice> = {};
+  const out: Record<string, ColumnChoice> = Object.create(null);
   for (const [column, choice] of Object.entries(columns)) {
     if (choice.as === "name") {
       out[column] = named ? { as: "ignore" } : choice;
@@ -97,7 +112,7 @@ export function withChoice(
   column: string,
   choice: ColumnChoice,
 ): Record<string, ColumnChoice> {
-  const out: Record<string, ColumnChoice> = {};
+  const out: Record<string, ColumnChoice> = Object.create(null);
   for (const [name, current] of Object.entries(columns)) {
     out[name] = choice.as === "name" && current.as === "name" ? { as: "ignore" } : current;
   }
@@ -146,25 +161,27 @@ export function stepBlocked(
     // sheet is gone).
     sheetChosen?: boolean;
   },
+  locale: UiLocale = "en",
 ): string | null {
+  const t = tFor(locale);
   if (step === 1) {
-    if (state.reading) return "Reading the file…";
-    if (state.sheetChosen === false) return "Choose a sheet first.";
-    if (!state.inspection) return "Choose a file first.";
+    if (state.reading) return t("dataChoices.blocked.reading");
+    if (state.sheetChosen === false) return t("dataChoices.blocked.sheet");
+    if (!state.inspection) return t("dataChoices.blocked.file");
     if (state.inspection.sample && !state.options.sample) {
-      return `Choose to use the first ${state.inspection.limit.toLocaleString("en-US")} rows, or another file.`;
+      return t("dataChoices.blocked.sample", { limit: state.inspection.limit });
     }
-    if (state.inspection.kept === 0) return "This file has no rows to import.";
+    if (state.inspection.kept === 0) return t("dataChoices.blocked.empty");
   }
   if (step === 2) {
-    if (!state.classIri) return "Choose what each row is.";
-    if (state.basis === "failed") return "The identifier could not be checked. Try again.";
-    if (state.basis !== "ready") return "Checking the identifier…";
+    if (!state.classIri) return t("dataChoices.blocked.class");
+    if (state.basis === "failed") return t("dataChoices.blocked.idFailed");
+    if (state.basis !== "ready") return t("dataChoices.blocked.idReading");
   }
   if (step === 3 && !state.columnsReady) {
     return state.basis === "failed"
-      ? "What each column can become could not be read. Try again."
-      : "Reading what each column can become…";
+      ? t("dataChoices.blocked.fieldsFailed")
+      : t("dataChoices.blocked.fieldsReading");
   }
   return null;
 }

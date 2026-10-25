@@ -4,6 +4,10 @@ FILE: frontend/src/api.ts
 ================================================================================
 
 SUMMARY
+    Command/preview requests accept a read language independent of RDF arguments.
+    Explicit label-language reads reuse recorded validation and reasoning results.
+    Declined approvals retain host facts beside their original failure text.
+    Documentation downloads share the API error boundary and preserve UI facts.
     The single place the frontend talks to the backend. One thin wrapper per
     REST endpoint, each returning a typed Promise.
 
@@ -11,7 +15,8 @@ BASIC IDEA
     Keeping every fetch call here (rather than scattered in components) means
     URL shapes, request encoding and error handling live in one file. `handle`
     centralises turning a non-2xx response into a thrown Error carrying the
-    backend's `detail` message, so callers can just try/catch.
+    backend's `detail` message, so callers can just try/catch. Optional
+    uiMessage metadata is validated and retained for current-locale rendering.
 
     Every call that changes something on the server carries CLIENT_HEADER. The
     backend refuses a state-changing request without it (local_guard.py), which
@@ -40,12 +45,10 @@ BASIC IDEA
     server keeps nothing until the import. "Change the mapping" names the
     snapshot instead, whose copy the browser does not have.
 
-    Projects (authoring-foundations) add their own calls at the foot. An open
-    project document is read through the same ontology calls under its
-    prj-<hex>-<doc> id; the five that show names also carry the project's
-    display language, set here once by the project store (setDisplayLanguage)
-    rather than threaded through every component, and sent only while a
-    project has one, so every library request is unchanged.
+    Project documents use the same ontology calls under prj-<hex>-<doc> IDs.
+    Name-showing requests accept an explicit dictionary display language.
+    Project-store module language remains a compatibility shim for older
+    embedded callers; the application passes its own per-dictionary choice.
 
 INPUTS / INPUT SOURCES
     - Arguments from the components (ids, IRIs, query text, files, payloads).
@@ -56,6 +59,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { WireMessage } from "./i18n/server-contracts";
+import { validWireMessage } from "./i18n/serverMessage";
+import type { EntityPage, EntityParams } from "./entities/types";
 import type { QueryState } from "./sparql/types";
 import type {
   AlreadyDefined,
@@ -134,15 +140,17 @@ export const CLIENT_HEADER = { "X-Semantic-Studio": "1" } as const;
  */
 export class ApiError extends Error {
   readonly status: number;
+  readonly uiMessage?: WireMessage;
   // The backend's `detail` as sent, for a caller that reads more than the
   // sentence: a workbook refused with its sheets (csv-data-import 5.8).
   readonly detail: unknown;
 
-  constructor(message: string, status: number, detail?: unknown) {
+  constructor(message: string, status: number, detail?: unknown, uiMessage?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.uiMessage = validWireMessage(uiMessage) ? uiMessage : undefined;
   }
 }
 
@@ -216,7 +224,15 @@ async function send(url: string, init?: RequestInit, transport?: Transport): Pro
     const requests = await approvalRequests(response);
     if (!requests) return response;
     const answer = await approvalHandler(requests);
-    if (answer === null) throw new ApiError(declinedMessage(requests), 409);
+    if (answer === null) {
+      const hosts = [...new Set(requests.map(request => request.host))];
+      const parts = hosts.flatMap((host, index) => [
+        ...(index ? [{ code: "words.host_separator", args: {} }] : []),
+        { text: host },
+      ]);
+      throw new ApiError(declinedMessage(requests), 409, undefined,
+        { code: "network.approval.declined", args: { hosts: parts } });
+    }
     grants = [...grants, ...answer];
   }
 }
@@ -229,10 +245,12 @@ async function handle<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let detail = response.statusText;
     let raw: unknown;
+    let uiMessage: unknown;
     try {
       // Backend errors put a human message in { detail: ... }.
       const body = await response.json();
       raw = body?.detail;
+      uiMessage = body?.uiMessage ?? body?.detail?.uiMessage;
       if (body.detail?.code === "approval_required") {
         // Reached only with no dialog registered: say what was needed.
         const hosts = (body.detail.requests as ApprovalRequest[]).map((r) => r.host);
@@ -251,7 +269,7 @@ async function handle<T>(response: Response): Promise<T> {
     } catch {
       /* keep statusText */
     }
-    throw new ApiError(detail, response.status, raw);
+    throw new ApiError(detail, response.status, raw, uiMessage);
   }
   return response.json() as Promise<T>;
 }
@@ -266,9 +284,9 @@ function withImports(url: string, imports: boolean): string {
   return url + (url.includes("?") ? "&" : "?") + "imports=true";
 }
 
-// The open project's display language, or null (D-085). Module state rather
-// than a parameter: five calls read it and a dozen components make them, and
-// none of those components has any other reason to know about languages.
+// The open project's display language, or null (D-085). Compatibility state
+// for older embedded callers. Application views now pass their dictionary
+// language explicitly, so a Library cannot inherit another project's choice.
 let displayLanguage: string | null = null;
 
 /** The project store sets this when a project opens, closes or switches. */
@@ -276,9 +294,10 @@ export function setDisplayLanguage(lang: string | null): void {
   displayLanguage = lang;
 }
 
-function withLang(url: string): string {
-  if (!displayLanguage) return url;
-  return url + (url.includes("?") ? "&" : "?") + `lang=${encodeURIComponent(displayLanguage)}`;
+function withLang(url: string, explicitLanguage?: string): string {
+  const language = explicitLanguage ?? displayLanguage;
+  if (!language) return url;
+  return url + (url.includes("?") ? "&" : "?") + `lang=${encodeURIComponent(language)}`;
 }
 
 // List loaded ontologies (dropdown summaries).
@@ -425,9 +444,9 @@ export function deleteOntology(id: string): Promise<OntologyDeletion> {
  * nothing, which is the setting the whole choice of default relies on.
  * Callers pass a limit only once the user has asked for more.
  */
-export function getGraph(id: string, limit?: number, imports = false): Promise<VizGraph> {
+export function getGraph(id: string, limit?: number, imports = false, displayLanguage?: string): Promise<VizGraph> {
   const query = limit === undefined ? "" : `?limit=${limit}`;
-  return send(withLang(withImports(`/api/ontologies/${id}/graph${query}`, imports))).then((r) =>
+  return send(withLang(withImports(`/api/ontologies/${id}/graph${query}`, imports), displayLanguage)).then((r) =>
     handle<VizGraph>(r),
   );
 }
@@ -445,6 +464,7 @@ export function getNeighborhood(
   iri: string,
   limit?: number,
   imports = false,
+  displayLanguage?: string,
 ): Promise<VizNeighborhood> {
   const extra = limit === undefined ? "" : `&limit=${limit}`;
   return send(
@@ -453,6 +473,7 @@ export function getNeighborhood(
         `/api/ontologies/${id}/neighborhood?iri=${encodeURIComponent(iri)}${extra}`,
         imports,
       ),
+      displayLanguage,
     ),
   ).then((r) => handle<VizNeighborhood>(r));
 }
@@ -462,8 +483,8 @@ export function getNeighborhood(
  * left out (query-page-rework 5.2). A POST because 200 IRIs do not fit a
  * URL; it changes nothing, and carries the client header as every POST does.
  */
-export function getResultNodes(id: string, iris: string[], imports = false): Promise<VizNodes> {
-  return send(withLang(withImports(`/api/ontologies/${id}/nodes`, imports)), {
+export function getResultNodes(id: string, iris: string[], imports = false, displayLanguage?: string): Promise<VizNodes> {
+  return send(withLang(withImports(`/api/ontologies/${id}/nodes`, imports), displayLanguage), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...CLIENT_HEADER },
     body: JSON.stringify({ iris }),
@@ -477,20 +498,20 @@ export function getResultNodes(id: string, iris: string[], imports = false): Pro
  * the frontend virtualizes it, so the whole asserted structure comes back. The
  * server caches it on the ontology, so re-opening the tab is cheap.
  */
-export function fetchHierarchy(id: string, imports = false, inferred = false): Promise<Hierarchy> {
+export function fetchHierarchy(id: string, imports = false, inferred = false, displayLanguage?: string): Promise<Hierarchy> {
   // With `inferred`, a current reasoning result's edges come with the origin
   // "inferred" (D-046); a stale one adds nothing.
   const url = withImports(`/api/ontologies/${id}/hierarchy`, imports);
-  return send(withLang(inferred ? `${url}${url.includes("?") ? "&" : "?"}inferred=true` : url)).then((r) =>
+  return send(withLang(inferred ? `${url}${url.includes("?") ? "&" : "?"}inferred=true` : url, displayLanguage)).then((r) =>
     handle<Hierarchy>(r),
   );
 }
 
 // Every statement about one entity, for the detail panel.
 // `signal` lets a caller abort a request a newer one has replaced (CF-4).
-export function getNodeDetails(id: string, iri: string, imports = false, signal?: AbortSignal): Promise<NodeDetails> {
+export function getNodeDetails(id: string, iri: string, imports = false, signal?: AbortSignal, displayLanguage?: string): Promise<NodeDetails> {
   return send(
-    withLang(withImports(`/api/ontologies/${id}/node?iri=${encodeURIComponent(iri)}`, imports)),
+    withLang(withImports(`/api/ontologies/${id}/node?iri=${encodeURIComponent(iri)}`, imports), displayLanguage),
     signal ? { signal } : undefined,
   ).then((r) => handle<NodeDetails>(r));
 }
@@ -508,14 +529,27 @@ export function searchNodes(
    *  its cap (100) above. The search box asks for one more than it shows, to
    *  know whether more match (explore-and-query-layout 5.7). */
   limit?: number,
+  displayLanguage?: string,
 ): Promise<VizNode[]> {
   const extra = (kind ? `&kind=${kind}` : "") + (limit !== undefined ? `&limit=${limit}` : "");
   return send(
     withLang(
       withImports(`/api/ontologies/${id}/search?q=${encodeURIComponent(q)}${extra}`, imports),
+      displayLanguage,
     ),
     signal ? { signal } : undefined,
   ).then((r) => handle<VizNode[]>(r));
+}
+
+/** Complete dictionary page; explicit params never inherit project module state. */
+export function getEntities(id: string, params: EntityParams, signal?: AbortSignal): Promise<EntityPage> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.set(key, String(value));
+  }
+  const suffix = query.size ? `?${query}` : "";
+  return send(`/api/ontologies/${id}/entities${suffix}`, signal ? { signal } : undefined)
+    .then(response => handle<EntityPage>(response));
 }
 
 // The source text for the View tab (original bytes, or pretty Turtle).
@@ -528,22 +562,22 @@ export function getSource(id: string, pretty = false): Promise<OntologySource> {
 /* --- visual query builder ------------------------------------------------ */
 
 // The class-level schema powering the query builder.
-export function getQuerySchema(id: string, imports = false): Promise<QuerySchema> {
-  return send(withImports(`/api/ontologies/${id}/query-schema`, imports)).then((r) =>
+export function getQuerySchema(id: string, imports = false, displayLanguage?: string): Promise<QuerySchema> {
+  return send(withLang(withImports(`/api/ontologies/${id}/query-schema`, imports), displayLanguage ?? "")).then((r) =>
     handle<QuerySchema>(r),
   );
 }
 
 // Map a clicked graph node to the class/type the builder should step on.
-export function getQueryNode(id: string, iri: string, imports = false): Promise<QueryNodeInfo> {
+export function getQueryNode(id: string, iri: string, imports = false, displayLanguage?: string): Promise<QueryNodeInfo> {
   return send(
-    withImports(`/api/ontologies/${id}/query-node?iri=${encodeURIComponent(iri)}`, imports),
+    withLang(withImports(`/api/ontologies/${id}/query-node?iri=${encodeURIComponent(iri)}`, imports), displayLanguage ?? ""),
   ).then((r) => handle<QueryNodeInfo>(r));
 }
 
 // Execute a SPARQL SELECT and return the result rows.
-export function runSparql(id: string, query: string, imports = false): Promise<SparqlResults> {
-  return send(withImports(`/api/ontologies/${id}/sparql`, imports), {
+export function runSparql(id: string, query: string, imports = false, displayLanguage?: string): Promise<SparqlResults> {
+  return send(withLang(withImports(`/api/ontologies/${id}/sparql`, imports), displayLanguage ?? ""), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...CLIENT_HEADER },
     body: JSON.stringify({ query }),
@@ -617,16 +651,7 @@ export async function downloadDocumentation(
   // as excluded, so omitting it is the safe path.
   const query = includeIndividuals ? "?include_individuals=true" : "";
   const response = await send(`/api/ontologies/${id}/documentation${query}`);
-  if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const body = await response.json();
-      if (body.detail) detail = String(body.detail);
-    } catch {
-      /* keep statusText */
-    }
-    throw new ApiError(detail, response.status);
-  }
+  if (!response.ok) await handle(response);
   const blob = await response.blob();
   const filename =
     filenameFromDisposition(response.headers.get("content-disposition")) ?? `${id}-docs.zip`;
@@ -757,8 +782,8 @@ export class TurtleError extends ApiError {
   readonly column: number | null;
   readonly detail: string;
 
-  constructor(message: string, line: number | null, column: number | null, detail: string) {
-    super(message, 422);
+  constructor(message: string, line: number | null, column: number | null, detail: string, uiMessage?: unknown) {
+    super(message, 422, detail, uiMessage);
     this.name = "TurtleError";
     this.line = line;
     this.column = column;
@@ -866,8 +891,9 @@ export function runCommand(
   doc: ProjectDocName,
   command: string,
   args: Record<string, unknown>,
+  displayLanguage?: string,
 ): Promise<ChangeResult> {
-  return send(documentUrl(pid, doc, "/commands"), {
+  return send(withLang(documentUrl(pid, doc, "/commands"), displayLanguage ?? ""), {
     method: "POST",
     headers: JSON_WRITE,
     body: JSON.stringify({ command, args }),
@@ -880,8 +906,9 @@ export function previewDelete(
   doc: ProjectDocName,
   iri: string,
   strategy: "reparent" | "orphan" = "reparent",
+  displayLanguage?: string,
 ): Promise<{ dryRun: true; impact: DeleteImpact; revision: number }> {
-  return send(documentUrl(pid, doc, "/commands"), {
+  return send(withLang(documentUrl(pid, doc, "/commands"), displayLanguage ?? ""), {
     method: "POST",
     headers: JSON_WRITE,
     body: JSON.stringify({ command: "DeleteEntity", args: { iri, strategy }, dryRun: true }),
@@ -894,8 +921,9 @@ export function planShare(
   pid: string,
   property: string,
   cls?: string,
+  displayLanguage?: string,
 ): Promise<{ dryRun: true; plan: SharePlan; revision: number }> {
-  return send(documentUrl(pid, "model", "/commands"), {
+  return send(withLang(documentUrl(pid, "model", "/commands"), displayLanguage ?? ""), {
     method: "POST",
     headers: JSON_WRITE,
     body: JSON.stringify({ command: "ShareDomain", args: cls ? { property, class: cls } : { property }, dryRun: true }),
@@ -906,7 +934,8 @@ export function planShare(
 export function alreadyDefined(e: unknown): AlreadyDefined | null {
   if (!(e instanceof ApiError) || e.status !== 409) return null;
   const detail = e.detail as AlreadyDefined | undefined;
-  return detail?.code === "already_defined" ? detail : null;
+  if (detail?.code !== "already_defined") return null;
+  return e.uiMessage ? { ...detail, uiMessage: e.uiMessage } : detail;
 }
 
 // The annotation properties the form offers, each with its default type.
@@ -924,11 +953,12 @@ export function getCanvas(
   pid: string,
   doc: ProjectDocName,
   inferred: { imports: boolean } | null = null,
+  displayLanguage?: string,
 ): Promise<CanvasView> {
   // With a current reasoning result: its kind-of lines and the boxes that can
   // never have members (axioms-and-reasoning 5.7).
   const query = inferred ? `?inferred=true${inferred.imports ? "&imports=true" : ""}` : "";
-  return send(withLang(documentUrl(pid, doc, "/canvas") + query)).then((r) => handle<CanvasView>(r));
+  return send(withLang(documentUrl(pid, doc, "/canvas") + query, displayLanguage)).then((r) => handle<CanvasView>(r));
 }
 
 export function getLayout(pid: string, doc: ProjectDocName): Promise<CanvasLayout> {
@@ -966,7 +996,7 @@ export async function applyDocumentSource(
     body: JSON.stringify({ text }),
   });
   if (response.status === 422) {
-    let body: { detail?: unknown } = {};
+    let body: { detail?: unknown; uiMessage?: unknown } = {};
     try {
       body = await response.clone().json();
     } catch {
@@ -981,6 +1011,7 @@ export async function applyDocumentSource(
         detail.line ?? null,
         detail.column ?? null,
         detail.detail ?? "",
+        body.uiMessage,
       );
     }
   }
@@ -1039,30 +1070,41 @@ export function getLanguageReport(pid: string, doc: ProjectDocName): Promise<Lan
 }
 
 // The shapes in shapes.ttl in the form's structure (shacl-authoring 5.1, 5.5).
-export function getShapes(pid: string): Promise<ShapesListing> {
-  return send(projectUrl(pid, "/shapes")).then((r) => handle<ShapesListing>(r));
+export function getShapes(pid: string, displayLanguage?: string): Promise<ShapesListing> {
+  return send(withLang(projectUrl(pid, "/shapes"), displayLanguage ?? "")).then((r) => handle<ShapesListing>(r));
 }
 
 // What a rule can be about for a target, and what the model suggests (5.4).
-export function getShapeSuggestions(pid: string, target: string, shape?: string): Promise<ShapeSuggestions> {
+export function getShapeSuggestions(pid: string, target: string, shape?: string, displayLanguage?: string): Promise<ShapeSuggestions> {
   const params = new URLSearchParams({ target });
   if (shape) params.set("shape", shape);
-  return send(projectUrl(pid, `/shapes/suggestions?${params}`)).then((r) => handle<ShapeSuggestions>(r));
+  return send(withLang(projectUrl(pid, `/shapes/suggestions?${params}`), displayLanguage ?? "")).then((r) => handle<ShapeSuggestions>(r));
 }
 
 // Validate on demand (5.6). A POST that changes nothing; it carries the
 // client header because local_guard asks it of every POST.
-export function validateProject(pid: string): Promise<ValidationResult> {
-  return send(projectUrl(pid, "/validate"), { method: "POST", headers: { ...CLIENT_HEADER } }).then((r) =>
+export function validateProject(pid: string, displayLanguage?: string): Promise<ValidationResult> {
+  return send(withLang(projectUrl(pid, "/validate"), displayLanguage ?? ""), { method: "POST", headers: { ...CLIENT_HEADER } }).then((r) =>
     handle<ValidationResult>(r),
   );
+}
+
+/** Read the recorded check, changing names only; null before a check exists. */
+export function getValidationResult(pid: string, displayLanguage?: string): Promise<ValidationResult | null> {
+  return send(withLang(projectUrl(pid, "/validate"), displayLanguage ?? "")).then(r => handle<ValidationResult | null>(r));
+}
+
+/** Read the recorded reasoning result without another worker run. */
+export function getReasoningResult(pid: string, imports: boolean, displayLanguage?: string): Promise<ReasoningResult> {
+  const query = imports ? "?imports=true" : "";
+  return send(withLang(projectUrl(pid, "/reasoning") + query, displayLanguage ?? "")).then(r => handle<ReasoningResult>(r));
 }
 
 /* --- reasoning (axioms-and-reasoning Stage A) -------------------------------- */
 
 /** One run; it blocks until the run ends, and is 409 while another runs. */
-export function reasonProject(pid: string, includeData: boolean, imports: boolean): Promise<ReasoningResult> {
-  return send(projectUrl(pid, "/reasoning"), {
+export function reasonProject(pid: string, includeData: boolean, imports: boolean, displayLanguage?: string): Promise<ReasoningResult> {
+  return send(withLang(projectUrl(pid, "/reasoning"), displayLanguage ?? ""), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...CLIENT_HEADER },
     body: JSON.stringify({ includeData, imports }),
@@ -1082,21 +1124,22 @@ export function getReasoningPage(
   group: ReasoningGroupKind,
   offset: number,
   imports: boolean,
+  displayLanguage?: string,
 ): Promise<ReasoningPage> {
   const query = `?group=${group}&offset=${offset}${imports ? "&imports=true" : ""}`;
-  return send(projectUrl(pid, `/reasoning${query}`)).then((r) => handle<ReasoningPage>(r));
+  return send(withLang(projectUrl(pid, `/reasoning${query}`), displayLanguage ?? "")).then((r) => handle<ReasoningPage>(r));
 }
 
 /** The last result's facts about one entity, for the detail panel. */
-export function getReasoningAbout(pid: string, iri: string, imports: boolean): Promise<ReasoningAbout> {
+export function getReasoningAbout(pid: string, iri: string, imports: boolean, displayLanguage?: string): Promise<ReasoningAbout> {
   const query = `?about=${encodeURIComponent(iri)}${imports ? "&imports=true" : ""}`;
-  return send(projectUrl(pid, `/reasoning${query}`)).then((r) => handle<ReasoningAbout>(r));
+  return send(withLang(projectUrl(pid, `/reasoning${query}`), displayLanguage ?? "")).then((r) => handle<ReasoningAbout>(r));
 }
 
 /** One fact's one-step reason (5.6). */
-export function getWhy(pid: string, fact: { s: string; p: string; o: string }): Promise<WhyReason> {
+export function getWhy(pid: string, fact: { s: string; p: string; o: string }, displayLanguage?: string): Promise<WhyReason> {
   const query = ["s", "p", "o"].map((k) => `${k}=${encodeURIComponent(fact[k as "s" | "p" | "o"])}`).join("&");
-  return send(projectUrl(pid, `/reasoning/why?${query}`)).then((r) => handle<WhyReason>(r));
+  return send(withLang(projectUrl(pid, `/reasoning/why?${query}`), displayLanguage ?? "")).then((r) => handle<WhyReason>(r));
 }
 
 /* --- data snapshots (csv-data-import) ---------------------------------------- */
@@ -1132,8 +1175,9 @@ export function previewData(
   source: DataSourceRef,
   options: DataOptions,
   choices: Partial<DataChoices>,
+  displayLanguage?: string,
 ): Promise<DataPreview> {
-  return postForm(projectUrl(pid, "/data/preview"), dataForm(source, { options, choices }));
+  return postForm(withLang(projectUrl(pid, "/data/preview"), displayLanguage ?? ""), dataForm(source, { options, choices }));
 }
 
 // Import: a new snapshot, switched on.
@@ -1146,8 +1190,8 @@ export function importData(
   return postForm(projectUrl(pid, "/data"), dataForm(file, { options, choices }));
 }
 
-export function listData(pid: string): Promise<SnapshotListing> {
-  return send(projectUrl(pid, "/data")).then((r) => handle<SnapshotListing>(r));
+export function listData(pid: string, displayLanguage?: string): Promise<SnapshotListing> {
+  return send(withLang(projectUrl(pid, "/data"), displayLanguage ?? "")).then((r) => handle<SnapshotListing>(r));
 }
 
 // Refresh (5.7): the same mapping on a new file, or `choices` for it after a

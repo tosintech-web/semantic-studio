@@ -23,7 +23,8 @@ BASIC IDEA
     failure. What it buys is that the user is told, and that the message names
     the error rather than hiding it.
 
-    A class component because there is no hook form of componentDidCatch. It is
+    UI copy follows the locale context; a catalog failure has a minimal
+    provider-independent recovery message. A class component because there is no hook form of componentDidCatch. It is
     the only class in this codebase and that is why.
 
 INPUTS / INPUT SOURCES
@@ -37,7 +38,10 @@ EXPECTED OUTPUT
 */
 
 import { Component } from "react";
-import type { ErrorInfo, ReactNode } from "react";
+import type { ContextType, ErrorInfo, ReactNode } from "react";
+
+import { I18nContext } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 interface Props {
   children: ReactNode;
@@ -48,6 +52,8 @@ interface State {
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
+  static contextType = I18nContext;
+  declare context: ContextType<typeof I18nContext>;
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
@@ -66,19 +72,28 @@ export default class ErrorBoundary extends Component<Props, State> {
     const { error } = this.state;
     if (!error) return this.props.children;
 
+    // Translation is itself allowed to fail: a broken catalog must not turn
+    // the final recovery screen into another empty page.
+    let title: string, description: string, reload: string;
+    try {
+      title = this.context.t("crash.title");
+      description = this.context.t("crash.description");
+      reload = this.context.t("crash.reload");
+    } catch {
+      return <div className="crash-screen" role="alert">
+        <h1>問題が発生しました。 / Something went wrong.</h1>
+        <button onClick={() => window.location.reload()}>再読み込み / Reload</button>
+      </div>;
+    }
     return (
       <div className="crash-screen" role="alert">
-        <h1>Something went wrong.</h1>
-        <p>
-          The interface stopped rather than showing you something wrong. Reloading
-          starts again from the ontology library; nothing stored on your machine
-          has been changed.
-        </p>
-        {/* The message as text, never as markup. It can contain an IRI out of a
-            loaded file, which is untrusted input — see trust boundary 3. */}
+        <h1>{title}</h1>
+        <p>{description}</p>
+        {/* External error details remain text, independent of UI locale. */}
         <p className="crash-detail">{error.message || String(error)}</p>
+        <UiLanguageSelect />
         <button className="primary" onClick={() => window.location.reload()}>
-          Reload the application
+          {reload}
         </button>
       </div>
     );

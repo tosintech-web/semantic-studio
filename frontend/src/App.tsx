@@ -12,7 +12,9 @@ SUMMARY
 BASIC IDEA
     App is the conductor: it fetches the ontology list and the active graph,
     holds the query-builder hook (shared by the graph and the query panel), and
-    routes user actions. The three modes (View / Explore / Query) all render
+    routes user actions. Incremental graph reads share the full view identity
+    so late expansions cannot revive a replaced graph. The three modes
+    (View / Explore / Query) all render
     over the SAME graph so switching between them never throws away the settled
     layout — View overlays a source pane, Explore shows the detail panel, Query
     shows the builder panel.
@@ -154,6 +156,14 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { makeUiMessage, renderUiMessage, type UiMessage } from "./i18n/uiMessage";
+import { renderServerError } from "./i18n/serverMessage";
+import { I18nContext, type I18nValue, useI18n } from "./i18n/I18nProvider";
+import type { Translator, UiLocale } from "./i18n/types";
+import { DictionaryViewContext } from "./dictionary/DictionaryViewContext";
+import { DictionaryLanguageContext, useDictionaryLanguage } from "./dictionary/useDictionaryLanguage";
+import DictionaryLanguageSelect from "./components/DictionaryLanguageSelect";
+import UiLanguageSelect from "./components/UiLanguageSelect";
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ApiError,
@@ -207,6 +217,9 @@ import Logo from "./components/Logo";
 import NetworkApprovalDialog from "./components/NetworkApprovalDialog";
 import NetworkPanel from "./components/NetworkPanel";
 import QueryPanel from "./components/QueryPanel";
+import EntityList from "./components/EntityList";
+import DictionaryContext from "./components/DictionaryContext";
+import ReferenceOnlyPanel from "./components/ReferenceOnlyPanel";
 import SearchBox from "./components/SearchBox";
 import SourceView from "./components/SourceView";
 import {
@@ -223,7 +236,7 @@ import {
   IconSun,
   IconView,
 } from "./components/icons";
-import { removalConfirmation, removalPrompt } from "./removalPrompt";
+import { removalConfirmationNotice, removalPrompt } from "./removalPrompt";
 import { formatName, homeStatus, statementCount } from "./statusWords";
 import { missingExamples } from "./home/libraryOrder";
 import type { SourceTarget } from "./sourceTarget";
@@ -245,7 +258,7 @@ import type {
   VizGraph,
   VizNeighborhood,
 } from "./types";
-import { resultIris, sendable, shownOnGraph, undrawnSentence } from "./sparql/resultNodes";
+import { resultIris, sendable, shownOnGraphNotice, undrawnNotice } from "./sparql/resultNodes";
 
 // The modeling canvas (visual-modeling 5.4, D-086): its own chunk, React Flow
 // with it, fetched from the local server the first time a canvas opens in a
@@ -256,15 +269,18 @@ const loadCanvas = () => lazy(() => import("./canvas/ModelCanvas"));
 
 /** A canvas that could not load leaves the tree and the form working. */
 class CanvasBoundary extends Component<{ onRetry: () => void; children: ReactNode }, { failed: boolean }> {
+  static contextType = I18nContext;
+  declare context: I18nValue;
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
   render() {
     if (!this.state.failed) return this.props.children;
+    const { t } = this.context;
     return (
-      <section className="model-canvas canvas-message" aria-label="Modeling canvas">
-        <p>The canvas could not load. The tree and the form still work.</p>
+      <section className="model-canvas canvas-message" aria-label={t("app.canvas")}>
+        <p>{t("app.canvasFailed")}</p>
         <button
           type="button"
           className="ghost"
@@ -273,7 +289,7 @@ class CanvasBoundary extends Component<{ onRetry: () => void; children: ReactNod
             this.props.onRetry();
           }}
         >
-          Retry
+          {t("app.retry")}
         </button>
       </section>
     );
@@ -290,24 +306,19 @@ function canvasPreference(): boolean {
   }
 }
 
-/** The 5.6 warning, word for word, before a commented file is rewritten. */
-const COMMENTS_WARNING =
-  "This file has comments. Saving after a visual change rewrites it in a standard " +
-  "layout and removes them.";
-
 /** "28 Sep 2026, 14:05" for the recovery question. */
-function when(iso: string): string {
+function when(iso: string, locale: UiLocale): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime())
     ? iso
-    : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    : date.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
 }
 
 /** What a mode tab says when there is nothing for it to act on yet. The tabs
  *  used to be disabled here, which prevented the empty canvas by removing the
  *  choice rather than by answering it; now they route through Home and the
  *  library heading asks which ontology. */
-const NO_ONTOLOGY_TITLE = "Pick an ontology on the home screen first";
+
 
 /** What a 404 from /neighborhood means, said without calling it an error.
  *
@@ -337,9 +348,7 @@ const PANEL_HEADING_IDS = [
   "query-panel-region",
 ];
 
-const NOT_A_GRAPH_NODE =
-  "That entity is not drawn on the graph, so the view did not move: relationships " +
-  "and blank nodes are described but never shown as nodes.";
+const NOT_A_GRAPH_NODE = makeUiMessage("app.notGraphNode");
 
 /** The theme to start in: saved preference, else the OS setting, else dark. */
 function initialTheme(): Theme {
@@ -390,13 +399,13 @@ const NO_QUESTIONS: ExampleQuestion[] = [];
  * is what tears the canvas down and rebuilds it — the one thing an expansion
  * must not do.
  */
-function countOf(graph: VizGraph | null, what: "node" | "edge", extra: Expanded): string {
+function countOf(graph: VizGraph | null, what: "node" | "edge", extra: Expanded, t: Translator): string {
   if (!graph) return "…";
   const added = what === "node" ? extra.nodes.size : extra.edges;
   const drawn = (what === "node" ? graph.stats.nodeCount : graph.stats.edgeCount) + added;
   const total = what === "node" ? graph.stats.nodeTotal : graph.stats.edgeTotal;
-  if (!graph.stats.truncated) return drawn.toLocaleString();
-  return `${drawn.toLocaleString()} of ${total.toLocaleString()}`;
+  if (!graph.stats.truncated) return t("app.count", { count: drawn });
+  return t("app.countPartial", { drawn, total });
 }
 
 /**
@@ -409,20 +418,13 @@ function countOf(graph: VizGraph | null, what: "node" | "edge", extra: Expanded)
  * interface says it did. And the drawn total is repeated every time, since it
  * is the number the whole feature is about.
  */
-function expansionAnnouncement(
-  added: number,
-  drawn: number,
-  stats: VizNeighborhood["stats"],
-): string {
-  const where = `${drawn.toLocaleString()} of ${stats.nodeTotal.toLocaleString()} drawn.`;
-  if (added === 0) {
-    return `Nothing new to draw: those connections are already on the graph. ${where}`;
-  }
-  const what = added === 1 ? "1 entity" : `${added.toLocaleString()} entities`;
-  const partial = stats.truncated
-    ? ` Showing the ${stats.budget.toLocaleString()} most connected of ${stats.neighborTotal.toLocaleString()} connections.`
-    : "";
-  return `Added ${what}.${partial} ${where}`;
+function expansionAnnouncement(added: number, drawn: number, stats: VizNeighborhood["stats"]): UiMessage {
+  const total = stats.nodeTotal;
+  if (added === 0) return makeUiMessage("app.expansion.none", { drawn, total });
+  const suffix = added === 1 ? "one" : "many";
+  return stats.truncated
+    ? makeUiMessage(`app.expansion.${suffix}.partial`, { added, drawn, total, budget: stats.budget, neighbors: stats.neighborTotal })
+    : makeUiMessage(`app.expansion.${suffix}.complete`, { added, drawn, total });
 }
 
 export default function App() {
@@ -430,6 +432,11 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [ontologies, setOntologies] = useState<OntologySummary[]>([]);   // dropdown list
   const [activeId, setActiveId] = useState<string | null>(null);          // selected ontology
+  // Notifications may finish after their panel unmounts. Changing tabs keeps
+  // authority; leaving and reopening a dictionary creates a different owner.
+  const activeOwner = useMemo(() => ({}), [activeId]);
+  const activeOwnerRef = useRef(activeOwner);
+  activeOwnerRef.current = activeOwner;
   const [graphData, setGraphData] = useState<VizGraph | null>(null);      // its graph
   const [selected, setSelected] = useState<string | null>(null);          // clicked node (Explore)
   // The selection as it is now, for effects that must not follow it.
@@ -458,20 +465,23 @@ export default function App() {
     resolve: (grantIds: string[] | null) => void;
   } | null>(null);
   const [loadingGraph, setLoadingGraph] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   // The ontology list's own loading and failure state, kept apart from `error`
   // above. A list that will not load is reported inside the chooser's library
   // section, because the catalogue and the file routes still work without it
   // and the error bar would imply the whole screen was broken.
   const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const [listError, setListError] = useState<unknown>(null);
   // What a removal is reported in afterwards. Kept apart from `error` because
   // it is not a failure.
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<UiMessage | null>(null);
   // Which ontology the removal count is running against: the card that
   // started it, in Home's ⋯ menu, is the one that has to say it is busy.
   // Removal is started nowhere else (portal-foundations 5.7).
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [entityQuery, setEntityQuery] = useState("");
+  const [referenceOnlySelection, setReferenceOnlySelection] = useState<string | null>(null);
+  const [entitySelectionSource, setEntitySelectionSource] = useState<{ iri: string; view: object } | null>(null);
   const [mode, setMode] = useState<AppMode>("explore");
   // A mode picked from the header with nothing open. It is remembered rather
   // than refused, so the library heading can ask which ontology it should act
@@ -512,7 +522,7 @@ export default function App() {
   // no camera); and the header's sentence when more were hidden than drawn.
   const [queryResults, setQueryResults] = useState<ReadonlySet<string>>(NO_RESULTS);
   const [frameTick, setFrameTick] = useState(0);
-  const [resultsNote, setResultsNote] = useState<string | null>(null);
+  const [resultsNote, setResultsNote] = useState<UiMessage | null>(null);
   // Which run is current, so a /nodes answer for one replaced by a newer
   // run, or cleared, draws and says nothing.
   const resultsRun = useRef(0);
@@ -563,12 +573,13 @@ export default function App() {
   // the imports panel reports a change.
   const [importsCount, setImportsCount] = useState<number | null>(null);
   const onImportsChanged = useCallback((listing: ImportsListing) => {
+    if (activeOwnerRef.current !== activeOwner) return;
     setImportsCount(resolvedCount(listing));
     setImportsVersion((v) => v + 1);
-  }, []);
+  }, [activeOwner]);
   // The open project (authoring-foundations). Its revision and display
   // language are part of every fetch key below, so a change refreshes the
-  // views; for a library ontology both are constant (0 and null).
+  // views; a Library keeps revision 0 but has its own display language.
   // Read slice by slice: the editor's text is in the store too and changes on
   // every keystroke, which must not re-render all of App.
   const openProjectSummary = useProjectSelector((s) => s.project);
@@ -591,13 +602,33 @@ export default function App() {
   // Only a project document's views are named by it; a library ontology open
   // beside a project ignores it, and must not refetch when it moves.
   const storeLanguage = useProjectSelector((s) => s.displayLanguage);
-  const displayLanguage = editingProjectDoc ? storeLanguage : null;
+  const { locale: uiLocale, t } = useI18n();
+  const { language: displayLanguage, setLanguage: setDictionaryLanguage } = useDictionaryLanguage({
+    ontologyId: activeId,
+    projectLanguage: editingProjectDoc ? storeLanguage : null,
+    uiLocale,
+  });
+  const displayLanguageRef = useRef(displayLanguage);
+  displayLanguageRef.current = displayLanguage;
   // The editing form and the tree's actions (visual-modeling 5.1, 5.2) are
   // for the open project's model.ttl only. Memoized: the form derives its
   // blocks from the languages array, and a new array per render would
   // redo that on every keystroke anywhere in App.
   const openDocName = projectDocuments.find((d) => d.ontologyId === activeId)?.doc ?? null;
+  const dictionaryView = useMemo(() => ({ revision: editingProjectDoc ? revision : 0, viewGeneration: `${importsVersion}:${editingProjectDoc ? dataGeneration : 0}` }), [revision, importsVersion, editingProjectDoc, dataGeneration]);
   const viewRevision = openDocName === "model" ? revision + dataGeneration : revision;
+  // Every graph replacement invalidates incremental reads too. Keep an opaque
+  // token (rather than comparing values after await) so leaving and reopening
+  // the same view cannot revive an old request. Update during render: an old
+  // response must be refused even before the refetch effect runs.
+  const graphView = useMemo(() => ({}), [activeId, graphBudget, mode === "entities",
+    includeImports, includeImports ? importsVersion : 0, viewRevision, displayLanguage]);
+  // Classification is structural, independent of label language and graph
+  // budget. Retain its source across tab unmounts until a fresh list reconciles it.
+  const entitySource = useMemo(() => ({}), [activeId, includeImports,
+    includeImports ? importsVersion : 0, viewRevision]);
+  const graphViewRef = useRef(graphView);
+  graphViewRef.current = graphView;
   // Where the model's data came from, for the Explore and Query source lines.
   const dataSources = useMemo(
     () => (openDocName === "model" ? (projectData?.snapshots ?? []).filter((d) => d.enabled) : []),
@@ -743,14 +774,14 @@ export default function App() {
   const readOnlyNote = !activeId
     ? null
     : openDocName === null
-      ? "From the library, read-only. Start a project from it to change it."
+      ? t("app.libraryReadOnly")
       : openDocName === "shapes"
-        ? "shapes.ttl is edited as Turtle, in View; this form edits model.ttl."
+        ? t("app.shapesReadOnly")
         : null;
   // The project list, for the Home screen's first section.
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
-  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectsError, setProjectsError] = useState<unknown>(null);
   const [projectBusyId, setProjectBusyId] = useState<string | null>(null);
   // The New project form, and the library ontology it starts from, if any.
   const [newProject, setNewProject] = useState<{ source?: string } | null>(null);
@@ -821,7 +852,7 @@ export default function App() {
   const pendingSelection = useRef<string | null>(null);
 
   // The shared query-builder state; the schema is only fetched in Query mode.
-  const builder = useQueryBuilder(activeId, mode === "query", includeImports, viewRevision);
+  const builder = useQueryBuilder(activeId, mode === "query", includeImports, viewRevision, displayLanguage, dictionaryView.viewGeneration);
 
   // Apply and persist the theme whenever it changes (data-theme drives the CSS).
   useEffect(() => {
@@ -838,7 +869,7 @@ export default function App() {
     setListError(null);
     listOntologies()
       .then((list) => setOntologies(list))
-      .catch((e) => setListError(String(e.message ?? e)))
+      .catch((e) => setListError(e))
       .finally(() => setListLoading(false));
   }, []);
 
@@ -848,7 +879,7 @@ export default function App() {
     setProjectsError(null);
     return listProjects()
       .then((list) => setProjects(list))
-      .catch((e) => setProjectsError(String(e.message ?? e)))
+      .catch((e) => setProjectsError(e))
       .finally(() => setProjectsLoading(false));
   }, []);
 
@@ -895,6 +926,7 @@ export default function App() {
   // than blanking the canvas on every change (found in review).
   const graphFor = useRef<string | null>(null);
   useEffect(() => {
+    if (mode === "entities") { setLoadingGraph(false); return; }
     const identity = `${activeId}|${graphBudget}|${includeImports}`;
     if (graphFor.current !== identity) setGraphData(null);
     graphFor.current = identity;
@@ -916,7 +948,7 @@ export default function App() {
     if (!activeId) return;
     setLoadingGraph(true);
     let cancelled = false;
-    getGraph(activeId, graphBudget ?? undefined, includeImports)
+    getGraph(activeId, graphBudget ?? undefined, includeImports, displayLanguage)
       .then((g) => {
         if (cancelled) return;
         setGraphData(g);
@@ -931,7 +963,7 @@ export default function App() {
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(String(e.message ?? e));
+        setError(e);
         // Drop the press with the response that never came. Left set, it would
         // be consumed by whatever graph arrived next and move focus for a
         // button nobody had just pressed.
@@ -946,6 +978,7 @@ export default function App() {
   }, [
     activeId,
     graphBudget,
+    mode === "entities",
     includeImports,
     includeImports ? importsVersion : 0,
     // A project document's revision and display language: an edit, an undo
@@ -1060,6 +1093,7 @@ export default function App() {
     // Query on an empty library opens in Query rather than dropping the mode
     // the user had already asked for.
     enterMode(summary.id, modeAfterPick());
+    setNotice(makeUiMessage("load.success", { name: summary.name }));
   };
 
   // Remove the active ontology after confirmation, then return to the chooser.
@@ -1076,7 +1110,7 @@ export default function App() {
   // card's menu on the home screen, where the ontology being removed is
   // usually not the active one.
   const onRemove = async (id: string) => {
-    const name = ontologies.find((o) => o.id === id)?.name ?? "this ontology";
+    const name = ontologies.find((o) => o.id === id)?.name ?? id;
     setRemovingId(id);
     let count: number | null = null;
     let names: string[] = [];
@@ -1089,7 +1123,7 @@ export default function App() {
     } finally {
       setRemovingId(null);
     }
-    if (!window.confirm(removalPrompt(name, count, names))) return;
+    if (!window.confirm(removalPrompt(name, count, names, t))) return;
     try {
       // The count comes back from the delete rather than being reused from
       // above: another tab may have saved one in between, and what was actually
@@ -1101,9 +1135,9 @@ export default function App() {
       if (id === activeId) setActiveId(null);
       // `?? 0` guards a server that predates the field: without it the message
       // would read "and undefined saved queries".
-      setNotice(removalConfirmation(name, result.deletedQueries ?? 0));
+      setNotice(removalConfirmationNotice(name, result.deletedQueries ?? 0));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
     }
   };
 
@@ -1195,7 +1229,7 @@ export default function App() {
         }
         resolve(ids);
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(e);
         resolve(null);
       }
     },
@@ -1274,21 +1308,23 @@ export default function App() {
   const onExpand = useCallback(async (iri: string) => {
     const id = activeIdRef.current;
     if (!id) return;
+    const view = graphViewRef.current;
     setExpandingIri(iri);
     try {
-      const data = await getNeighborhood(id, iri, undefined, includeImportsRef.current);
-      if (activeIdRef.current !== id) return;
+      const data = await getNeighborhood(id, iri, undefined, includeImportsRef.current, displayLanguageRef.current);
+      if (graphViewRef.current !== view) return;
       // The token, not the data, is what tells GraphView this is a new merge:
       // expanding the same entity twice hands over an equal object.
       setExpansion((prev) => ({ data, token: (prev?.token ?? 0) + 1 }));
     } catch (e: unknown) {
+      if (graphViewRef.current !== view) return;
       // 404 is the endpoint's answer for "that IRI is not a node here", which is
       // a fact about the graph rather than a failure — see NOT_A_GRAPH_NODE.
       // Everything else is a real error and keeps the error bar.
       if (e instanceof ApiError && e.status === 404) setNotice(NOT_A_GRAPH_NODE);
-      else setError(e instanceof Error ? e.message : String(e));
+      else setError(e);
     } finally {
-      if (activeIdRef.current === id) setExpandingIri(null);
+      if (graphViewRef.current === view) setExpandingIri(null);
     }
   }, []);
 
@@ -1340,6 +1376,7 @@ export default function App() {
   // a person building a path is not thrown around.
   const onQueryResults = useCallback((results: SparqlResults | null, explicit: boolean) => {
     const run = ++resultsRun.current;
+    const view = graphViewRef.current;
     const iris = resultIris(results);
     setQueryResults(iris.length ? new Set(iris) : NO_RESULTS);
     setResultsNote(null);
@@ -1352,25 +1389,25 @@ export default function App() {
     const shown = iris.length - hidden.length;
     const finish = (count: number) => {
       setFrameTick((t) => t + 1);
-      setNotice(shownOnGraph(count));
+      setNotice(shownOnGraphNotice(count));
     };
     const id = activeIdRef.current;
     if (hidden.length === 0 || !id) {
       finish(shown);
       return;
     }
-    getResultNodes(id, sendable(hidden), includeImportsRef.current)
+    getResultNodes(id, sendable(hidden), includeImportsRef.current, displayLanguageRef.current)
       .then((answer) => {
-        if (resultsRun.current !== run || activeIdRef.current !== id) return;
+        if (resultsRun.current !== run || graphViewRef.current !== view) return;
         if (answer.nodes.length > 0) {
           setExpansion((prev) => ({ data: answer, token: (prev?.token ?? 0) + 1 }));
         }
-        setResultsNote(undrawnSentence(answer.drawn, answer.total));
+        setResultsNote(undrawnNotice(answer.drawn, answer.total));
         finish(shown + answer.drawn);
       })
       .catch(() => {
         // The table still holds every answer; frame what is drawn.
-        if (resultsRun.current === run) finish(shown);
+        if (resultsRun.current === run && graphViewRef.current === view) finish(shown);
       });
   }, []);
 
@@ -1426,7 +1463,7 @@ export default function App() {
   // absent from one form is regularly present in the other — so ignoring the
   // null would leave "that entity does not appear" standing over a line that is
   // now highlighted.
-  const onSourceTargetResolved = useCallback((missing: string | null) => {
+  const onSourceTargetResolved = useCallback((missing: UiMessage | null) => {
     setNotice(missing);
   }, []);
 
@@ -1588,7 +1625,7 @@ export default function App() {
 
   // --- projects (authoring-foundations) -----------------------------------
 
-  const failed = (e: unknown) => setError(e instanceof Error ? e.message : String(e));
+  const failed = (e: unknown) => setError(e);
 
   // Leave the open project, asking "Save, discard, or stay?" when it has
   // unsaved changes. `then` runs once the project is closed.
@@ -1670,7 +1707,7 @@ export default function App() {
     setProjectBusyId(project.id);
     try {
       await updateProject(project.id, { kind });
-      setNotice(`${project.name} is now ${kind === "ontology" ? "an ontology" : "a taxonomy"}. Nothing in the model was changed.`);
+      setNotice(makeUiMessage(kind === "ontology" ? "app.kindOntology" : "app.kindTaxonomy", { name: project.name }));
       await refreshProjects();
       if (projectStore.getSnapshot().project?.id === project.id) await projectStore.reload();
     } catch (e: unknown) {
@@ -1684,7 +1721,7 @@ export default function App() {
     setProjectBusyId(pid);
     duplicateProject(pid)
       .then((copy) => {
-        setNotice(`Made an independent copy: ${copy.name}.`);
+        setNotice(makeUiMessage("app.projectCopied", { name: copy.name }));
         return refreshProjects();
       })
       .catch(failed)
@@ -1703,17 +1740,15 @@ export default function App() {
   // destroyed, and the confirmation says so before and after (5.1).
   const onDeleteProject = (pid: string) => {
     const project = projects.find((p) => p.id === pid);
-    const name = project?.name ?? "this project";
-    const question =
-      `Delete "${name}"? Its folder moves into projects/.trash/ in your ` +
-      "Semantic Studio data folder, where you can still recover it.";
+    const name = project?.name ?? pid;
+    const question = t("app.deleteQuestion", { name });
     if (!window.confirm(question)) return;
     const run = () => {
       setProjectBusyId(pid);
       deleteProject(pid)
         .then((result) => {
           if (projectStore.getSnapshot().project?.id === pid) projectStore.reset();
-          setNotice(`Deleted "${name}". Its folder was moved to ${result.location} in your data folder; nothing was destroyed.`);
+          setNotice(makeUiMessage("app.projectDeleted", { name, location: result.location }));
           return refreshProjects();
         })
         .catch(failed)
@@ -1828,11 +1863,15 @@ export default function App() {
   // Layout: a header (brand + nav rows), a main area (graph + right panel that
   // depends on the mode), a status bar, and the Load dialog when open.
   return (
+    <DictionaryLanguageContext.Provider value={displayLanguage}>
+    <DictionaryViewContext.Provider value={dictionaryView}>
     <div className="app">
       <header className="app-header">
         <div className="nav-row">
           <Logo />
-          <nav className="main-nav" role="tablist" aria-label="Workspace">
+          <UiLanguageSelect />
+          {activeId && !editingProjectDoc && <DictionaryLanguageSelect language={displayLanguage} onChange={setDictionaryLanguage} />}
+          <nav className="main-nav" role="tablist" aria-label={t("app.workspace")}>
             {/* Home is a real fourth view of the workspace, so it is a tab
                 rather than a plain button: it swaps the main region exactly as
                 the other three do. It is first because it is where the
@@ -1842,20 +1881,20 @@ export default function App() {
               aria-selected={tabSelected("home")}
               className={showHome ? "nav-item active" : "nav-item"}
               onClick={goHome}
-              title="Your library, the catalogue and the file routes"
+              title={t("app.homeHint")}
             >
               <IconHome />
-              <span>Home</span>
+              <span>{t("nav.home")}</span>
             </button>
             {/* Load stays enabled with no ontology open: it is the way out of
                 an empty library, so disabling it would be a dead end. */}
             <button
               className="nav-item"
               onClick={() => openDialog("suggested")}
-              title="Load an ontology from a file or a URL"
+              title={t("app.loadHint")}
             >
               <IconLoad />
-              <span>Load</span>
+              <span>{t("app.load")}</span>
             </button>
             {/* No longer disabled with nothing open. Pressing one is now a
                 question the home screen answers — "choose an ontology to
@@ -1867,20 +1906,25 @@ export default function App() {
               aria-selected={tabSelected("view")}
               className={tabSelected("view") ? "nav-item active" : "nav-item"}
               onClick={() => onPickMode("view")}
-              title={activeId ? "Read the ontology file itself" : NO_ONTOLOGY_TITLE}
+              title={activeId ? t("app.viewHint") : t("app.pickFirst")}
             >
               <IconView />
-              <span>View</span>
+              <span>{t("nav.view")}</span>
             </button>
             <button
               role="tab"
               aria-selected={tabSelected("explore")}
               className={tabSelected("explore") ? "nav-item active" : "nav-item"}
               onClick={() => onPickMode("explore")}
-              title={activeId ? "Browse the ontology and inspect entities" : NO_ONTOLOGY_TITLE}
+              title={activeId ? t("app.exploreHint") : t("app.pickFirst")}
             >
               <IconExplore />
-              <span>Explore</span>
+              <span>{t("nav.explore")}</span>
+            </button>
+            <button role="tab" aria-selected={tabSelected("entities")}
+              className={tabSelected("entities") ? "nav-item active" : "nav-item"}
+              onClick={() => onPickMode("entities")} title={activeId ? t("nav.entities") : t("app.pickFirst")}>
+              <span>{t("nav.entities")}</span>
             </button>
             {/* Edit (edit-page-rework 5.1): the job, between looking at the
                 model and asking it questions. The mode keeps its id,
@@ -1892,24 +1936,24 @@ export default function App() {
               onClick={() => onPickMode("hierarchy")}
               title={
                 !activeId
-                  ? NO_ONTOLOGY_TITLE
+                  ? t("app.pickFirst")
                   : editingProjectDoc
-                    ? "Edit the model: outline, canvas and details"
-                    : "Browse the class tree (read-only)"
+                    ? t("app.editHint")
+                    : t("app.treeHint")
               }
             >
               <IconEdit />
-              <span>Edit</span>
+              <span>{t("nav.edit")}</span>
             </button>
             <button
               role="tab"
               aria-selected={tabSelected("query")}
               className={tabSelected("query") ? "nav-item active" : "nav-item"}
               onClick={() => onPickMode("query")}
-              title={activeId ? "Build a SPARQL query by clicking the graph" : NO_ONTOLOGY_TITLE}
+              title={activeId ? t("app.queryHint") : t("app.pickFirst")}
             >
               <IconQuery />
-              <span>Query</span>
+              <span>{t("nav.query")}</span>
             </button>
             {/* Shapes is for projects only (shacl-authoring 5.1): a library
                 ontology has no shapes.ttl and nothing to validate. */}
@@ -1919,10 +1963,10 @@ export default function App() {
                 aria-selected={tabSelected("shapes")}
                 className={tabSelected("shapes") ? "nav-item active" : "nav-item"}
                 onClick={() => onPickMode("shapes")}
-                title="SHACL shapes: rules for good data, and validation"
+                title={t("app.shapesHint")}
               >
                 <IconShapes />
-                <span>Shapes</span>
+                <span>{t("nav.shapes")}</span>
               </button>
             )}
           </nav>
@@ -1937,10 +1981,10 @@ export default function App() {
             className="nav-item about-item"
             onClick={() => setAboutOpen(true)}
             aria-haspopup="dialog"
-            title="What this is, who made it, and its licence"
+            title={t("app.aboutHint")}
           >
             <IconAbout />
-            <span>About</span>
+            <span>{t("app.about")}</span>
           </button>
           {/* Beside About and outside the tablist for the same reason: it
               opens a dialog about the application, not a view of an
@@ -1949,16 +1993,16 @@ export default function App() {
             className="nav-item about-item"
             onClick={() => setNetworkOpen(true)}
             aria-haspopup="dialog"
-            title="Work offline, and see which sites Semantic Studio may connect to"
+            title={t("app.networkHint")}
           >
             <IconNetwork />
-            <span>Network</span>
+            <span>{t("app.network")}</span>
           </button>
           <button
             className="header-icon-btn"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            aria-label="Toggle colour theme"
+            title={theme === "dark" ? t("app.lightHint") : t("app.darkHint")}
+            aria-label={t("app.theme")}
           >
             {theme === "dark" ? <IconSun /> : <IconMoon />}
           </button>
@@ -1981,17 +2025,17 @@ export default function App() {
           ) : active ? (
             <>
               <label className="context-label" htmlFor="ontology-select">
-                ONTOLOGY
+                {t("app.ontology")}
               </label>
               <select
                 id="ontology-select"
                 value={activeId ?? ""}
                 onChange={(e) => setActiveId(e.target.value || null)}
-                title="Active ontology"
+                title={t("app.activeOntology")}
               >
                 {ontologies.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.name} ({statementCount(o.triples)})
+                    {o.name} ({statementCount(o.triples, t)})
                   </option>
                 ))}
               </select>
@@ -2001,14 +2045,14 @@ export default function App() {
               <button
                 className="ghost icon-btn"
                 onClick={onCloseOntology}
-                title="Close this ontology and return to the home screen"
-                aria-label="Close this ontology"
+                title={t("app.closeHint")}
+                aria-label={t("app.closeOntology")}
               >
                 <IconClose />
               </button>
             </>
           ) : (
-            <span className="context-label">NO ONTOLOGY OPEN</span>
+            <span className="context-label">{t("app.noneOpen")}</span>
           )}
           <div className="spacer" />
           {/* Absent on Home, where it would search inside an ontology the user
@@ -2018,16 +2062,18 @@ export default function App() {
               things is worse than one. Absent in Hierarchy too: the tree has its
               own filter, and two search-like inputs meaning different things is
               the same trap. Absent in Shapes: a pick there would select an
-              entity in a view that is not on screen. */}
-          {!showHome && mode !== "hierarchy" && mode !== "shapes" && (
+              entity in a view that is not on screen. Entities also owns its
+              filter and handles reference-only rows without the editor. */}
+          {!showHome && mode !== "hierarchy" && mode !== "shapes" && mode !== "entities" && (
             <SearchBox
               ontologyId={activeId}
               theme={theme}
               onPick={onSearchPick}
+              onShowAll={(query) => { setEntityQuery(query); onPickMode("entities"); }}
               drawnIds={drawnIds}
               imports={includeImports}
               placeholder={
-                mode === "query" ? "Search to add a step…" : "Search concepts, properties…"
+                mode === "query" ? t("search.queryPrompt") : t("search.prompt")
               }
             />
           )}
@@ -2039,19 +2085,20 @@ export default function App() {
         {!showHome && mode === "hierarchy" && active && !editingProjectDoc && (
           <div className="readonly-notice" role="note">
             <p>
-              {active.name} is a library ontology, so it is read-only here. To change it, save a copy as your own
-              project.
+              {t("app.libraryCopy", { name: active.name })}
             </p>
             <button type="button" className="primary" onClick={() => setNewProject({ source: active.id })}>
-              Save as a project
+              {t("app.saveProject")}
             </button>
           </div>
         )}
       </header>
 
-      {error && (
-        <div className="error-bar" onClick={() => setError(null)} title="Click to dismiss">
-          {error}
+      {!!error && (
+        <div className="error-bar">
+          <p role="alert">{renderServerError(error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details>
+          <button type="button" onClick={() => { setError(null); document.querySelector<HTMLElement>('.main-nav [aria-selected="true"]')?.focus(); }}>{t("app.dismissError")}</button>
         </div>
       )}
 
@@ -2065,12 +2112,12 @@ export default function App() {
           than there, because the same render also swaps the whole main area
           back to the chooser. The visible bar inside it is conditional, so an
           idle region occupies no space and draws nothing. */}
-      <div className="notice-region" role="status" aria-live="polite">
-        {notice && (
-          <div className="notice-bar" onClick={() => setNotice(null)} title="Click to dismiss">
-            {notice}
-          </div>
-        )}
+      <div className="notice-container">
+        <div className="notice-region" role="status" aria-live="polite">
+          {notice && <div className="notice-bar">{renderUiMessage(notice, t)}</div>}
+        </div>
+        {notice && <button type="button" className="ghost icon-btn notice-close" aria-label={t("app.dismissNotice")}
+          onClick={() => { setNotice(null); document.querySelector<HTMLElement>('.main-nav [aria-selected="true"]')?.focus(); }}><span aria-hidden="true">✕</span></button>}
       </div>
 
       {/* Above the canvas, below the search box, so it reads before the graph
@@ -2083,7 +2130,7 @@ export default function App() {
           library saying how much of an ontology nobody is looking at is drawn.
           Not in Hierarchy either: the tree is unbudgeted, so a "Show more"
           about the graph is meaningless above it. */}
-      {!showHome && mode !== "hierarchy" && graphData && defaultBudget !== null && (
+      {!showHome && mode !== "hierarchy" && mode !== "entities" && graphData && defaultBudget !== null && (
         <GraphNotice
           stats={graphData.stats}
           defaultBudget={defaultBudget}
@@ -2148,6 +2195,32 @@ export default function App() {
             onDelete: onDeleteProject,
           }}
         />
+      ) : mode === "entities" && activeId ? (
+        <main className="main entity-workspace">
+          <div className="entity-browser">
+            <DictionaryContext name={active?.name ?? ""} editing={editingProjectDoc}
+              documentName={editingProjectDoc && openDocName ? `${openDocName}.ttl` : null}
+              saveState={projectSaving ? "saving" : projectDoc?.dirty ? "dirty" : "saved"} />
+            <EntityList key={activeId} ontologyId={activeId} language={displayLanguage} imports={includeImports}
+              revision={dictionaryView.revision} viewGeneration={dictionaryView.viewGeneration}
+              initialQuery={entityQuery} selectedIri={selected}
+              selectionStale={entitySelectionSource?.iri === selected && entitySelectionSource.view !== entitySource}
+              onSelect={(iri) => {
+                setSelected(iri); setFocusPanel(!!iri);
+                setEntitySelectionSource(iri ? { iri, view: entitySource } : null);
+              }} onReferenceOnly={(iri) => {
+                setReferenceOnlySelection(iri);
+                if (selected) setEntitySelectionSource(previous => previous?.iri === selected && previous.view === entitySource
+                  ? previous : { iri: selected, view: entitySource });
+              }} />
+          </div>
+          {selected && (referenceOnlySelection === selected ?
+            <ReferenceOnlyPanel key={selected} iri={selected} onClose={() => setSelected(null)} /> :
+            <DetailPanel ontologyId={activeId} iri={selected} imports={includeImports} revision={viewRevision}
+              focusHeading={focusPanel} language={displayLanguage} onNavigate={(iri) => { setSelected(iri); setReferenceOnlySelection(null); }}
+              onClose={() => setSelected(null)} editing={editingModel} readOnlyNote={readOnlyNote}
+              onDeleted={onEntityDeleted} />)}
+        </main>
       ) : mode === "shapes" && openProjectSummary ? (
         <main className="main">
           <ShapesView
@@ -2205,8 +2278,8 @@ export default function App() {
             <CanvasBoundary onRetry={() => setModelCanvas(loadCanvas)}>
               <Suspense
                 fallback={
-                  <section className="model-canvas canvas-message" aria-label="Modeling canvas" aria-busy="true">
-                    <p role="status">Loading the canvas…</p>
+                  <section className="model-canvas canvas-message" aria-label={t("app.canvas")} aria-busy="true">
+                    <p role="status">{t("app.canvasLoading")}</p>
                   </section>
                 }
               >
@@ -2240,7 +2313,7 @@ export default function App() {
             <SideTabs tab={sideTab} onTab={chooseSideTab} badge={reasonBadge} wide={!showCanvas}>
               {sideTab === "reasoning" ? (
                 <div className="side-reasoning">
-                  <h2 className="side-heading">Reasoning</h2>
+                  <h2 className="side-heading">{t("app.reasoning")}</h2>
                   {/* Reason is in the canvas toolbar; here as well before
                       any run, and whenever the canvas is hidden (5.4, 5.6). */}
                   {(!showCanvas || reasoningResult === null) && (
@@ -2279,10 +2352,9 @@ export default function App() {
               )}
             </SideTabs>
           ) : selected === null ? (
-            <aside className="detail-panel detail-empty" aria-label="Entity details">
+            <aside className="detail-panel detail-empty" aria-label={t("app.details")}>
               <p className="detail-note">
-                Select a class, property or concept to see its details and
-                connections.
+                {t("app.selectPrompt")}
               </p>
             </aside>
           ) : (
@@ -2297,7 +2369,7 @@ export default function App() {
               can see is a skip link nobody uses, including sighted keyboard
               users. */}
           <button className="skip-link" onClick={skipToPanel}>
-            Skip to the entity list
+            {t("app.skipList")}
           </button>
           <div className="graph-area">
             <GraphView
@@ -2339,7 +2411,7 @@ export default function App() {
                 ) : null
               }
             />
-            {loadingGraph && <div className="loading-overlay">Building graph…</div>}
+            {loadingGraph && <div className="loading-overlay">{t("app.buildingGraph")}</div>}
           </div>
           {/* View sits over the graph rather than replacing it, so switching
               back to Explore does not throw away the settled layout. */}
@@ -2359,7 +2431,7 @@ export default function App() {
               <SourceView
                 ontologyId={activeId}
                 target={sourceTarget}
-                onTargetResolved={onSourceTargetResolved}
+                onTargetMessage={onSourceTargetResolved}
               />
             ))}
           {mode === "query" ? (
@@ -2378,7 +2450,7 @@ export default function App() {
               onResults={onQueryResults}
               resultsOnGraph={resultsOnGraph}
               onFrameResults={frameResults}
-              resultsNote={resultsNote}
+              resultsNote={resultsNote ? renderUiMessage(resultsNote, t) : null}
               questions={exampleQuestions}
             />
           ) : mode === "explore" ? (
@@ -2422,22 +2494,24 @@ export default function App() {
         {active ? (
           <>
             <span>{active.name}</span>
-            <span>{statementCount(active.triples)}</span>
+            <span>{statementCount(active.triples, t)}</span>
             {/* Under a budget these read "2,000 of 18,717". The status bar
                 keeps saying so after the notice is dismissed, so the fact that
                 the view is partial is never fully hidden. */}
-            <span>{countOf(graphData, "node", expanded)} nodes</span>
-            <span>{countOf(graphData, "edge", expanded)} edges</span>
+            {mode !== "entities" && <>
+              <span>{t("app.nodes", { count: countOf(graphData, "node", expanded, t) })}</span>
+              <span>{t("app.edges", { count: countOf(graphData, "edge", expanded, t) })}</span>
+            </>}
             <span className="dim">{formatName(active.format)}</span>
             {/* A fetched file names where it came from; a bundled example
                 says so in a word, not the code's "example" (home-and-examples
                 5.6: the card's facts are the status bar's once it is open). */}
             {active.source !== "upload" && active.source !== "project" && (
-              <span className="dim src">{active.source === "example" ? "Example" : active.source}</span>
+              <span className="dim src">{active.source === "example" ? t("app.example") : active.source}</span>
             )}
           </>
         ) : (
-          <span className="dim">{homeStatus(projects.length, ontologies.length)}</span>
+          <span className="dim">{homeStatus(projects.length, ontologies.length, t)}</span>
         )}
       </footer>
 
@@ -2469,7 +2543,7 @@ export default function App() {
             // The report's next step: the Shapes view, checking at once.
             setDialogOpen(false);
             if (modelOntologyId) enterMode(modelOntologyId, "shapes");
-            projectStore.validate().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+            projectStore.validate().catch((e: unknown) => setError(e));
           }}
           onShowData={() => {
             // The tree's Examples section lists the data, each row labelled.
@@ -2490,12 +2564,12 @@ export default function App() {
 
       {projectRecovery && (
         <ConfirmDialog
-          title="Recover unsaved changes?"
+          title={t("app.recoveryTitle")}
           escape="later"
           busy={promptBusy}
           actions={[
-            { id: "discard", label: "Discard them", danger: true },
-            { id: "recover", label: "Recover", primary: true },
+            { id: "discard", label: t("app.discardThem"), danger: true },
+            { id: "recover", label: t("app.recover"), primary: true },
           ]}
           onAnswer={(answer) => {
             if (answer === "later") {
@@ -2510,21 +2584,19 @@ export default function App() {
           }}
         >
           <p>
-            This project has changes from {when(projectRecovery.draftTime)} that were
-            never saved. Recovering loads them as unsaved changes; the undo history is not
-            recovered.
+            {t("app.recoveryBody", { date: when(projectRecovery.draftTime, uiLocale) })}
           </p>
         </ConfirmDialog>
       )}
 
       {commentsWarning && (
         <ConfirmDialog
-          title="Save and remove the comments?"
+          title={t("app.commentsTitle")}
           escape="cancel"
           busy={projectSaving}
           actions={[
-            { id: "cancel", label: "Don't save" },
-            { id: "save", label: "Save and keep a backup", primary: true },
+            { id: "cancel", label: t("app.dontSave") },
+            { id: "save", label: t("app.saveBackup"), primary: true },
           ]}
           onAnswer={(answer) => {
             if (answer === "save") projectStore.save(true).catch(failed);
@@ -2532,19 +2604,18 @@ export default function App() {
           }}
         >
           <p>
-            {COMMENTS_WARNING} The current file will be kept as{" "}
-            <code>{commentsWarning.backup}</code>.
+            {t("app.commentsBody", { backup: commentsWarning.backup })}
           </p>
         </ConfirmDialog>
       )}
 
       {changingKind && (
         <ConfirmDialog
-          title={`Change ${changingKind.name} to ${changingKind.kind === "ontology" ? "a taxonomy" : "an ontology"}?`}
+          title={t(changingKind.kind === "ontology" ? "app.changeToTaxonomy" : "app.changeToOntology", { name: changingKind.name })}
           escape="cancel"
           actions={[
-            { id: "cancel", label: "Cancel" },
-            { id: "change", label: "Change", primary: true },
+            { id: "cancel", label: t("common.cancel") },
+            { id: "change", label: t("app.change"), primary: true },
           ]}
           onAnswer={(answer) => {
             const project = changingKind;
@@ -2554,43 +2625,42 @@ export default function App() {
         >
           <p>
             {changingKind.kind === "ontology"
-              ? "The canvas and the tree will offer concepts instead of classes. Nothing in the model is rewritten: its classes stay, shown read-only and editable in Turtle."
-              : "The canvas and the tree will offer classes instead of concepts. Nothing in the model is rewritten: its concepts stay, shown read-only and editable in Turtle."}
+              ? t("app.toTaxonomyBody")
+              : t("app.toOntologyBody")}
           </p>
         </ConfirmDialog>
       )}
 
       {leaveEditor && (
         <ConfirmDialog
-          title="Apply your Turtle edits?"
+          title={t("app.applyTitle")}
           escape="stay"
           busy={promptBusy}
           actions={[
-            { id: "stay", label: "Stay" },
-            { id: "discard", label: "Discard", danger: true },
-            { id: "apply", label: "Apply", primary: true },
+            { id: "stay", label: t("app.stay") },
+            { id: "discard", label: t("app.discard"), danger: true },
+            { id: "apply", label: t("app.apply"), primary: true },
           ]}
           onAnswer={(answer) => void answerLeaveEditor(answer)}
         >
-          <p>The text in the editor has changes that are not applied yet. Apply, discard, or stay?</p>
+          <p>{t("app.applyBody")}</p>
         </ConfirmDialog>
       )}
 
       {leaveProject && (
         <ConfirmDialog
-          title="Save your changes?"
+          title={t("app.saveTitle")}
           escape="stay"
           busy={promptBusy}
           actions={[
-            { id: "stay", label: "Stay" },
-            { id: "discard", label: "Discard", danger: true },
-            { id: "save", label: "Save", primary: true },
+            { id: "stay", label: t("app.stay") },
+            { id: "discard", label: t("app.discard"), danger: true },
+            { id: "save", label: t("app.save"), primary: true },
           ]}
           onAnswer={(answer) => void answerLeaveProject(answer)}
         >
           <p>
-            {openProjectSummary?.name ?? "This project"} has unsaved changes. Save, discard, or
-            stay?
+            {t("app.saveBody", { name: openProjectSummary?.name ?? t("app.thisProject") })}
           </p>
         </ConfirmDialog>
       )}
@@ -2603,5 +2673,7 @@ export default function App() {
         />
       )}
     </div>
+    </DictionaryViewContext.Provider>
+    </DictionaryLanguageContext.Provider>
   );
 }

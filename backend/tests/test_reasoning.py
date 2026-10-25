@@ -12,6 +12,9 @@ SUMMARY
     canvas are given. Plus the timing budgets of Section 10.
 
 BASIC IDEA
+    Additive display facts and definition parts retain exact legacy sentences and RDF names
+    through actual reasoning routes.
+
     Every model is written in the test (rdf-fixture): a shop model in
     Turtle, applied to a Small project through the Turtle route as a
     learner would, so the run goes through the real route, the real
@@ -49,6 +52,7 @@ from rdflib import Graph, URIRef
 from rdflib.namespace import OWL, RDF, RDFS
 
 from app import reasoning
+from app.messages import make_message
 from app.editing import editing_service
 from app.main import app
 from tests.budget import limit_ms
@@ -169,6 +173,10 @@ def test_the_shop_models_facts_exactly_in_their_groups(shop):
     for item in items(result):
         assert item["s"].startswith(EX) and item["o"].startswith(EX), item
         assert item["s"] != item["o"]
+        wire = item["uiMessage"]
+        assert wire["code"].startswith("reasoning.fact.")
+        assert wire["args"]["s"] == [{"text": item["sLabel"]}]
+        assert wire["args"]["o"] == [{"text": item["oLabel"]}]
 
 
 def test_facts_about_imported_terms_alone_are_counted_apart():
@@ -258,6 +266,10 @@ def test_a_thing_in_disjoint_classes_and_a_class_that_can_never_have_members(sho
         "carl cannot be both a Person and an Organization: no Person is an Organization.",
     ]
     robot, carl = result["problems"]
+    assert robot["uiMessage"]["code"] == "reasoning.problem.never.both"
+    assert carl["uiMessage"]["code"] == "reasoning.problem.disjoint_member"
+    for problem in (robot, carl):
+        assert all(cause["uiMessage"]["code"].startswith("reasoning.fact.") for cause in problem["causes"])
     assert robot["kind"] == "neverMembers" and robot["subject"] == EX + "Robot"
     # Its causes: the stated path to each of the pair, and the disjointness,
     # each a fact whose subject is a link.
@@ -321,6 +333,9 @@ def test_never_to_itself_never_both_ways_and_different_things_made_the_same_each
     """)
     result = reason(shop)
     problems = {p["kind"]: p for p in result["problems"]}
+    for kind, code in (("irreflexive", "irreflexive"), ("asymmetric", "asymmetric"), ("differentSame", "different_same")):
+        assert problems[kind]["uiMessage"]["code"] == "reasoning.problem." + code
+        assert all(cause.get("uiMessage") for cause in problems[kind]["causes"])
     assert problems["irreflexive"]["sentence"] == "Alice is linked to itself by knows, which is never to itself."
     # OWL-RL reports the pair once per direction; it is shown once.
     assert sum(1 for p in result["problems"] if p["kind"] == "asymmetric") == 1
@@ -418,6 +433,10 @@ def test_each_family_gives_its_reason_one_step_with_its_premises(shop):
         answer = why(shop, facts[sentence])
         assert (answer["family"], answer["sentence"]) == (family, words), sentence
         assert answer["premises"], sentence
+        for description in [answer, *answer["premises"]]:
+            wire = description.get("uiMessage")
+            assert wire is not None, description
+            assert make_message(wire["code"], **wire["args"]) == wire
         families.add(family)
     assert families == set(reasoning.FAMILIES)
     # The transitive reason's three lines, as the spec draws them.
@@ -432,8 +451,12 @@ def test_each_family_gives_its_reason_one_step_with_its_premises(shop):
     assert why(shop, inferred[0])["family"] == "domainRange"
     definition = manager["premises"][-1]
     assert definition["o"] is None and definition["inferred"] is False
+    assert definition["uiMessage"]["code"] == "reasoning.definition"
+    assert {"text": "Employee"} in definition["uiMessage"]["args"]["expression"]
+    assert {"code": "words.reasoning.minimum_one", "args": {}} in definition["uiMessage"]["args"]["expression"]
     # A stated fact asked about says so; a fact not in the result is 404.
     assert why(shop, manager["premises"][1])["family"] == "stated"
+    assert why(shop, manager["premises"][1])["uiMessage"]["code"] == "reasoning.reason.stated"
     assert client.get(
         f"/api/projects/{shop}/reasoning/why", params={"s": EX + "acme", "p": str(RDF.type), "o": EX + "Robot"},
     ).status_code == 404
@@ -568,6 +591,7 @@ def test_a_run_past_the_time_limit_is_killed_with_its_sentence(shop, monkeypatch
     assert result["status"] == "timedOut"
     # The limit that applied, never the one the module started with.
     assert result["sentence"] == "Stopped after 1.5 seconds. Try without the data snapshots, or with fewer imports."
+    assert result["uiMessage"] == {"code": "reasoning.timeout", "args": {"seconds": 1.5}}
     assert not reasoning.service.running(shop)
 
 
@@ -586,6 +610,7 @@ def test_a_set_over_the_ceiling_is_refused_before_any_process_starts(shop, monke
     result = reason(shop)
     count = len(Graph().parse(data=SHOP, format="turtle"))
     assert result["status"] == "tooLarge" and started == [] and result["statements"] == count
+    assert result["uiMessage"] == {"code": "reasoning.too_large", "args": {"count": count, "limit": 10}}
     assert result["sentence"] == (
         f"This project has {count:,} statements to reason over. Semantic Studio reasons over at most "
         "10: try without the data snapshots, or with fewer imports."
@@ -805,3 +830,47 @@ def test_two_domain_lines_make_a_subject_a_member_of_both():
     apply(pid, SHARED_DOMAIN)
     memberships = shown(reason(pid))["memberships"]
     assert "bob is an Employee" in memberships and "bob is a Manager" in memberships
+
+
+@pytest.mark.parametrize("status,statements,seconds,code,args", [
+    ("stopped", 0, None, "reasoning.stopped", {}),
+    ("failed", 0, None, "reasoning.failed", {}),
+    ("timedOut", 0, 1.5, "reasoning.timeout", {"seconds": 1.5}),
+    ("tooLarge", 200001, None, "reasoning.too_large", {"count": 200001, "limit": 200000}),
+])
+def test_ending_metadata_is_additive_and_uses_original_facts(status, statements, seconds, code, args):
+    outcome = reasoning.Outcome(status, reasoning.Key(1, 0, False, False), statements=statements,
+                                message="Raw failure detail" if status == "failed" else None,
+                                limit_seconds=seconds)
+    legacy = outcome.sentence()
+    summary = outcome.summary()
+    assert summary["sentence"] == legacy
+    assert summary["uiMessage"] == {"code": code, "args": args}
+    assert summary["status"] == status
+    if status == "failed":
+        assert summary["sentence"] == "The reasoner stopped with an error: Raw failure detail"
+
+
+def test_ending_metadata_does_not_add_an_ending_to_a_finished_run():
+    summary = reasoning.Outcome("done", reasoning.Key(1, 0, False, False)).summary()
+    assert summary["sentence"] is None
+    assert summary.get("uiMessage") is None
+
+
+@pytest.mark.parametrize("predicate,expected", [
+    (RDF.type, "Alice is an Organization"),
+    (RDFS.subClassOf, "Alice is a kind of Organization"),
+    (RDFS.subPropertyOf, "Alice is a kind of Organization"),
+    (OWL.equivalentClass, "Alice and Organization mean the same thing"),
+    (OWL.equivalentProperty, "Alice and Organization mean the same thing"),
+    (OWL.sameAs, "Alice and Organization are the same thing"),
+    (OWL.differentFrom, "Alice and Organization are different things"),
+    (OWL.disjointWith, "no Alice is an Organization"),
+    (OWL.inverseOf, "Alice is Organization the other way round"),
+    (RDFS.domain, "whoever Alice something is an Organization"),
+    (RDFS.range, "whatever something Alice is an Organization"),
+    (U("worksFor"), "Alice works for Organization"),
+])
+def test_fact_wording_preserves_each_predicate_meaning(predicate, expected):
+    names = {U("alice"): "Alice", U("org"): "Organization", U("worksFor"): "works for"}
+    assert reasoning.fact_sentence((U("alice"), predicate, U("org")), names.__getitem__) == expected

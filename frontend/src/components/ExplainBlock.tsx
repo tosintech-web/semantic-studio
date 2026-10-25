@@ -43,8 +43,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { explainSentences, type Sentence } from "../explain/explainSentences";
-import type { PanelTerm } from "../explain/glossary";
+import { definition, type PanelTerm } from "../explain/glossary";
 import type { Explain } from "../types";
 
 interface Props {
@@ -73,16 +74,17 @@ function SentenceLine({ sentence, onNavigate }: { sentence: Sentence; onNavigate
 }
 
 export default function ExplainBlock({ label, explain, language = null, onNavigate, terms }: Props) {
-  const sentences = explainSentences(label, explain, language);
+  const { t, locale } = useI18n();
+  const sentences = explainSentences(label, explain, language, locale);
   return (
     <section className="explain-block">
-      <h3>In plain words</h3>
+      <h3>{t("explain.heading")}</h3>
       {sentences.map((sentence, i) => (
         <SentenceLine key={i} sentence={sentence} onNavigate={onNavigate} />
       ))}
       {terms.length > 0 && (
         <details className="explain-terms">
-          <summary>What these words mean ({terms.length})</summary>
+          <summary>{t("explain.terms", { count: terms.length })}</summary>
           <ul>
             {terms.map((term) => (
               <li key={term.iri}>
@@ -90,7 +92,7 @@ export default function ExplainBlock({ label, explain, language = null, onNaviga
                     match; the prefixed form beside it when that differs. */}
                 <span className="explain-term">{term.name}</span>
                 {term.name !== term.prefixed && <span className="explain-prefixed"> ({term.prefixed})</span>}
-                {`: ${term.definition}`}
+                {`: ${definition(term.iri, locale) ?? term.definition}`}
               </li>
             ))}
           </ul>

@@ -13,10 +13,13 @@ SUMMARY
     builder and in the live region; warnings under their rule and said once;
     a rule outside the form read-only with Edit in Turtle; Check it in data
     too on shapes.ttl; a rule begun on the canvas opening the builder; and
+    current-language delayed operation/refusal notices and raw warning records;
     focus, which goes back to Add a rule after an add, to the next rule
     after a remove, and never to the page.
 
 BASIC IDEA
+    Warning metadata and original disclosures follow UI language while preserving
+    class-group meaning, native focus and fix arguments.
     The block is rendered with its runner, the api mocked as the other form
     tests mock it, and the rules handed in by a harness that can change them,
     as a refetch for the new revision does.
@@ -32,9 +35,14 @@ EXPECTED OUTPUT
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../state/projectStore";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { useI18n } from "../i18n/I18nProvider";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { builderSentence, EMPTY_BUILDER, itemSentence } from "../modeling/ruleSentences";
+import { projectStore, useProjectStore } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleRestriction } from "../types";
-import { useRunner } from "./EditParts";
+import { RunnerErrorDetails, useRunner } from "./EditParts";
 import RulesBlock from "./RulesBlock";
 
 const { openProject, runCommand } = vi.hoisted(() => ({ openProject: vi.fn(), runCommand: vi.fn() }));
@@ -92,7 +100,7 @@ function Harness({ initial }: { initial: ClassRules }) {
   const [rules, set] = useState(initial);
   setRules = set;
   const runner = useRunner();
-  return <RulesBlock iri={EX + "Order"} name="Order" rules={rules} runner={runner} onSelect={onSelect} />;
+  return <><RunnerErrorDetails runner={runner} /><RulesBlock iri={EX + "Order"} name="Order" rules={rules} runner={runner} onSelect={onSelect} /></>;
 }
 
 async function show(rules: ClassRules) {
@@ -169,7 +177,7 @@ describe("the Rules block (5.9)", () => {
       fireEvent.click(add);
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand.mock.calls[0].slice(1)).toEqual([
+    expect(runCommand.mock.calls[0].slice(1, 4)).toEqual([
       "model",
       "AddRestriction",
       { class: EX + "Order", form: "every", property: EX + "hasLine", kind: "some", filler: EX + "OrderLine", n: null },
@@ -192,7 +200,7 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["AddDisjointWith", { a: EX + "Order", b: EX + "Person" }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["AddDisjointWith", { a: EX + "Order", b: EX + "Person" }]);
   });
 
   it("a refusal stands under the builder and is said in the live region; the builder stays (AC-10)", async () => {
@@ -205,8 +213,9 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
     });
-    const group = screen.getByRole("group");
-    expect(within(group).getByText("Order already has this rule.")).toBeTruthy();
+    const group = screen.getByRole("group", { name: "Every Order has at least one line that is an Order line" });
+    expect(within(group).getByText("The operation could not be completed. Check the details.")).toBeTruthy();
+    expect(screen.getByText("Order already has this rule.").tagName).toBe("PRE");
     expect(said()).toBe("Order already has this rule.");
   });
 
@@ -227,7 +236,7 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual([
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual([
       "ReplaceRestriction",
       {
         class: EX + "Order",
@@ -248,7 +257,7 @@ describe("the Rules block (5.9)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove: Every Order has at least one line that is an Order line" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["RemoveRestriction", { class: EX + "Order", restriction: first.key }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["RemoveRestriction", { class: EX + "Order", restriction: first.key }]);
     expect(said()).toMatch(/^Removed: Every Order has at least one line that is an Order line\./);
     await refetch(rulesOf([second]));
     await waitFor(() =>
@@ -300,7 +309,7 @@ describe("the Rules block (5.9)", () => {
         screen.getByRole("button", { name: "Check it in data too: Every Order has at least one line that is an Order line" }),
       );
     });
-    expect(runCommand.mock.calls[0].slice(1)).toEqual(["shapes", "CheckInData", { class: EX + "Order", restriction: rule.key }]);
+    expect(runCommand.mock.calls[0].slice(1, 4)).toEqual(["shapes", "CheckInData", { class: EX + "Order", restriction: rule.key }]);
     expect(said()).toBe("Did CheckInData. Validate checks it in your data.");
   });
 
@@ -334,4 +343,153 @@ describe("the Rules block (5.9)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add a rule" }));
     expect(document.querySelectorAll(".rules-block [disabled]").length).toBe(0);
   });
+});
+
+it("restores keyboard focus when the closing builder DOM commit completes", async () => {
+  await show(rulesOf([]));
+  fireEvent.click(screen.getByRole("button", { name: "Add a rule" }));
+  fireEvent.keyDown(screen.getByRole("combobox", { name: "Rule" }), { key: "Escape" });
+  // The replacement button must be focused once React has committed it: a
+  // zero-delay timer can run before that button exists under concurrent work.
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Add a rule" }));
+});
+
+
+it("switches rule editing controls without changing the selected identifiers or count draft", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><Harness initial={rulesOf([])} /></I18nProvider>); });
+  fireEvent.click(screen.getByRole("button", { name: "ルールを追加" }));
+  const group = screen.getByRole("group", { name: "すべてのOrderは…" });
+  fireEvent.change(within(group).getByRole("combobox", { name: "関係または属性" }), { target: { value: EX + "hasLine" } });
+  fireEvent.change(within(group).getByRole("combobox", { name: "成立する条件" }), { target: { value: "atLeast" } });
+  const count = within(group).getByRole("spinbutton", { name: "件数（0〜1,000）" });
+  fireEvent.change(count, { target: { value: "3" } });
+  expect(group.getAttribute("aria-label")).toBe("すべてのOrderは「has line」の値を3件以上持ちます");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("group", { name: "Every Order has at least 3 lines" })).toBe(group);
+  expect(within(group).getByRole("spinbutton", { name: "How many (0 to 1,000)" })).toBe(count);
+  expect((count as HTMLInputElement).value).toBe("3");
+  expect(runCommand).not.toHaveBeenCalled();
+  await act(async () => fireEvent.click(within(group).getByRole("button", { name: "Add" })));
+  expect(runCommand.mock.calls[0].slice(1, 4)).toEqual(["model", "AddRestriction", { class: EX + "Order", form: "every", property: EX + "hasLine", kind: "atLeast", filler: null, n: 3 }]);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords existing rules and capped choices while preserving the underlying rules", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const rules = rulesOf([some(), disjoint], { choices: { ...CHOICES, properties: { ...CHOICES.properties, total: 500 } } });
+  const original = JSON.stringify(rules);
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><Harness initial={rules} /></I18nProvider>); });
+  expect(screen.getByRole("region", { name: "すべてのOrderに成立するルール" })).toBeTruthy();
+  expect(screen.getByText("すべてのOrderは「has line」でOrder lineに少なくとも1件結び付きます")).toBeTruthy();
+  expect(screen.getByText("OrderはPersonとは重なりません")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "ルールを追加" }));
+  expect(screen.getByText("関係と属性500件のうち先頭1件を表示しています。他の項目のルールはTurtleで記述してください。")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("No Order is a Person")).toBeTruthy();
+  expect(screen.getByText("Showing the first 1 of 500 relationships and attributes; write a rule on another in Turtle.")).toBeTruthy();
+  expect(JSON.stringify(rules)).toBe(original);
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+function NoticeProbe() {
+  const snapshot = useProjectStore();
+  const { locale, t } = useI18n();
+  return <output data-testid="notice"><span key={snapshot.announcement.id}>{renderProjectAnnouncement(snapshot.announcement, locale, t)}</span></output>;
+}
+
+it.each(["add", "change", "remove"] as const)("retains %s rule facts through a pending command and later UI changes", async action => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const initial = rulesOf(action === "add" ? [] : [some()]);
+  initial.choices = { ...CHOICES, properties: { items: [...CHOICES.properties.items, { iri: EX + "Hidden", label: "HIDDEN-CHOICE-LABEL", kind: "relationship" }], total: 500 } };
+  let finish!: (value: unknown) => void;
+  runCommand.mockImplementationOnce(() => new Promise(done => { finish = done; }));
+  const words = { add: ["Added", "added_restriction", "Added a rule on has line to Order"], change: ["Changed", "changed_restriction", "Changed a rule on has line of Order"], remove: ["Removed", "removed_restriction", "Removed a rule on has line from Order"] }[action];
+  const state = { ...EMPTY_BUILDER, property: EX + "hasLine", kind: "atLeast" as const, n: "3" };
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><NoticeProbe /><Harness initial={initial} /></I18nProvider>); });
+  if (action === "remove") {
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^削除：/ })); });
+  } else {
+    fireEvent.click(screen.getByRole("button", { name: action === "add" ? "ルールを追加" : /^編集：/ }));
+    fireEvent.change(screen.getByRole("combobox", { name: "関係または属性" }), { target: { value: EX + "hasLine" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "成立する条件" }), { target: { value: "atLeast" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "件数（0〜1,000）" }), { target: { value: "3" } });
+    // Remove the optional qualifier so the exact draft is three unqualified values.
+    const qualifier = screen.getByRole("combobox", { name: /クラス|種類|値の型/ });
+    fireEvent.change(qualifier, { target: { value: "" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: action === "add" ? "追加" : "ルールを保存" })); });
+  }
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  await act(async () => { finish({ revision: 3, label: words[2], uiMessage: { code: `command.${words[1]}`, args: { property: "has line", name: "Order" } }, state: STATE }); });
+  const english = action === "remove" ? itemSentence("Order", some(), "en")! : builderSentence("Order", state, CHOICES, "en");
+  const japanese = action === "remove" ? itemSentence("Order", some(), "ja")! : builderSentence("Order", state, CHOICES, "ja");
+  expect(screen.getByTestId("notice").textContent).toBe(`${words[0]}: ${english}. ${words[2]}.`);
+  const notice = projectStore.getSnapshot().announcement;
+  const span = screen.getByTestId("notice").firstElementChild;
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  const operation = { add: "クラス「Order」へのhas lineに関する制約の追加", change: "クラス「Order」のhas lineに関する制約の変更", remove: "クラス「Order」からのhas lineに関する制約の削除" }[action];
+  const prefix = { add: "ルールを追加しました", change: "ルールを変更しました", remove: "ルールを削除しました" }[action];
+  expect(screen.getByTestId("notice").textContent).toBe(`${prefix}：${japanese}（${operation}）`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(screen.getByTestId("notice").firstElementChild).toBe(span);
+  expect(JSON.stringify(notice)).not.toContain("HIDDEN-CHOICE-LABEL");
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each(["known", "unknown", "newline"] as const)("keeps a %s warning as facts and never reannounces on a UI-only change", async mode => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><NoticeProbe /><Harness initial={rulesOf([])} /></I18nProvider>); });
+  const warning = { text: mode === "newline" ? "Original <b>{name}\nsecond line" : "Original <b>{name} warning",
+    ...(mode === "known" ? { uiMessage: { code: "validation.min_count", args: { name: "対象 <img>{name}", count: 2 } } } : {}),
+  };
+  await refetch(rulesOf([], { warnings: [warning] }));
+  const notice = projectStore.getSnapshot().announcement;
+  expect(screen.getByTestId("notice").textContent).toBe(mode === "known" ? "注意：「対象 <img>{name}」には2件以上の値が必要です。" : "注意：1件の注意事項があります。詳細を確認してください。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByTestId("notice").textContent).toBe(mode === "known" ? "Warning: 対象 <img>{name} needs at least 2 values." : `Warning: ${warning.text}`);
+  expect(notice.text).toBe(`Warning: ${warning.text}`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  await refetch(rulesOf([], { warnings: [{ ...warning }] }));
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(runCommand).not.toHaveBeenCalled();
+  expect(screen.getByTestId("notice").querySelector("b,img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords a refused rule's live notice without replacing its original details or repeating the command", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const raw = "Original rule refusal <b>{literal}";
+  runCommand.mockRejectedValueOnce(new Error(raw));
+  render(<I18nProvider><UiLanguageSelect /><NoticeProbe /><Harness initial={rulesOf([some()])} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /^削除：/ })));
+  const notice = screen.getByTestId("notice");
+  expect(notice.textContent).toBe("操作を完了できませんでした。詳細を確認してください。");
+  const id = projectStore.getSnapshot().announcement.id;
+  expect(said()).toBe(raw);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(notice.textContent).toBe("The operation could not be completed. Check the details.");
+  expect(said()).toBe(raw);
+  expect(projectStore.getSnapshot().announcement.id).toBe(id);
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  expect(document.querySelector("b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("renders a class-membership warning from raw facts in either language", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const warning = { text: "Original class warning <b>{name}", disjoint: EX + "Person",
+    uiMessage: { code: "model.members.parent", args: { name: "甲 <b>{name}", parent: "乙 {parent}" } },
+  };
+  render(<I18nProvider><UiLanguageSelect /><Harness initial={rulesOf([disjoint], { warnings: [warning] })} /></I18nProvider>);
+  const row = screen.getByText("Original class warning <b>{name}").closest("li")!;
+  expect(row.textContent).toContain("クラス「甲 <b>{name}」は「乙 {parent}」の下位クラスであり、同時に「乙 {parent}」とは重ならないため、メンバーを持てません。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(row.textContent).toContain("甲 <b>{name} can never have members: it is a kind of 乙 {parent} and disjoint with it.");
+  expect(runCommand).not.toHaveBeenCalled();
+  expect(document.querySelector("b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

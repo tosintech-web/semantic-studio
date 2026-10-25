@@ -4,6 +4,7 @@ FILE: frontend/src/components/ReusePlan.tsx
 ================================================================================
 
 SUMMARY
+    A reuse target owns its reads and drafts; language-only reads preserve focus.
     The reuse plan of attribute-reuse 5.2: what using an existing attribute
     or relationship on one more class means, in the person's names, before
     anything is written, and the one or more choices that do it. Also the
@@ -11,6 +12,10 @@ SUMMARY
     new class.
 
 BASIC IDEA
+    UI locale changes render-time guidance without refetching the plan or
+    replacing a parent-name draft; refusals retain their facts and escaped
+    original details, and stored notices remain producer-owned.
+
     The server alone decides the case: the plan is ShareDomain's dry run,
     asked once as the form opens, and its answer is worded here through
     modeling/sentences.ts. Case A gives the property to the class, case B
@@ -34,21 +39,21 @@ INPUTS / INPUT SOURCES (props)
       null for the 5.4 Fix.
     - runner: the form's command runner.
     - onDone, onCancel: after a choice, or Cancel; onAlready: case B, with
-      its sentence.
+      its legacy sentence and selected facts for current-language display.
 
 EXPECTED OUTPUT
     - The plan's sentences and buttons; ShareDomain or AddSubClassOf.
 ================================================================================
 */
 
+import { renderServerError, renderServerMessage } from "../i18n/serverMessage";
+import { useI18n } from "../i18n/I18nProvider";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useId, useRef, useState } from "react";
 import { planShare } from "../api";
 import {
-  OR_PARENT,
-  SHARE_IT,
   gainsSentence,
   giveParent,
-  givenAnnouncement,
   importedParentNote,
   makeKindOf,
   moveUpTo,
@@ -59,8 +64,8 @@ import {
   planRdfsParent,
   planSubclass,
   planUnion,
-  sharedAnnouncement,
 } from "../modeling/sentences";
+import { reuseNotice, type ProjectNoticeDetail } from "../modeling/projectNotices";
 import type { SharePlan } from "../types";
 import type { Runner } from "./EditParts";
 import EntityPicker from "./EntityPicker";
@@ -73,29 +78,42 @@ interface Props {
   runner: Runner;
   onDone: () => void;
   onCancel: () => void;
-  onAlready?: (sentence: string) => void;
+  onAlready?: (sentence: string, notice: ProjectNoticeDetail) => void;
 }
 
-export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDone, onCancel, onAlready }: Props) {
+export default function ReusePlan(props: Props) {
+  return <ReusePlanTarget key={JSON.stringify([props.pid, props.property.iri, props.cls?.iri])} {...props} />;
+}
+
+function ReusePlanTarget({ pid, ontologyId, property, cls, runner, onDone, onCancel, onAlready }: Props) {
+  const { locale, t } = useI18n();
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const { busy, errors, run } = runner;
   const id = useId();
   const [plan, setPlan] = useState<SharePlan | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{ cause: unknown; message: string } | null>(null);
   const [parentOpen, setParentOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const [parentName, setParentName] = useState("");
   const box = useRef<HTMLDivElement>(null);
   const parentField = useRef<HTMLInputElement>(null);
+  const initialFocusGiven = useRef(false);
 
   useEffect(() => {
     let live = true;
-    planShare(pid, property.iri, cls?.iri)
-      .then((answer) => live && setPlan(answer.plan))
-      .catch((e: unknown) => live && setFailed(e instanceof Error ? e.message : String(e)));
+    const reading = dictionaryLanguage === undefined ? planShare(pid, property.iri, cls?.iri)
+      : planShare(pid, property.iri, cls?.iri, dictionaryLanguage);
+    reading
+      .then((answer) => {
+        if (!live) return;
+        setPlan(answer.plan);
+        setFailed(null);
+      })
+      .catch((e: unknown) => live && setFailed({ cause: e, message: e instanceof Error ? e.message : String(e) }));
     return () => {
       live = false;
     };
-  }, [pid, property.iri, cls?.iri]);
+  }, [pid, property.iri, cls?.iri, dictionaryLanguage]);
 
   // Case B writes nothing: the caller closes the form and says why. Once,
   // when the plan arrives, whatever the caller's callback is by then.
@@ -103,14 +121,18 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   already.current = onAlready;
   useEffect(() => {
     if (plan?.case === "B" && cls && already.current) {
-      already.current(planAlready(property.label, cls.label, plan.via?.label ?? cls.label));
+      already.current(planAlready(property.label, cls.label, plan.via?.label ?? cls.label), reuseNotice({ mode: "already", name: property.label, cls: cls.label, via: plan.via?.label ?? cls.label }));
     }
-  }, [plan, cls, property.label]);
+  }, [plan, cls?.iri, cls?.label, property.label]);
 
   // The first choice takes focus when the plan arrives (5.5).
   useEffect(() => {
-    if (!plan) return;
-    box.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    if (!plan || initialFocusGiven.current) return;
+    const first = box.current?.querySelector<HTMLButtonElement>("button");
+    if (first) {
+      first.focus();
+      initialFocusGiven.current = true;
+    }
   }, [plan]);
 
   useEffect(() => {
@@ -125,7 +147,7 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   // covered by it and left out, so the server's list, not everyone.
   const united = plan?.union?.map((c) => c.label) ?? everyone;
 
-  const share = async (args: Record<string, unknown>, said: string) => {
+  const share = async (args: Record<string, unknown>, said: ProjectNoticeDetail) => {
     if (busy) return;
     const body = { property: property.iri, ...(cls ? { class: cls.iri } : {}), ...args };
     if (await run("reuse", "ShareDomain", body, () => said)) onDone();
@@ -133,15 +155,16 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
 
   const cancel = (
     <button type="button" className="ghost" onClick={onCancel}>
-      Cancel
+      {t("common.cancel")}
     </button>
   );
   const error = errors.reuse ? <p className="edit-error">{errors.reuse}</p> : null;
 
   if (failed) {
     return (
-      <div className="reuse-plan" role="group" aria-label={`Use ${name}`}>
-        <p className="edit-error">{failed}</p>
+      <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })}>
+        <p className="edit-error">{renderServerError(failed.cause, t)}</p>
+        <details><summary>{t("common.details")}</summary><pre>{failed.message}</pre></details>
         <div className="edit-actions">{cancel}</div>
       </div>
     );
@@ -149,14 +172,15 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   if (!plan) {
     return (
       <p className="detail-note" role="status">
-        Checking {name}…
+        {t("reusePlan.checking", { name })}
       </p>
     );
   }
   if (plan.case === null || plan.case === "B") {
     return (
-      <div className="reuse-plan" role="group" aria-label={`Use ${name}`} ref={box}>
-        <p>{plan.case === "B" && cls ? planAlready(name, cls.label, plan.via?.label ?? cls.label) : plan.refused}</p>
+      <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })} ref={box}>
+        <p>{plan.case === "B" && cls ? planAlready(name, cls.label, plan.via?.label ?? cls.label, locale) : renderServerMessage(plan.refusedUiMessage, plan.refused ?? "", t)}</p>
+        {plan.case === null && <details><summary>{t("common.details")}</summary><pre>{plan.refused}</pre></details>}
         <div className="edit-actions">{cancel}</div>
       </div>
     );
@@ -169,21 +193,21 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
         <EntityPicker
           ontologyId={ontologyId}
           kind="class"
-          label="An existing class as the parent"
+          label={t("reusePlan.pickParent")}
           exclude={plan.domain.classes.map((c) => c.iri).concat(cls ? [cls.iri] : [])}
           busy={busy}
           onCancel={() => setPicking(false)}
-          onPick={(parent) => void share({ how: "parent", parent }, sharedAnnouncement(name, everyone))}
+          onPick={(parent) => void share({ how: "parent", parent }, reuseNotice({ mode: "shared", name, classes: everyone }))}
         />
       ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (parentName.trim()) void share({ how: "parent", parentLabel: parentName.trim() }, sharedAnnouncement(name, everyone));
+            if (parentName.trim()) void share({ how: "parent", parentLabel: parentName.trim() }, reuseNotice({ mode: "shared", name, classes: everyone }));
           }}
         >
           <label htmlFor={`${id}-parent`} className="edit-field-label">
-            {parentQuestion(everyone)}
+            {parentQuestion(everyone, locale)}
           </label>
           <input
             id={`${id}-parent`}
@@ -194,10 +218,10 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
           />
           <div className="edit-actions">
             <button type="submit" className="primary" aria-disabled={busy || !parentName.trim()}>
-              {giveParent(everyone)}
+              {giveParent(everyone, locale)}
             </button>
             <button type="button" className="link-btn" onClick={() => setPicking(true)}>
-              Choose an existing class instead
+              {t("reusePlan.existingParent")}
             </button>
           </div>
         </form>
@@ -206,53 +230,53 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
   );
 
   return (
-    <div className="reuse-plan" role="group" aria-label={`Use ${name}`} ref={box}>
+    <div className="reuse-plan" role="group" aria-label={t("reusePlan.use", { name })} ref={box}>
       {plan.case === "A" && cls && (
         <>
-          <p>{planNoClass(name, cls.label)}</p>
-          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, givenAnnouncement(name, cls.label))}>
-            Yes
+          <p>{planNoClass(name, cls.label, locale)}</p>
+          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, reuseNotice({ mode: "given", name, cls: cls.label }))}>
+            {t("reusePlan.yes")}
           </button>
         </>
       )}
       {plan.case === "C" && cls && (
         <>
-          <p>{planMoveUp(name, cls.label, domain)}</p>
-          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, givenAnnouncement(name, cls.label))}>
-            Move it up
+          <p>{planMoveUp(name, cls.label, domain, locale)}</p>
+          <button type="button" className="primary" aria-disabled={busy} onClick={() => void share({}, reuseNotice({ mode: "given", name, cls: cls.label }))}>
+            {t("reusePlan.moveUp")}
           </button>
         </>
       )}
       {choices && choices.subclass && cls && (
         <div className="reuse-choice">
-          <p>{planSubclass(name, cls.label, domain[0])}</p>
+          <p>{planSubclass(name, cls.label, domain[0], locale)}</p>
           <button
             type="button"
             aria-disabled={busy}
             onClick={async () => {
               if (busy) return;
-              const said = `${cls.label} is now a kind of ${domain[0]}, and has ${name}.`;
+              const said = reuseNotice({ mode: "subclass", name, cls: cls.label, parent: domain[0] });
               if (await run("reuse", "AddSubClassOf", { child: cls.iri, parent: plan.domain.classes[0].iri }, () => said)) onDone();
             }}
           >
-            {makeKindOf(cls.label, domain[0])}
+            {makeKindOf(cls.label, domain[0], locale)}
           </button>
         </div>
       )}
       {choices && choices.union && (
         <div className="reuse-choice">
-          <p>{planUnion(word, name, united)}</p>
+          <p>{planUnion(word, name, united, locale)}</p>
           {plan.turtle && (
-            <pre className="reuse-turtle" aria-label="The Turtle it writes">
+            <pre className="reuse-turtle" aria-label={t("reusePlan.turtle")}>
               <code>{plan.turtle}</code>
             </pre>
           )}
-          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "union" }, sharedAnnouncement(name, united))}>
-            {SHARE_IT}
+          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "union" }, reuseNotice({ mode: "shared", name, classes: united }))}>
+            {t("modelSentences.shareIt")}
           </button>
           {choices.parent && !parentOpen && (
             <button type="button" className="link-btn" onClick={() => setParentOpen(true)}>
-              {OR_PARENT}
+              {t("modelSentences.orParent")}
             </button>
           )}
           {choices.parent && parentOpen && parentForm}
@@ -260,18 +284,18 @@ export default function ReusePlan({ pid, ontologyId, property, cls, runner, onDo
       )}
       {choices && !choices.union && choices.parent && (
         <div className="reuse-choice">
-          <p>{planRdfsParent(name, everyone)}</p>
+          <p>{planRdfsParent(name, everyone, locale)}</p>
           {parentForm}
         </div>
       )}
       {choices && !choices.parent && plan.imported && plan.imported.length > 0 && (
-        <p className="detail-note">{importedParentNote(plan.imported[0].label, plan.imported[0].from)}</p>
+        <p className="detail-note">{importedParentNote(plan.imported[0].label, plan.imported[0].from, locale)}</p>
       )}
       {choices?.up.map((up) => (
         <div className="reuse-choice" key={up.iri}>
-          <p className="detail-note">{gainsSentence(name, up.label, up.gains.map((g) => g.label), up.gainsTotal)}</p>
-          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "up", parent: up.iri }, givenAnnouncement(name, up.label))}>
-            {moveUpTo(name, up.label)}
+          <p className="detail-note">{gainsSentence(name, up.label, up.gains.map((g) => g.label), up.gainsTotal, locale)}</p>
+          <button type="button" aria-disabled={busy} onClick={() => void share({ how: "up", parent: up.iri }, reuseNotice({ mode: "given", name, cls: up.label }))}>
+            {moveUpTo(name, up.label, locale)}
           </button>
         </div>
       ))}

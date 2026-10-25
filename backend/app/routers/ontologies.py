@@ -4,6 +4,7 @@ FILE: backend/app/routers/ontologies.py
 ================================================================================
 
 SUMMARY
+    Owned connection purposes carry optional facts without rewriting payloads.
     The main REST API surface. Every endpoint for loading, listing, deleting,
     viewing, exploring (graph + node details + search) and querying (schema +
     SPARQL execution) an ontology lives here, under the /api/ontologies prefix,
@@ -12,6 +13,9 @@ SUMMARY
     load (load-progress 5.3).
 
 BASIC IDEA
+    Translated HTTP refusals carry source codes and facts while keeping the
+    original status and detail payloads intact.
+
     The read endpoints take ?imports=true, which serves the same view built
     over the ontology plus its resolved imports (imports.py). Off is the
     default and answers exactly as before. A project model with switched-on
@@ -43,11 +47,17 @@ BASIC IDEA
     loads.py while it runs, and a cancel marks it: the store checks the mark
     before it writes, so a cancelled load leaves nothing (D-115).
 
+    Dictionary lists use /{oid}/entities: filtered true totals, opaque view
+    revisions, 50 default / 100 maximum rows and a 256 KiB encoded response
+    bound. Search keeps its legacy array and kind filters over the same index.
+
 INPUTS / INPUT SOURCES
     - HTTP requests from the frontend / API clients.
     - Uploaded files (multipart) and JSON fetch/sparql request bodies.
     - Remote RDF files fetched over HTTP for the /fetch endpoint.
     - The shared `store` and `saved_queries` singletons.
+    - Source metadata captures byte/time limits and query/network failures
+      beside the original refusal status/detail, including documentation limits.
     - Environment: SEMANTIC_STUDIO_MAX_UPLOAD_BYTES, SEMANTIC_STUDIO_MAX_FETCH_BYTES,
       SEMANTIC_STUDIO_PARSE_TIMEOUT and SEMANTIC_STUDIO_GRAPH_NODE_BUDGET
       override the default caps.
@@ -98,6 +108,9 @@ from starlette.concurrency import run_in_threadpool
 
 # Delegate the real work to the domain modules.
 from .. import parse_errors, provenance
+from ..messages import MessageText, UiHTTPException, integer_arg, make_message
+from ..entity_views import (EntityPageTooLarge, EntityViewChanged, encode_entity_response,
+                            entity_page, entity_search, get_entity_view)
 from ..docs_export import DocsExportError, build_zip
 from ..embedded_queries import MAX_TEXT_CHARS as MAX_QUERY_CHARS
 from ..embedded_queries import list_embedded_queries
@@ -110,7 +123,6 @@ from ..graph_builder import (
     neighborhood_viz,
     node_details,
     nodes_viz,
-    search_nodes,
     term_kind,
 )
 from .. import axioms, examples, library_examples, modeling_checks
@@ -210,9 +222,10 @@ def _check_docs_rate_limit() -> None:
         while _docs_request_times and now - _docs_request_times[0] > DOCS_RATE_WINDOW:
             _docs_request_times.popleft()
         if len(_docs_request_times) >= DOCS_RATE_MAX:
-            raise HTTPException(
+            raise UiHTTPException(
                 status_code=429,
-                detail="Too many documentation exports in a short time. Try again in a moment.",
+                detail='Too many documentation exports in a short time. Try again in a moment.',
+                ui_message=make_message('export.too_frequent'),
             )
         _docs_request_times.append(now)
 
@@ -388,7 +401,11 @@ def _get_or_404(oid: str):
     """Fetch an ontology by id or raise a 404 — shared by every /{oid} route."""
     ontology = store.get(oid)
     if ontology is None:
-        raise HTTPException(status_code=404, detail=f"Unknown ontology id: {oid}")
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'Unknown ontology id: {oid}',
+            ui_message=make_message('ontology.not_found'),
+        )
     return ontology
 
 
@@ -402,11 +419,23 @@ def list_ontologies() -> list[dict]:
     return [library_examples.with_questions(o.summary()) for o in store.list()]
 
 
-def too_large_detail(limit: int, variable: str) -> str:
-    """The message for a refused oversized body: the limit, and how to raise it."""
-    return (
+def too_large_detail(limit: int, variable: str) -> MessageText:
+    """Legacy file refusal with the actual configured byte limit attached."""
+    return MessageText(
         f"This file is larger than the {limit // (1024 * 1024)} MB limit. "
-        f"You can raise the limit with the {variable} environment variable."
+        f"You can raise the limit with the {variable} environment variable.",
+        "request.file_limit", limit=integer_arg(limit), variable=variable,
+    )
+
+
+def nodes_too_large() -> MessageText:
+    return MessageText(NODES_TOO_LARGE, "request.nodes_limit", limit=integer_arg(NODES_MAX_BYTES))
+
+
+def import_files_too_large() -> MessageText:
+    return MessageText(
+        IMPORT_FILES_TOO_LARGE, "imports.total_file_limit",
+        limit=integer_arg(imports_mod.MAX_TOTAL_BYTES),
     )
 
 
@@ -444,7 +473,11 @@ async def read_json_capped(request: Request, limit: int, detail: str):
     try:
         return json.loads(b"".join(chunks) or b"null")
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="The body must be JSON.") from exc
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be JSON.',
+            ui_message=make_message('request.body_json'),
+        ) from exc
 
 
 CANCELLED_DETAIL = {
@@ -463,11 +496,16 @@ def _load(load_id: Optional[uuid.UUID]):
         with running_loads.running(str(load_id) if load_id else None) as mark:
             yield mark
     except LoadCancelled as exc:
-        raise HTTPException(status_code=409, detail=CANCELLED_DETAIL) from exc
-    except LoadAlreadyRunning as exc:
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=409,
-            detail={"code": "load_running", "message": "A load with this id is already running."},
+            detail=CANCELLED_DETAIL,
+            ui_message=make_message('load.cancelled'),
+        ) from exc
+    except LoadAlreadyRunning as exc:
+        raise UiHTTPException(
+            status_code=409,
+            detail={'code': 'load_running', 'message': 'A load with this id is already running.'},
+            ui_message=make_message('load.already_running'),
         ) from exc
 
 
@@ -510,7 +548,11 @@ async def upload_ontology(
     with _load(loadId) as mark:
         data = await _read_capped(file, MAX_UPLOAD_BYTES, "SEMANTIC_STUDIO_MAX_UPLOAD_BYTES")
         if not data:
-            raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+            raise UiHTTPException(
+                status_code=400,
+                detail='The uploaded file is empty.',
+                ui_message=make_message('load.empty_file'),
+            )
         # Detect the RDF format from the filename (or the caller's override).
         fmt = detect_format(file.filename, format)
         try:
@@ -526,7 +568,7 @@ async def upload_ontology(
                 mark=mark,
             )
         except ParseTimeout as exc:
-            raise HTTPException(status_code=504, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc
         except ParseError as exc:
             raise HTTPException(
                 status_code=422, detail=_load_failure(exc, data, file.filename)
@@ -543,6 +585,7 @@ def _load_failure(exc: ParseError, data: bytes, filename: Optional[str],
         head=data[:1024],
         filename=filename,
         technical=str(exc),
+        ui_message=exc.ui_message,
     )
 
 
@@ -561,7 +604,7 @@ FETCH_HEADERS = {
 }
 
 
-FETCH_REASON = "You asked Semantic Studio to load an ontology from this address."
+FETCH_REASON = MessageText("You asked Semantic Studio to load an ontology from this address.", "network.reason.fetch")
 
 
 @router.post("/fetch")
@@ -579,11 +622,19 @@ async def fetch_ontology(request: FetchRequest) -> dict:
     parsed = urlparse(raw_input)
     # Only web URLs are fetchable.
     if parsed.scheme not in ("http", "https"):
-        raise HTTPException(status_code=400, detail="Only http(s) URLs are supported.")
+        raise UiHTTPException(
+            status_code=400,
+            detail='Only http(s) URLs are supported.',
+            ui_message=make_message('fetch.web_only'),
+        )
     host = (parsed.hostname or "").lower()
     # Reject GitHub Enterprise hosts up front with a helpful message.
     if is_github_enterprise_host(host):
-        raise HTTPException(status_code=400, detail=GHE_NOT_SUPPORTED_DETAIL)
+        raise UiHTTPException(
+            status_code=400,
+            detail=GHE_NOT_SUPPORTED_DETAIL,
+            ui_message=make_message('fetch.github_enterprise'),
+        )
     # Turn a github.com "blob" page URL into the raw download URL.
     url = to_raw_url(raw_input)
     with _load(request.loadId) as mark:
@@ -603,22 +654,23 @@ async def fetch_ontology(request: FetchRequest) -> dict:
             )
         except BlockedAddress as exc:
             # Refused before any connection was made to the address in question.
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=400, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         except TooLarge as exc:
             raise HTTPException(
                 status_code=413,
                 detail=too_large_detail(MAX_FETCH_BYTES, "SEMANTIC_STUDIO_MAX_FETCH_BYTES"),
             ) from exc
         except TooManyRedirects as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=502, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         except FetchFailed as exc:
             # Connection/timeout/DNS failure.
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=502, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         if response.status >= 400:
             # The remote server returned an error status (404, 403, ...).
-            raise HTTPException(
+            raise UiHTTPException(
                 status_code=502,
-                detail=f"Fetching {url} failed with HTTP {response.status}.",
+                detail=f'Fetching {url} failed with HTTP {response.status}.',
+                ui_message=make_message('fetch.http_failed', url=url, status=response.status),
             )
         final_url, data = response.url, response.body
 
@@ -637,7 +689,7 @@ async def fetch_ontology(request: FetchRequest) -> dict:
                 mark=mark,
             )
         except ParseTimeout as exc:
-            raise HTTPException(status_code=504, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc
         except ParseError as exc:
             # The name wins; a server's content type explains a nameless address.
             suggested = parse_errors.format_from_content_type(response.headers.get("content-type"))
@@ -651,7 +703,11 @@ async def fetch_ontology(request: FetchRequest) -> dict:
 def delete_ontology(oid: str) -> dict:
     """DELETE /api/ontologies/{oid} -> remove the ontology and its saved queries."""
     if not store.remove(oid):
-        raise HTTPException(status_code=404, detail=f"Unknown ontology id: {oid}")
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'Unknown ontology id: {oid}',
+            ui_message=make_message('ontology.not_found'),
+        )
     # Saved queries belong to an ontology; leaving them would orphan them
     # because a re-loaded file gets a fresh id.
     #
@@ -718,9 +774,10 @@ def get_neighborhood(
         # Blank nodes are excluded from the viz graph by build_viz_graph, so
         # this is also the expected answer for one, and for a predicate that
         # was never drawn as an entity.
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=404,
-            detail=f"No entity with that IRI is drawn in this ontology: {iri}",
+            detail=f'No entity with that IRI is drawn in this ontology: {iri}',
+            ui_message=make_message('ontology.entity_not_drawn', iri=iri),
         )
     return result
 
@@ -742,7 +799,7 @@ async def get_nodes(
     body whole before validation sees it, so the cap is applied while
     reading (code review). Validation still answers 422 as before.
     """
-    payload = await read_json_capped(request, NODES_MAX_BYTES, NODES_TOO_LARGE)
+    payload = await read_json_capped(request, NODES_MAX_BYTES, nodes_too_large())
     try:
         asked = NodesRequest.model_validate(payload)
     except ValidationError as exc:
@@ -842,7 +899,11 @@ def get_node(
             if example is not None:
                 details["example"] = example
     if details is None:
-        raise HTTPException(status_code=404, detail=f"No statements found for {iri}")
+        raise UiHTTPException(
+            status_code=404,
+            detail=f'No statements found for {iri}',
+            ui_message=make_message('ontology.no_statements', iri=iri),
+        )
     if imports:
         source = imports_service.merged(ontology)["importedFrom"].get(iri)
         if source is not None:
@@ -850,21 +911,58 @@ def get_node(
     return details
 
 
+def _entity_refusal(error: Exception):
+    if isinstance(error, EntityPageTooLarge):
+        raise UiHTTPException(
+            status_code=400,
+            ui_message=make_message("entities.page_too_large", total=error.total, suggested_limit=error.suggested_limit),
+            detail={"code": "ENTITY_PAGE_TOO_LARGE", "message": str(error),
+                            "total": error.total, "suggested_limit": error.suggested_limit},
+        ) from error
+    raise UiHTTPException(
+        status_code=409,
+        ui_message=make_message("entities.view_changed"),
+        detail={"code": "ENTITY_VIEW_CHANGED", "message": "The dictionary is updating. Try again."},
+    ) from error
+
+
+@router.get("/{oid}/entities")
+def get_entities(
+    oid: str, q: str = Query("", max_length=512),
+    kind: Literal["all", "concept", "individual", "class", "properties", "other"] = "all",
+    lang: Optional[str] = LANG_PARAM, imports: bool = IMPORTS_PARAM,
+    offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100),
+    sort: Literal["label", "iri"] = "label",
+) -> Response:
+    """Every named dictionary item, independently of the visual graph budget."""
+    ontology = _get_or_404(oid)
+    try:
+        # FastAPI runs this synchronous route in a worker. The lock covers the
+        # complete projection/encoding, not only index selection: own graph
+        # descriptions must belong to the same revision as index values.
+        with ontology.reading():
+            view = get_entity_view(ontology, include_imports=imports, language=lang)
+            page = entity_page(view, query=q, kind=kind, offset=offset, limit=limit, sort=sort)
+            return Response(encode_entity_response(page, total=page["total"], limit=limit), media_type="application/json")
+    except (EntityPageTooLarge, EntityViewChanged) as error:
+        _entity_refusal(error)
+
+
 @router.get("/{oid}/search")
 def search(
-    oid: str,
-    q: str = Query(...),
-    limit: int = Query(default=25, le=100),
-    imports: bool = IMPORTS_PARAM,
-    lang: Optional[str] = LANG_PARAM,
+    oid: str, q: str = Query(..., max_length=512), limit: int = Query(default=25, ge=1, le=100),
+    imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM,
     kind: Optional[SearchKind] = Query(default=None),
-) -> list[dict]:
-    """GET /{oid}/search?q=... -> ranked label/IRI matches for the search box.
-
-    In a project every name matches, whatever the display language. `kind`
-    keeps one kind of entity, before the limit (the editing form's pickers)."""
+) -> Response:
+    """Legacy VizNode array backed by complete dictionary search values."""
     ontology = _get_or_404(oid)
-    return search_nodes(_viz(ontology, imports, lang), q, limit, kind)
+    try:
+        with ontology.reading():
+            view = get_entity_view(ontology, include_imports=imports, language=lang)
+            rows, total = entity_search(view, q, kind=kind, limit=limit)
+            return Response(encode_entity_response(rows, total=total, limit=limit), media_type="application/json")
+    except (EntityPageTooLarge, EntityViewChanged) as error:
+        _entity_refusal(error)
 
 
 @router.get("/{oid}/source")
@@ -897,8 +995,10 @@ def get_source(
         try:
             raw = ontology.source_bytes()
         except OSError as exc:
-            raise HTTPException(
-                status_code=404, detail="The stored source file is no longer available."
+            raise UiHTTPException(
+                status_code=404,
+                detail='The stored source file is no longer available.',
+                ui_message=make_message('ontology.source_missing'),
             ) from exc
         # Normalized so a file written on Windows does not render with a
         # stray carriage return at the end of every line.
@@ -975,11 +1075,11 @@ def get_documentation(oid: str, include_individuals: str = Query("false")) -> Re
         with ontology.reading():
             data = build_zip(ontology, include_individuals=include)
     except DocsExportError as exc:
-        # A part of the export is over its limit; the message names the number.
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        # The optional descriptor belongs to the refusal's actual source facts.
+        raise UiHTTPException(status_code=400, detail=str(exc), ui_message=exc.ui_message) from exc
     except ParseTimeout as exc:
         # Generation parses the ontology if it was not loaded yet.
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc
     except ParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     # Record the export as a typed provenance activity, after it succeeds, so a
@@ -1029,10 +1129,10 @@ def get_hierarchy(
 
 
 @router.get("/{oid}/query-schema")
-def get_query_schema(oid: str, imports: bool = IMPORTS_PARAM) -> dict:
+def get_query_schema(oid: str, imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM) -> dict:
     """Class-level schema powering the visual query builder."""
     ontology = _get_or_404(oid)
-    return imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS)
+    return imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS, lang)
 
 
 @router.get("/{oid}/embedded-queries")
@@ -1049,7 +1149,7 @@ def get_embedded_queries(oid: str, imports: bool = IMPORTS_PARAM) -> dict:
 
 
 @router.get("/{oid}/query-node")
-def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARAM) -> dict:
+def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM) -> dict:
     """Map a clicked graph node to the class (and optional instance pin).
 
     Takes the imports flag although the spec's list of changed endpoints does
@@ -1057,20 +1157,21 @@ def get_query_node(oid: str, iri: str = Query(...), imports: bool = IMPORTS_PARA
     classes too, and describing one against the file alone would refuse it.
     """
     ontology = _get_or_404(oid)
-    schema = imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS)
+    schema = imports_mod.view_query_schema(ontology, imports, PARSE_TIMEOUT_SECONDS, lang)
     graph = _graph(ontology, imports)
     with ontology.reading():
-        described = describe_query_node(graph, iri, schema)
+        described = describe_query_node(graph, iri, schema, langs=ontology.label_langs(lang))
     if described is None:
-        raise HTTPException(
+        raise UiHTTPException(
             status_code=404,
-            detail="This node is not a class and has no type that can be queried.",
+            detail='This node is not a class and has no type that can be queried.',
+            ui_message=make_message('query.node_not_queryable'),
         )
     return described
 
 
 @router.post("/{oid}/sparql")
-def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM) -> dict:
+def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM, lang: Optional[str] = LANG_PARAM) -> dict:
     """POST /{oid}/sparql -> run a SELECT query and return the result rows.
 
     Maps the executor's exceptions to HTTP: timeout -> 504, bad/forbidden
@@ -1084,7 +1185,7 @@ def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM) 
     try:
         # The worker takes the read lock itself: held here, the worker would
         # wait on it, and a stopped query would read on after it was let go.
-        result = execute_select(graph, request.query, key=oid, reading=ontology.reading)
+        result = execute_select(graph, request.query, key=oid, reading=ontology.reading, langs=ontology.label_langs(lang))
         if imports:
             result["importDocuments"] = imports_service.merged(ontology)["documents"]
         # What the results covered: the switched-on data snapshots, which
@@ -1094,11 +1195,11 @@ def run_sparql(oid: str, request: SparqlRequest, imports: bool = IMPORTS_PARAM) 
             result["dataSources"] = view["snapshots"]
         return result
     except QueryTimeout as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=504, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
     except QueryBusy as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=409, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
     except QueryError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=400, detail=str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -1153,7 +1254,11 @@ def map_import(oid: str, body: ImportMapping) -> dict:
     ontology = _get_or_404(oid)
     target = store.get(body.ontologyId)
     if target is None or target.id == ontology.id:
-        raise HTTPException(status_code=400, detail="Choose another ontology from your library.")
+        raise UiHTTPException(
+            status_code=400,
+            detail='Choose another ontology from your library.',
+            ui_message=make_message('ontology.choose_other'),
+        )
     imports_service.map_to_library(ontology, body.iri, target, parse_timeout=PARSE_TIMEOUT_SECONDS)
     return imports_service.listing(ontology)
 
@@ -1175,7 +1280,7 @@ async def import_files(
     enforced while reading, and the request as a whole the closure's 150 MB.
     """
     ontology = _get_or_404(oid)
-    too_big = IMPORT_FILES_TOO_LARGE
+    too_big = import_files_too_large()
     # A declared oversize never reaches here: main.py's middleware refuses it
     # before FastAPI parses the body (D-015). What is left is the real size.
     received: list[tuple[str, bytes]] = []

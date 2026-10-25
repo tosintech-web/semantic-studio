@@ -4,6 +4,8 @@ FILE: frontend/src/sparql/useQueryBuilder.ts
 ================================================================================
 
 SUMMARY
+    Schema failures retain source objects; owned hints render from current-locale facts.
+    Delayed node picks are scoped to their dictionary view and query intent.
     The React hook that owns all query-builder state and behaviour. It fetches
     the ontology's query schema, holds the current QueryState, derives the live
     SPARQL and the graph highlighting, and exposes the actions the UI calls to
@@ -46,6 +48,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
+import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getQueryNode, getQuerySchema } from "../api";
 import type { QueryNodeInfo, QuerySchema } from "../types";
@@ -180,6 +184,9 @@ export interface TextQuery {
   runBlocked: string | null;
   /** A one-line note shown above the editor, e.g. about $this. */
   note: string | null;
+  /** Optional source descriptors; absent notes/reasons remain authored text. */
+  runBlockedUi?: UiMessage;
+  noteUi?: UiMessage;
   /** A new text query, started from the prefixes the ontology uses
    *  (query-page-rework 5.3): its help line says they are at the top. */
   fresh: boolean;
@@ -200,12 +207,15 @@ export function useQueryBuilder(
   // A project document's revision (authoring-foundations): the schema is
   // fetched again when an edit moves it. 0 for the library, which never does.
   revision = 0,
+  displayLanguage?: string,
+  viewGeneration = "",
 ) {
   const [schema, setSchema] = useState<QuerySchema | null>(null);      // class-level schema
-  const [schemaError, setSchemaError] = useState<string | null>(null); // schema fetch error
+  const [schemaError, setSchemaError] = useState<unknown | null>(null); // schema fetch error
   const [loadingSchema, setLoadingSchema] = useState(false);
   const [state, setState] = useState<QueryState>(emptyQueryState);     // the query being built
-  const [hint, setHint] = useState<string | null>(null);               // transient user guidance
+  const { t } = useI18n();
+  const [hint, setHint] = useState<UiMessage | null>(null);               // transient user guidance
   const [openQuery, setOpenQuery] = useState<{ id: string; name: string } | null>(null); // saved query being edited
   const [textQuery, setTextQuery] = useState<TextQuery | null>(null);  // set while the query is text
   const textRef = useRef("");                        // the live text; a ref so typing renders nothing here
@@ -214,6 +224,12 @@ export function useQueryBuilder(
   const openQueryRef = useRef(openQuery);
   openQueryRef.current = openQuery;
   const sessionRef = useRef(0);
+  // Read identity and user intent are separate: a response belongs both to
+  // its dictionary view and to the visual query session that requested it.
+  const nodeView = useMemo(() => ({}), [ontologyId, imports, revision, displayLanguage, viewGeneration]);
+  const nodeViewRef = useRef(nodeView);
+  nodeViewRef.current = nodeView;
+  const nodeIntent = useRef(0);
   const requestedFor = useRef<string | null>(null);  // "ontology|imports" whose schema we already fetched
   // A ref mirror of state so async callbacks read the latest without re-binding.
   const stateRef = useRef(state);
@@ -237,23 +253,33 @@ export function useQueryBuilder(
   // fetched for the other setting would offer steps the query cannot use. The
   // query being built is kept across the switch; only the schema is replaced.
   useEffect(() => {
-    const key = `${ontologyId}|${imports}|${revision}`;
+    const key = `${ontologyId}|${imports}|${revision}|${displayLanguage}|${viewGeneration}`;
     if (!active || !ontologyId || requestedFor.current === key) return;
     requestedFor.current = key;
     setLoadingSchema(true);
+    setSchemaError(null);
     let cancelled = false;
-    getQuerySchema(ontologyId, imports)
-      .then((result) => !cancelled && setSchema(result))
+    let pending = true;
+    getQuerySchema(ontologyId, imports, displayLanguage)
+      .then((result) => {
+        if (cancelled) return;
+        pending = false;
+        setSchema(result);
+      })
       .catch((e: unknown) => {
         if (cancelled) return;
+        pending = false;
         requestedFor.current = null;
-        setSchemaError(e instanceof Error ? e.message : String(e));
+        setSchemaError(e);
       })
       .finally(() => !cancelled && setLoadingSchema(false));
     return () => {
       cancelled = true;
+      // A pending read is not a cached schema. Returning to Query must retry
+      // it, while a completed schema keeps its existing no-refetch behavior.
+      if (pending && requestedFor.current === key) requestedFor.current = null;
     };
-  }, [active, ontologyId, imports, revision]);
+  }, [active, ontologyId, imports, revision, displayLanguage, viewGeneration]);
 
   // The live SPARQL, regenerated whenever the state or namespaces change.
   const sparql = useMemo(
@@ -353,7 +379,7 @@ export function useQueryBuilder(
       if (!schema) return;
       setHint(null);
       if (!appendClass(classIri, label, null, schema)) {
-        setHint(`No relationship connects “${label}” to the current path.`);
+        setHint(makeUiMessage("queryBuilder.unconnectedClass", { name: label }));
       }
     },
     [schema, appendClass],
@@ -398,17 +424,22 @@ export function useQueryBuilder(
       // but nothing it does reaches the text or the builder behind it.
       if (!ontologyId || !schema || textQueryRef.current) return;
       setHint(null);
+      const view = nodeViewRef.current;
+      const intent = nodeIntent.current;
+      const current = () => nodeViewRef.current === view && nodeIntent.current === intent && !textQueryRef.current;
       let info: QueryNodeInfo;
       try {
-        info = await getQueryNode(ontologyId, nodeIri, imports);
+        info = await getQueryNode(ontologyId, nodeIri, imports, displayLanguage);
       } catch {
-        setHint("That node has no type, so it cannot be used as a query step.");
+        if (!current()) return;
+        setHint(makeUiMessage("queryBuilder.untyped"));
         return;
       }
+      if (!current()) return;
       const target = info.isClass ? null : info.types[0];
       const classIri = info.isClass ? info.iri : target?.iri;
       if (!classIri) {
-        setHint("That node has no type, so it cannot be used as a query step.");
+        setHint(makeUiMessage("queryBuilder.untyped"));
         return;
       }
       const label = info.isClass ? info.label : target?.label ?? classIri;
@@ -416,13 +447,10 @@ export function useQueryBuilder(
 
       // Attaches to the most recent step that actually relates to this class.
       if (!appendClass(classIri, label, pin, schema)) {
-        setHint(
-          `No relationship in this ontology connects “${label}” to the current path. ` +
-            "Pick a highlighted node, or choose one of the suggested next steps.",
-        );
+        setHint(makeUiMessage("queryBuilder.unconnectedNode", { name: label }));
       }
     },
-    [ontologyId, schema, appendClass, imports],
+    [ontologyId, schema, appendClass, imports, displayLanguage],
   );
 
   /** Every continuation available from the current path, best first. */
@@ -461,7 +489,7 @@ export function useQueryBuilder(
         if (!existing || link.count > existing.count) {
           byKey.set(key, {
             anchor: index,
-            anchorLabel: step.label,
+            anchorLabel: classLabels.get(step.classIri) ?? step.label,
             predicate: link.predicate,
             predicateLabel: link.label,
             inverse,
@@ -539,6 +567,7 @@ export function useQueryBuilder(
 
   /** Empty the path back to a blank query. */
   const clear = useCallback(() => {
+    nodeIntent.current += 1;
     setState((prev) => ({ ...prev, steps: [] }));
     setHint(null);
     setOpenQuery(null);
@@ -546,6 +575,7 @@ export function useQueryBuilder(
 
   /** Load a saved query's state and remember which saved query it is. */
   const loadState = useCallback((next: QueryState, opened: { id: string; name: string }) => {
+    nodeIntent.current += 1;
     setState({ ...emptyQueryState(), ...next });
     setOpenQuery(opened);
     setHint(null);
@@ -557,6 +587,7 @@ export function useQueryBuilder(
    * session is kept, because the editor already holds what was typed.
    */
   const forkToText = useCallback((text: string, baseline: string) => {
+    nodeIntent.current += 1;
     textRef.current = text;
     setTextQuery({
       forkedFrom: stateRef.current,
@@ -580,11 +611,12 @@ export function useQueryBuilder(
   const openTextQuery = useCallback(
     (
       text: string,
-      options: Partial<Pick<TextQuery, "forkedFrom" | "name" | "runBlocked" | "note" | "fresh">> & {
+      options: Partial<Pick<TextQuery, "forkedFrom" | "name" | "runBlocked" | "note" | "fresh" | "runBlockedUi" | "noteUi">> & {
         /** The saved text query being opened, if it is one. */
         opened?: { id: string; name: string } | null;
       } = {},
     ) => {
+      nodeIntent.current += 1;
       textRef.current = text;
       sessionRef.current += 1;
       // From one text query to another, the query to resume is still the one
@@ -597,6 +629,8 @@ export function useQueryBuilder(
         baseline: text,
         runBlocked: options.runBlocked ?? null,
         note: options.note ?? null,
+        runBlockedUi: options.runBlockedUi,
+        noteUi: options.noteUi,
         fresh: options.fresh ?? false,
         session: sessionRef.current,
         resume,
@@ -626,6 +660,7 @@ export function useQueryBuilder(
    * the builder is left as it was, and so is the saved query behind it.
    */
   const leaveText = useCallback(() => {
+    nodeIntent.current += 1;
     const current = textQueryRef.current;
     if (!current) return;
     if (!current.forkedFrom) setOpenQuery(current.resume);
@@ -644,15 +679,53 @@ export function useQueryBuilder(
     return !!current && textRef.current !== current.baseline;
   }, []);
 
+  // Names are view metadata, not query structure. Keep the raw state/text
+  // intact while a language-specific schema relabels an already open query.
+  const pins = useMemo(() => [...new Set(state.steps.flatMap(step => step.pin ? [step.pin.iri] : []))], [state.steps]);
+  const pinScope = JSON.stringify([ontologyId, displayLanguage, imports, revision, viewGeneration, pins]);
+  const [pinNames, setPinNames] = useState<{ scope: string; labels: Record<string, string> }>({ scope: "", labels: {} });
+  useEffect(() => {
+    if (!active || !ontologyId || displayLanguage === undefined || pins.length === 0) return;
+    let cancelled = false;
+    Promise.all(pins.map(async iri => {
+      try {
+        const info = await getQueryNode(ontologyId, iri, imports, displayLanguage);
+        return info ? [iri, info.label] as const : null;
+      } catch { return null; }
+    })).then(rows => {
+      if (!cancelled) setPinNames({ scope: pinScope, labels: Object.fromEntries(rows.filter(row => row !== null)) });
+    });
+    return () => { cancelled = true; };
+  }, [active, ontologyId, displayLanguage, pinScope, imports]);
+
+  const displayState = useMemo(() => {
+    if (!schema) return state;
+    const classes = new Map(schema.classes.map(cls => [cls.iri, cls.label]));
+    const properties = new Map(Object.values(schema.dataProperties).flat().map(prop => [prop.predicate, prop.label]));
+    let changed = false;
+    const steps = state.steps.map(step => {
+      const label = classes.get(step.classIri) ?? step.label;
+      const pinLabel = step.pin && pinNames.scope === pinScope ? pinNames.labels[step.pin.iri] : undefined;
+      const props = step.props.map(prop => {
+        const name = properties.get(prop.predicateIri);
+        return name && name !== prop.label ? { ...prop, label: name } : prop;
+      });
+      if (label === step.label && (!pinLabel || pinLabel === step.pin?.label) && props.every((prop, i) => prop === step.props[i])) return step;
+      changed = true;
+      return { ...step, label, props, ...(step.pin && pinLabel ? { pin: { ...step.pin, label: pinLabel } } : {}) };
+    });
+    return changed ? { ...state, steps } : state;
+  }, [schema, state, pinNames, pinScope]);
+
   // Everything the graph and the panel need, in one object.
   return {
     schema,
     schemaError,
     loadingSchema,
-    state,
+    state: displayState,
     setState,
     sparql,
-    hint,
+    hint: hint ? renderUiMessage(hint, t) : null,
     setHint,
     pathIris,
     candidates,

@@ -34,3 +34,8 @@ backend/app/vocab/*.rdf binary
 backend/app/examples/*.ttl binary
 # Their ready-made questions (query-page-rework 5.4) are pinned there too.
 backend/app/examples/questions/*.rq binary
+
+# Third-party originals are keyed by byte hash in the dependency inventory.
+# Preserve CRLF where an upstream license used it; never rewrite its notice.
+licenses/texts/* binary
+licenses/*.html binary

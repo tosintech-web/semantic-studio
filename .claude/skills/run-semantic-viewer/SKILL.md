@@ -17,7 +17,7 @@ there; `driver.mjs` resolves the repo from its own location, but a relative
 
 ## Prerequisites
 
-Python ≥ 3.11, Node ≥ 20, and Chrome or Edge (the driver finds
+Python ≥ 3.11, Node ≥ 24.15, and Chrome or Edge (the driver finds
 `C:/Program Files/Google/Chrome/Application/chrome.exe` and the usual Linux
 paths automatically; otherwise set `CHROME=<path to the binary>`).
 
@@ -187,3 +187,17 @@ built application renders.
 | `waitFor timed out: sigma canvases mounted` | The ontology never loaded. Check the `[upload]` line above it, then open the last screenshot. |
 | Screenshot of the graph is blank | SwiftShader was refused — confirm the Chrome build supports `--enable-unsafe-swiftshader`, or run `HEADFUL=1` to see the real window. |
 | Port 8010 already listening | A previous `serve` survived. `netstat -ano \| findstr :8010`, then `taskkill /PID <pid> /T /F`. |
+
+## P1 Japanese dictionary acceptance
+
+Build the frontend, then run `node .claude/skills/run-semantic-viewer/driver.mjs p1`.
+It uses generated data, a scratch server and a fresh Chrome profile. It checks
+real IME/debounce, same-name identities, fifty-row paging, seven-sample median
+response-to-click timing, AX/Tab/focus, independent UI/dictionary/primary languages,
+reload, long-name/header geometry, light/dark and a 1000px viewport at 80% CSS zoom,
+then project editing, Undo/Redo, Save and reload through the real interface.
+
+`SEMANTIC_STUDIO_PYTHON` may point at an existing Python environment when the
+isolated checkout does not have its own `backend/.venv`. Keep screenshots and
+scratch libraries out of Git. `smoke` explicitly selects English for its original
+checks; `p1` separately verifies the Japanese default.

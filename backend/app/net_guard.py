@@ -4,6 +4,7 @@ FILE: backend/app/net_guard.py
 ================================================================================
 
 SUMMARY
+    Owned connection purposes carry optional facts without rewriting payloads.
     Decides whether an address is one the server may connect to, and hands the
     requests rdflib makes on its own while parsing to the network broker. The
     address rule is a deny rule on ranges, not an allowlist of hosts: the
@@ -47,11 +48,14 @@ EXPECTED OUTPUT
     - None, when the URL may be fetched.
     - Raises BlockedAddress, carrying a message written for the person who
       typed the URL, which the router turns into an HTTP 400 detail.
+      Its optional UI facts retain the actual source gate through parser layers.
     - For rdflib: a buffered response object, or the broker's refusal.
 ================================================================================
 """
 
 from __future__ import annotations
+
+from .messages import MessageText, MessageError, integer_arg, make_message
 
 import base64
 import contextvars
@@ -99,8 +103,17 @@ ALL_REFUSAL_MESSAGES = (
 )
 
 
-class BlockedAddress(Exception):
+class BlockedAddress(MessageError):
     """The URL may not be fetched. Carries the message shown to the user."""
+
+
+def address_message(after_redirect: bool) -> dict:
+    """The refusal's source gate, independent of its legacy sentence."""
+    return make_message("network.redirect_refused" if after_redirect else "network.address_refused")
+
+
+def resolution_message(after_redirect: bool) -> dict:
+    return make_message("network.redirect_refused" if after_redirect else "network.host_unresolvable")
 
 
 def is_blocked_address(ip: IPAddress) -> bool:
@@ -176,7 +189,7 @@ def resolve_host(host: str) -> list[IPAddress]:
         infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
     except socket.gaierror as exc:
         # A lookup failure is a refusal, not a reason to try connecting anyway.
-        raise BlockedAddress(UNRESOLVABLE_HOST_DETAIL) from exc
+        raise BlockedAddress(UNRESOLVABLE_HOST_DETAIL, ui_message=make_message("network.host_unresolvable")) from exc
     addresses: list[IPAddress] = []
     seen: set[str] = set()
     for info in infos:
@@ -191,7 +204,7 @@ def resolve_host(host: str) -> list[IPAddress]:
         except ValueError:
             continue
     if not addresses:
-        raise BlockedAddress(UNRESOLVABLE_HOST_DETAIL)
+        raise BlockedAddress(UNRESOLVABLE_HOST_DETAIL, ui_message=make_message("network.host_unresolvable"))
     return addresses
 
 
@@ -205,18 +218,21 @@ def assert_url_fetchable(url: str, *, after_redirect: bool = False) -> None:
     detail = BLOCKED_REDIRECT_DETAIL if after_redirect else BLOCKED_ADDRESS_DETAIL
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
-        raise BlockedAddress(detail)
+        raise BlockedAddress(detail, ui_message=address_message(after_redirect))
     host = (parsed.hostname or "").strip()
     if not host:
-        raise BlockedAddress(detail)
+        raise BlockedAddress(detail, ui_message=address_message(after_redirect))
     try:
         addresses = resolve_host(host)
     except BlockedAddress:
         # A lookup failure after a redirect is still a redirect problem.
-        raise BlockedAddress(detail if after_redirect else UNRESOLVABLE_HOST_DETAIL) from None
+        raise BlockedAddress(
+            detail if after_redirect else UNRESOLVABLE_HOST_DETAIL,
+            ui_message=resolution_message(after_redirect),
+        ) from None
     # Every address, not just the first: one blocked address blocks the URL.
     if any(is_blocked_address(ip) for ip in addresses):
-        raise BlockedAddress(detail)
+        raise BlockedAddress(detail, ui_message=address_message(after_redirect))
 
 
 # ---------------------------------------------------------------------------
@@ -275,9 +291,10 @@ CONTEXT_FAILED_DETAIL = (
     "and it could not be downloaded: {reason}"
 )
 
-CONTEXT_REASON = (
+CONTEXT_REASON = MessageText(
     "The file you are opening defines its terms in a JSON-LD context "
-    "published on this site."
+    "published on this site.",
+    "network.reason.context",
 )
 
 # Contexts fetched during one parse, kept so the ontology can be re-parsed
@@ -356,13 +373,20 @@ def guarded_urlopen(request) -> addinfourl:
             timeout=CONTEXT_SOCKET_TIMEOUT,
         )
     except BlockedAddress as exc:
-        raise BlockedAddress(CONTEXT_REFUSED_DETAIL.format(url=url)) from exc
+        raise BlockedAddress(
+            CONTEXT_REFUSED_DETAIL.format(url=url),
+            ui_message=make_message("context.address_refused", url=url),
+        ) from exc
     except network_broker.TooLarge as exc:
         raise BlockedAddress(
-            CONTEXT_TOO_LARGE_DETAIL.format(url=url, mb=MAX_FETCH_BYTES // (1024 * 1024))
+            CONTEXT_TOO_LARGE_DETAIL.format(url=url, mb=MAX_FETCH_BYTES // (1024 * 1024)),
+            ui_message=make_message("context.response_limit", url=url, limit=integer_arg(MAX_FETCH_BYTES)),
         ) from exc
     except network_broker.FetchFailed as exc:
-        raise BlockedAddress(CONTEXT_FAILED_DETAIL.format(url=url, reason=exc)) from exc
+        raise BlockedAddress(
+            CONTEXT_FAILED_DETAIL.format(url=url, reason=exc),
+            ui_message=make_message("context.fetch_failed", url=url),
+        ) from exc
 
     if response.status >= 400:
         raise HTTPError(url, response.status, f"HTTP {response.status}", Message(), None)

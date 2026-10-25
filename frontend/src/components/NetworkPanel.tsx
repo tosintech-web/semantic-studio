@@ -41,6 +41,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import type { UiLocale } from "../i18n/types";
+import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
+import { renderServerError } from "../i18n/serverMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getNetworkActivity,
@@ -56,19 +60,20 @@ interface Props {
   onClose: () => void;
 }
 
-function when(iso: string): string {
+function when(iso: string, locale: UiLocale): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString(locale);
 }
 
 export default function NetworkPanel({ onClose }: Props) {
+  const { t, locale } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const sitesHeadingRef = useRef<HTMLHeadingElement>(null);
   const [policy, setPolicy] = useState<NetworkPolicy | null>(null);
   const [activity, setActivity] = useState<NetworkActivity[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState("");
+  const [error, setError] = useState<unknown>(null);
+  const [status, setStatus] = useState<UiMessage | null>(null);
   const [saving, setSaving] = useState(false);
 
   useDialogTrap(panelRef, headingRef, onClose);
@@ -81,7 +86,7 @@ export default function NetworkPanel({ onClose }: Props) {
         setPolicy(p);
         setActivity(a);
       })
-      .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setError(e));
     return () => {
       live = false;
     };
@@ -98,13 +103,9 @@ export default function NetworkPanel({ onClose }: Props) {
     try {
       const result = await setNetworkOffline(next);
       setPolicy({ ...policy, offline: result.offline });
-      setStatus(
-        result.offline
-          ? "Working offline. Semantic Studio will not connect to any site."
-          : "Working online. Semantic Studio asks before connecting to a site.",
-      );
+      setStatus(makeUiMessage(result.offline ? "network.panel.offlineNotice" : "network.panel.onlineNotice"));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
     } finally {
       setSaving(false);
     }
@@ -116,10 +117,10 @@ export default function NetworkPanel({ onClose }: Props) {
       try {
         await revokeNetworkGrant(id);
         setPolicy({ ...policy, grants: policy.grants.filter((g) => g.id !== id) });
-        setStatus(`Removed your decision for ${host}. It will be asked about again.`);
+        setStatus(makeUiMessage("network.panel.revoked", { host }));
         sitesHeadingRef.current?.focus();
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(e);
       }
     },
     [policy],
@@ -137,20 +138,20 @@ export default function NetworkPanel({ onClose }: Props) {
         aria-modal="true"
         aria-labelledby="network-panel-heading"
       >
-        <button className="icon-btn about-close" onClick={onClose} aria-label="Close Network settings">
+        <button className="icon-btn about-close" onClick={onClose} aria-label={t("network.panel.close")}>
           ✕
         </button>
         <h2 id="network-panel-heading" ref={headingRef} tabIndex={-1} className="network-heading">
-          Network settings
+          {t("network.panel.title")}
         </h2>
 
-        {error && <p className="detail-error">{error}</p>}
-        {!policy && !error && <p className="detail-note">Loading…</p>}
+        {!!error && <><p className="detail-error">{renderServerError(error, t)}</p><details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details></>}
+        {!policy && !error && <p className="detail-note">{t("network.panel.loading")}</p>}
 
         {policy && (
           <>
             <section className="network-section" aria-labelledby="network-offline-heading">
-              <h3 id="network-offline-heading">Connections</h3>
+              <h3 id="network-offline-heading">{t("network.panel.connections")}</h3>
               <button
                 type="button"
                 role="switch"
@@ -161,36 +162,36 @@ export default function NetworkPanel({ onClose }: Props) {
                 <span className="network-switch-track" aria-hidden="true">
                   <span className="network-switch-thumb" />
                 </span>
-                Work offline
+                {t("network.panel.offline")}
               </button>
               <p className="network-state">
                 {offline
-                  ? "Offline. Semantic Studio does not connect to any site, and does not ask."
-                  : "Online. Semantic Studio asks before connecting to a site you have not decided about."}
+                  ? t("network.panel.offlineState")
+                  : t("network.panel.onlineState")}
               </p>
             </section>
 
             <section className="network-section" aria-labelledby="network-sites-heading">
               <h3 id="network-sites-heading" ref={sitesHeadingRef} tabIndex={-1}>
-                Allowed and blocked sites
+                {t("network.panel.sites")}
               </h3>
               {policy.grants.length === 0 ? (
-                <p className="network-empty">No sites allowed yet.</p>
+                <p className="network-empty">{t("network.panel.emptySites")}</p>
               ) : (
                 <ul className="network-list">
                   {policy.grants.map((g) => (
                     <li key={g.id} className="network-row">
                       <span className="network-host">{g.host}</span>
-                      <span className="network-purpose">{purposeLabel(g.capability)}</span>
+                      <span className="network-purpose">{purposeLabel(g.capability, t)}</span>
                       <span className="network-decision">
-                        {g.decision === "allow" ? "Always allowed" : "Blocked"}
+                        {g.decision === "allow" ? t("network.panel.allowed") : t("network.panel.blockedState")}
                       </span>
                       <button
                         className="ghost"
                         onClick={() => void revoke(g.id, g.host)}
-                        aria-label={`Revoke your decision for ${g.host}, ${purposeLabel(g.capability)}`}
+                        aria-label={t("network.panel.revokeName", { host: g.host, purpose: purposeLabel(g.capability, t) })}
                       >
-                        Revoke
+                        {t("network.panel.revoke")}
                       </button>
                     </li>
                   ))}
@@ -199,23 +200,23 @@ export default function NetworkPanel({ onClose }: Props) {
             </section>
 
             <section className="network-section" aria-labelledby="network-activity-heading">
-              <h3 id="network-activity-heading">Recent connections</h3>
+              <h3 id="network-activity-heading">{t("network.panel.recent")}</h3>
               {activity && activity.length === 0 ? (
-                <p className="network-empty">No connections yet.</p>
+                <p className="network-empty">{t("network.panel.emptyActivity")}</p>
               ) : (
                 <ol className="network-list network-activity">
                   {(activity ?? []).map((a, i) => (
                     <li key={`${a.time}-${i}`} className="network-row">
-                      <span className="network-when">{when(a.time)}</span>
-                      <span className="network-outcome">{outcomeLabel(a.outcome)}</span>
-                      <span className="network-purpose">{purposeLabel(a.capability)}</span>
+                      <span className="network-when">{when(a.time, locale)}</span>
+                      <span className="network-outcome">{outcomeLabel(a.outcome, t)}</span>
+                      <span className="network-purpose">{purposeLabel(a.capability, t)}</span>
                       <span className="network-url" title={a.url}>
                         {a.url}
                       </span>
                       {a.bytes > 0 && (
-                        <span className="network-bytes">{a.bytes.toLocaleString()} bytes</span>
+                        <span className="network-bytes">{t("network.panel.bytes", { count: a.bytes })}</span>
                       )}
-                      {!a.encrypted && <span className="network-plain">not encrypted</span>}
+                      {!a.encrypted && <span className="network-plain">{t("network.panel.plain")}</span>}
                     </li>
                   ))}
                 </ol>
@@ -225,7 +226,7 @@ export default function NetworkPanel({ onClose }: Props) {
         )}
 
         <p className="visually-hidden" role="status" aria-live="polite">
-          {status}
+          {status ? renderUiMessage(status, t) : ""}
         </p>
       </div>
     </>

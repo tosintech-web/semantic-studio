@@ -9,6 +9,9 @@ SUMMARY
     ValueInput it is built on, which the form reuses to edit a value in place.
 
 BASIC IDEA
+    Whole UI messages and value-type choices follow the current translator;
+    annotation content, language tags and in-progress drafts remain original.
+
     Four steps that read top to bottom as one small form. The property list is
     the server's (GET …/annotation-properties): the suggested properties under
     Common, then those this model declares, then those its imports declare,
@@ -39,9 +42,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState } from "react";
 import { getAnnotationProperties } from "../api";
-import { typeFromKey, typeKey, valueProblem, VALUE_TYPES, toValue } from "../modeling/values";
+import { typeFromKey, typeKey, valueProblem, valueTypeChoices, toValue } from "../modeling/values";
 import { projectStore } from "../state/projectStore";
 import type { Runner } from "./EditParts";
 import type { AnnotationPropertyOption, AnnotationValue, ValueType } from "../types";
@@ -77,6 +81,7 @@ export function ValueInput({
   autoFocus,
   onChange,
 }: ValueInputProps) {
+  const { t } = useI18n();
   const id = useId();
   const [other, setOther] = useState(!languages.includes(lang));
   const common = {
@@ -102,7 +107,7 @@ export function ValueInput({
         className="ghost value-switch"
         onClick={() => !busy && onChange(on ? "false" : "true", lang)}
       >
-        {on ? "Yes" : "No"}
+        {t(on ? "annotation.yes" : "annotation.no")}
       </button>
     );
   } else {
@@ -139,7 +144,7 @@ export function ValueInput({
       {type.kind === "text" && (
         <div className="value-lang">
           <label htmlFor={`${id}-lang`} className="edit-field-label">
-            Language
+            {t("annotation.language")}
           </label>
           <select
             id={`${id}-lang`}
@@ -160,11 +165,11 @@ export function ValueInput({
                 {l}
               </option>
             ))}
-            <option value="__other">Other…</option>
+            <option value="__other">{t("annotation.other")}</option>
           </select>
           {other && (
             <input
-              aria-label="Language tag (BCP 47, for example de or pt-BR)"
+              aria-label={t("annotation.languageTag")}
               value={lang}
               readOnly={busy}
               onChange={(e) => onChange(value, e.target.value.trim())}
@@ -192,6 +197,7 @@ const NEW = "__new";
 const FIELD = "adder";
 
 export default function AnnotationAdder({ iri, primaryLanguage, languages, runner, onDone }: Props) {
+  const { t } = useI18n();
   const id = useId();
   const langs = [primaryLanguage, ...languages.filter((l) => l !== primaryLanguage)];
   const [options, setOptions] = useState<AnnotationPropertyOption[] | null>(null);
@@ -239,11 +245,11 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
   }
 
   const creating = property === NEW;
-  const problem = !creating && property && value !== "" ? valueProblem(type, value, lang) : null;
+  const problem = !creating && property && value !== "" ? valueProblem(type, value, lang, t) : null;
   const blocked =
     busy ||
     !property ||
-    (creating ? !newName.trim() : valueProblem(type, value, type.kind === "text" ? lang : undefined) !== null);
+    (creating ? !newName.trim() : valueProblem(type, value, type.kind === "text" ? lang : undefined, t) !== null);
 
   const add = async () => {
     if (blocked) return;
@@ -260,15 +266,15 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
   };
 
   const groups: [string, AnnotationPropertyOption["source"]][] = [
-    ["Common", "suggested"],
-    ["In this model", "document"],
-    ["From imports", "import"],
+    [t("annotation.common"), "suggested"],
+    [t("annotation.document"), "document"],
+    [t("annotation.import"), "import"],
   ];
   const errorId = `${id}-error`;
   return (
     <form
       className="annotation-adder"
-      aria-label="Add an annotation"
+      aria-label={t("annotation.addTitle")}
       onSubmit={(e) => {
         e.preventDefault();
         void add();
@@ -282,7 +288,7 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
       }}
     >
       <label htmlFor={`${id}-property`} className="edit-field-label">
-        Property
+        {t("annotation.property")}
       </label>
       <select
         id={`${id}-property`}
@@ -292,7 +298,7 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
         onChange={(e) => !busy && choose(e.target.value)}
       >
         <option value="" disabled>
-          {options ? "Choose a property…" : "Loading…"}
+          {t(options ? "annotation.choose" : "annotation.loading")}
         </option>
         {groups.map(([title, source]) => {
           const inGroup = (options ?? []).filter((o) => o.source === source);
@@ -306,17 +312,17 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
             </optgroup>
           ) : null;
         })}
-        <option value={NEW}>New annotation property…</option>
+        <option value={NEW}>{t("annotation.new")}</option>
       </select>
 
       {creating ? (
         <div className="new-annotation-property">
           <label htmlFor={`${id}-new-name`} className="edit-field-label">
-            Name of the new property ({primaryLanguage})
+            {t("annotation.newName", { language: primaryLanguage })}
           </label>
           <input id={`${id}-new-name`} value={newName} readOnly={busy} onChange={(e) => setNewName(e.target.value)} />
           <label htmlFor={`${id}-new-type`} className="edit-field-label">
-            Its values are
+            {t("annotation.valuesAre")}
           </label>
           <select
             id={`${id}-new-type`}
@@ -324,9 +330,9 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
             aria-disabled={busy}
             onChange={(e) => !busy && setNewType(typeFromKey(e.target.value))}
           >
-            {VALUE_TYPES.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
+            {valueTypeChoices(t).map((choice) => (
+              <option key={choice.key} value={choice.key}>
+                {choice.label}
               </option>
             ))}
           </select>
@@ -335,7 +341,7 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
         property && (
           <>
             <label htmlFor={`${id}-type`} className="edit-field-label">
-              Value type
+              {t("annotation.valueType")}
             </label>
             <select
               id={`${id}-type`}
@@ -348,9 +354,9 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
                 setValue(next.kind === "typed" && next.datatype === "xsd:boolean" ? "true" : "");
               }}
             >
-              {VALUE_TYPES.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
+              {valueTypeChoices(t).map((choice) => (
+                <option key={choice.key} value={choice.key}>
+                  {choice.label}
                 </option>
               ))}
             </select>
@@ -360,7 +366,7 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
               value={value}
               lang={lang}
               languages={langs}
-              label="Value"
+              label={t("annotation.value")}
               busy={busy}
               invalid={problem !== null || error !== null}
               describedBy={problem || error ? errorId : undefined}
@@ -380,10 +386,10 @@ export default function AnnotationAdder({ iri, primaryLanguage, languages, runne
       )}
       <div className="edit-actions">
         <button type="submit" className="primary" aria-disabled={blocked}>
-          {busy ? "Saving change…" : creating ? "Create property" : "Add"}
+          {t(busy ? "annotation.saving" : creating ? "annotation.create" : "annotation.add")}
         </button>
         <button type="button" className="ghost" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>

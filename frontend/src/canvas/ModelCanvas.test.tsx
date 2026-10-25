@@ -5,13 +5,16 @@ FILE: frontend/src/canvas/ModelCanvas.test.tsx
 ================================================================================
 
 SUMMARY
+    Failures retain causes across UI locales and cannot cross project/document owners.
     The modeling canvas (visual-modeling Stage 2, AC-10 to AC-14): what it
     draws and how it names it, the empty, too-big and error states, the
-    palette, a drop onto a class, the relate menu and its refusals, rename,
+    palette, a drop onto a class, the relate menu and its refusal explanations
+    with retained raw details, rename,
     delete, moving a box, the shared selection, and that React Flow is only
     ever loaded lazily.
 
 BASIC IDEA
+    Completed operation notices retain facts and render in either UI locale.
     React Flow is stubbed, as GraphView's tests stub Sigma: the stub renders
     each node through the canvas's own node components and keeps the props
     the canvas handed it, so a test can call onConnect or onNodesChange
@@ -31,7 +34,17 @@ EXPECTED OUTPUT
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "../components/UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+function noticeIn(locale: UiLocale): string {
+  return renderProjectAnnouncement(projectStore.getSnapshot().announcement, locale,
+    ((code, args) => translate(locale, code, args)) as Translator);
+}
+
 import type { CanvasLayout, CanvasView } from "../types";
 
 const { openProject, closeProject, runCommand, getCanvas, putLayout, previewDelete, getNodeDetails, reasonProject } = vi.hoisted(() => ({
@@ -210,7 +223,7 @@ const box = (label: string) =>
   [...document.querySelectorAll<HTMLElement>(".react-flow__node")].find(
     (n) => n.querySelector(".canvas-box-name")?.textContent === label,
   )!;
-const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2);
+const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2, 4);
 
 beforeEach(async () => {
   projectStore._reset();
@@ -515,6 +528,8 @@ describe("relating (AC-12)", () => {
     // One command, so one undo step (relationships R6).
     expect(runCommand).toHaveBeenCalledTimes(1);
     expect(lastCommand()).toEqual(["SetEnds", { property: EX + "mentions", range: EX + "Document" }]);
+    expect(noticeIn("ja")).toBe("Invoice (en)からDocumentへの関連「mentions」の未設定の端点を補いました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
     // The relationship it completed is selected, so its form opens.
     expect(onSelect).toHaveBeenLastCalledWith(EX + "mentions");
   });
@@ -544,8 +559,9 @@ describe("relating (AC-12)", () => {
       fireEvent.click(screen.getByRole("menuitem", { name: "Document is a kind of Agent" }));
     });
     expect(within(document.querySelector(".relate-menu")!).getByRole("alert").textContent).toBe(
-      "Document is already a subclass of Agent.",
+      "The operation could not be completed. Check the details.",
     );
+    expect(screen.getByText("Document is already a subclass of Agent.").tagName).toBe("PRE");
   });
 });
 
@@ -970,7 +986,8 @@ describe("PR #47 review", () => {
     await act(async () => {
       vi.advanceTimersByTime(1100);
     });
-    expect(screen.getByText(/The canvas layout could not be saved: The disk is full\./)).toBeTruthy();
+    expect(screen.getByText("The canvas layout could not be saved. Your boxes stay where they are.")).toBeTruthy();
+    expect(screen.getByText("The disk is full.").closest("details")).toBeTruthy();
     // A refetch that does not know the move keeps it.
     getCanvas.mockResolvedValue(viewOf({ revision: 3 }));
     await act(async () => {
@@ -1014,7 +1031,8 @@ describe("PR #47 review", () => {
     await act(async () => {
       await expect(set.show(EX + "Invoice")).resolves.toBeUndefined();
     });
-    expect(screen.getByText("The canvas could not change what it shows: Refused.")).toBeTruthy();
+    expect(screen.getByText("The canvas could not change what it shows.")).toBeTruthy();
+    expect(screen.getByText("Refused.").closest("details")).toBeTruthy();
     const after = onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0];
     expect(after.shown).toEqual([]);
     expect(getCanvas).not.toHaveBeenCalled();
@@ -1033,7 +1051,7 @@ describe("PR #47 review", () => {
     getNodeDetails.mockResolvedValue({ iri: EX + "billedTo", kind: "objectProperty" });
     await renderCanvas(viewOf({ limited: true, nodes: [], edges: [] }), EX + "billedTo");
     await act(async () => undefined);
-    expect(getNodeDetails).toHaveBeenCalledWith(`${PID}-model`, EX + "billedTo");
+    expect(getNodeDetails).toHaveBeenCalledWith(`${PID}-model`, EX + "billedTo", false, undefined, undefined);
     expect(putLayout).not.toHaveBeenCalled();
     cleanup();
     getNodeDetails.mockResolvedValue({ iri: EX + "Paid", kind: "concept" });
@@ -1164,6 +1182,8 @@ describe("relationships Stage A: seeing and drawing relationships", () => {
     expect(projectStore.getSnapshot().announcement.text).toBe(
       "Created relationship copies, from Invoice (en) to Document.",
     );
+    expect(noticeIn("ja")).toBe("Invoice (en)からDocumentへの関連「copies」を作成しました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
 
   it("the relate menu is headed by its two ends and swaps them before anything is made (AC-4)", async () => {
@@ -1353,7 +1373,8 @@ describe("relationships Stage B: related lines and the Stage A follow-ups (5.8, 
     await act(async () => {
       fireEvent.click(screen.getByRole("menuitem", { name: "Status is related to Paid" }));
     });
-    expect(screen.getByRole("alert").textContent).toBe(sentence);
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText(sentence).tagName).toBe("PRE");
   });
 
   it("a related line opens the link panel, and Delete removes it both ways in one command", async () => {
@@ -1493,7 +1514,7 @@ describe("inferred lines and boxes (axioms-and-reasoning 5.7)", () => {
 
   it("asks for them, draws the line dashed and labelled inferred, and says so on the box", async () => {
     await renderInferred({ imports: false });
-    expect(getCanvas).toHaveBeenCalledWith(PID, "model", { imports: false });
+    expect(getCanvas).toHaveBeenCalledWith(PID, "model", { imports: false }, "en");
     const line = inferredLine();
     expect(line.ariaLabel).toBe("Invoice (en) is a kind of Agent, inferred");
     // The word, always shown, and the dash: never colour alone.
@@ -1537,7 +1558,7 @@ describe("inferred lines and boxes (axioms-and-reasoning 5.7)", () => {
     );
     expect(inferredLine()).toBeUndefined();
     expect(within(box("Document")).queryByText("can never have members")).toBeNull();
-    expect(getCanvas).toHaveBeenLastCalledWith(PID, "model", null);
+    expect(getCanvas).toHaveBeenLastCalledWith(PID, "model", null, "en");
   });
 });
 
@@ -1588,6 +1609,10 @@ describe("rule lines and boxes (axioms-and-reasoning 5.9, AC-11)", () => {
   });
 
   it("a click on a rule selects its class; Delete removes it by its key", async () => {
+    runCommand.mockResolvedValueOnce({ revision: 3, state: STATE,
+      label: "Removed a rule on has line from Invoice (en)",
+      uiMessage: { code: "command.removed_restriction", args: { property: "has line", name: "Invoice (en)" } },
+    });
     await renderCanvas(ruled());
     await act(async () => flow.props.onEdgeClick({}, rules()[0]));
     expect(onSelect).toHaveBeenCalledWith(EX + "Invoice");
@@ -1596,6 +1621,20 @@ describe("rule lines and boxes (axioms-and-reasoning 5.9, AC-11)", () => {
       fireEvent.keyDown(document.activeElement!, { key: "Delete" });
     });
     expect(lastCommand()).toEqual(["RemoveRestriction", { class: EX + "Invoice", restriction: someKey }]);
+    expect(noticeIn("ja")).toBe("ルールを削除しました：すべてのInvoice (en)は「has line」でDocumentに少なくとも1件結び付きます（クラス「Invoice (en)」からのhas lineに関する制約の削除）");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
+  });
+
+  it("retains endpoints for a legacy rule line without readable rule parts", async () => {
+    const view = ruled();
+    view.edges = view.edges.map(edge => edge.kind === "rule" ? { ...edge, rule: undefined } : edge);
+    await renderCanvas(view);
+    await act(async () => flow.props.onEdgeClick({}, rules()[0]));
+    await act(async () => fireEvent.keyDown(document.activeElement!, { key: "Delete" }));
+    expect(lastCommand()).toEqual(["RemoveRestriction", { class: EX + "Invoice", restriction: someKey }]);
+    expect(noticeIn("ja")).toBe("ルールを削除しました：Invoice (en)からDocumentへのルール（RemoveRestriction）");
+    expect(noticeIn("en")).toBe("Removed: A rule from Invoice (en) to Document. RemoveRestriction.");
+    expect(projectStore.getSnapshot().announcement.text).toBe(noticeIn("en"));
   });
 
   it("the relate menu's rule entry selects the class and opens its builder through the store", async () => {
@@ -1926,5 +1965,195 @@ describe("a shared domain (attribute-reuse 5.3)", () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Remove Invoice (en)" }));
     });
     expect(lastCommand()).toEqual(["UnshareDomain", { property: EX + "filedBy", class: EX + "Invoice" }]);
+    expect(noticeIn("ja")).toBe("Invoice (en)から「filed by」を外しました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
+});
+
+
+it("switches canvas controls and box words while preserving the attribute draft and positions", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const view = viewOf();
+  getCanvas.mockResolvedValue(view);
+  render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  await waitFor(() => expect(document.querySelectorAll(".react-flow__node")).toHaveLength(view.nodes.length));
+  expect(screen.getByRole("region", { name: "モデリングキャンバス" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "拡大" })).toBeTruthy();
+  expect(box("Document").textContent).toContain("OWLクラス");
+  expect(box("Agent").textContent).toContain("インポート · FOAF");
+  fireEvent.click(screen.getByRole("button", { name: "Documentに属性を追加" }));
+  const field = screen.getByRole("textbox", { name: "Documentの新しい属性名" });
+  fireEvent.change(field, { target: { value: "金額 <b>{name}</b>" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "値の型" }), { target: { value: "xsd:decimal" } });
+  const before = flow.props.nodes.map((node: any) => [node.id, node.position]);
+  const calls = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name of the new attribute of Document" })).toBe(field);
+  expect((field as HTMLInputElement).value).toBe("金額 <b>{name}</b>");
+  expect((screen.getByRole("combobox", { name: "Type of value" }) as HTMLSelectElement).value).toBe("xsd:decimal");
+  expect(flow.props.nodes.map((node: any) => [node.id, node.position])).toEqual(before);
+  expect(getCanvas).toHaveBeenCalledTimes(calls);
+  expect(putLayout).not.toHaveBeenCalled();
+  await act(async () => { fireEvent.click(within(box("Document")).getByRole("button", { name: "Add" })); });
+  expect(lastCommand()).toEqual(["CreateDatatypeProperty", { label: "金額 <b>{name}</b>", domain: EX + "Document", datatype: "xsd:decimal" }]);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("updates an open relate menu without resetting its draft or changing its command", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf());
+  render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  await waitFor(() => expect(document.querySelectorAll(".react-flow__node")).toHaveLength(5));
+  act(() => { flow.props.onConnect({ source: EX + "Document", target: EX + "Invoice", sourceHandle: null, targetHandle: null }); flow.props.onConnectEnd({ clientX: 40, clientY: 50 }); });
+  expect(screen.getByRole("menuitem", { name: "DocumentはInvoice (en)の一種です" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("menuitem", { name: "新しい関係…" }));
+  const field = screen.getByRole("textbox", { name: "新しい関係の名前" });
+  fireEvent.change(field, { target: { value: "関連する" } });
+  const calls = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name of the new relationship" })).toBe(field);
+  expect((field as HTMLInputElement).value).toBe("関連する");
+  expect(getCanvas).toHaveBeenCalledTimes(calls);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Create" })); });
+  expect(lastCommand()).toEqual(["CreateObjectProperty", { label: "関連する", domain: EX + "Document", range: EX + "Invoice" }]);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords a read-only explanation and selected-line hint in the current language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf({ kind: "taxonomy" }));
+  render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  await waitFor(() => expect(document.querySelectorAll(".react-flow__node")).toHaveLength(5));
+  fireEvent.keyDown(box("Document"), { key: "Enter" });
+  expect(document.querySelector(".canvas-hint")?.textContent).toContain("Documentはクラスで、分類体系では読み取り専用です。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".canvas-hint")?.textContent).toContain("Document is a class, read-only in a taxonomy.");
+  const related = flow.props.edges.find((edge: any) => edge.id.startsWith("broader"));
+  act(() => flow.props.onEdgeClick({}, related));
+  expect(document.querySelector(".canvas-hint")?.textContent).toBe("Paid is narrower than Status selected. Delete removes it.");
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(document.querySelector(".canvas-hint")?.textContent).toBe("「PaidはStatusより狭い概念です」を選択しています。Deleteで削除できます。");
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps a canvas read failure as original details while UI language and retry change", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const raw = "Original canvas read <img>{cause}";
+  getCanvas.mockRejectedValueOnce(new Error(raw));
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  });
+  expect(screen.getByText("操作を完了できませんでした。詳細を確認してください。")).toBeTruthy();
+  const details = screen.getByText(raw).closest("details");
+  expect(details).not.toBeNull();
+  fireEvent.click(details!.querySelector("summary")!);
+  details!.querySelector("summary")!.focus();
+  const calls = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(details!.open).toBe(true);
+  expect(document.activeElement).toBe(details!.querySelector("summary"));
+  expect(getCanvas.mock.calls.length).toBe(calls);
+  expect(document.querySelector("img")).toBeNull();
+  getCanvas.mockResolvedValue(viewOf());
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Retry" })); });
+  expect(screen.queryByText(raw)).toBeNull();
+  expect(box("Document")).toBeTruthy();
+});
+
+it("renders a layout save failure and its server reason per locale without moving boxes or retrying", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf());
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>);
+  });
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  const raw = "Original layout limit <img>{cause}";
+  putLayout.mockRejectedValueOnce(Object.assign(new Error(raw), { uiMessage: { code: "request.layout_limit", args: { limit: 9 } } }));
+  await act(async () => {
+    flow.props.onNodesChange([{ type: "position", id: EX + "Paid", position: { x: 900, y: 9 }, dragging: false }]);
+  });
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  expect(screen.getByText("キャンバスの配置を保存できませんでした。図の位置は維持されています。")).toBeTruthy();
+  expect(screen.getByText("レイアウトの容量は9バイトまでです。")).toBeTruthy();
+  const details = screen.getByText(raw).closest("details")!;
+  expect(details).not.toBeNull();
+  fireEvent.click(details.querySelector("summary")!);
+  details.querySelector("summary")!.focus();
+  const calls = putLayout.mock.calls.length;
+  const reads = getCanvas.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("The canvas layout could not be saved. Your boxes stay where they are.")).toBeTruthy();
+  expect(screen.getByText("A layout may contain at most 9 bytes.")).toBeTruthy();
+  expect(details.open).toBe(true);
+  expect(document.activeElement).toBe(details.querySelector("summary"));
+  expect(putLayout.mock.calls.length).toBe(calls);
+  expect(getCanvas.mock.calls.length).toBe(reads);
+  expect((flow.props.nodes as any[]).find(n => n.id === EX + "Paid").position).toEqual({ x: 900, y: 9 });
+  await act(async () => { await projectStore.flushAll(); });
+  expect(screen.queryByText(raw)).toBeNull();
+});
+
+it("keeps a failed shown-set change and its raw cause without another request on locale change", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getCanvas.mockResolvedValue(viewOf({ limited: true, nodes: [], edges: [], undrawn: [], layout: { version: 1, generation: 0, positions: {}, shown: [], viewport: null } }));
+  await act(async () => {
+    render(<I18nProvider><UiLanguageSelect /><ModelCanvas projectId={PID} doc="model" revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} onCanvasSet={onCanvasSet} /></I18nProvider>);
+  });
+  const raw = "Original shown-set refusal <img>{cause}";
+  putLayout.mockRejectedValueOnce(new Error(raw));
+  await act(async () => { await onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0].show(EX + "Invoice"); });
+  expect(screen.getByText("キャンバスに表示する項目を変更できませんでした。")).toBeTruthy();
+  const details = screen.getByText(raw).closest("details")!;
+  expect(details).not.toBeNull();
+  const calls = putLayout.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("The canvas could not change what it shows.")).toBeTruthy();
+  expect(onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0].shown).toEqual([]);
+  expect(putLayout.mock.calls.length).toBe(calls);
+  fireEvent.click(details.querySelector("summary")!);
+  expect(details.open).toBe(true);
+  putLayout.mockRejectedValueOnce(new Error("Second shown refusal"));
+  await act(async () => { await onCanvasSet.mock.calls[onCanvasSet.mock.calls.length - 1][0].show(EX + "Invoice"); });
+  const next = screen.getByText("Second shown refusal").closest("details")!;
+  expect(next).not.toBe(details);
+  expect(next.open).toBe(false);
+  expect(screen.queryByText(raw)).toBeNull();
+  expect(putLayout.mock.calls.length).toBe(calls + 1);
+});
+
+it.each(["project", "document"])("hides old canvas data while a different %s is being read", async (kind) => {
+  const view = await renderCanvas();
+  getCanvas.mockImplementationOnce(() => new Promise(() => {}));
+  await act(async () => {
+    view.rerender(<ModelCanvas projectId={kind === "project" ? "second-project" : PID} doc={kind === "document" ? "shapes" : "model"} revision={2} language="en" primaryLanguage="en" selected={null} onSelect={onSelect} onDeleted={onDeleted} />);
+  });
+  expect(document.querySelectorAll(".react-flow__node")).toHaveLength(0);
+  expect(screen.getByRole("region", { name: "Modeling canvas" }).getAttribute("aria-busy")).toBe("true");
+});
+
+it.each(["success", "failure"])("ignores an old project's late save %s after the canvas target changes", async (result) => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const view = await renderCanvas();
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  let resolve!: (value: any) => void;
+  let reject!: (error: Error) => void;
+  putLayout.mockImplementationOnce(() => new Promise((yes, no) => { resolve = yes; reject = no; }));
+  await act(async () => {
+    flow.props.onNodesChange([{ type: "position", id: EX + "Document", position: { x: 900, y: 9 }, dragging: false }]);
+  });
+  await act(async () => { vi.advanceTimersByTime(1100); });
+  const newer = viewOf({ nodes: [viewOf().nodes[0]], edges: [], undrawn: [], total: 1, layout: { version: 1, generation: 0, positions: { [EX + "Document"]: [777, 7] }, shown: null, viewport: null } });
+  getCanvas.mockResolvedValue(newer);
+  const props = { projectId: "second-project", doc: "model" as const, language: "en", primaryLanguage: "en", selected: null, onSelect, onDeleted };
+  await act(async () => { view.rerender(<ModelCanvas {...props} revision={2} />); });
+  await act(async () => {
+    if (result === "success") resolve({ generation: 100 });
+    else reject(new Error("Old project save refused"));
+  });
+  expect(screen.queryByText(/Old project save refused/)).toBeNull();
+  getCanvas.mockResolvedValue({ ...newer, revision: 3, layout: { ...newer.layout, generation: 1, positions: { [EX + "Document"]: [888, 8] } } });
+  await act(async () => { view.rerender(<ModelCanvas {...props} revision={3} />); });
+  expect((flow.props.nodes as any[]).find(n => n.id === EX + "Document").position).toEqual({ x: 888, y: 8 });
 });

@@ -4,6 +4,7 @@ FILE: backend/app/shapes_form.py
 ================================================================================
 
 SUMMARY
+    Shape titles and suggestions use the read language; editable names and required languages stay unchanged.
     SHACL shapes as the learner's form sees them (shacl-authoring 5.3 to
     5.5): which node shapes a shapes document lists, each one read into the
     form's structure -- target, name, severity, message and one rule per
@@ -12,6 +13,10 @@ SUMMARY
     commands that write shapes are editing.py's.
 
 BASIC IDEA
+    Unsupported-form reasons keep their original strings and order, with aligned
+    display facts after deduplication. Counts beyond exact browser integers stay
+    in Turtle; the form never writes a rounded replacement.
+
     A rule is one path and what is checked on it: the form's unit, written
     as one property shape (`sh:property [ sh:path ... ]`) carrying every kind
     the learner chose for that path. The one exception is *a name in each
@@ -47,6 +52,10 @@ BASIC IDEA
     *one value only*, and names and definitions. A suggestion whose every
     part an existing rule on its path already says is not offered again.
 
+    path_parts retains the same structural path meanings as path_label while
+    keeping standard UI words separate from literal model names for rendering
+    in the client's current language. The legacy English label stays intact.
+
 INPUTS / INPUT SOURCES
     - The shapes document's graph, and the model's graph (with its imports
       merged when they are resolved) for names, classes and properties.
@@ -68,6 +77,7 @@ from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.collection import Collection
 from rdflib.namespace import OWL, RDF, RDFS, SKOS, XSD
 
+from .messages import literal_part, make_message, word_part, MessageText
 from .graph_builder import pick_label_in, prefixed
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
@@ -210,6 +220,34 @@ def path_label(model: Graph, path: tuple, languages: list) -> str:
     return " or ".join(path_label(model, (p,), languages) for p in path)
 
 
+def path_parts(model: Graph, path: tuple, languages: list) -> list[dict]:
+    """The same path meanings as path_label, without capturing English UI words.
+
+    This is a noun group, not a nested template. Standard meanings and the
+    alternative separator are registered zero-argument words; other paths
+    retain the model's literal display names in the requested RDF languages.
+    """
+    if tuple(path) == DEFINITION_PATH:
+        return [word_part("words.path.definition")]
+    if len(path) == 1:
+        iri = path[0]
+        if iri == RDFS.label:
+            return [word_part("words.path.nameLabel" if _name_taken(model, languages) else "words.path.name")]
+        standard = {
+            SKOS.prefLabel: "words.path.preferredName", SKOS.definition: "words.path.definition",
+            RDFS.comment: "words.path.description",
+        }
+        if iri in standard:
+            return [word_part(standard[iri])]
+        return [literal_part(pick_label_in(model, iri, languages)[0])]
+    parts = []
+    for index, iri in enumerate(path):
+        if index:
+            parts.append(word_part("words.path.or"))
+        parts.extend(path_parts(model, (iri,), languages))
+    return parts
+
+
 def path_kind(model: Graph, path: tuple) -> str:
     """What the rule editor offers for a path (5.3): its kind in the model."""
     if tuple(path) == DEFINITION_PATH or path == (SKOS.definition,) or path == (RDFS.comment,):
@@ -282,7 +320,21 @@ def _required_language(shapes: Graph, prop) -> Optional[str]:
 
 
 def _phrase(shapes: Graph, predicate) -> str:
-    return f"uses {prefixed(shapes, predicate)}"
+    return MessageText(f"uses {prefixed(shapes, predicate)}", "shape.readonly.uses_predicate", predicate=prefixed(shapes, predicate))
+
+
+def _display_iri(shapes: Graph, node) -> str:
+    """Metadata must not allocate prefixes before legacy names are computed."""
+    try:
+        prefix, namespace, local = shapes.namespace_manager.compute_qname(node, generate=False)
+        return f"{prefix}:{local}" if prefix else local
+    except Exception:
+        return str(node)
+
+
+def _type_parts(shapes: Graph, types: set) -> list[dict]:
+    return [part for index, kind in enumerate(sorted(types))
+            for part in ([word_part("words.list.and")] if index else []) + [literal_part(_display_iri(shapes, kind))]]
 
 
 def read_rules(shapes: Graph, node, model: Graph, names: Names, languages: list) -> tuple[list, list, set]:
@@ -294,11 +346,11 @@ def read_rules(shapes: Graph, node, model: Graph, names: Names, languages: list)
     plain: set = set()
     for prop in shapes.objects(node, SH.property):
         if not isinstance(prop, BNode):
-            unsupported.append("refers to a rule written elsewhere")
+            unsupported.append(MessageText("refers to a rule written elsewhere", 'shape.readonly.rule_reference', rule=_display_iri(shapes, prop)))
             continue
         path = path_of(shapes, shapes.value(prop, SH.path))
         if path is None:
-            unsupported.append("uses a path the form cannot edit")
+            unsupported.append(MessageText("uses a path the form cannot edit", 'shape.readonly.path'))
             continue
         severity = shapes.value(prop, SH.severity)
         severities.add(severity if severity is not None else SH.Violation)
@@ -318,7 +370,7 @@ def read_rules(shapes: Graph, node, model: Graph, names: Names, languages: list)
         for predicate in sorted(extra):
             unsupported.append(_phrase(shapes, predicate))
         if path in plain:
-            unsupported.append(f"has two rules on {rule['pathLabel']}")
+            unsupported.append(MessageText(f"has two rules on {rule['pathLabel']}", 'shape.readonly.duplicate_path', path=path_parts(model, path, languages)))
             continue
         plain.add(path)
         _read_constraints(shapes, prop, rule, names, unsupported)
@@ -337,7 +389,15 @@ def _read_constraints(shapes: Graph, prop, rule: dict, names: Names, unsupported
             continue
         number = _literal_number(values[0])
         if len(values) > 1 or number is None or number < 0:
-            unsupported.append(f"has a {prefixed(shapes, predicate)} the form cannot read")
+            unsupported.append(MessageText(f"has a {prefixed(shapes, predicate)} the form cannot read", 'shape.readonly.predicate_value', predicate=prefixed(shapes, predicate)))
+            continue
+        # Keep valid RDF integers intact, but never offer an editor that would
+        # round them through JavaScript's Number. Turtle still accepts them.
+        if number > 2**53 - 1:
+            unsupported.append(MessageText(
+                f"has {_display_iri(shapes, predicate)} {number}, which the form cannot preserve exactly",
+                "shape.readonly.precision", predicate=_display_iri(shapes, predicate), value=str(number),
+            ))
             continue
         rule[key] = number
     datatype = shapes.value(prop, SH.datatype)
@@ -347,14 +407,14 @@ def _read_constraints(shapes: Graph, prop, rule: dict, names: Names, unsupported
         if datatype in _DATATYPE_NAMES or datatype == RDF.langString:
             rule["datatype"] = datatype_json(datatype)
         else:
-            unsupported.append(f"uses the type of value {prefixed(shapes, datatype)}")
+            unsupported.append(MessageText(f"uses the type of value {prefixed(shapes, datatype)}", 'shape.readonly.datatype', datatype=prefixed(shapes, datatype)))
     cls = shapes.value(prop, SH["class"])
     if cls is not None:
         if isinstance(cls, URIRef):
             rule["class"] = str(cls)
             rule["classLabel"] = names(cls)
         else:
-            unsupported.append("points to a class written as an expression")
+            unsupported.append(MessageText("points to a class written as an expression", 'shape.readonly.class_expression'))
     pattern = shapes.value(prop, SH.pattern)
     if pattern is not None:
         rule["pattern"] = str(pattern)
@@ -364,22 +424,22 @@ def _read_constraints(shapes: Graph, prop, rule: dict, names: Names, unsupported
         if bound is not None:
             rule[key] = bound
         elif (prop, predicate, None) in shapes:
-            unsupported.append(f"has a {prefixed(shapes, predicate)} the form cannot read")
+            unsupported.append(MessageText(f"has a {prefixed(shapes, predicate)} the form cannot read", 'shape.readonly.predicate_value', predicate=prefixed(shapes, predicate)))
     allowed = shapes.value(prop, SH["in"])
     if allowed is not None:
         members = _list(shapes, allowed)
         if members is None:
-            unsupported.append("has an sh:in the form cannot read")
+            unsupported.append(MessageText("has an sh:in the form cannot read", 'shape.readonly.allowed_list'))
         elif any(isinstance(m, Literal) and not m.language and m.datatype is not None
                  and m.datatype not in _DATATYPE_NAMES for m in members):
-            unsupported.append("has an allowed value of a type the form does not offer")
+            unsupported.append(MessageText("has an allowed value of a type the form does not offer", 'shape.readonly.allowed_type'))
         else:
             rule["in"] = [value_json(m, names) for m in members]
     tags = shapes.value(prop, SH.languageIn)
     if tags is not None:
         members = _list(shapes, tags)
         if members is None or not all(isinstance(m, Literal) for m in members):
-            unsupported.append("has an sh:languageIn the form cannot read")
+            unsupported.append(MessageText("has an sh:languageIn the form cannot read", 'shape.readonly.language_list'))
         else:
             rule["languageIn"] = [str(m) for m in members]
     unique = shapes.value(prop, SH.uniqueLang)
@@ -401,32 +461,36 @@ def read_shape(shapes: Graph, node, model: Graph, names: Names, languages: list)
         unsupported.append(_phrase(shapes, predicate))
     types = set(shapes.objects(node, RDF.type))
     if types - {SH.NodeShape}:
-        unsupported.append("is also a class (an implicit target)")
+        unsupported.append(MessageText("is also a class (an implicit target)", 'shape.readonly.additional_types', types=_type_parts(shapes, types - {SH.NodeShape})))
     targets = list(shapes.objects(node, SH.targetClass))
     if len(targets) > 1:
-        unsupported.append("has more than one target class")
+        unsupported.append(MessageText("has more than one target class", 'shape.readonly.multiple_targets', count=len(targets)))
     target = targets[0] if targets else None
     if target is not None and not isinstance(target, URIRef):
-        unsupported.append("targets a class written as an expression")
+        unsupported.append(MessageText("targets a class written as an expression", 'shape.readonly.target_expression'))
         target = None
     label = shapes.value(node, RDFS.label)
     severity = shapes.value(node, SH.severity)
     message = list(shapes.objects(node, SH.message))
     if len(message) > 1:
-        unsupported.append("has more than one message")
+        unsupported.append(MessageText("has more than one message", 'shape.readonly.multiple_messages', count=len(message)))
     rules, rule_unsupported, rule_severities = read_rules(shapes, node, model, names, languages)
     unsupported += rule_unsupported
     own = severity if severity is not None else SH.Violation
     if rule_severities - {own}:
-        unsupported.append("has a different severity on one rule")
+        unsupported.append(MessageText("has a different severity on one rule", 'shape.readonly.rule_severity'))
     if own not in (SH.Violation, SH.Warning):
-        unsupported.append(f"has the severity {prefixed(shapes, own)}")
+        unsupported.append(MessageText(f"has the severity {prefixed(shapes, own)}", 'shape.readonly.severity', severity=prefixed(shapes, own)))
+    unique = list(dict.fromkeys(unsupported))
     return {
         "id": shape_id(node),
         "iri": str(node) if isinstance(node, URIRef) else None,
         "name": str(label) if label is not None else (
             prefixed(shapes, node) if isinstance(node, URIRef) else "Unnamed shape"
         ),
+        # The editable name stays the original value. A display-language read
+        # must not feed a translated title into the primary-language writer.
+        **({"displayName": pick_label_in(shapes, node, languages)[0]} if label is not None else {}),
         "named": label is not None,
         "target": target_json(target, names),
         "severity": SEVERITIES.get(own, "violation"),
@@ -434,7 +498,10 @@ def read_shape(shapes: Graph, node, model: Graph, names: Names, languages: list)
         "rules": rules,
         "editable": not unsupported,
         # Each part once, in the order found.
-        "unsupported": list(dict.fromkeys(unsupported)),
+        "unsupported": [str(part) for part in unique],
+        **({"unsupportedUiMessages": [getattr(part, "ui_message", None) for part in unique]} if unique else {}),
+        **({"nameUiMessage": make_message("words.validation.unnamed_shape")}
+           if label is None and not isinstance(node, URIRef) else {}),
     }
 
 
@@ -527,10 +594,12 @@ def suggestions(
     existing_rules: list[dict],
     names: Names,
     languages: list,
+    *, label_languages: Optional[list[str]] = None,
 ) -> dict:
     """The paths a rule can be about, and the rules the model suggests (5.4),
     without those an existing rule already says."""
-    paths = paths_for(model, target, names, languages)
+    reading_languages = languages if label_languages is None else label_languages
+    paths = paths_for(model, target, names, reading_languages)
     primary = languages[0] if languages else "en"
     by_path = {tuple(r["path"]): r for r in existing_rules}
     out: list[dict] = []
@@ -567,7 +636,7 @@ def suggestions(
     for item in out:
         known = labels.get(tuple(item["rule"]["path"]))
         item["rule"]["pathLabel"] = known["label"] if known else path_label(
-            model, tuple(URIRef(p) for p in item["rule"]["path"]), languages)
+            model, tuple(URIRef(p) for p in item["rule"]["path"]), reading_languages)
         item["rule"]["pathKind"] = known["kind"] if known else "other"
     return {"paths": paths, "suggestions": out}
 

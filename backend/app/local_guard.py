@@ -49,13 +49,15 @@ EXPECTED OUTPUT
     - The request passes through unchanged when it comes from the application.
     - HTTP 400 for a Host that is not an allowed name.
     - HTTP 403 for a state-changing request without the header, or with a
-      foreign Origin.
+      foreign Origin. Original detail is retained with additive UI metadata.
 ================================================================================
 """
 
 from __future__ import annotations
 
 import json
+
+from .messages import detail_body, make_message
 import os
 from urllib.parse import urlsplit
 
@@ -147,27 +149,27 @@ class LocalOnlyMiddleware:
         # Host first, and for every method: a rebinding page can *read*, so a
         # GET is as dangerous as a DELETE here.
         if host_name(host) not in allowed_hosts():
-            await _refuse(send, 400, BAD_HOST_DETAIL)
+            await _refuse(send, 400, BAD_HOST_DETAIL, ui_message=make_message("request.foreign_host"))
             return
 
         if scope["method"].upper() not in SAFE_METHODS:
             if headers.get(CLIENT_HEADER) != CLIENT_HEADER_VALUE:
-                await _refuse(send, 403, FORBIDDEN_DETAIL)
+                await _refuse(send, 403, FORBIDDEN_DETAIL, ui_message=make_message("request.foreign_page"))
                 return
             origin = headers.get("origin")
             # Absent Origin is allowed: browsers omit it on some same-origin
             # requests, and non-browser clients (curl, the test client) have
             # none. The header check above already stops a foreign page.
             if origin is not None and not origin_allowed(origin, host, scope.get("scheme", "http")):
-                await _refuse(send, 403, FORBIDDEN_DETAIL)
+                await _refuse(send, 403, FORBIDDEN_DETAIL, ui_message=make_message("request.foreign_page"))
                 return
 
         await self.app(scope, receive, send)
 
 
-async def _refuse(send, status: int, detail: str) -> None:
+async def _refuse(send, status: int, detail: str, *, ui_message: dict | None = None) -> None:
     """Answer with FastAPI's usual `{"detail": ...}` shape and stop."""
-    body = json.dumps({"detail": detail}).encode("utf-8")
+    body = json.dumps(detail_body(detail, ui_message)).encode("utf-8")
     await send(
         {
             "type": "http.response.start",

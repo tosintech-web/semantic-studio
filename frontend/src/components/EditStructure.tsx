@@ -17,6 +17,10 @@ SUMMARY
     other classes, and those it has through a parent.
 
 BASIC IDEA
+    The current translator supplies headings, relationship-target guidance
+    and shared/inherited group descriptions, without changing draft state,
+    reference identities, sharing semantics or command arguments.
+
     Each list names what is there, as links that select it, with Remove where
     a command takes it away; each "Add …" opens either a picker (to link to
     something that exists) or the names-first form (to make something new).
@@ -50,6 +54,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderProjectNoticeDetail, type ProjectNoticeDetail } from "../modeling/projectNotices";
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useRef, useState } from "react";
 import { alreadyDefined } from "../api";
 import { structureOf, type EntityModel, type Ref } from "../modeling/entity";
@@ -101,6 +107,7 @@ function Links({
   onSelect: (iri: string) => void;
   remove?: { label: (r: Ref) => string; run: (r: Ref) => void; busy: boolean };
 }) {
+  const { t } = useI18n();
   if (refs.length === 0) return <p className="detail-note">{empty}</p>;
   return (
     <ul className="edit-list">
@@ -117,7 +124,7 @@ function Links({
               aria-disabled={remove.busy}
               onClick={() => !remove.busy && remove.run(r)}
             >
-              Remove
+              {t("editSection.remove")}
             </button>
           )}
         </li>
@@ -141,6 +148,7 @@ function PropertyGroups({
   empty: string;
   onSelect: (iri: string) => void;
 }) {
+  const { t } = useI18n();
   const mine = properties.filter((p) => p.kind === kind);
   const own = mine.filter((p) => p.how === "own");
   const shared = mine.filter((p) => p.how === "shared" || p.how === "both");
@@ -158,10 +166,10 @@ function PropertyGroups({
   );
   const note = (p: ClassProperty) =>
     p.how === "both"
-      ? " (both, see warning)"
+      ? t("editStructure.both")
       : p.with && p.with.length > 0
-        ? ` (shared with ${p.with.map((w) => w.label).join(", ")})`
-        : " (shared)";
+        ? t("editStructure.sharedWith", { classes: p.with.map(w => w.label).join(t("editStructure.separator")) })
+        : t("editStructure.shared");
   return (
     <>
       {own.length > 0 && (
@@ -173,7 +181,7 @@ function PropertyGroups({
       )}
       {shared.length > 0 && (
         <>
-          <h6 className="edit-subhead">Shared with others</h6>
+          <h6 className="edit-subhead">{t("editStructure.sharedHeading")}</h6>
           <ul className="edit-list">
             {shared.map((p) => (
               <li key={p.iri}>
@@ -186,7 +194,7 @@ function PropertyGroups({
       )}
       {[...through.entries()].map(([via, group]) => (
         <div key={via}>
-          <h6 className="edit-subhead">Through {group.via}</h6>
+          <h6 className="edit-subhead">{t("editStructure.through", { parent: group.via })}</h6>
           <ul className="edit-list">
             {group.items.map((p) => (
               <li key={p.iri}>{link(p)}</li>
@@ -210,6 +218,7 @@ export default function EditStructure({
   warnings = [],
   rules,
 }: Props) {
+  const { t, locale } = useI18n();
   const { busy, errors, run, clear } = runner;
   const [open, setOpen] = useState<Open>(null);
   // The button each form was opened from, to give focus back to.
@@ -221,7 +230,7 @@ export default function EditStructure({
   // under the list once the form has closed.
   const [reuse, setReuse] = useState<{ iri: string; label: string } | null>(null);
   const [existing, setExisting] = useState<AlreadyDefined | null>(null);
-  const [note, setNote] = useState<string | null>(null);
+  const [note, setNote] = useState<ProjectNoticeDetail | null>(null);
   const formBox = useRef<HTMLDivElement>(null);
   const lists = useRef<Record<string, HTMLHeadingElement | null>>({});
   const pid = useProjectSelector((s) => s.project?.id ?? null);
@@ -275,9 +284,9 @@ export default function EditStructure({
         cls={{ iri, label: name }}
         runner={runner}
         onDone={() => reused(which)}
-        onAlready={(sentence) => {
-          setNote(sentence);
-          projectStore.say(sentence);
+        onAlready={(_sentence, facts) => {
+          setNote(facts);
+          projectStore.say(facts);
           reused(which);
         }}
         onCancel={() => {
@@ -312,6 +321,7 @@ export default function EditStructure({
   const existingChoice = existing
     ? {
         sentence: existing.message,
+        uiMessage: existing.uiMessage,
         className: name,
         onUse: () => setReuse({ iri: existing.property.iri, label: existing.property.label }),
         onAnother: () => setExisting(null),
@@ -363,30 +373,30 @@ export default function EditStructure({
 
   if (shape === "class") {
     return (
-      <Block title="Structure">
-        <h5>Is a kind of</h5>
+      <Block title={t("editStructure.structure")}>
+        <h5>{t("editStructure.parent")}</h5>
         <Links
           refs={model.parents}
-          empty="No parent: a top-level class."
+          empty={t("editStructure.noParent")}
           onSelect={onSelect}
           remove={{
             busy,
-            label: (r) => `Remove ${r.label} as a parent of ${name}`,
+            label: (r) => t("editStructure.removeParent", { parent: r.label, name }),
             run: (r) => void run("parents", "RemoveSubClassOf", { child: iri, parent: r.iri }),
           }}
         />
         {errors.parents && <p className="edit-error">{errors.parents}</p>}
         {open === "parent"
-          ? picker("parent", "class", `New parent of ${name}`, model.parents.map((p) => p.iri), (parent) =>
+          ? picker("parent", "class", t("editStructure.newParent", { name }), model.parents.map((p) => p.iri), (parent) =>
               run("parent", "AddSubClassOf", { child: iri, parent }),
             )
-          : button("parent", "Add parent")}
+          : button("parent", t("editStructure.addParent"))}
 
-        <h5>Subclasses</h5>
-        <Links refs={model.children} empty="No subclasses." onSelect={onSelect} />
+        <h5>{t("editStructure.subclasses")}</h5>
+        <Links refs={model.children} empty={t("editStructure.noSubclasses")} onSelect={onSelect} />
         {open === "subclass" ? (
           <NewEntityForm
-            title={`New subclass of ${name}`}
+            title={t("editSection.subclass", { name })}
             primaryLanguage={primaryLanguage}
             busy={busy}
             error={errors.subclass}
@@ -396,22 +406,22 @@ export default function EditStructure({
             }
           />
         ) : (
-          button("subclass", "Add subclass")
+          button("subclass", t("editStructure.addSubclass"))
         )}
 
         {rules && <RulesBlock iri={iri} name={name} rules={rules} runner={runner} onSelect={onSelect} />}
 
-        {listHeading("attribute", "Attributes")}
+        {listHeading("attribute", t("editStructure.attributes"))}
         {model.properties.length > 0 ? (
-          <PropertyGroups properties={model.properties} kind="attribute" empty="No attributes." onSelect={onSelect} />
+          <PropertyGroups properties={model.properties} kind="attribute" empty={t("editStructure.noAttributes")} onSelect={onSelect} />
         ) : (
-          <Links refs={model.attributes} empty="No attributes." onSelect={onSelect} />
+          <Links refs={model.attributes} empty={t("editStructure.noAttributes")} onSelect={onSelect} />
         )}
-        {note && <p className="detail-note">{note}</p>}
+        {note && <p className="detail-note">{renderProjectNoticeDetail(note, locale, t)}</p>}
         {open === "attribute" ? (
           <div ref={formBox}>
             <NewEntityForm
-              title={`New attribute of ${name}`}
+              title={t("editStructure.newAttribute", { name })}
               primaryLanguage={primaryLanguage}
               datatypes
               busy={busy}
@@ -426,25 +436,25 @@ export default function EditStructure({
             {plan("attribute")}
           </div>
         ) : (
-          button("attribute", "Add attribute")
+          button("attribute", t("editStructure.addAttribute"))
         )}
 
-        {listHeading("relationship", "Relationships")}
+        {listHeading("relationship", t("editStructure.relationships"))}
         {model.properties.length > 0 ? (
-          <PropertyGroups properties={model.properties} kind="relationship" empty="No relationships." onSelect={onSelect} />
+          <PropertyGroups properties={model.properties} kind="relationship" empty={t("editStructure.noRelationships")} onSelect={onSelect} />
         ) : (
-          <Links refs={model.relationships} empty="No relationships." onSelect={onSelect} />
+          <Links refs={model.relationships} empty={t("editStructure.noRelationships")} onSelect={onSelect} />
         )}
         {open === "relationship" ? (
           <div ref={formBox}>
           <NewEntityForm
-            title={`New relationship from ${name}`}
+            title={t("editStructure.newRelationship", { name })}
             primaryLanguage={primaryLanguage}
             busy={busy}
             error={existing ? null : errors.relationship}
             existing={reuse ? null : existingChoice}
             suggest={reuse ? undefined : suggest("relationship")}
-            missing={range ? null : "Choose the class it points to."}
+            missing={range ? null : t("editStructure.chooseTarget")}
             onCancel={close}
             onSubmit={({ name: label, iri: chosen }) =>
               range && void createProperty("relationship", "CreateObjectProperty", {
@@ -460,7 +470,7 @@ export default function EditStructure({
                 <EntityPicker
                   ontologyId={ontologyId}
                   kind="class"
-                  label="It points to (a class)"
+                  label={t("editStructure.targetClass")}
                   onCancel={() => setPickingRange(false)}
                   onPick={(target, label) => {
                     setRange({ iri: target, label });
@@ -469,9 +479,9 @@ export default function EditStructure({
                 />
               ) : (
                 <p className="detail-note">
-                  It points to: {range ? range.label : "not chosen yet (required)"}{" "}
+                  {t("editStructure.pointsTo", { target: range ? range.label : t("editStructure.noTarget") })}{" "}
                   <button type="button" className="link-btn" onClick={() => setPickingRange(true)}>
-                    {range ? "Change" : "Choose a class"}
+                    {t(range ? "editStructure.change" : "editStructure.chooseClass")}
                   </button>
                 </p>
               )}
@@ -480,7 +490,7 @@ export default function EditStructure({
           {plan("relationship")}
           </div>
         ) : (
-          button("relationship", "Add relationship")
+          button("relationship", t("editStructure.addRelationship"))
         )}
       </Block>
     );
@@ -513,30 +523,30 @@ export default function EditStructure({
   }
 
   return (
-    <Block title="Structure">
-      <h5>Broader concepts</h5>
+    <Block title={t("editStructure.structure")}>
+      <h5>{t("editStructure.broader")}</h5>
       <Links
         refs={model.broader}
-        empty="No broader concept: a top concept."
+        empty={t("editStructure.noBroader")}
         onSelect={onSelect}
         remove={{
           busy,
-          label: (r) => `Remove ${r.label} as broader than ${name}`,
+          label: (r) => t("editStructure.removeBroader", { broader: r.label, name }),
           run: (r) => void run("broaderList", "RemoveBroader", { concept: iri, broader: r.iri }),
         }}
       />
       {errors.broaderList && <p className="edit-error">{errors.broaderList}</p>}
       {open === "broader"
-        ? picker("broader", "concept", `New broader concept of ${name}`, model.broader.map((b) => b.iri), (broader) =>
+        ? picker("broader", "concept", t("editStructure.newBroader", { name }), model.broader.map((b) => b.iri), (broader) =>
             run("broader", "AddBroader", { concept: iri, broader }),
           )
-        : button("broader", "Add broader concept")}
+        : button("broader", t("editStructure.addBroader"))}
 
-      <h5>Narrower concepts</h5>
-      <Links refs={model.narrower} empty="No narrower concepts." onSelect={onSelect} />
+      <h5>{t("editStructure.narrower")}</h5>
+      <Links refs={model.narrower} empty={t("editStructure.noNarrower")} onSelect={onSelect} />
       {open === "narrower" ? (
         <NewEntityForm
-          title={`New narrower concept of ${name}`}
+          title={t("editStructure.newNarrower", { name })}
           primaryLanguage={primaryLanguage}
           busy={busy}
           error={errors.narrower}
@@ -546,12 +556,12 @@ export default function EditStructure({
           }
         />
       ) : (
-        button("narrower", "Add narrower concept")
+        button("narrower", t("editStructure.addNarrower"))
       )}
 
       {model.schemes.length > 0 && (
         <>
-          <h5>Scheme</h5>
+          <h5>{t("editStructure.scheme")}</h5>
           <Links refs={model.schemes} empty="" onSelect={onSelect} />
         </>
       )}

@@ -11,6 +11,9 @@ SUMMARY
     ontology binds, Add PREFIX (query-page-rework 5.3).
 
 BASIC IDEA
+    Failures and owned restriction/note facts re-render without changing the raw
+    error used by the existing Add PREFIX helper, query text or editor session.
+
     It opens in one of two conditions. Opened on the builder's query, it shows
     the generated text and the query is still visual; the first change calls
     onFork and from then on the text is the query (D-071). Opened as a text
@@ -48,10 +51,15 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { renderUiMessage } from "../i18n/uiMessage";
+import type { OperationFailure } from "../i18n/operationFailure";
+import OperationError from "./OperationError";
+import { englishTranslator } from "../i18n/format";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { TextQuery } from "../sparql/useQueryBuilder";
-import { RUN_HELP, STARTED_HELP, addPrefixLine, unknownPrefix } from "../sparql/textQuery";
+import { addPrefixLine, unknownPrefix } from "../sparql/textQuery";
 
 interface Props {
   generated: string;
@@ -60,6 +68,7 @@ interface Props {
   namespaces: Record<string, string>;
   running: boolean;
   error: string | null;
+  errorFailure?: OperationFailure | null;
   /** "Save", or "Update" when a saved query is open. */
   saveLabel: string;
   saveTitle: string;
@@ -73,7 +82,7 @@ interface Props {
   onClose: () => void;
 }
 
-export const FORK_NOTICE = "This query is now text. The graph and the path bar no longer change it.";
+export const FORK_NOTICE = englishTranslator("sparql.editor.fork");
 
 export default function SparqlEditor({
   generated,
@@ -82,6 +91,7 @@ export default function SparqlEditor({
   namespaces,
   running,
   error,
+  errorFailure = null,
   saveLabel,
   saveTitle,
   onFork,
@@ -93,6 +103,7 @@ export default function SparqlEditor({
   onBack,
   onClose,
 }: Props) {
+  const { t } = useI18n();
   const [text, setText] = useState(() => (textQuery ? initialText : generated));
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -101,7 +112,7 @@ export default function SparqlEditor({
   // the graph shows up here too. After the fork this component owns it.
   const value = textQuery ? text : generated;
   const readOnly = !!textQuery?.runBlocked;
-  const runReason = textQuery?.runBlocked ?? null;
+  const runReason = textQuery?.runBlockedUi ? renderUiMessage(textQuery.runBlockedUi, t) : textQuery?.runBlocked ?? null;
 
   // Focus enters the editor when it opens (AC-15), the caret at the end:
   // after a new query's prefixes, on the line where the query goes
@@ -158,23 +169,23 @@ export default function SparqlEditor({
     <div className="sparql-editor">
       {textQuery?.forkedFrom && (
         // role="status" so it is announced once, when the fork happens. Its
-        // text never changes afterwards, so it is never announced again.
+        // locale changes may rephrase it, without changing the query or fork.
         <div className="fork-notice" role="status">
-          <span>{FORK_NOTICE}</span>{" "}
+          <span>{t("sparql.editor.fork")}</span>{" "}
           <button className="link-btn" onClick={onBack}>
-            Back to the visual version
+            {t("sparql.editor.back")}
           </button>
         </div>
       )}
       {textQuery?.name && <p className="sparql-editor-name">{textQuery.name}</p>}
-      {textQuery?.note && <p className="query-hint">{textQuery.note}</p>}
+      {textQuery?.note && <p className="query-hint">{textQuery.noteUi ? renderUiMessage(textQuery.noteUi, t) : textQuery.note}</p>}
       {runReason && <p className="query-hint">{runReason}</p>}
-      {error && (
+      {(errorFailure || error) && (
         <div className="detail-error sparql-error">
-          <p>{error}</p>
+          <OperationError failure={errorFailure ?? { cause: error }} className="operation-error" />
           {missing !== null && missingNs !== null && (
             <button ref={addRef} className="ghost add-prefix" onClick={addPrefix}>
-              {`Add PREFIX ${missing}:`}
+              {t("sparql.editor.prefix", { prefix: missing })}
             </button>
           )}
         </div>
@@ -183,7 +194,7 @@ export default function SparqlEditor({
       <textarea
         ref={areaRef}
         className="sparql-textarea"
-        aria-label="SPARQL query text"
+        aria-label={t("sparql.editor.label")}
         aria-describedby="sparql-editor-help"
         spellCheck={false}
         autoCapitalize="off"
@@ -197,11 +208,11 @@ export default function SparqlEditor({
       {/* Visible, not only to a screen reader (5.3): it says what is in the
           box. Tab's meaning is the one part only a keyboard user needs. */}
       <p id="sparql-editor-help" className="sparql-editor-help">
-        {textQuery?.fresh ? STARTED_HELP : RUN_HELP}{" "}
-        <span className="visually-hidden">Tab moves to the next control.</span>
+        {t(textQuery?.fresh ? "sparql.editor.helpFresh" : "sparql.editor.helpRun")}{" "}
+        <span className="visually-hidden">{t("sparql.editor.tabHelp")}</span>
       </p>
       <p className="visually-hidden" role="status" aria-live="polite">
-        {running ? "Running query…" : ""}
+        {running ? t("sparql.editor.runningAnnouncement") : ""}
       </p>
 
       <div className="query-toolbar sparql-editor-actions">
@@ -209,19 +220,19 @@ export default function SparqlEditor({
           className="primary"
           disabled={running || !!runReason || !value.trim()}
           onClick={run}
-          aria-label={runReason ? `Run. ${runReason}` : undefined}
-          title={runReason ?? "Run the query (Ctrl+Enter)"}
+          aria-label={runReason ? t("sparql.editor.runBlockedLabel", { reason: runReason }) : undefined}
+          title={runReason ?? t("sparql.editor.runHint")}
         >
-          {running ? "Running…" : "▶ Run  Ctrl+Enter"}
+          {running ? t("sparql.editor.running") : t("sparql.editor.run")}
         </button>
         <button className="ghost" disabled={!value.trim()} onClick={onSave} title={saveTitle}>
           ⌸ {saveLabel}
         </button>
         <button className="ghost" disabled={!value} onClick={() => onDownload(value)}>
-          Download .rq
+          {t("sparql.editor.download")}
         </button>
         <button className="ghost" onClick={() => fileRef.current?.click()}>
-          Open .rq file…
+          {t("sparql.editor.open")}
         </button>
         <input
           ref={fileRef}
@@ -237,7 +248,7 @@ export default function SparqlEditor({
         />
         <div className="spacer" />
         <button className="ghost" onClick={onClose}>
-          Close editor
+          {t("sparql.editor.close")}
         </button>
       </div>
     </div>

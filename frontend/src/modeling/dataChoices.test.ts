@@ -8,7 +8,8 @@ SUMMARY
     column starts as, one name per row, a choice in a select, a new
     attribute's suggested type, and why Next waits on each step -- for the
     sample choice, for the chosen class's own reading, and for the columns'
-    choices before step 4.
+    choices before step 4. Japanese wording and offered labels retain the
+    same values/decisions, and raw header keys never use object prototypes.
 
 BASIC IDEA
     Pure functions, tested without rendering, as the module is kept out of
@@ -25,6 +26,8 @@ EXPECTED OUTPUT
 import { describe, expect, it } from "vitest";
 import {
   NEW_ATTRIBUTE,
+  NEW_TYPES,
+  newTypes,
   choiceValue,
   initialColumns,
   parseChoice,
@@ -131,5 +134,49 @@ describe("why Next waits", () => {
       "What each column can become could not be read. Try again.",
     );
     expect(stepBlocked(3, { ...base, basis: "ready", columnsReady: true })).toBeNull();
+  });
+});
+
+
+it("localizes offered type labels without changing type identities", () => {
+  expect(newTypes().map(type => type.label)).toEqual(NEW_TYPES.map(type => type.label));
+  expect(newTypes("ja").map(type => type.label)).toEqual(["テキスト", "整数", "数値", "日付", "日時", "trueまたはfalse", "言語指定のないテキスト"]);
+  expect(newTypes("ja").map(({ key, datatype }) => ({ key, datatype }))).toEqual(NEW_TYPES.map(({ key, datatype }) => ({ key, datatype })));
+});
+
+it.each(["__proto__", "constructor", "toString"])("keeps the literal header %s as an ordinary mapping key", (key) => {
+  const result = initialColumns([key], {});
+  expect(Object.keys(result.columns)).toEqual([key]);
+  expect(result.columns[key]).toEqual({ as: "ignore" });
+  expect(result.suggested).toEqual([]);
+  const named = withChoice(result.columns, key, { as: "name" });
+  expect(Object.prototype.hasOwnProperty.call(named, key)).toBe(true);
+  expect(JSON.parse(JSON.stringify(named))[key]).toEqual({ as: "name" });
+  const suggestions = Object.fromEntries([[key, { as: "attribute" as const, property: `${P}raw` }]]);
+  expect(initialColumns([key], suggestions).columns[key]).toEqual(suggestions[key]);
+});
+
+describe("Japanese blocking reasons keep the same next-step decisions", () => {
+  const found = { sample: true, kept: 2000, limit: 2000 } as DataInspection;
+  const base = { inspection: found, options: { sample: true }, classIri: `${P}Person` };
+  it.each([
+    [1, { ...base, reading: true }, "ファイルを読み込み中…"],
+    [1, { ...base, sheetChosen: false }, "先にシートを選択してください。"],
+    [1, { ...base, inspection: null }, "先にファイルを選択してください。"],
+    [1, { ...base, options: {} }, "先頭2,000行を使用するか、別のファイルを選択してください。"],
+    [1, { ...base, inspection: { ...found, kept: 0 } }, "このファイルには取り込める行がありません。"],
+    [2, { ...base, classIri: null }, "各行が何を表すか選択してください。"],
+    [2, { ...base, basis: "failed" as const }, "識別子を確認できませんでした。再試行してください。"],
+    [2, { ...base, basis: "reading" as const }, "識別子を確認中…"],
+    [3, { ...base, columnsReady: false, basis: "failed" as const }, "各列の対応先を読み込めませんでした。再試行してください。"],
+    [3, { ...base, columnsReady: false, basis: "reading" as const }, "各列の対応先を読み込み中…"],
+  ] as const)("step %s: %s", (step, state, text) => {
+    expect(stepBlocked(step, state, "ja")).toBe(text);
+    expect(stepBlocked(step, state)).not.toBeNull();
+  });
+  it("keeps all ready steps ready", () => {
+    expect(stepBlocked(1, base, "ja")).toBeNull();
+    expect(stepBlocked(2, { ...base, basis: "ready" }, "ja")).toBeNull();
+    expect(stepBlocked(3, { ...base, columnsReady: true }, "ja")).toBeNull();
   });
 });

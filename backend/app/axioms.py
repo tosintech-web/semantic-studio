@@ -4,6 +4,7 @@ FILE: backend/app/axioms.py
 ================================================================================
 
 SUMMARY
+    Restriction reads share one subject scan without widening the recognized forms.
     A class's rules as the learner's form reads them (axioms-and-reasoning
     5.8, 5.9, D-105): its restrictions, in the two forms *every X ...* and
     *an X is exactly ...*, its disjoint classes and its equivalent classes,
@@ -64,7 +65,8 @@ EXPECTED OUTPUT
     - covers(reading, ancestors) and class_properties(view, cls, name):
       which properties a class has, and how (own, shared, both, through).
     - reuse_plan(view, own, prop, cls, name) -> the case of 5.2 for using a
-      property on one more class, with the choices it offers.
+      property on one more class, with the choices it offers and display facts
+      for a refusal; legacy refusal sentences remain available.
 
     A property's domain is read here and nowhere else but editing.py, which
     writes it (test_axioms.py scans). Two rdfs:domain values mean *both*
@@ -85,11 +87,16 @@ from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.collection import Collection
 from rdflib.namespace import OWL, RDF, RDFS, XSD
 
+from .messages import literal_part, make_message, word_part
 from . import examples
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
 
 Name = Callable[[URIRef], str]
+
+# Schema carriers that are not general class types for dictionary individuals.
+# Keeping this knowledge here preserves the one reader of OWL expression shapes.
+NON_INSTANCE_TYPES = frozenset({OWL.Restriction, RDF.List})
 
 FORMS = ("every", "defines")
 KINDS = ("some", "only", "exactly", "atLeast", "atMost", "value")
@@ -178,13 +185,18 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
     uses, with one value each: anything more is Turtle's to show."""
     if not isinstance(node, BNode):
         return None
-    predicates = list(g.predicates(node, None))
-    if len(predicates) != len(set(predicates)):
-        return None  # a predicate written twice: not one sentence
-    present = set(predicates)
-    if RDF.type in present and set(g.objects(node, RDF.type)) != {OWL.Restriction}:
+    # A restriction has one value per predicate. Capture that one subject
+    # read instead of returning to the store for its type, property and filler.
+    # Duplicate predicates keep the same unsupported-form decision.
+    objects = {}
+    for predicate, value in g.predicate_objects(node):
+        if predicate in objects:
+            return None
+        objects[predicate] = value
+    present = set(objects)
+    if RDF.type in present and objects[RDF.type] != OWL.Restriction:
         return None
-    prop = _one(g, node, OWL.onProperty)
+    prop = objects.get(OWL.onProperty)
     if not isinstance(prop, URIRef):
         return None  # an inverse, or no property
     rest = present - {RDF.type, OWL.onProperty}
@@ -197,7 +209,7 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
         if rest != {predicate}:
             return None
         kind = _VALUE_PREDICATES[predicate]
-        filler = _one(g, node, predicate)
+        filler = objects.get(predicate)
         if kind == "value":
             return (prop, kind, filler, None) if isinstance(filler, (URIRef, Literal)) else None
         # A class, never a datatype or a nested expression.
@@ -206,7 +218,7 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
         return prop, kind, filler, None
     predicate = counts[0]
     kind, qualified = _COUNT_BY_PREDICATE[predicate]
-    n = _count(_one(g, node, predicate))
+    n = _count(objects.get(predicate))
     if n is None:
         return None
     if not qualified:
@@ -214,7 +226,7 @@ def parse_restriction(g: Graph, node) -> Optional[tuple]:
     on = [p for p in (OWL.onClass, OWL.onDataRange) if p in rest]
     if len(on) != 1 or rest != {predicate, on[0]}:
         return None
-    filler = _one(g, node, on[0])
+    filler = objects.get(on[0])
     if not isinstance(filler, URIRef) or (on[0] == OWL.onClass) == is_datatype(filler):
         return None
     return prop, kind, filler, n
@@ -648,6 +660,10 @@ def choices(g: Graph, own: Graph, name: Name) -> dict:
 UNION_MAX = 100
 DOMAIN_FORMS = ("none", "one", "union", "separate", "expression")
 _TOP = (OWL.Thing, RDFS.Resource)
+# These fixed terms are tested for every cell of a shared-property union.
+# Resolve namespace attributes once; loaded terms still undergo every check.
+_UNION_OF, _OWL_CLASS = OWL.unionOf, OWL.Class
+_RDF_TYPE, _RDF_FIRST, _RDF_REST, _RDF_NIL = RDF.type, RDF.first, RDF.rest, RDF.nil
 
 
 @dataclass(frozen=True)
@@ -676,9 +692,9 @@ def _union_members(g: Graph, node) -> Optional[tuple]:
             return None  # shared with another statement: changing it would change that too
     head, typed = None, False
     for p, o in g.predicate_objects(node):
-        if p == OWL.unionOf and head is None:
+        if p == _UNION_OF and head is None:
             head = o
-        elif p == RDF.type and o == OWL.Class and not typed:
+        elif p == _RDF_TYPE and o == _OWL_CLASS and not typed:
             typed = True
         else:
             return None
@@ -687,15 +703,15 @@ def _union_members(g: Graph, node) -> Optional[tuple]:
     members: list = []
     seen: set = set()
     cell = head
-    while cell != RDF.nil:
+    while cell != _RDF_NIL:
         if not isinstance(cell, BNode) or cell in seen or len(members) >= UNION_MAX:
             return None
         seen.add(cell)
         first = rest = None
         for p, o in g.predicate_objects(cell):
-            if p == RDF.first and first is None:
+            if p == _RDF_FIRST and first is None:
                 first = o
-            elif p == RDF.rest and rest is None:
+            elif p == _RDF_REST and rest is None:
                 rest = o
             else:
                 return None
@@ -906,7 +922,7 @@ def reuse_plan(view: Graph, own: Graph, prop, cls, name: Name, imported_from: Op
     if reading.form == "expression":
         return {**plan, "case": None, "refused": (
             f"The class {name(prop)} belongs to is written as an expression in Turtle; change it there."
-        )}
+        ), "refusedUiMessage": make_message("editing.guard.share_expression", name=name(prop))}
     if reading.form == "none":
         return {**plan, "case": "A"}
     lineage = up(cls)
@@ -916,7 +932,10 @@ def reuse_plan(view: Graph, own: Graph, prop, cls, name: Name, imported_from: Op
         return {**plan, "case": None, "refused": (
             f"{name(prop)} lists {domain_names(reading, name)} separately, which means both. "
             "Share it from its warning first."
-        )}
+        ), "refusedUiMessage": make_message("editing.guard.share_separate", name=name(prop), classes=[
+            part for index, member in enumerate(members)
+            for part in ([word_part("words.list.and")] if index else []) + [literal_part(name(member))]
+        ])}
     if all(cls in up(c) for c in members):
         return {**plan, "case": "C"}
 

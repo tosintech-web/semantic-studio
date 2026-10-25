@@ -15,7 +15,7 @@ SUMMARY
 BASIC IDEA
     The component calls the /search endpoint through api.ts, so api.ts is
     mocked and the component is driven by typing into its input. The debounce
-    is 200 ms of real time, so the timers are faked and advanced deliberately
+    is 300 ms of real time, so the timers are faked and advanced deliberately
     rather than waited on.
 
     The marker is asserted as text. The specification requires it not to be
@@ -37,6 +37,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SearchBox from "./SearchBox";
@@ -70,14 +72,14 @@ afterEach(() => {
 const input = () => screen.getByRole("combobox") as HTMLInputElement;
 const options = () => screen.getAllByRole("option");
 
-/** Type a query and let the 200 ms debounce and the mocked promise settle. */
+/** Type a query and let the 300 ms debounce and the mocked promise settle. */
 async function search(drawnIds: Set<string> | null, onPick = vi.fn()) {
   const view = render(
     <SearchBox ontologyId="o1" theme="dark" onPick={onPick} drawnIds={drawnIds} />,
   );
   fireEvent.change(input(), { target: { value: "thing" } });
   await act(async () => {
-    vi.advanceTimersByTime(250);
+    vi.advanceTimersByTime(300);
   });
   return { onPick, view };
 }
@@ -122,7 +124,7 @@ describe("SearchBox as a combobox", () => {
 
     fireEvent.change(box, { target: { value: "thing" } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
 
     expect(box.getAttribute("aria-expanded")).toBe("true");
@@ -207,7 +209,7 @@ describe("SearchBox as a combobox", () => {
     searchNodes.mockResolvedValue([DRAWN]);
     fireEvent.change(input(), { target: { value: "drawn" } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
     expect(region.textContent).toBe("1 result");
 
@@ -215,7 +217,7 @@ describe("SearchBox as a combobox", () => {
     searchNodes.mockResolvedValue([]);
     fireEvent.change(input(), { target: { value: "nothing here" } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
     expect(region.textContent).toBe("No results");
     expect(input().getAttribute("aria-expanded")).toBe("false");
@@ -242,7 +244,7 @@ describe("SearchBox as a combobox", () => {
     render(<SearchBox ontologyId="o1" theme="dark" onPick={vi.fn()} />);
     fireEvent.change(input(), { target: { value: "thing" } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
     expect(options()).toHaveLength(25);
 
@@ -281,7 +283,7 @@ describe("SearchBox imports (external-access Stage 2)", () => {
     render(<SearchBox ontologyId="o1" theme="dark" onPick={vi.fn()} imports />);
     fireEvent.change(input(), { target: { value: "thing" } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
     expect(searchNodes).toHaveBeenCalledWith(
       "o1",
@@ -290,6 +292,7 @@ describe("SearchBox imports (external-access Stage 2)", () => {
       undefined,
       expect.any(AbortSignal),
       26,
+      undefined,
     );
     const rows = options();
     expect(rows.find((r) => r.textContent?.includes("Hidden Thing"))!.textContent).toContain(
@@ -314,11 +317,11 @@ describe("SearchBox, answers out of order", () => {
 
     fireEvent.change(input(), { target: { value: "pla" } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
     fireEvent.change(input(), { target: { value: "planet" } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
     await act(async () => {
       answerFirst([OLD]);
@@ -363,37 +366,22 @@ describe("SearchBox limits in words (explore-and-query-layout 5.7, U-4, AC-9)", 
   const typed = async (value: string) => {
     fireEvent.change(input(), { target: { value } });
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
   };
-  const HINT = "Type at least 2 letters to search.";
   const MORE = "More than 25 match. Type more of the name to narrow the list.";
-
-  it("one character shows the hint, tied to the field; none at 0 or at 2", async () => {
+  it("searches one character and clears candidates for an empty field", async () => {
     render(<SearchBox ontologyId="o1" theme="dark" onPick={vi.fn()} />);
-    expect(screen.queryByText(HINT)).toBeNull();
-    expect(input().getAttribute("aria-describedby")).toBeNull();
-    await typed("p");
-    const hint = screen.getByText(HINT);
-    expect(input().getAttribute("aria-describedby")).toBe(hint.id);
-    expect(searchNodes).not.toHaveBeenCalled();
-    await typed("pl");
-    expect(screen.queryByText(HINT)).toBeNull();
-    expect(input().getAttribute("aria-describedby")).toBeNull();
-    await typed("");
-    expect(screen.queryByText(HINT)).toBeNull();
+    await typed("p"); expect(options()).toHaveLength(2);
+    await typed(""); expect(screen.queryByRole("option")).toBeNull();
+    expect(searchNodes).toHaveBeenCalledTimes(1);
   });
-
-  it("the hint goes on an outside click and on Escape, like the list", async () => {
+  it("dismisses one-character results with outside click or Escape", async () => {
     render(<SearchBox ontologyId="o1" theme="dark" onPick={vi.fn()} />);
-    await typed("p");
-    expect(screen.getByText(HINT)).toBeTruthy();
-    fireEvent.mouseDown(document.body);
-    expect(screen.queryByText(HINT)).toBeNull();
-    await typed("q");
-    expect(screen.getByText(HINT)).toBeTruthy();
-    fireEvent.keyDown(input(), { key: "Escape" });
-    expect(screen.queryByText(HINT)).toBeNull();
+    await typed("p"); expect(options()).toHaveLength(2);
+    fireEvent.mouseDown(document.body); expect(screen.queryByRole("option")).toBeNull();
+    await typed("q"); expect(options()).toHaveLength(2);
+    fireEvent.keyDown(input(), { key: "Escape" }); expect(screen.queryByRole("option")).toBeNull();
     expect(input().value).toBe("q");
   });
 
@@ -420,4 +408,51 @@ describe("SearchBox limits in words (explore-and-query-layout 5.7, U-4, AC-9)", 
     expect(screen.queryByText(MORE)).toBeNull();
     expect(screen.getByRole("status").textContent).toBe("25 results");
   });
+});
+
+it("does not search or select during IME composition and shows the match reason", async () => {
+  searchNodes.mockResolvedValue([{ ...DRAWN, match: { reason: "reading", value: "いぬ", truncated: false } }]);
+  const onPick = vi.fn();
+  render(<SearchBox ontologyId="one" theme="light" onPick={onPick} />);
+  fireEvent.compositionStart(input()); fireEvent.change(input(), { target: { value: "犬" } });
+  await act(async () => { vi.advanceTimersByTime(1000); }); expect(searchNodes).not.toHaveBeenCalled();
+  fireEvent.compositionEnd(input()); await act(async () => { vi.advanceTimersByTime(300); });
+  expect(screen.getByText("Reading: いぬ")).toBeTruthy();
+  fireEvent.keyDown(input(), { key: "ArrowDown" });
+  fireEvent.keyDown(input(), { key: "Enter", isComposing: true }); expect(onPick).not.toHaveBeenCalled();
+  fireEvent.keyDown(input(), { key: "Enter" }); expect(onPick).toHaveBeenCalledWith(DRAWN.id);
+});
+it("does not reopen a dismissed popup when a delayed response arrives", async () => {
+  let reply!: (value: VizNode[]) => void;
+  searchNodes.mockImplementation(() => new Promise<VizNode[]>(r => { reply = r; }));
+  render(<SearchBox ontologyId="one" theme="light" onPick={vi.fn()} />);
+  fireEvent.change(input(), { target: { value: "犬" } });
+  await act(async () => { vi.advanceTimersByTime(300); });
+  fireEvent.keyDown(input(), { key: "Escape" });
+  await act(async () => { reply([DRAWN]); }); expect(input().getAttribute("aria-expanded")).toBe("false");
+});
+it("passes the current query to the all-results door without changing a query step", async () => {
+  searchNodes.mockResolvedValue(MANY.slice(0, 26)); const all = vi.fn(); const pick = vi.fn();
+  render(<SearchBox ontologyId="o1" theme="dark" onPick={pick} onShowAll={all} />);
+  fireEvent.change(input(), { target: { value: " 犬 " } });
+  await act(async () => { vi.advanceTimersByTime(300); });
+  fireEvent.click(screen.getByRole("button", { name: "See all in Entities" }));
+  expect(all).toHaveBeenCalledWith("犬"); expect(pick).not.toHaveBeenCalled();
+});
+
+it("translates result kinds on UI language changes while preserving the entity label and search result", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  searchNodes.mockResolvedValue([{ ...DRAWN, label: "<b>犬</b>" }]);
+  const onPick = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><SearchBox ontologyId="o1" theme="dark" onPick={onPick} /></I18nProvider>);
+  fireEvent.change(screen.getByRole("combobox", { name: "辞書の項目を検索…" }), { target: { value: "犬" } });
+  await act(async () => { vi.advanceTimersByTime(300); });
+  expect(screen.getByText("クラス")).toBeTruthy();
+  expect(screen.getByText("<b>犬</b>")).toBeTruthy();
+  expect(document.querySelector(".result-label b")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText("Class")).toBeTruthy();
+  expect(screen.getByText("<b>犬</b>")).toBeTruthy();
+  expect(searchNodes).toHaveBeenCalledTimes(1);
+  expect(onPick).not.toHaveBeenCalled();
 });

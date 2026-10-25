@@ -77,6 +77,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
+import { renderServerMessage } from "../i18n/serverMessage";
+import type { WireMessage } from "../i18n/server-contracts";
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
@@ -89,8 +93,6 @@ import {
 } from "../api";
 import type { CatalogueEntry } from "../catalogue";
 import {
-  STOPPED,
-  TOO_LATE,
   newLoadId,
   stepAnnouncement,
   stepSentence,
@@ -150,6 +152,7 @@ interface LoadRun {
 /** What went wrong, and for a file no parser read, the parsers' own text. */
 interface LoadError {
   message: string;
+  uiMessage?: WireMessage;
   technical: string | null;
 }
 
@@ -158,11 +161,12 @@ interface LoadError {
 function loadError(e: unknown): LoadError {
   const message = e instanceof Error ? e.message : String(e);
   const detail = e instanceof ApiError ? e.detail : null;
+  const uiMessage = e instanceof ApiError ? e.uiMessage : undefined;
   if (detail && typeof detail === "object") {
     const { code, technical } = detail as { code?: unknown; technical?: unknown };
-    if (code === "parse_error" && typeof technical === "string" && technical) return { message, technical };
+    if (code === "parse_error" && typeof technical === "string" && technical) return { message, technical, uiMessage };
   }
-  return { message, technical: null };
+  return { message, technical: null, uiMessage };
 }
 
 export default function LoadDialog({
@@ -177,6 +181,7 @@ export default function LoadDialog({
   onExamplesRestored,
   onLibraryChanged,
 }: Props) {
+  const { t: ui } = useI18n();
   const [tab, setTab] = useState<LoadTab>(initialTab === "data" && !project ? "suggested" : initialTab);
   const [wizard, setWizard] = useState<WizardStart | null>(startImport && project ? { kind: "new" } : null);
   // The wizard closed: the Data section takes focus back (X4).
@@ -215,7 +220,7 @@ export default function LoadDialog({
   const [run, setRun] = useState<LoadRun | null>(null);
   const [now, setNow] = useState(() => Date.now());
   // What a Cancel ended with, standing where the load started.
-  const [ended, setEnded] = useState<{ origin: LoadOrigin; text: string } | null>(null);
+  const [ended, setEnded] = useState<{ origin: LoadOrigin; message: UiMessage } | null>(null);
   const busy = run !== null || restoring;
 
   // The seconds tick while a load runs; only the visible sentence reads them.
@@ -262,7 +267,7 @@ export default function LoadDialog({
           // only when the words, the bar's whole percent or the step change
           // (PR #65 review).
           const shown = (s: number, t: number) =>
-            `${stepSentence({ kind: "sending", name, sent: s, total: t })}|${t > 0 ? Math.round((s / t) * 100) : 0}`;
+            `${stepSentence({ kind: "sending", name, sent: s, total: t }, ui)}|${t > 0 ? Math.round((s / t) * 100) : 0}`;
           const before = shown(fresh.sent, fresh.total);
           const wasSending = fresh.sending;
           Object.assign(fresh, { sent, total, sending: sent < total });
@@ -308,14 +313,14 @@ export default function LoadDialog({
     current.controller.abort();
     setRun(null);
     if (!closing) focusOrigin(current.origin);
-    const show = (text: string) => {
-      if (!closing && mounted.current && !runRef.current) setEnded({ origin: current.origin, text });
+    const show = (message: UiMessage) => {
+      if (!closing && mounted.current && !runRef.current) setEnded({ origin: current.origin, message });
     };
     cancelLoad(current.id).then(
       ({ stopped }) => {
         const inTime = stopped || current.sending;
         if (!inTime) onLibraryChanged?.();
-        show(inTime ? STOPPED : TOO_LATE);
+        show(makeUiMessage(inTime ? "load.stopped" : "load.tooLate"));
       },
       (e: unknown) => {
         // Not knowing is said as such; the library is read again either way.
@@ -363,12 +368,12 @@ export default function LoadDialog({
         step.kind === "sending" ? (step.total > 0 ? Math.min(100, Math.round((step.sent / step.total) * 100)) : 0) : null;
       return (
         <div className="load-status">
-          <p className="load-step">{stepSentence(step)}</p>
+          <p className="load-step">{stepSentence(step, ui)}</p>
           {share !== null ? (
             <div
               className="load-bar"
               role="progressbar"
-              aria-label="Sending the file"
+              aria-label={ui("load.dialog.sendingFile")}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={share}
@@ -376,32 +381,30 @@ export default function LoadDialog({
               <div className="load-bar-fill" style={{ width: `${share}%` }} />
             </div>
           ) : (
-            <div className="load-bar moving" role="progressbar" aria-label={step.kind === "downloading" ? "Downloading and reading" : "Reading the file"}>
+            <div className="load-bar moving" role="progressbar" aria-label={step.kind === "downloading" ? ui("load.dialog.downloading") : ui("load.dialog.readingFile")}>
               <div className="load-bar-fill" />
             </div>
           )}
-          <button type="button" onClick={() => cancelRun(false)}>
-            Cancel
-          </button>
+          <button type="button" onClick={() => cancelRun(false)}>{ui("common.cancel")}</button>
         </div>
       );
     }
     if (ended && !run && sameOrigin(ended.origin, origin)) {
       return (
         <div className="load-status">
-          <p className="load-step">{ended.text}</p>
+          <p className="load-step">{renderUiMessage(ended.message, ui)}</p>
         </div>
       );
     }
     return null;
   };
-  const announcement = step ? stepAnnouncement(step) : (ended?.text ?? "");
+  const announcement = step ? stepAnnouncement(step, ui) : (ended ? renderUiMessage(ended.message, ui) : "");
   const suggestedOrigin =
     run?.origin.tab === "suggested" ? run.origin : ended?.origin.tab === "suggested" ? ended.origin : null;
   // The Suggested tab, where focus goes once the examples are back: the
   // button that was pressed goes with them, and focus would fall to the page.
   const suggestedTab = useRef<HTMLButtonElement>(null);
-  const [restoredNote, setRestoredNote] = useState("");
+  const [restoredNames, setRestoredNames] = useState<string[] | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -444,7 +447,7 @@ export default function LoadDialog({
         .filter((o) => result.restored.includes(o.id))
         .map((o) => o.name);
       onExamplesRestored(result);
-      setRestoredNote(names.length ? `Added back: ${names.join(", ")}.` : "The examples are all in your library.");
+      setRestoredNames(names);
       suggestedTab.current?.focus();
     } catch (e: unknown) {
       setError(loadError(e));
@@ -482,7 +485,7 @@ export default function LoadDialog({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const title = tab === "data" && project ? `Data for ${project.name}` : "Load ontology";
+  const title = tab === "data" && project ? ui("load.dialog.dataTitle", { name: project.name }) : ui("load.dialog.title");
 
   return (
     // A click outside does not drop a wizard half way: Cancel does, and asks.
@@ -500,7 +503,7 @@ export default function LoadDialog({
           <h2 id="load-dialog-title" ref={headingRef} tabIndex={-1}>
             {title}
           </h2>
-          <button className="icon-btn" onClick={() => guard(close)} title="Close" aria-label="Close">
+          <button className="icon-btn" onClick={() => guard(close)} title={ui("load.dialog.close")} aria-label={ui("load.dialog.close")}>
             ✕
           </button>
         </div>
@@ -510,25 +513,17 @@ export default function LoadDialog({
             ref={suggestedTab}
             className={tab === "suggested" ? "tab active" : "tab"}
             onClick={() => switchTab("suggested")}
-          >
-            Suggested
-          </button>
-          <button className={tab === "file" ? "tab active" : "tab"} onClick={() => switchTab("file")}>
-            Local file
-          </button>
-          <button className={tab === "url" ? "tab active" : "tab"} onClick={() => switchTab("url")}>
-            URL / GitHub
-          </button>
+          >{ui("load.dialog.suggested")}</button>
+          <button className={tab === "file" ? "tab active" : "tab"} onClick={() => switchTab("file")}>{ui("load.dialog.file")}</button>
+          <button className={tab === "url" ? "tab active" : "tab"} onClick={() => switchTab("url")}>{ui("load.dialog.url")}</button>
           {project && (
-            <button className={tab === "data" ? "tab active" : "tab"} onClick={() => switchTab("data")}>
-              Data for this project
-            </button>
+            <button className={tab === "data" ? "tab active" : "tab"} onClick={() => switchTab("data")}>{ui("load.dialog.data")}</button>
           )}
         </div>
 
         {leaving && (
-          <div className="wizard-actions wizard-leave" role="group" aria-label="Leave the wizard?">
-            <span>Leave without importing? The mapping chosen so far is lost.</span>
+          <div className="wizard-actions wizard-leave" role="group" aria-label={ui("load.dialog.leaveQuestion")}>
+            <span>{ui("load.dialog.leaveHelp")}</span>
             <button
               type="button"
               onClick={() => {
@@ -537,12 +532,8 @@ export default function LoadDialog({
                 setWizardDirty(false);
                 action();
               }}
-            >
-              Leave
-            </button>
-            <button type="button" className="primary" autoFocus onClick={() => setLeaving(null)}>
-              Keep going
-            </button>
+            >{ui("load.dialog.leave")}</button>
+            <button type="button" className="primary" autoFocus onClick={() => setLeaving(null)}>{ui("load.dialog.continue")}</button>
           </div>
         )}
 
@@ -584,19 +575,15 @@ export default function LoadDialog({
                 {/* aria-disabled, never disabled, while it works: a disabled
                     button drops focus, and a failure would leave it on the
                     page (load-and-shapes 5.6). */}
-                <button type="button" aria-disabled={busy} onClick={() => !busy && void addExamplesBack()}>
-                  Add the examples back
-                </button>
+                <button type="button" aria-disabled={busy} onClick={() => !busy && void addExamplesBack()}>{ui("load.dialog.restore")}</button>
               </div>
             )}
             {/* Rendered whether or not it has anything to say: a live region
                 added with its text is unreliably announced. */}
             <p className="hint examples-restored" role="status">
-              {restoredNote}
+              {restoredNames === null ? "" : restoredNames.length ? ui("load.dialog.restored", { names: restoredNames.join(ui("common.listSeparator")) }) : ui("load.dialog.allRestored")}
             </p>
-            <p className="hint">
-              Well-known public ontologies — nothing is downloaded until you pick one.
-            </p>
+            <p className="hint">{ui("load.dialog.suggestedHelp")}</p>
             {/* CatalogueList, a component of its own since Home and this tab
                 both showed it; this tab is its one caller now. */}
             <CatalogueList
@@ -648,7 +635,7 @@ export default function LoadDialog({
                 e.target.value = "";
               }}
             />
-            <p>Drop an ontology file here, or click to browse.</p>
+            <p>{ui("load.dialog.drop")}</p>
             <p className="hint">Turtle, RDF/XML, OWL, N-Triples, N3, JSON-LD, TriG, N-Quads</p>
           </div>
         )}
@@ -659,8 +646,8 @@ export default function LoadDialog({
             <input
               ref={urlInput}
               type="text"
-              aria-label="Address of an RDF file"
-              placeholder="https://github.com/owner/repo/blob/main/ontology.ttl or any raw RDF URL"
+              aria-label={ui("load.dialog.address")}
+              placeholder={ui("load.dialog.addressHint")}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void submitUrl()}
@@ -668,19 +655,10 @@ export default function LoadDialog({
             />
             {/* aria-disabled, never disabled: the button pressed keeps focus,
                 and Cancel is the next stop after it (load-progress 5.3). */}
-            <button className="primary" onClick={() => void submitUrl()} aria-disabled={busy || !url.trim()}>
-              Fetch
-            </button>
+            <button className="primary" onClick={() => void submitUrl()} aria-disabled={busy || !url.trim()}>{ui("load.dialog.fetch")}</button>
             {statusAt({ tab: "url" })}
-            <p className="hint">
-              Any directly reachable RDF URL works, including public <strong>github.com</strong>{" "}
-              repositories — “blob” links are converted to raw file URLs automatically.
-            </p>
-            <p className="hint">
-              <strong>GitHub Enterprise is not currently supported.</strong> To view an ontology
-              hosted on a GitHub Enterprise instance, download the file to your computer and load
-              it via the “Local file” tab.
-            </p>
+            <p className="hint">{ui("load.dialog.githubHelp")}</p>
+            <p className="hint"><strong>{ui("load.dialog.enterpriseHelp")}</strong></p>
           </div>
         )}
 
@@ -692,14 +670,15 @@ export default function LoadDialog({
         </p>
         {error && (
           <div className="load-error">
-            <p className="detail-error">{error.message}</p>
+            <p className="detail-error">{renderServerMessage(error.uiMessage, error.message, ui)}</p>
             {/* Closed by default; the parsers' text is text, never markup. */}
-            {error.technical && (
+            {error.technical ? (
               <details className="technical-details">
-                <summary>Technical details</summary>
+                <summary>{ui("common.details")}</summary>
                 <pre>{error.technical}</pre>
+                <p className="load-error-original">{error.message}</p>
               </details>
-            )}
+            ) : error.uiMessage ? <details><summary>{ui("common.original")}</summary><p className="load-error-original">{error.message}</p></details> : <div><p className="detail-note">{ui("common.original")}</p><p className="load-error-original">{error.message}</p></div>}
           </div>
         )}
       </div>

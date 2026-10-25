@@ -8,7 +8,8 @@
 #     Specified by ci-and-housekeeping (backlog X-8).
 #
 # BASIC IDEA
-#     Four blocking jobs and one informational one. The backend runs twice:
+#     Publication checks plus four build/test jobs and one informational one.
+#     Publication also checks the committed message contract types. The backend runs twice:
 #     on Linux with Python 3.12, which is what the Docker image ships, and on
 #     Windows with Python 3.14, which is what the application is developed on.
 #     A pass on one says little about the other -- path separators, line
@@ -51,6 +52,23 @@ permissions:
   contents: read
 
 jobs:
+  publication:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s scripts -p 'test_check_publication.py'
+      - run: python -m unittest discover -s scripts -p 'test_distribution_notices.py'
+      - run: python scripts/generate_message_contracts.py --check
+      - name: Check selected Git blobs
+        env:
+          SCAN_REF: ${{ github.sha }}
+        run: python scripts/check_publication.py --git-ref "$SCAN_REF"
+
   backend-linux:
     runs-on: ubuntu-latest
     defaults:
@@ -105,6 +123,7 @@ jobs:
         run: echo "SEMANTIC_STUDIO_DATA_DIR=${{ runner.temp }}/semantic-studio-data" >> "$GITHUB_ENV"
       - run: npm ci --no-fund --no-audit
       # Everything but the tests titled [budget]; see test:ci in package.json.
+      - run: node build/distributionNotices.check.mjs
       - run: npm run test:ci
       # `npm run build` is these two steps; split so a failure names which.
       - run: npx tsc -b

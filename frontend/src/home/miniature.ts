@@ -46,6 +46,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { englishTranslator } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import type { CardSketch } from "../types";
 import { kindLabel } from "../types";
 
@@ -288,6 +290,7 @@ export interface CompositionSegment {
  */
 export function compositionSegments(
   counts: Record<string, number> | null | undefined,
+  t: Translator = englishTranslator,
 ): CompositionSegment[] {
   if (!counts) return [];
   const present = Object.entries(counts).filter(([, count]) => count > 0);
@@ -298,7 +301,7 @@ export function compositionSegments(
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
     .map(([kind, count]) => ({
       kind,
-      label: kindLabel(kind),
+      label: kindLabel(kind, t),
       count,
       percent: (count / total) * 100,
     }));

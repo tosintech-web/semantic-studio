@@ -4,12 +4,17 @@ FILE: backend/app/snapshots.py
 ================================================================================
 
 SUMMARY
+    Optional snapshot-list name projections never rewrite import metadata.
+    Preview label projections preserve the original mapping suggestions and RDF.
     Data snapshots in a project (csv-data-import 5.3 to 5.7, D-096): what the
     wizard's steps 2 to 4 offer and preview, the import itself, and each
     snapshot's folder -- refresh, switch, change the mapping, edit it as RML,
     remove. Also the snapshot graphs the project's views join.
 
 BASIC IDEA
+    Owned refusals add validated display facts at their source. Legacy text,
+    exception types and input-processing rules remain unchanged.
+
     A snapshot is a folder data/<sid>/ in the project: source.csv (the data
     imported), mapping.rml.ttl (standard RML), data.ttl (the statements it
     produced, so a project opens without running anything) and
@@ -32,7 +37,11 @@ BASIC IDEA
     layout (D-087). Its own counter, the generation, moves on every change,
     and the views are cached on it beside the revision (imports.py).
     Switched off, a snapshot stays on disk and leaves every view and
-    validation.
+    validation. Cold reopening reads each snapshot into rdflib's plain
+    SimpleMemory graph; snapshot graphs have no named contexts. Plain and
+    language-tagged strings skip identity normalization, while typed literals
+    retain rdflib's conversion and validation, and hand-edited Turtle retains
+    its general-parser fallback.
 
     A workbook (5.8) takes the same path: its sheet is written as the CSV
     copy, UTF-8 with a comma, and the original is kept beside it as
@@ -72,6 +81,7 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
+from .messages import make_message
 import json
 import re
 import shutil
@@ -87,6 +97,7 @@ from rdflib.namespace import RDF, RDFS, SKOS, XSD
 
 from . import lexical, rml, tabular
 from .examples import is_class
+from .graph_builder import pick_label_in
 from .projects import ProjectStore, _replace
 from .shapes_form import paths_for
 
@@ -111,8 +122,43 @@ NAME_MAX = 120
 Names = Callable[[URIRef], str]
 
 
+_REFRESH_MAPPING_CODES = {
+    'rml.template_open': 'snapshots.refresh.template_open',
+    'rml.template_close': 'snapshots.refresh.template_close',
+    'rml.field_multiple': 'snapshots.refresh.field_multiple',
+    'rml.field_missing': 'snapshots.refresh.field_missing',
+    'rml.source': 'snapshots.refresh.source',
+    'rml.syntax': 'snapshots.refresh.syntax',
+    'rml.unsupported': 'snapshots.refresh.unsupported',
+    'rml.map_count': 'snapshots.refresh.map_count',
+    'rml.formulation': 'snapshots.refresh.formulation',
+    'rml.delimiter': 'snapshots.refresh.delimiter',
+    'rml.encoding': 'snapshots.refresh.encoding',
+    'rml.header': 'snapshots.refresh.header',
+    'rml.predicate_object': 'snapshots.refresh.predicate_object',
+    'rml.predicate_iri': 'snapshots.refresh.predicate_iri',
+    'rml.pair_limit': 'snapshots.refresh.pair_limit',
+    'rml.class_limit': 'snapshots.refresh.class_limit',
+    'rml.object_source': 'snapshots.refresh.object_source',
+    'rml.language_datatype': 'snapshots.refresh.language_datatype',
+    'rml.columns_missing': 'snapshots.refresh.columns_missing',
+    'rml.subject_iri': 'snapshots.refresh.subject_iri',
+}
+
+
+def _refresh_mapping_message(error: rml.UnsupportedMapping) -> dict:
+    wire = error.ui_message
+    if wire and wire["code"] in _REFRESH_MAPPING_CODES:
+        return make_message(_REFRESH_MAPPING_CODES[wire["code"]], **wire["args"])
+    return make_message("snapshots.refresh_mapping_refused")
+
+
 class SnapshotError(ValueError):
     """A request that cannot be carried out, with the sentence saying why."""
+
+    def __init__(self, message: str, *, ui_message: dict | None = None):
+        super().__init__(message)
+        self.ui_message = ui_message
 
 
 class UnknownSnapshot(LookupError):
@@ -180,6 +226,7 @@ def summary(meta: dict, known: Optional[set] = None) -> dict:
         "enabled": meta.get("enabled", True),
         "className": meta.get("className"),
         "classIri": meta.get("classIri"),
+        **({"classNameUiMessage": make_message("words.kind.concept")} if meta.get("classIri") == str(SKOS.Concept) else {}),
         "statements": meta.get("statements", 0),
         "individuals": report.get("individuals", 0),
         "report": report,
@@ -327,20 +374,32 @@ def plan(
     pattern, which is what the wizard gives every snapshot -- so either
     file may be imported first."""
     if not isinstance(choices, dict):
-        raise SnapshotError("The mapping choices are an object.")
+        raise SnapshotError(
+            'The mapping choices are an object.',
+            ui_message=make_message('snapshots.choices_object'),
+        )
     kind = manifest.get("kind") or "ontology"
     base = manifest["baseIri"]
     primary = manifest.get("primaryLanguage", "en")
     raw_class = choices.get("classIri")
     if not isinstance(raw_class, str) or not raw_class:
-        raise SnapshotError("Choose what each row is.")
+        raise SnapshotError(
+            'Choose what each row is.',
+            ui_message=make_message('snapshots.class_required'),
+        )
     cls = URIRef(raw_class)
     taxonomy = cls == SKOS.Concept
     if not taxonomy and not is_class(model, cls):
-        raise SnapshotError("Each row is one of the model's classes; choose one.")
+        raise SnapshotError(
+            "Each row is one of the model's classes; choose one.",
+            ui_message=make_message('snapshots.model_class'),
+        )
     id_column = choices.get("idColumn")
     if id_column is not None and id_column not in table.columns:
-        raise SnapshotError(f"There is no column {id_column} in this file.")
+        raise SnapshotError(
+            f'There is no column {id_column} in this file.',
+            ui_message=make_message('snapshots.column_missing', name=str(id_column)),
+        )
     row_column = None
     if id_column is None:
         row_column = tabular.unique_name("row", table.columns)
@@ -351,17 +410,26 @@ def plan(
     links: list = []
     columns = choices.get("columns") or {}
     if not isinstance(columns, dict):
-        raise SnapshotError("The column choices are an object.")
+        raise SnapshotError(
+            'The column choices are an object.',
+            ui_message=make_message('snapshots.columns_object'),
+        )
     named = False
     for column, choice in columns.items():
         if column not in table.columns:
-            raise SnapshotError(f"There is no column {column} in this file.")
+            raise SnapshotError(
+                f'There is no column {column} in this file.',
+                ui_message=make_message('snapshots.column_missing', name=str(column)),
+            )
         what = (choice or {}).get("as", "ignore") if isinstance(choice, dict) else "ignore"
         if what == "ignore":
             continue
         if what == "name":
             if named:
-                raise SnapshotError("Only one column is the name.")
+                raise SnapshotError(
+                    'Only one column is the name.',
+                    ui_message=make_message('snapshots.one_name'),
+                )
             named = True
             predicate = SKOS.prefLabel if taxonomy else RDFS.label
             poms.append((predicate, rml.ObjectMap("reference", column, language=primary)))
@@ -370,7 +438,8 @@ def plan(
         field = offered.get(prop) if isinstance(prop, str) else None
         if field is None or field["kind"] != what:
             raise SnapshotError(
-                f"Column {column}: choose an attribute or relationship of the row's class."
+                f"Column {column}: choose an attribute or relationship of the row's class.",
+                ui_message=make_message('snapshots.column_property', name=str(column)),
             )
         prop_iri = URIRef(prop)
         if what == "attribute":
@@ -385,7 +454,8 @@ def plan(
             target = field.get("range")
             if not target:
                 raise SnapshotError(
-                    f"Column {column}: {field['label']} has no end class, so its ids cannot name rows."
+                    f"Column {column}: {field['label']} has no end class, so its ids cannot name rows.",
+                    ui_message=make_message('snapshots.relationship_end', name=str(column), property=str(field['label'])),
                 )
             prefix = (patterns or {}).get(str(target)) or f"{base}{DATA_DIR}/{class_slug(target)}/"
             template = rml.escape(prefix) + "{" + rml.escape(column) + "}"
@@ -574,12 +644,22 @@ class SnapshotService:
                     metas.append(self._read_meta(folder))
         return metas
 
-    def listing(self, pid: str) -> dict:
+    def listing(self, pid: str, names: Optional[Names] = None) -> dict:
         self.projects.folder(pid)
         with self._lock(pid):
             metas = self._metas(pid)
             known = _known(metas)
-            return {"generation": self.generation(pid), "snapshots": [summary(m, known) for m in metas]}
+            snapshots = [summary(m, known) for m in metas]
+            # Summaries and unmatched links are fresh read objects. Keep the
+            # original import metadata and mapping files exactly as saved.
+            if names is not None:
+                for entry in snapshots:
+                    iri = entry.get("classIri")
+                    if iri and iri != str(SKOS.Concept):
+                        entry["className"] = names(URIRef(iri))
+                    for link in entry["report"].get("unmatched", []):
+                        link["className"] = names(URIRef(link["classIri"]))
+            return {"generation": self.generation(pid), "snapshots": snapshots}
 
     def _summary(self, pid: str, meta: dict) -> dict:
         """summary() with the links counted against the project's snapshots
@@ -635,7 +715,7 @@ class SnapshotService:
 
     def preview(
         self, *, model: Graph, manifest: dict, names: Names, table: tabular.Table, choices: dict,
-        pid: Optional[str] = None,
+        pid: Optional[str] = None, display_languages: Optional[list[str]] = None,
     ) -> dict:
         """Steps 2 to 4 (5.3 to 5.5): the identifier checked, the choices for
         each column with suggestions, and -- once something is mapped -- the
@@ -653,9 +733,18 @@ class SnapshotService:
             return result
         cls = URIRef(cls_raw)
         offered = fields(model, cls, kind, names, languages)
-        result["fields"] = offered
+        # Mapping suggestions and their tie order keep the original reading.
+        # The display projection below must never select a different property.
         result["suggestions"] = suggestions(model, table, offered, tabular.suggest_name(table))
-        result["className"] = "concept" if cls == SKOS.Concept else names(cls)
+        reading_names = names if display_languages is None else lambda iri: pick_label_in(model, iri, display_languages)[0]
+        shown = offered
+        if display_languages is not None:
+            by_iri = {field["property"]: field for field in fields(model, cls, kind, reading_names, display_languages)}
+            shown = [by_iri[field["property"]] for field in offered]
+        result["fields"] = shown
+        result["className"] = "concept" if cls == SKOS.Concept else reading_names(cls)
+        if cls == SKOS.Concept:
+            result["classNameUiMessage"] = make_message("words.kind.concept")
         metas: list = []
         patterns: dict = {}
         if pid is not None:
@@ -670,13 +759,16 @@ class SnapshotService:
         mapping = rml.read_graph(made.graph)
         work = _with_row_column(table, made.row_column)
         graph, out = rml.run(mapping, work)
-        labels = {f["property"]: f["label"] for f in offered}
+        labels = {f["property"]: f["label"] for f in shown}
         result["rows"] = preview_rows(work, mapping, graph, out["subjects"], labels, made.row_column)
         # The links are counted against the snapshots there now, and this
         # file's own rows, which a link may point at (5.9).
         known = _known(metas) | set(out["subjects"])
         report = dict(out["report"])
         report["unmatched"] = _unmatched(_links(made.links, out, mapping), known)
+        if display_languages is not None:
+            for link in report["unmatched"]:
+                link["className"] = reading_names(URIRef(link["classIri"]))
         if report["unmatched"]:
             report["clean"] = False
         result["report"] = report
@@ -715,8 +807,8 @@ class SnapshotService:
     def _sample_check(table: tabular.Table, accept: bool) -> None:
         if table.sample and not accept:
             raise SnapshotError(
-                tabular.rows_sentence(table.total, bool(table.workbook))
-                + f" Choose to use the first {tabular.MAX_ROWS:,} rows, or another file."
+                tabular.rows_sentence(table.total, bool(table.workbook)) + f' Choose to use the first {tabular.MAX_ROWS:,} rows, or another file.',
+                ui_message=make_message("snapshots.sample_sheet" if table.workbook else "snapshots.sample_file", total=table.total, limit=tabular.MAX_ROWS),
             )
 
     def create(
@@ -793,7 +885,12 @@ class SnapshotService:
             # its first sheet is not a choice anyone made: the sheets go
             # back so step 1 can ask (PR #54 review).
             found = self.read(data, options, filename)
-            raise tabular.TabularError(CHOOSE_SHEET, "not-text", found.workbook)
+            raise tabular.TabularError(
+                CHOOSE_SHEET,
+                'not-text',
+                found.workbook,
+                ui_message=make_message('snapshots.choose_sheet'),
+            )
         table = self.read(data, options, filename)
         self._sample_check(table, bool(options.get("sample")))
         with self._lock(pid):
@@ -818,7 +915,10 @@ class SnapshotService:
                 try:
                     mapping = rml.read(text, base)
                 except rml.UnsupportedMapping as exc:
-                    raise SnapshotError(f"{exc} Change the mapping before refreshing.") from exc
+                    raise SnapshotError(
+                        f'{exc} Change the mapping before refreshing.',
+                        ui_message=_refresh_mapping_message(exc),
+                    ) from exc
                 row_column = meta.get("rowColumn")
                 needed = [c for c in mapping.references() if c != row_column]
                 missing = [c for c in needed if c not in table.columns]
@@ -840,8 +940,8 @@ class SnapshotService:
                 )
             except UnicodeEncodeError as exc:
                 raise SnapshotError(
-                    f"The new file holds characters {encoding} cannot store. "
-                    "Change the mapping, which writes the copy in the new file's encoding."
+                    f"The new file holds characters {encoding} cannot store. Change the mapping, which writes the copy in the new file's encoding.",
+                    ui_message=make_message('snapshots.refresh_encoding', encoding=str(encoding)),
                 ) from exc
             files[SOURCE] = source
             meta.update(
@@ -900,7 +1000,10 @@ class SnapshotService:
         that is not Turtle, reads another file, or does not fit the copy is
         refused and nothing is kept (Section 9)."""
         if not isinstance(text, str) or not text.strip():
-            raise SnapshotError("A mapping is Turtle text.")
+            raise SnapshotError(
+                'A mapping is Turtle text.',
+                ui_message=make_message('snapshots.mapping_text'),
+            )
         with self._lock(pid):
             folder = self.folder(pid, sid)
             meta = self._read_meta(folder)
@@ -909,23 +1012,34 @@ class SnapshotService:
             try:
                 probe.parse(data=text, format="turtle", publicID=base)
             except Exception as exc:  # noqa: BLE001 - rdflib raises many kinds
-                raise SnapshotError(f"This mapping is not valid Turtle: {str(exc).splitlines()[0]}") from exc
+                raise SnapshotError(
+                    f'This mapping is not valid Turtle: {str(exc).splitlines()[0]}',
+                    ui_message=make_message('snapshots.mapping_syntax'),
+                ) from exc
             # The source is checked before anything else, whatever else the
             # mapping holds: a mapping naming another file is never kept.
             for value in probe.objects(None, rml.RML.source):
                 urls = [value] if isinstance(value, Literal) else list(probe.objects(value, rml.CSVW.url))
                 if not urls:
-                    raise SnapshotError("rml:source must name this snapshot's own source.csv.")
+                    raise SnapshotError(
+                        "rml:source must name this snapshot's own source.csv.",
+                        ui_message=make_message('snapshots.source_missing'),
+                    )
                 for url in urls:
                     try:
                         rml.check_source(url)
                     except rml.UnsupportedMapping as exc:
-                        raise SnapshotError(str(exc)) from exc
+                        raise SnapshotError(
+                            str(exc),
+                            ui_message=exc.ui_message,
+                        ) from exc
             try:
                 mapping = rml.read_graph(probe)
             except rml.UnsupportedMapping as exc:
                 self._write(folder / MAPPING, text.encode("utf-8"))
                 meta["mapping"] = {"status": "outside", "message": str(exc)}
+                if exc.ui_message is not None:
+                    meta["mapping"]["uiMessage"] = exc.ui_message
                 self._write_meta(folder, meta)
                 if sid in self._loaded.get(pid, {}):
                     self._loaded[pid][sid].meta = meta
@@ -939,7 +1053,10 @@ class SnapshotService:
             try:
                 graph, out = rml.run(mapping, table)
             except rml.UnsupportedMapping as exc:
-                raise SnapshotError(str(exc)) from exc
+                raise SnapshotError(
+                    str(exc),
+                    ui_message=exc.ui_message,
+                ) from exc
             meta.update(
                 statements=len(graph),
                 report={**out["report"], "total": meta["rows"]["total"],
@@ -1000,7 +1117,10 @@ def _unescape(text: str) -> str:
 
 def read_ntriples(text: str) -> Graph:
     """N-Triples without blank nodes, as rdflib writes them, or ValueError."""
-    graph = Graph()
+    # Each snapshot is one plain graph, never an RDF dataset. The bundled
+    # SimpleMemory store keeps the same triple indexes without tracking named
+    # contexts for every cell, which dominates cold reopening of full tables.
+    graph = Graph(store="SimpleMemory")
     iris: dict[str, URIRef] = {}
 
     def iri(value: str) -> URIRef:
@@ -1021,7 +1141,14 @@ def read_ntriples(text: str) -> Graph:
             if o is not None:
                 obj = iri(o)
             else:
-                obj = Literal(_unescape(lexical), lang=lang, datatype=iri(datatype) if datatype else None)
+                # Plain and language-tagged lexical strings already are their
+                # Python value. Skip only their identity normalization; typed
+                # literals still take rdflib's full conversion/validation path.
+                obj = Literal(
+                    _unescape(lexical), lang=lang,
+                    datatype=iri(datatype) if datatype else None,
+                    normalize=None if datatype else False,
+                )
             yield iri(s), iri(p), obj, graph
 
     graph.addN(triples())

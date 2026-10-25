@@ -30,6 +30,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { Translator } from "./i18n/types";
+import { englishTranslator } from "./i18n/format";
+import { renderServerError } from "./i18n/serverMessage";
 import { ApiError } from "./api";
 
 /**
@@ -38,46 +41,36 @@ import { ApiError } from "./api";
  * server rejects with the browser's own text (*Failed to fetch*,
  * *NetworkError when attempting to fetch resource.*), which is never shown.
  */
-export function failureReason(e: unknown): string {
-  return e instanceof ApiError ? e.message : "the server did not answer.";
+export function failureReason(e: unknown, t: Translator = englishTranslator): string {
+  return e instanceof ApiError ? e.uiMessage ? renderServerError(e, t) : e.message : t("network.unreachable");
 }
 
-const PHRASES: Record<string, { always: string; purpose: string }> = {
-  "ontology:fetch": { always: "downloading ontologies", purpose: "Downloads" },
-  "ontology:import": { always: "importing ontologies", purpose: "Imports" },
-  "jsonld:context": { always: "loading JSON-LD contexts", purpose: "JSON-LD contexts" },
-  "sparql:service": { always: "running SPARQL queries", purpose: "SPARQL queries" },
-};
-
-const OUTCOMES: Record<string, string> = {
-  ok: "Downloaded",
-  "http-error": "Server error",
-  redirect: "Redirected",
-  failed: "Could not connect",
-  refused: "Refused: not a public address",
-  blocked: "Blocked by you",
-  asked: "Asked you first",
-  offline: "Offline: not sent",
-  "too-large": "Too large: stopped",
-};
+const PHRASES = {
+  "ontology:fetch": "fetch", "ontology:import": "import",
+  "jsonld:context": "context", "sparql:service": "service",
+} as const;
+const OUTCOMES = {
+  ok: "ok", "http-error": "http-error", redirect: "redirect", failed: "failed",
+  refused: "refused", blocked: "blocked", asked: "asked", offline: "offline", "too-large": "too-large",
+} as const;
 
 function lookup<T>(table: Record<string, T>, key: string): T | undefined {
   return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined;
 }
 
 /** Completes "Always, for ___ from this site". */
-export function alwaysPhrase(capability: string): string {
-  return lookup(PHRASES, capability)?.always ?? "this kind of connection";
+export function alwaysPhrase(capability: string, t: Translator = englishTranslator): string {
+  return t(`network.always.${lookup(PHRASES, capability) ?? "other"}`);
 }
 
 /** A short name for what a remembered decision covers. */
-export function purposeLabel(capability: string): string {
-  return lookup(PHRASES, capability)?.purpose ?? "Other";
+export function purposeLabel(capability: string, t: Translator = englishTranslator): string {
+  return t(`network.purpose.${lookup(PHRASES, capability) ?? "other"}`);
 }
 
 /** What happened to one logged request, in words. */
-export function outcomeLabel(outcome: string): string {
-  return lookup(OUTCOMES, outcome) ?? "Other";
+export function outcomeLabel(outcome: string, t: Translator = englishTranslator): string {
+  return t(`network.outcome.${lookup(OUTCOMES, outcome) ?? "other"}`);
 }
 
 /** True only for a request that reached the site and came back. */

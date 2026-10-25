@@ -11,6 +11,10 @@ SUMMARY
     box's own *+ attribute* both use it.
 
 BASIC IDEA
+    Keep fetched node facts in state, then derive descriptions and count in
+    the current UI locale. A locale change neither refetches nor replaces the
+    original reference identities; dictionary language still keys requests.
+
     Once the name has two characters and typing has rested SUGGEST_MS, the
     search endpoint is asked with its `kind` filter, the document only (not
     its imports), for at most five; each match's details then give its
@@ -29,7 +33,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { useEffect, useRef, useState } from "react";
+import { useI18n } from "../i18n/I18nProvider";
+import { translate } from "../i18n/format";
+import type { UiLocale } from "../i18n/types";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getNodeDetails, searchNodes } from "../api";
 import { domainWords, matchesSaid, suggestionLine, type PropertyWord } from "../modeling/sentences";
 import type { NodeDetails } from "../types";
@@ -48,21 +56,21 @@ const RANGE = "http://www.w3.org/2000/01/rdf-schema#range";
 
 /** The suggestion's words, from the property's details: its domain as the
  *  server reads it, and its type of value or the class it points to. */
-function lineOf(word: PropertyWord, details: NodeDetails): string {
+function lineOf(word: PropertyWord, details: NodeDetails, locale: UiLocale): string {
   const reading = details.domain;
   const domain =
     !reading || reading.form === "none"
       ? null
       : reading.form === "expression"
-        ? "a class written in Turtle"
-        : domainWords(reading.form === "separate" ? "separate" : "union", reading.classes.map((c) => c.label));
+        ? translate(locale, "newEntity.expressionDomain")
+        : domainWords(reading.form === "separate" ? "separate" : "union", reading.classes.map((c) => c.label), locale);
   const range = details.outgoing.find((r) => r.predicate.value === RANGE && r.object.type === "uri")?.object;
   const end = range
     ? word === "attribute"
       ? (range.prefixed ?? range.value)
       : (range.label ?? range.prefixed ?? range.value)
     : null;
-  return suggestionLine(word, details.label, domain, end);
+  return suggestionLine(word, details.label, domain, end, locale);
 }
 
 export function useSuggestions(
@@ -70,8 +78,9 @@ export function useSuggestions(
   kind: "datatypeProperty" | "objectProperty",
   name: string,
 ): { suggestions: Suggestion[]; said: string } {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [said, setSaid] = useState("");
+  const { locale } = useI18n();
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
+  const [matches, setMatches] = useState<NodeDetails[]>([]);
   const asked = useRef(0);
   const word: PropertyWord = kind === "objectProperty" ? "relationship" : "attribute";
 
@@ -79,26 +88,22 @@ export function useSuggestions(
     const q = name.trim();
     const ask = ++asked.current;
     if (!ontologyId || q.length < 2) {
-      setSuggestions([]);
-      setSaid("");
+      setMatches([]);
       return;
     }
     // A search a newer one replaces is aborted, its details with it (CF-4).
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
-        const found = await searchNodes(ontologyId, q, false, kind, controller.signal, SUGGESTED);
+        const found = await searchNodes(ontologyId, q, false, kind, controller.signal, SUGGESTED, dictionaryLanguage);
         const details = await Promise.all(
-          found.slice(0, SUGGESTED).map((n) => getNodeDetails(ontologyId, n.id, false, controller.signal)),
+          found.slice(0, SUGGESTED).map((n) => getNodeDetails(ontologyId, n.id, false, controller.signal, dictionaryLanguage)),
         );
         if (ask !== asked.current) return;
-        const next = details.map((d) => ({ iri: d.iri, label: d.label, line: lineOf(word, d) }));
-        setSuggestions(next);
-        setSaid(next.length ? matchesSaid(next.length, word) : "");
+        setMatches(details);
       } catch {
         if (ask === asked.current) {
-          setSuggestions([]);
-          setSaid("");
+          setMatches([]);
         }
       }
     }, SUGGEST_MS);
@@ -106,7 +111,10 @@ export function useSuggestions(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [name, ontologyId, kind, word]);
+  }, [name, ontologyId, kind, word, dictionaryLanguage]);
 
-  return { suggestions, said };
+  return useMemo(() => ({
+    suggestions: matches.map(d => ({ iri: d.iri, label: d.label, line: lineOf(word, d, locale) })),
+    said: matches.length ? matchesSaid(matches.length, word, locale) : "",
+  }), [matches, word, locale]);
 }

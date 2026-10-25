@@ -12,6 +12,12 @@ SUMMARY
     budgets of Section 10.
 
 BASIC IDEA
+    Generated count, type, range and language violations add separate display
+    facts through the actual API; legacy sentences and authored messages stay
+    unchanged. Broken-shape errors retain the engine text and display facts.
+    The timeout case releases and joins its own abandoned worker at teardown,
+    so its later rendering cannot pollute another test's metadata counters.
+
     Through the HTTP API, as the frontend drives it. Shapes are made by the
     shape commands where the form can make them and written in Turtle where
     the row is about Turtle (S13 to S15); the example individuals are inline
@@ -31,6 +37,7 @@ EXPECTED OUTPUT
 from __future__ import annotations
 
 import gc
+import threading
 import time
 
 import pytest
@@ -164,6 +171,8 @@ def test_s1_a_required_name_reports_who_has_none_and_links_to_them(pid):
     assert [b["sentence"] for b in bob] == ["Bob has no name; every Person must have at least 1."]
     # The link: the focus IRI the interface selects, and the name it shows.
     assert bob[0]["focusLabel"] == "Bob"
+    assert bob[0]["uiMessage"] == {"code": "validation.violation.min_count.attribute", "args": {
+        "focus": [{"text": "Bob"}], "path": [{"text": "name"}], "have": 0, "limit": 1}}
     # Five people (an Employee included), three with no name: Bob, Dave and Erin has one.
     assert p["focusCount"] == 5
     assert p["failingCount"] == 2
@@ -184,6 +193,9 @@ def test_s3_a_value_of_the_wrong_type_names_the_value_and_the_type(pid):
     assert p["state"] == "fails"
     assert sentences(p) == ['Erin\'s birth date "yesterday" is not a date.']
     assert p["problems"][0]["value"] == '"yesterday"'
+    assert p["problems"][0]["uiMessage"] == {"code": "validation.violation.datatype", "args": {
+        "focus": [{"text": "Erin"}], "path": [{"text": "birth date"}],
+        "value": [{"text": '"yesterday"'}], "datatype": "xsd:date"}}
 
 
 def test_s4_points_to_fails_for_a_person_and_passes_for_a_subclass_instance(pid):
@@ -225,6 +237,9 @@ def test_s7_number_and_date_ranges_name_the_limit(pid):
     p = panel(validate(pid), sid)
     assert "Erin's age 212 is above the maximum of 150." in sentences(p)
     assert "Alice's birth date \"1990-04-01\" is below the minimum of 2000-01-01." in sentences(p)
+    age = next(problem for problem in p["problems"] if problem["focus"] == EX + "erin" and problem["group"] == "age")
+    assert age["uiMessage"]["code"] == "validation.violation.max_inclusive"
+    assert age["uiMessage"]["args"]["bound"] == [{"text": "150"}]
 
 
 def test_s8_allowed_values_list_what_is_allowed(pid):
@@ -252,6 +267,10 @@ def test_s9_languages_outside_the_project_and_two_names_in_one(pid):
         'Frank has 2 names (label) in English; one per language is allowed.',
         'Frank\'s name (label) "Franz"@de is in German, which is not one of the project\'s languages.',
     ]
+
+    language = next(problem for problem in p["problems"] if problem["uiMessage"]["code"] == "validation.violation.language.project.tagged")
+    assert language["uiMessage"]["args"]["language"] == [{"code": "words.language.de", "args": {}}, {"text": " (de)"}]
+    assert language["groupUiMessage"] == {"code": "validation.term", "args": {"term": [{"code": "words.path.nameLabel", "args": {}}]}}
 
 
 # --- S10 to S12: model checks, taxonomies and nothing to check -------------------------
@@ -307,7 +326,9 @@ def test_a_passing_shape_says_how_many_it_checked(pid):
 def test_the_shapes_own_message_replaces_the_sentence(pid):
     sid = shape(pid, EX + "Person", {"path": [EX + "name"], "maxCount": 1})
     cmd(pid, "SetShapeMessage", shape=sid, value="One name per person, please.")
-    assert sentences(panel(validate(pid), sid)) == ["One name per person, please."]
+    checked = panel(validate(pid), sid)
+    assert sentences(checked) == ["One name per person, please."]
+    assert all("uiMessage" not in problem for problem in checked["problems"])
 
 
 def test_panels_sort_failing_first(pid):
@@ -345,6 +366,7 @@ shop:Good a sh:NodeShape ; rdfs:label "Good rules"@en ; sh:targetClass shop:Pers
     broken = panel(result, EX + "Broken")
     assert broken["state"] == "error"
     assert "minCount" in broken["error"]
+    assert broken["errorUiMessage"] == {"code": "validation.shapes_refused", "args": {}}
     good = panel(result, EX + "Good")
     assert good["state"] == "fails"
     assert sentences(good) == ["Carol has 2 names; every Person may have at most 1."]
@@ -473,19 +495,32 @@ def test_validate_refuses_a_dataset_as_data():
 
 def test_a_check_past_the_limit_is_stopped_with_its_size(pid, monkeypatch):
     real = shacl.pyshacl.validate
+    release = threading.Event()
+    workers = []
 
     def slow(*args, **kwargs):
-        time.sleep(0.6)
+        workers.append(threading.current_thread())
+        assert release.wait(10), "the test must release its validation worker"
         return real(*args, **kwargs)
 
     monkeypatch.setattr(shacl.pyshacl, "validate", slow)
     monkeypatch.setattr(shacl, "VALIDATE_TIMEOUT_SECONDS", 0.1)
     shape(pid, EX + "Person", {"path": [EX + "name"], "minCount": 1})
-    result = validate(pid)
-    assert result["stopped"] is True
-    assert result["shapes"] == []
-    assert result["shapeCount"] == 1
-    assert result["statements"] == len(editing_service.document(pid, "model").graph)
+    try:
+        result = validate(pid)
+        assert len(workers) == 1 and workers[0].is_alive()
+        assert result["stopped"] is True
+        assert result["shapes"] == []
+        assert result["shapeCount"] == 1
+        assert result["statements"] == len(editing_service.document(pid, "model").graph)
+    finally:
+        # The API deliberately abandons timed-out work. The test must still
+        # finish its own worker before restoring patches or counting another
+        # validation's metadata; a fixed sleep leaks work on faster suites.
+        release.set()
+        for worker in workers:
+            worker.join(timeout=10)
+        assert all(not worker.is_alive() for worker in workers)
 
 
 def test_a_shape_on_an_imported_class_finds_its_instances(pid):

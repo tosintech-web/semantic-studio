@@ -26,7 +26,8 @@ SUMMARY
     posts the cancel and says each of its two endings, focus going back to
     the starting control; the ✕, Escape and a click outside cancel and
     close, and nothing opens afterwards; the live region speaks the steps,
-    never the seconds.
+    never the seconds. Parser explanations re-render in the current UI language
+    without another upload or replacing their original technical details.
 
 BASIC IDEA
     api.ts is mocked; a load is held by its mock until the test answers it,
@@ -42,7 +43,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { Profiler, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -114,7 +118,8 @@ describe("a failed load (load-and-shapes 5.1, AC-2)", () => {
     await failWith(
       new ApiError(SENTENCE, 422, { code: "parse_error", message: SENTENCE, line: 3, format: "Turtle", technical: TECHNICAL }),
     );
-    expect(screen.getByText(SENTENCE).className).toBe("detail-error");
+    expect(document.querySelector(".detail-error")?.textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText(SENTENCE).className).toBe("load-error-original");
     const details = document.querySelector("details.technical-details") as HTMLDetailsElement;
     expect(details).toBeTruthy();
     expect(details.open).toBe(false);
@@ -861,4 +866,45 @@ describe("a load's steps and Cancel (load-progress 5.2 to 5.4)", () => {
     fireEvent.keyDown(dropzone, { key: "Enter" });
     expect(picked).toHaveBeenCalledTimes(1);
   });
+});
+it("cancels a file through Japanese controls and translates the same completed notice on UI change", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  uploadOntology.mockImplementation((_file, options: LoadOptions) => new Promise((_resolve, reject) => {
+    options.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+  }));
+  cancelLoad.mockResolvedValue({ stopped: true });
+  render(<I18nProvider><UiLanguageSelect /><LoadDialog initialTab="file" onLoaded={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
+  expect(screen.getByRole("dialog", { name: "辞書を読み込む" })).toBeTruthy();
+  await act(async () => { fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [new File(["x"], "犬.ttl")] } }); });
+  expect(screen.getByRole("progressbar", { name: "ファイルを送信中" })).toBeTruthy();
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "キャンセル" })); });
+  expect(screen.getAllByText("停止しました。ライブラリには何も追加していません。").length).toBeGreaterThan(0);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getAllByText("Stopped. Nothing was added to your library.").length).toBeGreaterThan(0);
+});
+
+it("translates a retained parser explanation while keeping original details and avoiding another upload", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const prefix = "<img>{prefix}:";
+  const original = `Line 4: the prefix ${prefix} is used but never declared.`;
+  const technical = "Original parser <b>trace</b>";
+  uploadOntology.mockRejectedValue(new ApiError(original, 422,
+    { code: "parse_error", message: original, line: 4, format: "Turtle", technical },
+    { code: "parse.undeclared_prefix", args: { line: 4, prefix } }));
+  render(<I18nProvider><UiLanguageSelect /><LoadDialog initialTab="file" onLoaded={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
+  await act(async () => {
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [new File(["x"], "辞書.ttl")] } });
+  });
+  expect(document.querySelector(".detail-error")?.textContent).toBe(`4行目：接頭辞「${prefix}」が宣言されていません。ファイルの先頭付近に @prefix ${prefix} <…> . を追加してください。`);
+  const details = document.querySelector<HTMLDetailsElement>("details.technical-details")!;
+  expect(details.open).toBe(false);
+  details.open = true; // jsdom does not implement a summary's native toggle.
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".detail-error")?.textContent).toBe(`Line 4: the prefix ${prefix} is used but never declared. Add @prefix ${prefix} <…> . near the top of the file.`);
+  expect(document.querySelector("details.technical-details")).toBe(details);
+  expect(details.open).toBe(true);
+  expect(details.querySelector("pre")?.textContent).toBe(technical);
+  expect(details.querySelector(".load-error-original")?.textContent).toBe(original);
+  expect(details.querySelector("img, b")).toBeNull();
+  expect(uploadOntology).toHaveBeenCalledTimes(1);
 });

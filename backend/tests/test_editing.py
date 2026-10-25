@@ -32,6 +32,12 @@ EXPECTED OUTPUT
       byte for byte), and what the form needs from the server: the created
       IRI, plain literals, search by kind, kinds in project details.
     - shacl-authoring Stage A: AC-2 as the server sees it, row S20.
+    - Additive creation/history metadata with unchanged English labels,
+      revisions and before/after RDF isomorphism; compound path words and
+      literal names stay distinct across every rule-set command and history.
+    - Value refusals keep exact HTTP details, graph isomorphism and revisions.
+    - Conditional operation descriptors preserve endpoint choices, semantic
+      characteristic/mapping/deletion kinds, shared names and exact Turtle text.
 ================================================================================
 """
 
@@ -1521,3 +1527,624 @@ def test_two_first_shape_commands_at_once_make_shapes_ttl_once(bare):
     assert answers == [200, 200]
     assert [d["role"] for d in project_store.manifest(pid)["documents"]].count("shapes") == 1
     assert len(list(shapes_graph(pid).subjects(RDF.type, SH.NodeShape))) == 2
+
+
+@pytest.mark.parametrize("command,field,code,legacy", [
+    ("CreateClass", "label", "command.created_class", "Created class"),
+    ("CreateObjectProperty", "label", "command.created_object_property", "Created object property"),
+    ("CreateDatatypeProperty", "label", "command.created_datatype_property", "Created datatype property"),
+    ("CreateConcept", "prefLabel", "command.created_concept", "Created concept"),
+    ("CreateAnnotationProperty", "label", "command.created_annotation_property", "Created annotation property"),
+])
+def test_creation_message_survives_history_without_changing_labels_or_graph(pid, command, field, code, legacy):
+    """Metadata follows the same history step; labels and RDF remain literal."""
+    name = "犬 <b>{name}</b>"
+    before = graph_copy(pid)
+    result = ok(pid, command, **{field: name, "iri": EX + "SyntheticCreated"})
+    after = graph_copy(pid)
+    wire = {"code": code, "args": {"name": name}}
+    assert result["label"] == f"{legacy} {name}"
+    assert result.get("uiMessage") == wire
+    assert result["state"]["undoLabel"] == result["label"]
+    assert result["state"].get("undoUiMessage") == wire
+    assert result["state"].get("redoUiMessage") is None
+    undone = undo(pid)
+    assert undone["label"] == result["label"]
+    assert undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, doc(pid).graph)
+    redone = redo(pid)
+    assert redone["label"] == result["label"]
+    assert redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert redone["revision"] > undone["revision"] > result["revision"]
+    assert isomorphic(after, doc(pid).graph)
+
+
+def test_legacy_change_and_step_accept_positional_calls_without_metadata():
+    change = editing.Change("Legacy label", [], [])
+    step = editing.Step("Legacy step", [], [])
+    assert change.label == "Legacy label" and step.label == "Legacy step"
+    assert change.ui_message is None and step.ui_message is None
+
+
+# Distinct literal names catch swapped operands and accidental HTML/prose rewriting.
+META_A = "甲 <b>{a}</b>"
+META_B = "乙 {b}"
+META_CA = "狭い <i>{c}</i>"
+META_CB = "広い {d}"
+META_P = "関係P <img>{p}"
+META_Q = "関係Q {q}"
+META_VALUE = {"kind": "text", "value": "注釈 <b>1</b>", "lang": "en"}
+META_PAIR = {"class": "shop:MetaA", "property": "shop:metaP", "kind": "some", "filler": "shop:MetaB"}
+META_KEY = {"form": "every", "property": "shop:metaP", "kind": "some", "filler": "shop:MetaB", "n": None}
+
+
+MODEL_OPERATION_CASES = [
+    (
+        "AddAnnotation",
+        {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE},
+        "command.added_annotation",
+        {"property": "rdfs:comment", "name": META_A},
+        f"Added rdfs:comment to {META_A}",
+        None,
+    ),
+    (
+        "RemoveAnnotation",
+        {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE},
+        "command.removed_annotation",
+        {"property": "rdfs:comment", "name": META_A},
+        f"Removed rdfs:comment from {META_A}",
+        ("AddAnnotation", {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE}),
+    ),
+    (
+        "ReplaceAnnotation",
+        {"iri": "shop:MetaA", "property": "rdfs:comment", "oldValue": META_VALUE, "newValue": {**META_VALUE, "value": "次の値"}},
+        "command.changed_annotation",
+        {"property": "rdfs:comment", "name": META_A},
+        f"Changed rdfs:comment of {META_A}",
+        ("AddAnnotation", {"iri": "shop:MetaA", "property": "rdfs:comment", "value": META_VALUE}),
+    ),
+    (
+        "AddSubClassOf",
+        {"child": "shop:MetaA", "parent": "shop:MetaB"},
+        "command.added_subclass",
+        {"child": META_A, "parent": META_B},
+        f"Made {META_A} a subclass of {META_B}",
+        None,
+    ),
+    (
+        "RemoveSubClassOf",
+        {"child": "shop:MetaA", "parent": "shop:MetaB"},
+        "command.removed_subclass",
+        {"child": META_A, "parent": META_B},
+        f"Removed {META_A} as a subclass of {META_B}",
+        ("AddSubClassOf", {"child": "shop:MetaA", "parent": "shop:MetaB"}),
+    ),
+    (
+        "AddSubPropertyOf",
+        {"child": "shop:metaP", "parent": "shop:metaQ"},
+        "command.added_subproperty",
+        {"child": META_P, "parent": META_Q},
+        f"Made {META_P} a more specific kind of {META_Q}",
+        None,
+    ),
+    (
+        "RemoveSubPropertyOf",
+        {"child": "shop:metaP", "parent": "shop:metaQ"},
+        "command.removed_subproperty",
+        {"child": META_P, "parent": META_Q},
+        f"Removed {META_Q} as more general than {META_P}",
+        ("AddSubPropertyOf", {"child": "shop:metaP", "parent": "shop:metaQ"}),
+    ),
+    (
+        "AddBroader",
+        {"concept": "shop:MetaCA", "broader": "shop:MetaCB"},
+        "command.added_broader",
+        {"concept": META_CA, "broader": META_CB},
+        f"Made {META_CA} narrower than {META_CB}",
+        None,
+    ),
+    (
+        "RemoveBroader",
+        {"concept": "shop:MetaCA", "broader": "shop:MetaCB"},
+        "command.removed_broader",
+        {"concept": META_CA, "broader": META_CB},
+        f"Removed {META_CB} as broader of {META_CA}",
+        ("AddBroader", {"concept": "shop:MetaCA", "broader": "shop:MetaCB"}),
+    ),
+    (
+        "AddRelated",
+        {"concept": "shop:MetaCA", "related": "shop:MetaCB"},
+        "command.added_related",
+        {"concept": META_CA, "related": META_CB},
+        f"Related {META_CA} to {META_CB}",
+        None,
+    ),
+    (
+        "RemoveRelated",
+        {"concept": "shop:MetaCA", "related": "shop:MetaCB"},
+        "command.removed_related",
+        {"concept": META_CA, "related": META_CB},
+        f"Removed {META_CB} as related to {META_CA}",
+        ("AddRelated", {"concept": "shop:MetaCA", "related": "shop:MetaCB"}),
+    ),
+    (
+        "RenameIri",
+        {"old": "shop:MetaA", "new": "shop:MetaRenamed"},
+        "command.renamed_iri",
+        {"old": "shop:MetaA", "new": "shop:MetaRenamed"},
+        "Renamed shop:MetaA to shop:MetaRenamed",
+        None,
+    ),
+    (
+        "SwapEnds",
+        {"property": "shop:metaP"},
+        "command.swapped_ends",
+        {"name": META_P},
+        f"Swapped the ends of {META_P}",
+        None,
+    ),
+    (
+        "ClearInverse",
+        {"property": "shop:metaP"},
+        "command.cleared_inverse",
+        {"name": META_P},
+        f"Removed the other way round of {META_P}",
+        ("SetInverse", {"property": "shop:metaP", "inverse": "shop:metaQ"}),
+    ),
+    (
+        "CreateExample",
+        {"class": "shop:MetaA", "label": "例 <b>{value}</b>", "iri": "shop:metaExample"},
+        "command.created_example",
+        {"name": "例 <b>{value}</b>", "class_name": META_A},
+        f"Created example 例 <b>{{value}}</b> of {META_A}",
+        None,
+    ),
+    (
+        "AddRestriction",
+        META_PAIR,
+        "command.added_restriction",
+        {"property": META_P, "name": META_A},
+        f"Added a rule on {META_P} to {META_A}",
+        None,
+    ),
+    (
+        "ReplaceRestriction",
+        {**META_PAIR, "kind": "only", "restriction": META_KEY},
+        "command.changed_restriction",
+        {"property": META_P, "name": META_A},
+        f"Changed a rule on {META_P} of {META_A}",
+        ("AddRestriction", META_PAIR),
+    ),
+    (
+        "RemoveRestriction",
+        {"class": "shop:MetaA", "restriction": META_KEY},
+        "command.removed_restriction",
+        {"property": META_P, "name": META_A},
+        f"Removed a rule on {META_P} from {META_A}",
+        ("AddRestriction", META_PAIR),
+    ),
+    (
+        "AddDisjointWith",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.added_disjoint",
+        {"first": META_A, "second": META_B},
+        f"Made {META_A} and {META_B} disjoint",
+        None,
+    ),
+    (
+        "RemoveDisjointWith",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.removed_disjoint",
+        {"first": META_A, "second": META_B},
+        f"Removed the disjointness of {META_A} and {META_B}",
+        ("AddDisjointWith", {"a": "shop:MetaA", "b": "shop:MetaB"}),
+    ),
+    (
+        "AddEquivalentClass",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.added_equivalent",
+        {"first": META_A, "second": META_B},
+        f"Made {META_A} and {META_B} mean the same thing",
+        None,
+    ),
+    (
+        "RemoveEquivalentClass",
+        {"a": "shop:MetaA", "b": "shop:MetaB"},
+        "command.removed_equivalent",
+        {"first": META_A, "second": META_B},
+        f"Removed that {META_A} and {META_B} mean the same thing",
+        ("AddEquivalentClass", {"a": "shop:MetaA", "b": "shop:MetaB"}),
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "command,args,code,facts,legacy,seed", MODEL_OPERATION_CASES,
+    ids=[case[0] for case in MODEL_OPERATION_CASES],
+)
+def test_model_operation_descriptors_keep_operands_and_rdf_through_history(pid, command, args, code, facts, legacy, seed):
+    for command_name, local, name, extra in [
+        ("CreateClass", "MetaA", META_A, {}), ("CreateClass", "MetaB", META_B, {}),
+        ("CreateConcept", "MetaCA", META_CA, {}), ("CreateConcept", "MetaCB", META_CB, {}),
+        ("CreateObjectProperty", "metaP", META_P, {"domain": "shop:MetaA", "range": "shop:MetaB"}),
+        ("CreateObjectProperty", "metaQ", META_Q, {"domain": "shop:MetaB", "range": "shop:MetaA"}),
+    ]:
+        field = "prefLabel" if command_name == "CreateConcept" else "label"
+        ok(pid, command_name, **{field: name, "iri": EX + local, **extra})
+    if seed:
+        ok(pid, seed[0], **seed[1])
+    before = graph_copy(pid)
+    result = ok(pid, command, **args)
+    after = graph_copy(pid)
+    wire = {"code": code, "args": facts}
+    assert result["label"] == legacy
+    assert result.get("uiMessage") == wire
+    assert result["state"].get("undoUiMessage") == wire
+    undone = undo(pid)
+    assert undone["label"] == legacy and undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, doc(pid).graph)
+    redone = redo(pid)
+    assert redone["label"] == legacy and redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert isomorphic(after, doc(pid).graph)
+
+
+PARTS_SHAPE = "犬の確認 <b>{shape}</b>"
+PARTS_CLASS = "犬 <i>{class}</i>"
+PARTS_CUSTOM = "備考 <img>{path}"
+PARTS_CUSTOM_IRI = EX + "partsValue"
+
+
+def _parts_seed(pid, collision=False):
+    ok(pid, "CreateClass", label=PARTS_CLASS, iri="shop:PartsClass")
+    ok(pid, "CreateClass", label="別の対象", iri="shop:PartsOther")
+    ok(pid, "CreateDatatypeProperty", label=PARTS_CUSTOM, iri="shop:partsValue", domain="shop:PartsClass", datatype="xsd:string")
+    if collision:
+        ok(pid, "CreateDatatypeProperty", label="name", iri="shop:partsName", domain="shop:PartsClass", datatype="xsd:string")
+
+
+def _shape_history_notice(pid, result, before, wire, legacy):
+    after = shapes_graph(pid)
+    assert result["label"] == legacy
+    assert result.get("uiMessage") == wire
+    assert result["state"].get("undoUiMessage") == wire
+    undone = client.post(f"/api/projects/{pid}/documents/shapes/undo").json()
+    assert undone["label"] == legacy and undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, editing_service.document(pid, "shapes").graph)
+    redone = client.post(f"/api/projects/{pid}/documents/shapes/redo").json()
+    assert redone["label"] == legacy and redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert isomorphic(after, editing_service.document(pid, "shapes").graph)
+
+
+PARTS_PATH_CASES = [
+    ([str(RDFS.label)], [{"code": "words.path.name", "args": {}}], "name", False),
+    ([str(RDFS.label)], [{"code": "words.path.nameLabel", "args": {}}], "name (label)", True),
+    ([str(SKOS.prefLabel)], [{"code": "words.path.preferredName", "args": {}}], "preferred name", False),
+    ([str(SKOS.definition)], [{"code": "words.path.definition", "args": {}}], "definition", False),
+    ([str(RDFS.comment)], [{"code": "words.path.description", "args": {}}], "description", False),
+    ([str(p) for p in editing.shapes_form.DEFINITION_PATH], [{"code": "words.path.definition", "args": {}}], "definition", False),
+    ([PARTS_CUSTOM_IRI], [{"text": PARTS_CUSTOM}], PARTS_CUSTOM, False),
+    ([str(RDFS.label), PARTS_CUSTOM_IRI], [{"code": "words.path.name", "args": {}}, {"code": "words.path.or", "args": {}}, {"text": PARTS_CUSTOM}], f"name or {PARTS_CUSTOM}", False),
+]
+
+
+@pytest.mark.parametrize("path,parts,legacy_path,collision", PARTS_PATH_CASES,
+                         ids=["name", "name-collision", "preferred", "definition", "description", "definition-alternative", "custom", "mixed-alternative"])
+def test_shape_path_notices_keep_semantic_words_and_names_through_each_history_step(pid, path, parts, legacy_path, collision):
+    _parts_seed(pid, collision)
+    sid = shapes_ok(pid, "CreateShape", target="shop:PartsClass", name=PARTS_SHAPE)["created"]
+    before = shapes_graph(pid)
+    added = shapes_ok(pid, "AddRule", shape=sid, rule={"path": path, "minCount": 1})
+    _shape_history_notice(pid, added, before, {"code": "command.added_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Added a rule on {legacy_path} to {PARTS_SHAPE}")
+    # A changed path must describe the replacement, not the rule it superseded.
+    original_path = path
+    if path == [PARTS_CUSTOM_IRI]:
+        path, parts, legacy_path = [str(RDFS.label)], [{"code": "words.path.name", "args": {}}], "name"
+    before = shapes_graph(pid)
+    changed = shapes_ok(pid, "ReplaceRule", shape=sid, path=original_path, rule={"path": path, "minCount": 2})
+    _shape_history_notice(pid, changed, before, {"code": "command.changed_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Changed the rule on {legacy_path} of {PARTS_SHAPE}")
+    before = shapes_graph(pid)
+    removed = shapes_ok(pid, "RemoveRule", shape=sid, path=path)
+    _shape_history_notice(pid, removed, before, {"code": "command.removed_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Removed the rule on {legacy_path} from {PARTS_SHAPE}")
+
+
+def test_long_alternative_path_metadata_is_complete_without_a_new_part_limit(pid):
+    _parts_seed(pid)
+    sid = shapes_ok(pid, "CreateShape", target="shop:PartsClass", name=PARTS_SHAPE)["created"]
+    path = [str(RDFS.label), PARTS_CUSTOM_IRI] * 40
+    parts = []
+    for index in range(80):
+        if index:
+            parts.append({"code": "words.path.or", "args": {}})
+        parts.append({"code": "words.path.name", "args": {}} if index % 2 == 0 else {"text": PARTS_CUSTOM})
+    before = shapes_graph(pid)
+    result = shapes_ok(pid, "AddRule", shape=sid, rule={"path": path, "minCount": 1})
+    _shape_history_notice(pid, result, before, {"code": "command.added_rule", "args": {"shape_name": PARTS_SHAPE, "path": parts}}, f"Added a rule on {' or '.join(['name', PARTS_CUSTOM] * 40)} to {PARTS_SHAPE}")
+
+
+@pytest.mark.parametrize("action", ["create", "default-name", "target", "name", "warning", "violation", "message", "remove-message", "delete", "check", "check-new-shape"])
+def test_other_shape_notices_keep_legacy_labels_and_rdf(pid, action):
+    _parts_seed(pid)
+    if action in ("create", "default-name"):
+        before = shapes_graph(pid)
+        name = PARTS_SHAPE if action == "create" else f"{PARTS_CLASS} rules"
+        args = {"target": "shop:PartsClass", **({"name": name} if action == "create" else {})}
+        result = shapes_ok(pid, "CreateShape", **args)
+        _shape_history_notice(pid, result, before, {"code": "command.created_shape", "args": {"name": name}}, f"Created shape {name}")
+        return
+    if action == "check-new-shape":
+        sid = None
+    else:
+        sid = shapes_ok(pid, "CreateShape", target="shop:PartsClass", name=PARTS_SHAPE)["created"]
+    shape_name = PARTS_SHAPE if sid else f"{PARTS_CLASS} rules"
+    if action in ("check", "check-new-shape"):
+        ok(pid, "AddRestriction", **{"class": "shop:PartsClass"}, property="shop:partsValue", kind="atMost", n=1)
+        args = {"class": "shop:PartsClass", "restriction": {"form": "every", "property": "shop:partsValue", "kind": "atMost", "filler": None, "n": 1}}
+        command, code, facts, legacy = "CheckInData", "command.added_check", {"shape_name": shape_name, "path": [{"text": PARTS_CUSTOM}]}, f"Added a check on {PARTS_CUSTOM} to {shape_name}"
+    elif action == "target":
+        command, args, code, facts, legacy = "SetShapeTarget", {"shape": sid, "target": "shop:PartsOther"}, "command.changed_shape_target", {"name": PARTS_SHAPE, "target": "別の対象"}, f"Made {PARTS_SHAPE} apply to 別の対象"
+    elif action == "name":
+        command, args, code, facts, legacy = "SetShapeName", {"shape": sid, "value": "改名 <b>{new}</b>"}, "command.renamed_shape", {"old": PARTS_SHAPE, "new": "改名 <b>{new}</b>"}, f"Renamed shape {PARTS_SHAPE} to 改名 <b>{{new}}</b>"
+    elif action in ("warning", "violation"):
+        if action == "violation":
+            shapes_ok(pid, "SetShapeSeverity", shape=sid, severity="warning")
+        word = "a warning" if action == "warning" else "a problem"
+        command, args, code, facts, legacy = "SetShapeSeverity", {"shape": sid, "severity": action}, "command.changed_shape_severity", {"name": PARTS_SHAPE, "severity": [{"code": f"words.severity.{action}", "args": {}}]}, f"Made a failure of {PARTS_SHAPE} {word}"
+    elif action in ("message", "remove-message"):
+        if action == "remove-message":
+            shapes_ok(pid, "SetShapeMessage", shape=sid, value="Original message")
+        command, args = "SetShapeMessage", {"shape": sid, "value": "確認 <b>{message}</b>" if action == "message" else ""}
+        code = "command.changed_shape_message" if action == "message" else "command.removed_shape_message"
+        facts, legacy = {"name": PARTS_SHAPE}, f"{'Set' if action == 'message' else 'Removed'} the message of {PARTS_SHAPE}"
+    else:
+        command, args, code, facts, legacy = "DeleteShape", {"shape": sid}, "command.deleted_shape", {"name": PARTS_SHAPE}, f"Deleted shape {PARTS_SHAPE}"
+    before = shapes_graph(pid)
+    result = shapes_ok(pid, command, **args)
+    _shape_history_notice(pid, result, before, {"code": code, "args": facts}, legacy)
+
+
+CONDITIONAL_ATTR = "属性 <b>{field}</b>"
+CONDITIONAL_E1 = "個体甲 <img>{subject}"
+CONDITIONAL_E2 = "個体乙 {target}"
+CONDITIONAL_C = "丙 {class}"
+
+
+def _conditional_seed(pid):
+    for local, label in (("MetaA", META_A), ("MetaB", META_B), ("MetaC", CONDITIONAL_C)):
+        ok(pid, "CreateClass", iri="shop:" + local, label=label)
+    for local, label in (("MetaCA", META_CA), ("MetaCB", META_CB)):
+        ok(pid, "CreateConcept", iri="shop:" + local, prefLabel=label)
+    ok(pid, "CreateObjectProperty", iri="shop:metaP", label=META_P, domain="shop:MetaA", range="shop:MetaB")
+    ok(pid, "CreateObjectProperty", iri="shop:metaQ", label=META_Q, domain="shop:MetaB", range="shop:MetaA")
+    ok(pid, "CreateObjectProperty", iri="shop:metaLoose", label="未設定の関係")
+    ok(pid, "CreateDatatypeProperty", iri="shop:metaAttr", label=CONDITIONAL_ATTR, domain="shop:MetaA", datatype="xsd:string")
+    ok(pid, "CreateExample", iri="shop:metaE1", label=CONDITIONAL_E1, **{"class": "shop:MetaA"})
+    ok(pid, "CreateExample", iri="shop:metaE2", label=CONDITIONAL_E2, **{"class": "shop:MetaB"})
+
+
+def _conditional_history(pid, result, before, code, facts, legacy):
+    after = graph_copy(pid)
+    wire = {"code": code, "args": facts}
+    assert result["label"] == legacy
+    assert result.get("uiMessage") == wire
+    assert result["state"].get("undoUiMessage") == wire
+    undone = undo(pid)
+    assert undone["label"] == legacy and undone.get("uiMessage") == wire
+    assert undone["state"].get("redoUiMessage") == wire
+    assert isomorphic(before, doc(pid).graph)
+    redone = redo(pid)
+    assert redone["label"] == legacy and redone.get("uiMessage") == wire
+    assert redone["state"].get("undoUiMessage") == wire
+    assert isomorphic(after, doc(pid).graph)
+
+
+CONDITIONAL_SIMPLE_CASES = [
+    ("SetLabel", {"iri": "shop:MetaA", "lang": "fr", "value": "Nom <b>{value}</b>"}, "command.set_label", {"name": META_A, "language": "fr"}, f"Set label of {META_A} (fr)"),
+    ("SetComment", {"iri": "shop:MetaA", "lang": "fr", "value": "Définition {value}"}, "command.set_comment", {"name": META_A, "language": "fr"}, f"Set comment of {META_A} (fr)"),
+    ("SetDomain", {"property": "shop:metaP", "target": "shop:MetaB"}, "command.set_domain", {"name": META_P, "target": META_B}, f"Set domain of {META_P} to {META_B}"),
+    ("SetRange", {"property": "shop:metaP", "target": "shop:MetaA"}, "command.set_range", {"name": META_P, "target": META_A}, f"Set range of {META_P} to {META_A}"),
+    ("SetEnds", {"property": "shop:metaP", "domain": "shop:MetaB"}, "command.set_ends_domain", {"name": META_P, "domain": META_B}, f"Set the ends of {META_P}: from {META_B}"),
+    ("SetEnds", {"property": "shop:metaP", "range": "shop:MetaA"}, "command.set_ends_range", {"name": META_P, "range": META_A}, f"Set the ends of {META_P}: to {META_A}"),
+    ("SetEnds", {"property": "shop:metaP", "domain": "shop:MetaB", "range": "shop:MetaA"}, "command.set_ends_both", {"name": META_P, "domain": META_B, "range": META_A}, f"Set the ends of {META_P}: from {META_B} to {META_A}"),
+    ("ClearDomain", {"property": "shop:metaP"}, "command.cleared_domain", {"name": META_P}, f"Cleared the start of {META_P}"),
+    ("ClearRange", {"property": "shop:metaP"}, "command.cleared_range", {"name": META_P}, f"Cleared the end of {META_P}"),
+    ("SetInverse", {"property": "shop:metaP", "inverse": "shop:metaQ"}, "command.made_inverse", {"name": META_P, "inverse": META_Q}, f"Made {META_Q} the other way round of {META_P}"),
+    ("SetInverse", {"property": "shop:metaP", "iri": "shop:metaNewInverse", "label": "逆の関係 <b>{inverse}</b>"}, "command.made_inverse", {"name": META_P, "inverse": "逆の関係 <b>{inverse}</b>"}, f"Made 逆の関係 <b>{{inverse}}</b> the other way round of {META_P}"),
+]
+
+
+@pytest.mark.parametrize("command,args,code,facts,legacy", CONDITIONAL_SIMPLE_CASES,
+                         ids=[f"{row[0]}-{index}" for index, row in enumerate(CONDITIONAL_SIMPLE_CASES)])
+def test_conditional_simple_notices_keep_prechange_names_and_end_selection(pid, command, args, code, facts, legacy):
+    _conditional_seed(pid)
+    before = graph_copy(pid)
+    result = ok(pid, command, **args)
+    _conditional_history(pid, result, before, code, facts, legacy)
+
+
+CONDITIONAL_CHARACTERISTICS = [
+    ("functional", "at most one"), ("inverseFunctional", "identifies its start"),
+    ("symmetric", "works both ways"), ("transitive", "chains"),
+    ("asymmetric", "never both ways"), ("irreflexive", "never to itself"),
+    ("reflexive", "always to itself"), ("functionalAttribute", "one value only"),
+]
+
+
+@pytest.mark.parametrize("token,words", CONDITIONAL_CHARACTERISTICS)
+@pytest.mark.parametrize("on", [True, False])
+def test_conditional_characteristic_notices_use_semantic_tokens_for_both_property_kinds(pid, token, words, on):
+    _conditional_seed(pid)
+    attribute = token == "functionalAttribute"
+    characteristic = "functional" if attribute else token
+    prop, label = ("shop:metaAttr", CONDITIONAL_ATTR) if attribute else ("shop:metaP", META_P)
+    if not on:
+        ok(pid, "SetCharacteristic", property=prop, characteristic=characteristic, on=True)
+    before = graph_copy(pid)
+    result = ok(pid, "SetCharacteristic", property=prop, characteristic=characteristic, on=on)
+    _conditional_history(pid, result, before,
+        "command.marked_characteristic" if on else "command.unmarked_characteristic",
+        {"name": label, "characteristic": [{"code": f"words.characteristic.{token}", "args": {}}]},
+        f'{"Marked" if on else "Unmarked"} {label} as "{words}"')
+    assert {name for name, _ in CONDITIONAL_CHARACTERISTICS if name != "functionalAttribute"} == set(editing.modeling_checks.CHARACTERISTICS)
+
+
+CONDITIONAL_MAPPING_KINDS = [
+    ("exactMatch", "an exact match"), ("closeMatch", "a close match"),
+    ("broadMatch", "a broader match"), ("narrowMatch", "a narrower match"),
+    ("relatedMatch", "a related match"),
+]
+
+
+@pytest.mark.parametrize("kind,words", CONDITIONAL_MAPPING_KINDS)
+@pytest.mark.parametrize("remove", [False, True])
+def test_conditional_mapping_notices_keep_the_external_target_literal(pid, kind, words, remove):
+    _conditional_seed(pid)
+    target = "https://example.org/external/target"
+    args = {"concept": "shop:MetaCA", "kind": kind, "target": target}
+    if remove:
+        ok(pid, "AddMapping", **args)
+    before = graph_copy(pid)
+    result = ok(pid, "RemoveMapping" if remove else "AddMapping", **args)
+    _conditional_history(pid, result, before, "command.removed_mapping" if remove else "command.added_mapping",
+        {"concept": META_CA, "mapping": [{"code": f"words.mapping.{kind}", "args": {}}], "target": target},
+        f'{"Removed" if remove else "Added"} {words} of {META_CA}: {target}')
+    assert {name for name, _ in CONDITIONAL_MAPPING_KINDS} == set(editing.MAPPINGS)
+
+
+@pytest.mark.parametrize("command", ["SetExampleValue", "AddExampleValue", "RemoveExampleValue"])
+@pytest.mark.parametrize("link", [False, True])
+def test_conditional_example_notices_keep_subject_target_and_field_separate(pid, command, link):
+    _conditional_seed(pid)
+    value = {"kind": "link", "value": "shop:metaE2"} if link else {"kind": "text", "value": "値 <b>{value}</b>", "lang": "en"}
+    prop, field = ("shop:metaP", META_P) if link else ("shop:metaAttr", CONDITIONAL_ATTR)
+    args = {"iri": "shop:metaE1", "property": prop, "value": value}
+    if command == "RemoveExampleValue":
+        ok(pid, "AddExampleValue", **args)
+    elif command == "SetExampleValue":
+        if link:
+            ok(pid, "CreateExample", label="前の対象", iri="shop:metaE3", **{"class": "shop:MetaB"})
+        old = {"kind": "link", "value": "shop:metaE3"} if link else {"kind": "text", "value": "前の値", "lang": "en"}
+        ok(pid, "AddExampleValue", iri="shop:metaE1", property=prop, value=old)
+    before = graph_copy(pid)
+    result = ok(pid, command, **args)
+    remove = command == "RemoveExampleValue"
+    if link:
+        code = "command.removed_example_link" if remove else "command.linked_example_value"
+        facts = {"subject": CONDITIONAL_E1, "target": CONDITIONAL_E2, "property": META_P}
+        legacy = f'{"Removed the link from" if remove else "Linked"} {CONDITIONAL_E1} to {CONDITIONAL_E2} by {META_P}'
+    else:
+        code = {"SetExampleValue": "command.set_example_value", "AddExampleValue": "command.added_example_value", "RemoveExampleValue": "command.removed_example_value"}[command]
+        facts = {"subject": CONDITIONAL_E1, "property": CONDITIONAL_ATTR}
+        legacy = f'{"Set" if command == "SetExampleValue" else "Added" if command == "AddExampleValue" else "Removed"} {CONDITIONAL_ATTR} {"of" if command == "SetExampleValue" else "to" if command == "AddExampleValue" else "from"} {CONDITIONAL_E1}'
+    _conditional_history(pid, result, before, code, facts, legacy)
+
+
+CONDITIONAL_DELETE_KINDS = [
+    (OWL.Class, "class", "class"), (OWL.ObjectProperty, "object property", "objectProperty"),
+    (OWL.DatatypeProperty, "datatype property", "datatypeProperty"),
+    (OWL.AnnotationProperty, "annotation property", "annotationProperty"),
+    (RDF.Property, "property", "property"), (SKOS.Concept, "concept", "concept"),
+    (SKOS.ConceptScheme, "concept scheme", "conceptScheme"),
+    (U("MetaA"), "example", "example"), (None, "entity", "entity"),
+]
+
+
+@pytest.mark.parametrize("rdf_type,legacy_kind,token", CONDITIONAL_DELETE_KINDS)
+def test_conditional_delete_notices_use_the_same_semantic_kind_as_the_legacy_label(pid, rdf_type, legacy_kind, token):
+    _conditional_seed(pid)
+    name = "削除候補 <b>{name}</b>"
+    text = doc(pid).text() + f'\n<{EX}metaDelete> <{RDFS.label}> {json.dumps(name, ensure_ascii=False)}@en .\n'
+    if rdf_type:
+        text += f'<{EX}metaDelete> <{RDF.type}> <{rdf_type}> .\n'
+    response = apply(pid, text)
+    assert response.status_code == 200, response.text
+    before = graph_copy(pid)
+    result = ok(pid, "DeleteEntity", iri="shop:metaDelete")
+    _conditional_history(pid, result, before, "command.deleted_entity",
+        {"kind": [{"code": f"words.kind.{token}", "args": {}}], "name": name}, f"Deleted {legacy_kind} {name}")
+
+
+@pytest.mark.parametrize("document", ["model", "shapes"])
+def test_conditional_turtle_apply_notices_remain_one_step_and_restore_exact_editor_text(pid, document):
+    current = editing_service.document(pid, document)
+    before = Graph()
+    for triple in current.graph:
+        before.add(triple)
+    text = current.text() + f'\n# Original comment {{literal}}\n<{EX}appliedParts> <{RDFS.label}> "適用 <b>{{value}}</b>"@ja .\n'
+    response = client.put(f"/api/projects/{pid}/documents/{document}/source", json={"text": text})
+    assert response.status_code == 200, response.text
+    result = response.json()
+    if document == "model":
+        _conditional_history(pid, result, before, "command.applied_turtle", {}, "Applied Turtle edits")
+    else:
+        _shape_history_notice(pid, result, before, {"code": "command.applied_turtle", "args": {}}, "Applied Turtle edits")
+    assert client.get(f"/api/projects/{pid}/documents/{document}/source").json()["text"] == text
+
+
+@pytest.mark.parametrize("case", ["give", "move", "union", "union-three", "parent-new", "parent-existing", "up", "separate", "unshare"])
+def test_conditional_shared_domain_notices_keep_case_and_name_group_facts(pid, case):
+    _conditional_seed(pid)
+    args = {"property": "shop:metaP", "class": "shop:MetaB"}
+    names = [{"text": META_A}, {"code": "words.list.and", "args": {}}, {"text": META_B}]
+    if case == "give":
+        args["property"] = "shop:metaLoose"
+        code, facts, legacy = "command.assigned_domain", {"property": "未設定の関係", "class_name": META_B}, f"Gave 未設定の関係 to {META_B}"
+    elif case == "move":
+        ok(pid, "AddSubClassOf", child="shop:MetaA", parent="shop:MetaB")
+        code, facts, legacy = "command.moved_domain", {"property": META_P, "class_name": META_B}, f"Moved {META_P} up to {META_B}"
+    elif case in ("union", "union-three", "separate"):
+        args["how"] = "union"
+        if case == "union-three":
+            ok(pid, "ShareDomain", **args)
+            args["class"] = "shop:MetaC"
+            names += [{"code": "words.list.and", "args": {}}, {"text": CONDITIONAL_C}]
+        if case == "separate":
+            response = apply(pid, doc(pid).text() + f'\n<{EX}metaP> <{RDFS.domain}> <{EX}MetaB> .\n')
+            assert response.status_code == 200, response.text
+            args.pop("class")
+            args.pop("how")  # The existing separate-domain fix chooses union.
+        labels = f"{META_A} and {META_B}" + (f" and {CONDITIONAL_C}" if case == "union-three" else "")
+        code, facts, legacy = "command.shared_domain", {"property": META_P, "names": names}, f"Shared {META_P} between {labels}"
+    elif case in ("parent-new", "parent-existing"):
+        args["how"] = "parent"
+        if case == "parent-new":
+            args.update(parentLabel="共通親 <b>{parent}</b>", parentIri="shop:MetaParent")
+        else:
+            args["parent"] = "shop:MetaC"
+        code, facts, legacy = "command.shared_parent", {"property": META_P, "names": names}, f"Gave {META_A} and {META_B} a shared parent, and {META_P} to it"
+    elif case == "up":
+        ok(pid, "AddSubClassOf", child="shop:MetaA", parent="shop:MetaC")
+        ok(pid, "AddSubClassOf", child="shop:MetaB", parent="shop:MetaC")
+        args.update(how="up", parent="shop:MetaC")
+        code, facts, legacy = "command.moved_domain", {"property": META_P, "class_name": CONDITIONAL_C}, f"Moved {META_P} up to {CONDITIONAL_C}"
+    else:
+        ok(pid, "ShareDomain", **args, how="union")
+        code, facts, legacy = "command.removed_domain_member", {"property": META_P, "class_name": META_B}, f"Removed {META_B} from {META_P}"
+    before = graph_copy(pid)
+    result = ok(pid, "UnshareDomain" if case == "unshare" else "ShareDomain", **args)
+    _conditional_history(pid, result, before, code, facts, legacy)
+
+
+@pytest.mark.parametrize("command,args,legacy,wire", [
+    ("AddAnnotation", {"iri": "shop:Person", "property": "rdfs:comment", "value": {"kind": "typed", "value": "<b>{value}", "datatype": "xsd:integer"}},
+     '"<b>{value}" is not a valid integer (expected a whole number such as 42).',
+     {"code": "editing.value.invalid_integer", "args": {"value": "<b>{value}"}}),
+    ("SetLabel", {"iri": "shop:Person", "value": "x", "lang": "en_US"},
+     '"en_US" is not a well-formed language tag (for example en or fr).',
+     {"code": "editing.value.invalid_language", "args": {"language": "en_US"}}),
+    ("AddAnnotation", {"iri": "shop:Person", "property": "rdfs:comment", "value": {"kind": "text", "value": "x", "lang": "ja", "datatype": "xsd:string"}},
+     "A value cannot carry both a language and a datatype; RDF allows one or the other.",
+     {"code": "editing.value.language_datatype", "args": {}}),
+])
+def test_value_refusal_wire_keeps_document_and_legacy_detail(pid, command, args, legacy, wire):
+    before, rev = graph_copy(pid), revision(pid)
+    response = run(pid, command, **args)
+    assert response.status_code == 422
+    assert response.json() == {"detail": legacy, "uiMessage": wire}
+    assert revision(pid) == rev
+    assert isomorphic(doc(pid).graph, before)

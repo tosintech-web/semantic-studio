@@ -23,7 +23,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { render } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PathBar from "./PathBar";
 import { emptyQueryState, type QueryState } from "../sparql/types";
@@ -87,4 +90,20 @@ describe("PathBar step colours", () => {
     const [plain] = renderBar({});
     expect(plain.style.background).toBe(css("#4a72a8"));
   });
+});
+
+it("localizes path actions and names each removable step without changing its target", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const remove = vi.fn(); const open = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><PathBar state={STATE} stepVars={["plain", "owl"]} theme="light" classKinds={{}} labelFor={iri => iri}
+    openMenu={null} onOpenMenu={open} onRemoveStep={remove} onClear={vi.fn()} /></I18nProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "ステップ2「Owl」と後続を削除" }));
+  expect(remove).toHaveBeenCalledWith(1);
+  fireEvent.click(screen.getByTitle("?owl — データプロパティとフィルターを選択"));
+  expect(open).toHaveBeenCalledWith({ kind: "class", index: 1 });
+  const predicate = document.querySelector(".chip-pred")?.textContent;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Remove step 2: Owl and everything after it" })).toBeTruthy();
+  expect(document.querySelector(".chip-pred")?.textContent).toBe(predicate);
+  cleanup();
 });

@@ -4,6 +4,8 @@ FILE: frontend/src/components/ShapeForm.tsx
 ================================================================================
 
 SUMMARY
+    Read-only titles use displayName; the editable name and its draft remain original.
+    Read names follow the selected dictionary language independently of UI locale.
     The form of the one selected shape (shacl-authoring 5.3, 5.4, 5.5): its
     sentence, what it applies to, its name, its rules -- each a sentence with
     Edit and Remove, and one rule editor at a time -- the rules the model
@@ -13,6 +15,14 @@ SUMMARY
     not, and Edit in Turtle.
 
 BASIC IDEA
+    Read-only reasons use aligned producer facts in the current UI locale, with
+    original details and identities preserved. Translated placeholder names are
+    display-only; the name input still edits only an authored RDF label.
+
+    Fetch failures retain their original cause. Display metadata follows the UI
+    locale at render time, with escaped original details kept separately.
+
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     Every control is one command on shapes.ttl through the shared runner
     (EditParts.useRunner, pointed at the shapes document), so every change
     is one undo step and a refusal shows under the field that caused it.
@@ -43,12 +53,15 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getShapeSuggestions } from "../api";
-import { pathWords, ruleSentence, shapeSentence } from "../modeling/shapeSentences";
+import { everyWord, pathWords, ruleSentence, shapeSentence } from "../modeling/shapeSentences";
 import type { ShapeForm as Shape, ShapePath, ShapeRule, ShapeSuggestions } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
-import { Block, InlineText, useRunner, useReturnFocus } from "./EditParts";
+import { RunnerErrorDetails, Block, InlineText, useRunner, useReturnFocus } from "./EditParts";
 import EntityPicker from "./EntityPicker";
 import RuleEditor from "./RuleEditor";
 
@@ -73,10 +86,13 @@ export default function ShapeForm({
   onDeleted,
   onEditInTurtle,
 }: Props) {
+  const { t, locale } = useI18n();
+  const readingLanguage = useDictionaryDisplayLanguage();
+  const displayName = validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : (shape.displayName ?? shape.name);
   const runner = useRunner("shapes");
   const { busy, errors, run } = runner;
   const [suggestions, setSuggestions] = useState<ShapeSuggestions | null>(null);
-  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [suggestError, setSuggestError] = useState<{ error: unknown } | null>(null);
   // One editor at a time: "new", a rule's path key, or nothing.
   const [editing, setEditing] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -105,17 +121,17 @@ export default function ShapeForm({
       return;
     }
     let live = true;
-    getShapeSuggestions(projectId, target, shape.id)
+    (readingLanguage === undefined ? getShapeSuggestions(projectId, target, shape.id) : getShapeSuggestions(projectId, target, shape.id, readingLanguage))
       .then((s) => {
         if (!live) return;
         setSuggestions(s);
         setSuggestError(null);
       })
-      .catch((e: unknown) => live && setSuggestError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setSuggestError({ error: e }));
     return () => {
       live = false;
     };
-  }, [projectId, target, shape.id, shape.editable, revisions]);
+  }, [projectId, target, shape.id, shape.editable, revisions, readingLanguage]);
 
   // The paths the rule editor offers, with any a rule already uses (a rule
   // written in Turtle may be on a path the model does not suggest).
@@ -123,31 +139,36 @@ export default function ShapeForm({
     const out = [...(suggestions?.paths ?? [])];
     for (const rule of shape.rules) {
       if (!out.some((p) => key(p.path) === key(rule.path))) {
-        out.push({ path: rule.path, label: pathWords(rule), kind: rule.pathKind ?? "other" });
+        out.push({ path: rule.path, label: pathWords(rule, locale), kind: rule.pathKind ?? "other" });
       }
     }
     return out;
-  }, [suggestions, shape.rules]);
+  }, [suggestions, shape.rules, locale]);
 
-  const sentence = shapeSentence(shape);
+  const sentence = shapeSentence(shape, locale);
 
   if (!shape.editable) {
     return (
       <section className="shape-form read-only" aria-labelledby="shape-form-heading">
         <h3 id="shape-form-heading" tabIndex={-1}>
-          {shape.name}
+          {displayName}
         </h3>
         <p className="shape-sentence">{sentence}</p>
         <p className="detail-note">
-          Written in Turtle with parts this form cannot edit. It is still validated with every other shape.
+          {t("shapeForm.readonly")}
         </p>
         <ul className="shape-unsupported">
-          {shape.unsupported.map((part) => (
-            <li key={part}>{part}</li>
-          ))}
+          {shape.unsupported.map((part, index) => {
+            const described = shape.unsupportedUiMessages != null;
+            const message = shape.unsupportedUiMessages?.[index];
+            return <li key={part}>
+              <p>{!described ? part : validWireMessage(message) ? renderServerMessage(message, part, t) : t("shape.readonly.unknown")}</p>
+              {described && <details className="technical-details"><summary>{t("common.details")}</summary><pre>{part}</pre></details>}
+            </li>;
+          })}
         </ul>
         <button type="button" className="primary" onClick={() => onEditInTurtle(shape)}>
-          Edit in Turtle
+          {t("shapeForm.turtle")}
         </button>
       </section>
     );
@@ -181,16 +202,16 @@ export default function ShapeForm({
   return (
     <section className="shape-form" aria-labelledby="shape-form-heading">
       <h3 id="shape-form-heading" tabIndex={-1}>
-        {shape.name}
+        {displayName}
       </h3>
       <p className="shape-sentence">{sentence}</p>
 
-      <Block title="Applies to">
+      <Block title={t("shapeForm.applies")}>
         {picking ? (
           <EntityPicker
             ontologyId={modelOntologyId}
             kind="class"
-            label="Class the shape applies to"
+            label={t("shapeForm.targetPicker")}
             busy={busy}
             error={errors.target}
             onPick={async (iri) => {
@@ -206,17 +227,17 @@ export default function ShapeForm({
           />
         ) : (
           <div className="edit-value">
-            <span>{shape.target ? shape.target.every ?? shape.target.label : "nothing yet"}</span>
+            <span>{shape.target ? shape.target.every ? locale === "en" ? shape.target.every : everyWord(shape, locale) : shape.target.label : t("shapeForm.noTarget")}</span>
             <button ref={targetRef} type="button" className="ghost edit-btn" onClick={() => setPicking(true)}>
-              Change
+              {t("shapeForm.change")}
             </button>
           </div>
         )}
       </Block>
 
-      <Block title="Name">
+      <Block title={t("shapeForm.name")}>
         <InlineText
-          label="shape name"
+          label={t("shapeForm.nameInput")}
           value={shape.named ? shape.name : null}
           busy={busy}
           error={errors.name}
@@ -224,8 +245,8 @@ export default function ShapeForm({
         />
       </Block>
 
-      <Block title="Rules">
-        {ruleCount === 0 && <p className="detail-note">No rules yet. Add one, or take a suggestion below.</p>}
+      <Block title={t("shapeForm.rules")}>
+        {ruleCount === 0 && <p className="detail-note">{t("shapeForm.empty")}</p>}
         <ul className="shape-rules">
           {shape.rules.map((rule) =>
             editing === key(rule.path) ? (
@@ -246,7 +267,7 @@ export default function ShapeForm({
               </li>
             ) : (
               <li key={key(rule.path)} className="shape-rule">
-                <span>{ruleSentence(rule)}</span>
+                <span>{ruleSentence(rule, locale)}</span>
                 <span className="shape-rule-actions">
                   <button
                     ref={(el) => {
@@ -255,19 +276,19 @@ export default function ShapeForm({
                     }}
                     type="button"
                     className="ghost edit-btn"
-                    aria-label={`Edit the rule on ${pathWords(rule)}`}
+                    aria-label={t("shapeForm.editLabel", { path: pathWords(rule, locale) })}
                     onClick={() => setEditing(key(rule.path))}
                   >
-                    Edit
+                    {t("shapeForm.edit")}
                   </button>
                   <button
                     type="button"
                     className="ghost edit-btn"
-                    aria-label={`Remove the rule on ${pathWords(rule)}`}
+                    aria-label={t("shapeForm.removeLabel", { path: pathWords(rule, locale) })}
                     aria-disabled={busy}
                     onClick={() => void removeRule(rule)}
                   >
-                    Remove
+                    {t("shapeForm.remove")}
                   </button>
                 </span>
               </li>
@@ -290,35 +311,36 @@ export default function ShapeForm({
           />
         ) : (
           <button ref={addRef} type="button" className="ghost" onClick={() => setEditing("new")}>
-            + Add a rule
+            {t("shapeForm.add")}
           </button>
         )}
         {editing !== "new" && editing === null && errors.rule && <p className="edit-error">{errors.rule}</p>}
       </Block>
 
-      <Block title="Suggested from the model">
-        {suggestError && <p className="edit-error">{suggestError}</p>}
+      <Block title={t("shapeForm.suggested")}>
+        {suggestError && <><p className="edit-error">{renderServerError(suggestError.error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{suggestError.error instanceof Error ? suggestError.error.message : String(suggestError.error)}</pre></details></>}
         {!target ? (
           // A shape written in Turtle with no target class (found in review):
           // there is nothing to suggest from until it has one.
-          <p className="detail-note">Choose what the shape applies to, and the model suggests rules for it.</p>
+          <p className="detail-note">{t("shapeForm.chooseTarget")}</p>
         ) : !suggestions ? (
-          !suggestError && <p className="detail-note">Reading the model…</p>
+          !suggestError && <p className="detail-note">{t("shapeForm.reading")}</p>
         ) : suggestions.suggestions.length === 0 ? (
-          <p className="detail-note">Every rule the model suggests is already here.</p>
+          <p className="detail-note">{t("shapeForm.allSuggested")}</p>
         ) : (
           <ul className="shape-suggestions">
             {suggestions.suggestions.map((s) => (
               <li key={s.id} className="shape-rule">
-                <span>{ruleSentence(s.rule)}</span>
+                <span>{ruleSentence(s.rule, locale)}</span>
                 <button
                   type="button"
                   className="ghost edit-btn"
-                  aria-label={`Add: ${ruleSentence(s.rule)}`}
+                  aria-label={t("shapeForm.suggestionLabel", { sentence: ruleSentence(s.rule, locale) })}
                   aria-disabled={busy}
                   onClick={() => !busy && void run("suggestion", "AddRule", { shape: shape.id, rule: s.rule, merge: true })}
                 >
-                  Add
+                  {t("shapeForm.addSuggestion")}
                 </button>
               </li>
             ))}
@@ -327,9 +349,9 @@ export default function ShapeForm({
         {errors.suggestion && <p className="edit-error">{errors.suggestion}</p>}
       </Block>
 
-      <Block title="More">
+      <Block title={t("shapeForm.more")}>
         <fieldset className="shape-severity">
-          <legend>When a rule is broken, it is</legend>
+          <legend>{t("shapeForm.severity")}</legend>
           {(["violation", "warning"] as const).map((severity) => (
             <label key={severity} className="rule-check">
               <input
@@ -339,14 +361,14 @@ export default function ShapeForm({
                 aria-disabled={busy}
                 onChange={() => !busy && void run("severity", "SetShapeSeverity", { shape: shape.id, severity })}
               />
-              {severity === "violation" ? "A problem" : "A warning"}
+              {t(severity === "violation" ? "shapeForm.violation" : "shapeForm.warning")}
             </label>
           ))}
         </fieldset>
         {errors.severity && <p className="edit-error">{errors.severity}</p>}
-        <h5>Message shown with every failure</h5>
+        <h5>{t("shapeForm.failureMessage")}</h5>
         <InlineText
-          label="message"
+          label={t("shapeForm.message")}
           value={shape.message}
           multiline
           busy={busy}
@@ -355,21 +377,21 @@ export default function ShapeForm({
         />
       </Block>
 
-      <Block title="Delete">
+      <Block title={t("shapeForm.delete")}>
         <button ref={deleteRef} type="button" className="ghost danger" onClick={() => setConfirmDelete(true)}>
-          Delete this shape
+          {t("shapeForm.deleteThis")}
         </button>
         {errors.delete && <p className="edit-error">{errors.delete}</p>}
       </Block>
 
       {confirmDelete && (
         <ConfirmDialog
-          title={`Delete ${shape.name}?`}
+          title={t("shapeForm.deleteQuestion", { name: displayName })}
           escape="cancel"
           busy={busy}
           actions={[
-            { id: "delete", label: "Delete", danger: true, primary: true },
-            { id: "cancel", label: "Cancel" },
+            { id: "delete", label: t("shapeForm.delete"), danger: true, primary: true },
+            { id: "cancel", label: t("shapeForm.cancel") },
           ]}
           onAnswer={async (answer) => {
             if (answer !== "delete") {
@@ -386,13 +408,11 @@ export default function ShapeForm({
           }}
         >
           <p>
-            {ruleCount === 0
-              ? "It has no rules."
-              : `Its ${ruleCount === 1 ? "rule goes" : `${ruleCount} rules go`} with it.`}{" "}
-            Undo brings it back.
+            {ruleCount === 0 ? t("shapeForm.deleteEmpty") : ruleCount === 1 ? t("shapeForm.deleteOne") : t("shapeForm.deleteMany", { count: ruleCount })}
           </p>
         </ConfirmDialog>
       )}
+      <RunnerErrorDetails runner={runner} />
     </section>
   );
 }

@@ -22,8 +22,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import { describe, expect, it } from "vitest";
-import { describeValue, toValue, typeFromKey, typeKey, valueProblem, VALUE_TYPES } from "./values";
+import { describeValue, toValue, typeFromKey, typeKey, valueProblem, valueTypeChoices, VALUE_TYPES } from "./values";
 
 const typed = (datatype: string) => ({ kind: "typed" as const, datatype });
 
@@ -86,4 +88,25 @@ describe("the values sent", () => {
     expect(describeValue({ kind: "typed", value: "2026-09-28", datatype: "xsd:date" })).toBe("date");
     expect(describeValue({ kind: "link", value: "https://x.org/" })).toBe("link");
   });
+});
+
+
+const ja = ((code, args) => translate("ja", code, args)) as Translator;
+it.each([
+  ["xsd:integer", "4.5", "「4.5」は整数ではありません（例：42）。"],
+  ["xsd:decimal", "4,5", "「4,5」は小数ではありません（例：4.5）。"],
+  ["xsd:boolean", "yes", "「yes」は真偽値ではありません（trueまたはfalseを指定してください）。"],
+  ["xsd:date", "2026-02-30", "「2026-02-30」は有効な日付ではありません（YYYY-MM-DD形式）。"],
+  ["xsd:dateTime", "2026-09-28T25:00:00", "「2026-09-28T25:00:00」は有効な日時ではありません（YYYY-MM-DDThh:mm:ss形式）。"],
+])("localizes %s refusal without changing validation", (datatype, raw, expected) => {
+  expect(valueProblem(typed(datatype), raw, undefined, ja)).toBe(expected);
+});
+it("localizes value choices and descriptions while preserving their identity", () => {
+  const choices = valueTypeChoices(ja);
+  expect(choices.map(c => [c.key, c.type])).toEqual(VALUE_TYPES.map(c => [c.key, c.type]));
+  expect(choices[0].label).toBe("言語付きテキスト");
+  expect(describeValue({ kind: "text", value: "犬", lang: "ja" }, ja)).toBe("テキスト（ja）");
+  expect(describeValue({ kind: "typed", value: "x", datatype: "__proto__" }, ja)).toBe("__proto__");
+  expect(valueProblem({ kind: "text" }, "犬", "de_DE", ja)).toBe("「de_DE」は有効な言語タグではありません（例：ja、en、fr）。");
+  expect(valueProblem({ kind: "link" }, "bad link", undefined, ja)).toBe("リンクに空白は使用できません。");
 });

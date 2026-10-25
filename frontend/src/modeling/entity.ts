@@ -44,6 +44,7 @@ EXPECTED OUTPUT
 */
 
 import type { AnnotationValue, ClassProperty, DomainReading, NodeDetails, TermRef } from "../types";
+import type { UiLocale } from "../i18n/types";
 import { domainWords, type Characteristic } from "./sentences";
 import { datatypeName } from "./values";
 
@@ -327,11 +328,11 @@ export function entityModel(details: NodeDetails, primary: string, languages: st
 /** A property's domain in words for its sentences (attribute-reuse 5.3):
  *  *Employee*, *Employee or Contractor* for a union, *Employee and
  *  Manager* for two domain lines, which mean both; null for none. */
-export function domainLabel(model: EntityModel): string | null {
+export function domainLabel(model: EntityModel, locale: UiLocale = "en"): string | null {
   const reading = model.domainReading;
   if (!reading || reading.form === "one" || reading.form === "none") return model.domain?.label ?? null;
   if (reading.classes.length === 0 || reading.form === "expression") return null;
-  return domainWords(reading.form, reading.classes.map((c) => c.label));
+  return domainWords(reading.form, reading.classes.map((c) => c.label), locale);
 }
 
 /** Whether a property's domain is several classes: a union or two lines. */

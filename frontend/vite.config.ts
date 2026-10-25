@@ -1,8 +1,24 @@
+/*
+================================================================================
+FILE: frontend/vite.config.ts
+SUMMARY
+    React build/dev configuration with production runtime license artifacts.
+BASIC IDEA
+    Preserve lazy chunks and proxy API calls locally; production output derives
+    notices from actual emitted modules and verifies original notice bytes.
+INPUTS / INPUT SOURCES
+    Vite, React, module metadata and the repository's license inventory.
+EXPECTED OUTPUT
+    Built app with runtime notices; dev/test access stays inside the repository.
+================================================================================
+*/
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
+import { distributionNotices } from "./build/distributionNotices.mjs";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), distributionNotices(fileURLToPath(new URL("..", import.meta.url)))],
   server: {
     proxy: {
       "/api": "http://localhost:8000",

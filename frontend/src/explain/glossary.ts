@@ -12,12 +12,11 @@ SUMMARY
 
 BASIC IDEA
     Built into the app, never fetched and never generated: a definition is
-    read here or not at all, and a term not in the list is not listed. A
-    SKOS mapping's definition is MAPPINGS' in modeling/sentences.ts, the
-    one the Edit page's concept form shows, read from there rather than
-    copied, so the two can never say different things.
+    indexed here by IRI or not listed. Each IRI references one ja/en catalog
+    definition. SKOS mappings share the editing choices' meaning keys, so the
+    two displays cannot acquire competing definitions.
 
-    Each definition is one sentence of at most 25 words, in US English,
+    The English compatibility definitions are one sentence of at most 25 words,
     starting lower case, as it follows the term's name and a colon, and
     names no prefixed term: a learner who needs this list cannot read one.
     glossary.test.ts holds every entry to that, and checks that every
@@ -41,7 +40,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { MAPPINGS } from "../modeling/sentences";
+import { translate } from "../i18n/format";
+import type { MessageId, UiLocale } from "../i18n/types";
 import { own } from "../theme/kinds";
 import type { NodeDetails, TermRef } from "../types";
 
@@ -53,159 +53,145 @@ const DCTERMS = "http://purl.org/dc/terms/";
 const DC = "http://purl.org/dc/elements/1.1/";
 const XSD = "http://www.w3.org/2001/XMLSchema#";
 
-/** MAPPINGS' sentence after the term's name and a colon: lower case first. */
-function mapping(id: string): string {
-  const means = MAPPINGS.find((m) => m.id === id)?.means ?? "";
-  return means ? `${means[0].toLowerCase()}${means.slice(1)}` : means;
-}
-
-export const GLOSSARY: Record<string, string> = {
-  // RDF
-  [`${RDF}type`]: "says what kind of thing something is; the value is a class.",
-  [`${RDF}Property`]: "a property in the plainest sense: a link from a thing to another thing or to a value.",
-  [`${RDF}langString`]: "a piece of text marked with the language it is written in.",
-  [`${RDF}List`]: "an ordered list of items, written as a chain of one item and the rest of the list.",
-  [`${RDF}first`]: "the first item of a list.",
-  [`${RDF}rest`]: "the rest of a list after its first item.",
-  [`${RDF}nil`]: "the empty list, which ends every list.",
-
-  // RDF Schema
-  [`${RDFS}subClassOf`]: "says one class is a more specific kind of another; everything in the first is also in the second.",
-  [`${RDFS}subPropertyOf`]: "says one property is a more specific kind of another; whatever the first links, the second links too.",
-  [`${RDFS}domain`]: "says what a property starts from: anything that has the property is in this class.",
-  [`${RDFS}range`]: "says what a property's values are: each value is in this class or of this type.",
-  [`${RDFS}label`]: "a name for people to read, often given in several languages.",
-  [`${RDFS}comment`]: "a description for people to read; it does not change what the ontology means.",
-  [`${RDFS}Class`]: "a category of things, in the plainest sense, as RDF Schema defines one.",
-  [`${RDFS}Literal`]: "any plain value, such as a piece of text, a number or a date, rather than a named thing.",
-  [`${RDFS}Resource`]: "anything at all that can be described; everything is one.",
-  [`${RDFS}Datatype`]: "a type of value, such as a whole number or a date.",
-  [`${RDFS}isDefinedBy`]: "names the vocabulary or document where this term is defined.",
-  [`${RDFS}seeAlso`]: "points to another resource that may say more about this one.",
-  [`${RDFS}member`]: "links a container to one of the things in it.",
-
-  // OWL
-  [`${OWL}Ontology`]: "the record that names an ontology; it often also says who made it, its version and its license.",
-  [`${OWL}Class`]: "a category of things, as the Web Ontology Language defines one; its members are individuals.",
-  [`${OWL}Thing`]: "the class of everything; every individual is in it.",
-  [`${OWL}Nothing`]: "the empty class; nothing can be in it.",
-  [`${OWL}NamedIndividual`]: "marks something as an individual: one particular thing with a name, not a category.",
-  [`${OWL}ObjectProperty`]: "a relationship: a property that links one thing to another thing.",
-  [`${OWL}DatatypeProperty`]: "an attribute: a property that gives a thing a value, such as a number, a date or a piece of text.",
-  [`${OWL}AnnotationProperty`]: "a property for notes to people, such as labels and comments; it does not change what the ontology means.",
-  [`${OWL}FunctionalProperty`]: "a property that has at most one value for each thing.",
-  [`${OWL}InverseFunctionalProperty`]: "a property whose value identifies its thing: no two things share the same value.",
-  [`${OWL}SymmetricProperty`]: "a property that works both ways: if A has it to B, then B has it to A.",
-  [`${OWL}AsymmetricProperty`]: "a property that never works both ways: if A has it to B, then B never has it to A.",
-  [`${OWL}TransitiveProperty`]: "a property that chains: if A has it to B and B has it to C, then A has it to C.",
-  [`${OWL}ReflexiveProperty`]: "a property every thing has to itself.",
-  [`${OWL}IrreflexiveProperty`]: "a property nothing has to itself.",
-  [`${OWL}inverseOf`]: "says one property is the other read the other way round: if A has one to B, B has the other to A.",
-  [`${OWL}equivalentClass`]: "says two classes have exactly the same members.",
-  [`${OWL}equivalentProperty`]: "says two properties always link the same things.",
-  [`${OWL}disjointWith`]: "says two classes share no members: nothing can be in both.",
-  [`${OWL}AllDisjointClasses`]: "a group of classes in which no two share a member.",
-  [`${OWL}members`]: "lists the classes or individuals a group is about.",
-  [`${OWL}sameAs`]: "says two names refer to the very same thing.",
-  [`${OWL}differentFrom`]: "says two names refer to two different things.",
-  [`${OWL}versionInfo`]: "a note saying which version this is, such as a number or a date.",
-  [`${OWL}versionIRI`]: "the web address of this particular version of the ontology.",
-  [`${OWL}priorVersion`]: "the web address of the version before this one.",
-  [`${OWL}imports`]: "says this ontology uses another one, and includes everything that one states.",
-  [`${OWL}deprecated`]: "marks a term as no longer recommended for use.",
-  [`${OWL}Restriction`]: "an unnamed class defined by a rule about one property, such as having at least one crew member.",
-  [`${OWL}onProperty`]: "names the property a rule is about.",
-  [`${OWL}onClass`]: "names the class a counted rule's values must be in.",
-  [`${OWL}someValuesFrom`]: "a rule that each member has at least one value of the property in this class.",
-  [`${OWL}allValuesFrom`]: "a rule that every value of the property, where there is one, is in this class.",
-  [`${OWL}hasValue`]: "a rule that each member has this exact value for the property.",
-  [`${OWL}cardinality`]: "a rule that each member has exactly this many values of the property.",
-  [`${OWL}minCardinality`]: "a rule that each member has at least this many values of the property.",
-  [`${OWL}maxCardinality`]: "a rule that each member has at most this many values of the property.",
-  [`${OWL}qualifiedCardinality`]: "a rule that each member has exactly this many values of the property in a given class.",
-  [`${OWL}minQualifiedCardinality`]: "a rule that each member has at least this many values of the property in a given class.",
-  [`${OWL}maxQualifiedCardinality`]: "a rule that each member has at most this many values of the property in a given class.",
-  [`${OWL}intersectionOf`]: "defines a class as the things that are in every one of the listed classes.",
-  [`${OWL}unionOf`]: "defines a class as the things that are in at least one of the listed classes.",
-  [`${OWL}complementOf`]: "defines a class as everything that is not in the given class.",
-  [`${OWL}oneOf`]: "defines a class by listing its members one by one.",
-  [`${OWL}disjointUnionOf`]: "says a class is exactly the listed classes together, and no two of them share a member.",
-
-  // SKOS
-  [`${SKOS}Concept`]: "one term in a vocabulary, such as a subject heading or a category.",
-  [`${SKOS}ConceptScheme`]: "a vocabulary: a set of concepts, arranged from broad to narrow.",
-  [`${SKOS}Collection`]: "a named group of concepts, gathered for a purpose of its own.",
-  [`${SKOS}OrderedCollection`]: "a named group of concepts kept in a set order.",
-  [`${SKOS}prefLabel`]: "the preferred name of a concept, at most one in each language.",
-  [`${SKOS}altLabel`]: "another name for a concept, such as a synonym or an abbreviation.",
-  [`${SKOS}hiddenLabel`]: "a name that finds a concept in a search, such as a common misspelling, but is never shown.",
-  [`${SKOS}definition`]: "a full statement of what a concept means.",
-  [`${SKOS}scopeNote`]: "a note saying how a concept is meant to be used, and what it does not cover.",
-  [`${SKOS}note`]: "a general note about a concept, for people to read.",
-  [`${SKOS}example`]: "an example of how a concept is used.",
-  [`${SKOS}editorialNote`]: "a note for the people who maintain the vocabulary.",
-  [`${SKOS}historyNote`]: "a note about how a concept's meaning or use has changed over time.",
-  [`${SKOS}changeNote`]: "a note recording a change made to a concept.",
-  [`${SKOS}notation`]: "a code that identifies a concept within its vocabulary, such as a number.",
-  [`${SKOS}broader`]: "links a concept to a broader, more general one.",
-  [`${SKOS}narrower`]: "links a concept to a narrower, more specific one.",
-  [`${SKOS}related`]: "links two associated concepts, neither broader nor narrower than the other.",
-  [`${SKOS}inScheme`]: "says which vocabulary a concept belongs to.",
-  [`${SKOS}hasTopConcept`]: "links a vocabulary to one of its broadest concepts, at the top of its hierarchy.",
-  [`${SKOS}topConceptOf`]: "says a concept is one of the broadest in a vocabulary, at the top of its hierarchy.",
-  [`${SKOS}member`]: "links a collection to one of the concepts in it.",
-  [`${SKOS}memberList`]: "lists the concepts of an ordered collection, in their order.",
-  [`${SKOS}exactMatch`]: mapping("exactMatch"),
-  [`${SKOS}closeMatch`]: mapping("closeMatch"),
-  [`${SKOS}broadMatch`]: mapping("broadMatch"),
-  [`${SKOS}narrowMatch`]: mapping("narrowMatch"),
-  [`${SKOS}relatedMatch`]: mapping("relatedMatch"),
-
-  // Dublin Core terms
-  [`${DCTERMS}title`]: "the name of a resource, such as a document or a vocabulary.",
-  [`${DCTERMS}description`]: "an account of what a resource is or contains, for people to read.",
-  [`${DCTERMS}creator`]: "a person or organization chiefly responsible for making a resource.",
-  [`${DCTERMS}contributor`]: "a person or organization that helped to make a resource.",
-  [`${DCTERMS}publisher`]: "the person or organization that makes a resource available.",
-  [`${DCTERMS}created`]: "the date a resource was made.",
-  [`${DCTERMS}modified`]: "the date a resource was last changed.",
-  [`${DCTERMS}issued`]: "the date a resource was published.",
-  [`${DCTERMS}date`]: "a date in the life of a resource, such as when it was made or changed.",
-  [`${DCTERMS}license`]: "the license that says how a resource may be used and shared.",
-  [`${DCTERMS}rights`]: "a statement about who holds rights over a resource, such as its copyright.",
-  [`${DCTERMS}source`]: "a resource this one is derived from.",
-  [`${DCTERMS}subject`]: "what a resource is about, often a term from a vocabulary.",
-  [`${DCTERMS}Agent`]: "a person, an organization or a program that can act, such as one that makes a resource.",
-
-  // Dublin Core's original fifteen, older than the terms above
-  [`${DC}title`]: "the name of a resource, in the original Dublin Core set.",
-  [`${DC}description`]: "an account of a resource, in the original Dublin Core set.",
-  [`${DC}date`]: "a date in the life of a resource, in the original Dublin Core set.",
-  [`${DC}creator`]: "who made a resource, in the original Dublin Core set.",
-  [`${DC}subject`]: "what a resource is about, in the original Dublin Core set.",
-
-  // XML Schema types of value
-  [`${XSD}string`]: "a piece of text.",
-  [`${XSD}integer`]: "a whole number, such as 3 or -12.",
-  [`${XSD}nonNegativeInteger`]: "a whole number that is zero or more.",
-  [`${XSD}positiveInteger`]: "a whole number that is one or more.",
-  [`${XSD}int`]: "a whole number within a fixed size, about two billion either side of zero.",
-  [`${XSD}decimal`]: "a number that may have a fractional part, such as 3.75.",
-  [`${XSD}double`]: "a number in floating-point form, which can be very large or very small.",
-  [`${XSD}float`]: "a number in floating-point form, less precise than a double.",
-  [`${XSD}boolean`]: "a yes-or-no value, written true or false.",
-  [`${XSD}date`]: "a calendar date, such as 1969-07-16.",
-  [`${XSD}dateTime`]: "a date and a time of day, such as 1969-07-16T13:32:00.",
-  [`${XSD}time`]: "a time of day, such as 13:32:00.",
-  [`${XSD}gYear`]: "a year, such as 1969.",
-  [`${XSD}anyURI`]: "a web address, or another identifier written like one.",
+type DefinitionCode = Extract<MessageId, `glossary.${string}` | `mapping.${string}.meaning`>;
+const DEFINITION_CODES: Record<string, DefinitionCode> = {
+  [`${RDF}type`]: "glossary.rdf.type",
+  [`${RDF}Property`]: "glossary.rdf.Property",
+  [`${RDF}langString`]: "glossary.rdf.langString",
+  [`${RDF}List`]: "glossary.rdf.List",
+  [`${RDF}first`]: "glossary.rdf.first",
+  [`${RDF}rest`]: "glossary.rdf.rest",
+  [`${RDF}nil`]: "glossary.rdf.nil",
+  [`${RDFS}subClassOf`]: "glossary.rdfs.subClassOf",
+  [`${RDFS}subPropertyOf`]: "glossary.rdfs.subPropertyOf",
+  [`${RDFS}domain`]: "glossary.rdfs.domain",
+  [`${RDFS}range`]: "glossary.rdfs.range",
+  [`${RDFS}label`]: "glossary.rdfs.label",
+  [`${RDFS}comment`]: "glossary.rdfs.comment",
+  [`${RDFS}Class`]: "glossary.rdfs.Class",
+  [`${RDFS}Literal`]: "glossary.rdfs.Literal",
+  [`${RDFS}Resource`]: "glossary.rdfs.Resource",
+  [`${RDFS}Datatype`]: "glossary.rdfs.Datatype",
+  [`${RDFS}isDefinedBy`]: "glossary.rdfs.isDefinedBy",
+  [`${RDFS}seeAlso`]: "glossary.rdfs.seeAlso",
+  [`${RDFS}member`]: "glossary.rdfs.member",
+  [`${OWL}Ontology`]: "glossary.owl.Ontology",
+  [`${OWL}Class`]: "glossary.owl.Class",
+  [`${OWL}Thing`]: "glossary.owl.Thing",
+  [`${OWL}Nothing`]: "glossary.owl.Nothing",
+  [`${OWL}NamedIndividual`]: "glossary.owl.NamedIndividual",
+  [`${OWL}ObjectProperty`]: "glossary.owl.ObjectProperty",
+  [`${OWL}DatatypeProperty`]: "glossary.owl.DatatypeProperty",
+  [`${OWL}AnnotationProperty`]: "glossary.owl.AnnotationProperty",
+  [`${OWL}FunctionalProperty`]: "glossary.owl.FunctionalProperty",
+  [`${OWL}InverseFunctionalProperty`]: "glossary.owl.InverseFunctionalProperty",
+  [`${OWL}SymmetricProperty`]: "glossary.owl.SymmetricProperty",
+  [`${OWL}AsymmetricProperty`]: "glossary.owl.AsymmetricProperty",
+  [`${OWL}TransitiveProperty`]: "glossary.owl.TransitiveProperty",
+  [`${OWL}ReflexiveProperty`]: "glossary.owl.ReflexiveProperty",
+  [`${OWL}IrreflexiveProperty`]: "glossary.owl.IrreflexiveProperty",
+  [`${OWL}inverseOf`]: "glossary.owl.inverseOf",
+  [`${OWL}equivalentClass`]: "glossary.owl.equivalentClass",
+  [`${OWL}equivalentProperty`]: "glossary.owl.equivalentProperty",
+  [`${OWL}disjointWith`]: "glossary.owl.disjointWith",
+  [`${OWL}AllDisjointClasses`]: "glossary.owl.AllDisjointClasses",
+  [`${OWL}members`]: "glossary.owl.members",
+  [`${OWL}sameAs`]: "glossary.owl.sameAs",
+  [`${OWL}differentFrom`]: "glossary.owl.differentFrom",
+  [`${OWL}versionInfo`]: "glossary.owl.versionInfo",
+  [`${OWL}versionIRI`]: "glossary.owl.versionIRI",
+  [`${OWL}priorVersion`]: "glossary.owl.priorVersion",
+  [`${OWL}imports`]: "glossary.owl.imports",
+  [`${OWL}deprecated`]: "glossary.owl.deprecated",
+  [`${OWL}Restriction`]: "glossary.owl.Restriction",
+  [`${OWL}onProperty`]: "glossary.owl.onProperty",
+  [`${OWL}onClass`]: "glossary.owl.onClass",
+  [`${OWL}someValuesFrom`]: "glossary.owl.someValuesFrom",
+  [`${OWL}allValuesFrom`]: "glossary.owl.allValuesFrom",
+  [`${OWL}hasValue`]: "glossary.owl.hasValue",
+  [`${OWL}cardinality`]: "glossary.owl.cardinality",
+  [`${OWL}minCardinality`]: "glossary.owl.minCardinality",
+  [`${OWL}maxCardinality`]: "glossary.owl.maxCardinality",
+  [`${OWL}qualifiedCardinality`]: "glossary.owl.qualifiedCardinality",
+  [`${OWL}minQualifiedCardinality`]: "glossary.owl.minQualifiedCardinality",
+  [`${OWL}maxQualifiedCardinality`]: "glossary.owl.maxQualifiedCardinality",
+  [`${OWL}intersectionOf`]: "glossary.owl.intersectionOf",
+  [`${OWL}unionOf`]: "glossary.owl.unionOf",
+  [`${OWL}complementOf`]: "glossary.owl.complementOf",
+  [`${OWL}oneOf`]: "glossary.owl.oneOf",
+  [`${OWL}disjointUnionOf`]: "glossary.owl.disjointUnionOf",
+  [`${SKOS}Concept`]: "glossary.skos.Concept",
+  [`${SKOS}ConceptScheme`]: "glossary.skos.ConceptScheme",
+  [`${SKOS}Collection`]: "glossary.skos.Collection",
+  [`${SKOS}OrderedCollection`]: "glossary.skos.OrderedCollection",
+  [`${SKOS}prefLabel`]: "glossary.skos.prefLabel",
+  [`${SKOS}altLabel`]: "glossary.skos.altLabel",
+  [`${SKOS}hiddenLabel`]: "glossary.skos.hiddenLabel",
+  [`${SKOS}definition`]: "glossary.skos.definition",
+  [`${SKOS}scopeNote`]: "glossary.skos.scopeNote",
+  [`${SKOS}note`]: "glossary.skos.note",
+  [`${SKOS}example`]: "glossary.skos.example",
+  [`${SKOS}editorialNote`]: "glossary.skos.editorialNote",
+  [`${SKOS}historyNote`]: "glossary.skos.historyNote",
+  [`${SKOS}changeNote`]: "glossary.skos.changeNote",
+  [`${SKOS}notation`]: "glossary.skos.notation",
+  [`${SKOS}broader`]: "glossary.skos.broader",
+  [`${SKOS}narrower`]: "glossary.skos.narrower",
+  [`${SKOS}related`]: "glossary.skos.related",
+  [`${SKOS}inScheme`]: "glossary.skos.inScheme",
+  [`${SKOS}hasTopConcept`]: "glossary.skos.hasTopConcept",
+  [`${SKOS}topConceptOf`]: "glossary.skos.topConceptOf",
+  [`${SKOS}member`]: "glossary.skos.member",
+  [`${SKOS}memberList`]: "glossary.skos.memberList",
+  [`${SKOS}exactMatch`]: "mapping.exactMatch.meaning",
+  [`${SKOS}closeMatch`]: "mapping.closeMatch.meaning",
+  [`${SKOS}broadMatch`]: "mapping.broadMatch.meaning",
+  [`${SKOS}narrowMatch`]: "mapping.narrowMatch.meaning",
+  [`${SKOS}relatedMatch`]: "mapping.relatedMatch.meaning",
+  [`${DCTERMS}title`]: "glossary.dcterms.title",
+  [`${DCTERMS}description`]: "glossary.dcterms.description",
+  [`${DCTERMS}creator`]: "glossary.dcterms.creator",
+  [`${DCTERMS}contributor`]: "glossary.dcterms.contributor",
+  [`${DCTERMS}publisher`]: "glossary.dcterms.publisher",
+  [`${DCTERMS}created`]: "glossary.dcterms.created",
+  [`${DCTERMS}modified`]: "glossary.dcterms.modified",
+  [`${DCTERMS}issued`]: "glossary.dcterms.issued",
+  [`${DCTERMS}date`]: "glossary.dcterms.date",
+  [`${DCTERMS}license`]: "glossary.dcterms.license",
+  [`${DCTERMS}rights`]: "glossary.dcterms.rights",
+  [`${DCTERMS}source`]: "glossary.dcterms.source",
+  [`${DCTERMS}subject`]: "glossary.dcterms.subject",
+  [`${DCTERMS}Agent`]: "glossary.dcterms.Agent",
+  [`${DC}title`]: "glossary.dc.title",
+  [`${DC}description`]: "glossary.dc.description",
+  [`${DC}date`]: "glossary.dc.date",
+  [`${DC}creator`]: "glossary.dc.creator",
+  [`${DC}subject`]: "glossary.dc.subject",
+  [`${XSD}string`]: "glossary.xsd.string",
+  [`${XSD}integer`]: "glossary.xsd.integer",
+  [`${XSD}nonNegativeInteger`]: "glossary.xsd.nonNegativeInteger",
+  [`${XSD}positiveInteger`]: "glossary.xsd.positiveInteger",
+  [`${XSD}int`]: "glossary.xsd.int",
+  [`${XSD}decimal`]: "glossary.xsd.decimal",
+  [`${XSD}double`]: "glossary.xsd.double",
+  [`${XSD}float`]: "glossary.xsd.float",
+  [`${XSD}boolean`]: "glossary.xsd.boolean",
+  [`${XSD}date`]: "glossary.xsd.date",
+  [`${XSD}dateTime`]: "glossary.xsd.dateTime",
+  [`${XSD}time`]: "glossary.xsd.time",
+  [`${XSD}gYear`]: "glossary.xsd.gYear",
+  [`${XSD}anyURI`]: "glossary.xsd.anyURI",
 };
 
-/** A term's definition, own-key: a key from a loaded file is never
- *  Object.prototype's (X-6). */
-export function definition(iri: string): string | undefined {
-  return own(GLOSSARY, iri);
+/** Unknown and inherited IRIs have no definition, never an invented meaning. */
+export function definition(iri: string, locale: UiLocale = "en"): string | undefined {
+  const code = own(DEFINITION_CODES, iri);
+  if (!code) return undefined;
+  const meaning = translate(locale, code);
+  return locale === "en" && code.startsWith("mapping.") ? meaning[0].toLowerCase() + meaning.slice(1) : meaning;
 }
+// The historical English export is a projection of the same definition keys.
+export const GLOSSARY: Record<string, string> = Object.fromEntries(Object.keys(DEFINITION_CODES).map(iri => [iri, definition(iri)!]));
 
 export interface PanelTerm {
   iri: string;
@@ -242,6 +228,7 @@ function shown(term: TermRef): { iri: string; name: string; prefixed: string } |
 export function panelTerms(
   statements: NodeDetails["outgoing"],
   references: NodeDetails["incoming"],
+  locale: UiLocale = "en",
 ): PanelTerm[] {
   const order: TermRef[] = [
     ...statements.flatMap((row) => [row.predicate, row.object]),
@@ -252,7 +239,7 @@ export function panelTerms(
   for (const term of order) {
     const found = shown(term);
     if (!found || seen.has(found.iri)) continue;
-    const meaning = definition(found.iri);
+    const meaning = definition(found.iri, locale);
     if (meaning === undefined) continue;
     seen.add(found.iri);
     out.push({ ...found, definition: meaning });

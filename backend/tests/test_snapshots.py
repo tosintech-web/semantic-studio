@@ -15,6 +15,9 @@ SUMMARY
     no row reported and caught by the Small template's Points to rule.
 
 BASIC IDEA
+    Unsupported mapping facts survive API wrapping and disk persistence; a
+    rejected refresh keeps its precise facts and leaves the last good data intact.
+
     Each test makes a Small-template project (Person, Organization, member
     of), adds the attributes it needs by command, and imports a CSV or a
     workbook built in the test. What is asserted is what the spec's rows check: the statements
@@ -27,7 +30,8 @@ INPUTS / INPUT SOURCES
     - The FastAPI app through TestClient, with the client header.
 
 EXPECTED OUTPUT
-    - Pass/fail; two `perf` budgets (Section 10).
+    - Pass/fail; two `perf` budgets (Section 10), and cold-parser literal
+      lexical forms, language tags, datatypes and Python values match rdflib.
 ================================================================================
 """
 
@@ -401,6 +405,13 @@ def test_d9_edit_as_rml_reruns_then_a_function_is_refused_by_name_with_the_data_
     # The last good data stays, and the mapping is kept as written.
     assert len(data_graph(pid, sid)) == len(before)
     assert "rml:function" in (folder(pid, sid) / "mapping.rml.ttl").read_text(encoding="utf-8")
+    expected = {"code": "rml.unsupported", "args": {"name": "rml:function"}}
+    assert refused["mapping"]["uiMessage"] == expected
+    assert json.loads((folder(pid, sid) / "snapshot.json").read_text())["mapping"]["uiMessage"] == expected
+    refreshed = client.post(f"/api/projects/{pid}/data/{sid}/refresh", files=csv_file(PEOPLE))
+    assert refreshed.status_code == 422, refreshed.text
+    assert refreshed.json()["uiMessage"] == {"code": "snapshots.refresh.unsupported", "args": expected["args"]}
+    assert set(data_graph(pid, sid)) == set(before)
 
 
 @pytest.mark.parametrize("source", ["../model.ttl", "C:\\\\x.csv", "https://example.org/people.csv"])
@@ -1069,3 +1080,17 @@ def test_x3_a_link_uses_the_iri_pattern_of_the_target_classs_snapshot(pid):
     assert not any("data/organization/" in str(t) for t in targets)
     assert people["report"]["unmatched"][0]["count"] == 12
     assert members(pid) == 6
+
+
+@pytest.mark.parametrize("suffix", ["", "@en-GB", "@ja", "^^<http://www.w3.org/2001/XMLSchema#string>", "^^<https://example.test/custom-type>"])
+@pytest.mark.parametrize("text", ["", "  spaces  ", "日本語 😀", "two\\nlines", "01"])
+def test_snapshot_literals_keep_rdflib_lexical_and_python_values(text, suffix):
+    from app.snapshots import read_ntriples
+
+    source = f'<https://example.test/s> <https://example.test/p> "{text}"{suffix} .'
+    expected = next(Graph().parse(data=source, format="nt").objects())
+    actual = next(read_ntriples(source).objects())
+    assert actual == expected
+    assert (str(actual), actual.language, actual.datatype, actual.value, actual.ill_typed) == (
+        str(expected), expected.language, expected.datatype, expected.value, expected.ill_typed,
+    )

@@ -28,6 +28,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api";
 import { projectStore } from "../state/projectStore";
 import CreateForm, { creatingTitle } from "./CreateForm";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, searchNodes } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -129,7 +131,7 @@ describe("CreateForm", () => {
     expect(screen.getByText(/To: Person/)).toBeTruthy();
     await create();
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateObjectProperty", { label: "works for", range: X + "Person" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateObjectProperty", { label: "works for", range: X + "Person" }, "en");
     expect(projectStore.getSnapshot().creating).toBeNull();
     expect(projectStore.getSnapshot().created).toMatchObject({ iri: X + "New", kind: "objectProperty" });
   });
@@ -147,7 +149,7 @@ describe("CreateForm", () => {
     await act(async () => {
       await projectStore.createDraft();
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Invoice", definition: "A bill.", iri: X + "Bill" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Invoice", definition: "A bill.", iri: X + "Bill" }, "en");
   });
 
   it("a relationship waits for the class it points to, as the class form's does", async () => {
@@ -170,7 +172,7 @@ describe("CreateForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "More options" }));
     fireEvent.change(screen.getByRole("combobox", { name: "Type of value" }), { target: { value: "xsd:decimal" } });
     await create();
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", { label: "total", datatype: "xsd:decimal" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", { label: "total", datatype: "xsd:decimal" }, "en");
   });
 
   it("an example waits for its class, said beside Create, and sends nothing until then", async () => {
@@ -231,4 +233,47 @@ describe("CreateForm", () => {
     elsewhere.remove();
     box.remove();
   });
+});
+
+
+it("keeps the shared creation draft and definition on UI language changes", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  act(() => projectStore.startCreating("class"));
+  render(<I18nProvider><UiLanguageSelect /><CreateForm ontologyId={`${PID}-model`} primaryLanguage="en" /></I18nProvider>);
+  expect(screen.getByText("クラスを作成")).toBeTruthy();
+  const input = screen.getByRole("textbox", { name: "名前（en）" });
+  fireEvent.change(input, { target: { value: "請求書" } });
+  fireEvent.change(screen.getByRole("textbox", { name: "定義（任意）" }), { target: { value: "<b>定義</b>" } });
+  const token = projectStore.getSnapshot().creating?.token;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(input);
+  expect((screen.getByRole("textbox", { name: "Definition (optional)" }) as HTMLTextAreaElement).value).toBe("<b>定義</b>");
+  expect(projectStore.getSnapshot().creating?.token).toBe(token);
+  await create();
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", expect.objectContaining({ label: "請求書", definition: "<b>定義</b>" }), "en");
+});
+
+
+it("keeps a structured refusal and the exact shared draft across locale switches, then clears it on cancel", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const error = new ApiError("Original <img>{diagnostic}", 422, undefined, { code: "model.invalid_value", args: { value: "<b>値</b>", datatype: "xsd:integer" } });
+  runCommand.mockRejectedValueOnce(error);
+  act(() => projectStore.startCreating("class"));
+  render(<I18nProvider><UiLanguageSelect /><CreateForm ontologyId={`${PID}-model`} primaryLanguage="en" /></I18nProvider>);
+  const input = screen.getByRole("textbox", { name: "名前（en）" });
+  fireEvent.change(input, { target: { value: "請求書" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "作成" })); });
+  expect(document.querySelector(".new-entity-form .edit-error")?.textContent).toBe("作成できませんでした：「<b>値</b>」はxsd:integerの値として使用できません。");
+  expect(projectStore.getSnapshot().creatingErrorCause?.error).toBe(error);
+  expect(screen.getByText(error.message).closest("details")).toBeTruthy();
+  expect(document.querySelector(".create-form img, .create-form b")).toBeNull();
+  const draft = projectStore.getSnapshot().creating;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".new-entity-form .edit-error")?.textContent).toBe('Could not create: “<b>値</b>” is not a valid xsd:integer value.');
+  expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(input);
+  expect(projectStore.getSnapshot().creating).toBe(draft);
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(projectStore.getSnapshot().creatingErrorCause).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

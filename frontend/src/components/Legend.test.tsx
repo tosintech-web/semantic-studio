@@ -39,7 +39,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Legend, { LEGEND_KEY } from "./Legend";
 import { EDGES } from "../theme/kinds";
@@ -462,3 +464,9 @@ function hexToRgb(hex: string): string {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   return `rgb(${r}, ${g}, ${b})`;
 }
+it("translates kinds and relations without changing the filter key", () => {
+  const toggle = vi.fn();
+  render(<I18nProvider><Legend theme="dark" kindCounts={COUNTS} edgeKinds={EDGE_KINDS} hiddenKinds={new Set()} onToggleKind={toggle} /></I18nProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "クラス、412" }));
+  expect(toggle).toHaveBeenCalledWith("class"); expect(screen.getByText("下位クラス" )).toBeTruthy();
+});

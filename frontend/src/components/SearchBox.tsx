@@ -9,7 +9,7 @@ SUMMARY
     Query mode also adds it to the path).
 
 BASIC IDEA
-    On each keystroke (debounced, min 2 chars) it queries /search and shows a
+    On each keystroke (debounced, min 1 character; 300ms; paused during composition) it queries /search and shows a
     dropdown. A document mousedown listener closes the dropdown on outside
     click. The placeholder changes in Query mode to signal that picking adds a
     step.
@@ -41,8 +41,7 @@ INPUTS / INPUT SOURCES (props)
 EXPECTED OUTPUT
     - The rendered search box and dropdown; onPick on selection.
     - A polite announcement of how many results a completed search found.
-    - The limits in words (U-4, explore-and-query-layout 5.7): a hint tied to
-      the field while one character is typed, and a line after the 25th
+    - The limits in words (U-4, explore-and-query-layout 5.7): a line after the 25th
       result when more match. One more than is shown is asked for, so the box
       knows.
     - Only the latest search's answer is applied; an older request still on
@@ -50,248 +49,83 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
+import { useDictionaryView } from "../dictionary/DictionaryViewContext";
+import { useEntitySearch, SHOWN_RESULTS } from "../entities/useEntitySearch";
+import { renderServerError } from "../i18n/serverMessage";
+import { useI18n } from "../i18n/I18nProvider";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { searchNodes } from "../api";
-import type { Theme, VizNode } from "../types";
+import type { Theme } from "../types";
 import { kindColor, kindLabel } from "../types";
-
+export { SHOWN_RESULTS } from "../entities/useEntitySearch";
 interface Props {
   ontologyId: string | null;
   theme: Theme;
   onPick: (iri: string) => void;
-  /** Entities on the canvas. null while no graph is loaded: mark nothing then. */
   drawnIds?: Set<string> | null;
   placeholder?: string;
-  /** Search the ontology together with its resolved imports. */
   imports?: boolean;
+  onShowAll?: (query: string) => void;
 }
-
-/** The listbox's id, and the stem every option id is built from. Constants
- *  because aria-controls and aria-activedescendant are references: they have to
- *  name the exact same strings the elements carry. */
 const LIST_ID = "search-results-list";
 const optionId = (index: number) => `search-result-${index}`;
-const HINT_ID = "search-hint";
-
-/** How many results the box shows. One more is asked for, so the box knows
- *  when more match and can say so rather than stopping silently (U-4). */
-export const SHOWN_RESULTS = 25;
-
-export default function SearchBox({
-  ontologyId,
-  theme,
-  onPick,
-  drawnIds = null,
-  placeholder = "Search concepts, properties…",
-  imports = false,
-}: Props) {
+export default function SearchBox({ ontologyId, theme, onPick, drawnIds = null, placeholder, imports = false, onShowAll }: Props) {
+  const { t } = useI18n();
+  const language = useDictionaryDisplayLanguage();
+  const view = useDictionaryView();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<VizNode[]>([]);
+  const [composing, setComposing] = useState(false);
+  const { results, loading, error, more } = useEntitySearch({ ontologyId, language, imports, ...view, query, composing });
   const [open, setOpen] = useState(false);
-  // Which option the arrow keys have moved to, as an index into `results`.
-  // -1 means "none active", which is the state every fresh set of results
-  // starts in: pre-selecting the first row would make Enter pick something the
-  // user never chose.
   const [active, setActive] = useState(-1);
-  // What the polite region says. Set only when a search COMPLETES, so it never
-  // announces a count for a query the user is still in the middle of typing.
-  const [announcement, setAnnouncement] = useState("");
-  // Whether the server had more than SHOWN_RESULTS for the latest search.
-  const [more, setMore] = useState(false);
-  const timer = useRef<number | undefined>(undefined);
   const wrapRef = useRef<HTMLDivElement>(null);
-  // Searches are numbered and only the latest one's answer is applied, the
-  // data wizard's rule for its reads: cancelling the debounce timer did not
-  // stop a request already sent, so a slow answer for "Pla" could land after
-  // the one for "Planet" and replace it (CF-4). The request it replaces is
-  // aborted as well, which saves the server the work; the number is what
-  // makes it correct, since an answer can already be on its way.
-  const searchCount = useRef(0);
-  const inFlight = useRef<AbortController | null>(null);
-
+  useEffect(() => { setActive(-1); }, [results]);
   useEffect(() => {
-    window.clearTimeout(timer.current);
-    const ticket = ++searchCount.current;
-    inFlight.current?.abort();
-    inFlight.current = null;
-    if (!ontologyId || query.trim().length < 2) {
-      setResults([]);
-      setMore(false);
-      setActive(-1);
-      setAnnouncement("");
-      return;
-    }
-    timer.current = window.setTimeout(() => {
-      const controller = new AbortController();
-      inFlight.current = controller;
-      const latest = () => ticket === searchCount.current;
-      searchNodes(ontologyId, query, imports, undefined, controller.signal, SHOWN_RESULTS + 1)
-        .then((r) => {
-          if (!latest()) return;
-          const overflow = r.length > SHOWN_RESULTS;
-          setResults(overflow ? r.slice(0, SHOWN_RESULTS) : r);
-          setMore(overflow);
-          setActive(-1);
-          setOpen(true);
-          setAnnouncement(
-            overflow
-              ? `${SHOWN_RESULTS} results shown, more match`
-              : r.length === 0
-                ? "No results"
-                : r.length === 1
-                  ? "1 result"
-                  : `${r.length} results`,
-          );
-        })
-        .catch(() => {
-          if (latest()) setResults([]);
-        });
-    }, 200);
-  }, [query, ontologyId, imports]);
-
-  // A search still on its way when the box goes is not wanted either.
-  useEffect(() => () => inFlight.current?.abort(), []);
-
-  useEffect(() => {
-    const close = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
+    const close = (e: MouseEvent) => { if (!wrapRef.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, []);
-
   const expanded = open && results.length > 0;
-  // One character typed: the search waits for two, and says so where the
-  // results would open, rather than looking broken (U-4).
-  // Shown and closed like the list: an outside click or Escape puts it away.
-  const tooShort = open && query.trim().length === 1;
-
-  // Keep the active option on screen. The list is bounded at 50vh and scrolls,
-  // so arrowing past the fold moves an aria-activedescendant nobody can see —
-  // which for a sighted keyboard user is the whole affordance gone. `?.` on the
-  // method as well as the element: jsdom does not implement scrollIntoView at
-  // all, and this is a convenience rather than something to guard the app on.
   useEffect(() => {
-    if (active < 0) return;
-    document.getElementById(optionId(active))?.scrollIntoView?.({ block: "nearest" });
+    if (active >= 0) document.getElementById(optionId(active))?.scrollIntoView?.({ block: "nearest" });
   }, [active]);
-
-  const pick = (iri: string) => {
-    onPick(iri);
-    setOpen(false);
-    setActive(-1);
-  };
-
-  /**
-   * The keyboard half of the combobox.
-   *
-   * Every branch calls preventDefault for a reason worth stating: Up and Down
-   * would otherwise move the caret to the ends of the text, and Enter in a
-   * type="search" input submits and clears it in some browsers. Escape does not
-   * call it — a native search input clears itself on Escape, and the
-   * specification asks for the typed text to survive, so the handler stops the
-   * list instead and lets a second Escape do whatever the browser does.
-   */
+  const pick = (iri: string) => { onPick(iri); setOpen(false); setActive(-1); };
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      if (expanded || tooShort) {
-        e.preventDefault();
-        setOpen(false);
-        setActive(-1);
-      }
-      return;
-    }
+    if (composing || e.nativeEvent.isComposing || e.keyCode === 229) return;
+    if (e.key === "Escape") { if (open) { e.preventDefault(); setOpen(false); setActive(-1); } return; }
     if (!expanded) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((i) => (i + 1) % results.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => (i <= 0 ? results.length - 1 : i - 1));
-    } else if (e.key === "Enter") {
-      // Only when an option is active. With none, Enter belongs to the input.
-      if (active >= 0 && active < results.length) {
-        e.preventDefault();
-        pick(results[active].id);
-      }
-    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive(i => (i + 1) % results.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(i => i <= 0 ? results.length - 1 : i - 1); }
+    else if (e.key === "Enter" && active >= 0 && active < results.length) { e.preventDefault(); pick(results[active].id); }
   };
-
+  const status = !query.trim() || composing ? "" : loading ? t("search.loading") : error ? renderServerError(error, t) : more ? t("search.more", { count: SHOWN_RESULTS }) : results.length ? (results.length === 1 ? t("search.one") : t("search.count", { count: results.length })) : t("search.none");
   return (
     <div className="search-box" ref={wrapRef}>
-      <input
-        type="search"
-        role="combobox"
-        aria-expanded={expanded}
-        aria-controls={LIST_ID}
-        aria-autocomplete="list"
-        aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
-        aria-describedby={tooShort && ontologyId ? HINT_ID : undefined}
-        placeholder={placeholder}
-        value={query}
-        disabled={!ontologyId}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onKeyDown={onKeyDown}
-        onFocus={() => results.length > 0 && setOpen(true)}
-      />
-      {/* Rendered whether or not it has anything to say. A live region added to
-          the DOM in the same commit as its text is unreliably announced — the
-          same finding HomeScreen and App's notice region both record. */}
-      <div className="visually-hidden" role="status" aria-live="polite">
-        {announcement}
-      </div>
-      {tooShort && ontologyId && (
-        <p className="search-results search-hint" id={HINT_ID}>
-          Type at least 2 letters to search.
-        </p>
-      )}
-      {expanded && (
-        <div className="search-results">
-          <ul className="search-options" id={LIST_ID} role="listbox" aria-label="Search results">
-            {results.map((r, index) => {
-              const notDrawn = drawnIds !== null && !drawnIds.has(r.id);
-              return (
-                <li
-                  key={r.id}
-                  id={optionId(index)}
-                  role="option"
-                  aria-selected={index === active}
-                  className={index === active ? "active" : undefined}
-                  onClick={() => pick(r.id)}
-                >
-                  <span className="dot" style={{ background: kindColor(r.kind, theme, r.classType) }} />
-                  <span className="result-label">{r.label}</span>
-                  {/* Words, not a colour or an opacity: the fact that an entity is
-                      off the canvas has to survive being read aloud. */}
-                  {notDrawn && (
-                    <span
-                      className="result-undrawn"
-                      title="This entity is outside the drawn part of the graph"
-                    >
-                      not drawn
-                    </span>
-                  )}
-                  {r.importedFrom && (
-                    <span className="result-imported">from {r.importedFrom}</span>
-                  )}
-                  <span className="result-kind">{kindLabel(r.kind)}</span>
-                </li>
-              );
-            })}
-          </ul>
-          {/* After the 25th option and not one itself: a listbox holds only
-              options, so the line sits beside it, in the same box. */}
-          {more && (
-            <p className="search-more">
-              More than {SHOWN_RESULTS} match. Type more of the name to narrow the list.
-            </p>
-          )}
-        </div>
-      )}
+      <input type="search" role="combobox" aria-label={placeholder ?? t("search.prompt")}
+        aria-expanded={expanded} aria-controls={LIST_ID} aria-autocomplete="list"
+        aria-activedescendant={expanded && active >= 0 && active < results.length ? optionId(active) : undefined}
+        placeholder={placeholder ?? t("search.prompt")} value={query} disabled={!ontologyId}
+        onCompositionStart={() => setComposing(true)} onCompositionEnd={() => setComposing(false)}
+        onChange={e => { setQuery(e.target.value); setOpen(true); }} onKeyDown={onKeyDown} onFocus={() => setOpen(true)} />
+      <div className="visually-hidden" role="status" aria-live="polite">{status}</div>
+      {open && query.trim() && !composing && !results.length && <p className="search-results search-hint">{status}</p>}
+      {expanded && <div className="search-results">
+        <ul className="search-options" id={LIST_ID} role="listbox" aria-label={t("search.results")}>
+          {results.map((r, index) => <li key={r.id} id={optionId(index)} role="option" aria-selected={index === active}
+            className={index === active ? "active" : undefined} onClick={() => pick(r.id)}>
+            <span className="dot" style={{ background: kindColor(r.kind, theme, r.classType) }} />
+            <span className="result-label">{r.label}</span>
+            {r.match && <span className="result-match">{t(`match.${r.match.reason}`, { value: r.match.value })}</span>}
+            {drawnIds !== null && !drawnIds.has(r.id) && <span className="result-undrawn" title={t("search.undrawnTitle")}>{t("search.undrawn")}</span>}
+            {r.importedFrom && <span className="result-imported">{t("search.from", { name: r.importedFrom })}</span>}
+            <span className="result-kind">{kindLabel(r.kind, t)}</span>
+          </li>)}
+        </ul>
+        {more && <p className="search-more">{t("search.narrow", { count: SHOWN_RESULTS })}
+          {onShowAll && <button type="button" onClick={() => { onShowAll(query.trim()); setOpen(false); }}>{t("search.showAll")}</button>}
+        </p>}
+      </div>}
     </div>
   );
 }

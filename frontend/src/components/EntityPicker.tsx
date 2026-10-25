@@ -4,6 +4,7 @@ FILE: frontend/src/components/EntityPicker.tsx
 ================================================================================
 
 SUMMARY
+    Search failures retain escaped original details beside the linked explanation.
     A search field that picks one class, property or concept (visual-modeling
     5.1): the parent of a class, the range of a relationship, a broader
     concept. Matches come from the document and its resolved imports, one kind
@@ -36,8 +37,13 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useId, useRef, useState } from "react";
-import { searchNodes } from "../api";
+import { useEntitySearch } from "../entities/useEntitySearch";
+import { useDictionaryView } from "../dictionary/DictionaryViewContext";
+import { renderServerError } from "../i18n/serverMessage";
+import { useI18n } from "../i18n/I18nProvider";
+import OperationError from "./OperationError";
 import type { SearchKind, VizNode } from "../types";
 
 interface Props {
@@ -55,7 +61,7 @@ interface Props {
 }
 
 /** How long typing rests before a search is sent. */
-const DEBOUNCE_MS = 150;
+
 
 export default function EntityPicker({
   ontologyId,
@@ -70,45 +76,23 @@ export default function EntityPicker({
 }: Props) {
   const id = useId();
   const listId = `${id}-list`;
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<VizNode[]>([]);
+  const { t } = useI18n();
+  const view = useDictionaryView();
+  const [composing, setComposing] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const search = useEntitySearch({ ontologyId, language: dictionaryLanguage, imports: true, ...view, query, composing, kind });
+  const results = dismissed ? [] : search.results.filter(n => !exclude.includes(n.id) && (!importedOnly || n.importedFrom));
   const [active, setActive] = useState(-1);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  // The query last answered, so an empty answer can say why.
-  const [answered, setAnswered] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      setResults([]);
-      setActive(-1);
-      return;
-    }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      searchNodes(ontologyId, q, true, kind)
-        .then((found) => {
-          if (cancelled) return;
-          const shown = found.filter((n) => !exclude.includes(n.id) && (!importedOnly || n.importedFrom));
-          setResults(shown);
-          setAnswered(q);
-          setActive(shown.length ? 0 : -1);
-          setSearchError(null);
-        })
-        .catch((e: unknown) => !cancelled && setSearchError(e instanceof Error ? e.message : String(e)));
-    }, DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-    // exclude is a fresh array on every render of the caller; its content is
-    // what matters and it only changes with the entity, which remounts this.
-  }, [query, ontologyId, kind, importedOnly]);
+  useEffect(() => { setActive(search.results.length ? 0 : -1); }, [search.results]);
 
   const open = results.length > 0;
   const pick = (node: VizNode) => {
@@ -116,6 +100,7 @@ export default function EntityPicker({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (composing || e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "ArrowDown" && open) {
       e.preventDefault();
       setActive((i) => (i + 1) % results.length);
@@ -124,12 +109,12 @@ export default function EntityPicker({
       setActive((i) => (i <= 0 ? results.length - 1 : i - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (open && active >= 0) pick(results[active]);
+      if (open && active >= 0 && active < results.length) pick(results[active]);
     } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       if (open) {
-        setResults([]);
+        setDismissed(true);
         setActive(-1);
       } else {
         onCancel();
@@ -138,7 +123,7 @@ export default function EntityPicker({
   };
 
   const errorId = `${id}-error`;
-  const shownError = error ?? searchError;
+  const shownError = error ?? (search.error ? renderServerError(search.error, t) : null);
   return (
     <div className="entity-picker">
       <label htmlFor={`${id}-input`} className="edit-field-label">
@@ -158,13 +143,15 @@ export default function EntityPicker({
           aria-describedby={shownError ? errorId : undefined}
           aria-invalid={shownError ? true : undefined}
           readOnly={busy}
-          placeholder="Type to search…"
+          placeholder={t("search.prompt")}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onCompositionStart={() => setComposing(true)}
+          onCompositionEnd={() => setComposing(false)}
+          onChange={(e) => { setQuery(e.target.value); setDismissed(false); }}
           onKeyDown={onKeyDown}
         />
         <button type="button" className="ghost" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       <ul id={listId} role="listbox" aria-label={label} className="entity-picker-list" hidden={!open}>
@@ -182,21 +169,20 @@ export default function EntityPicker({
             }}
           >
             {node.label}
-            {node.importedFrom && <span className="entity-picker-from">, from {node.importedFrom}</span>}
+            {node.match && <span className="result-match">{t(`match.${node.match.reason}`, { value: node.match.value })}</span>}
+            {node.importedFrom && <span className="entity-picker-from">, {t("search.from", { name: node.importedFrom })}</span>}
           </li>
         ))}
       </ul>
-      {query.trim() && !open && !searchError && (
+      {query.trim() && !open && !shownError && !composing && (
         <p className="detail-note" role="status">
-          {importedOnly && answered === query.trim()
-            ? "No concept from an import matches. Only other vocabularies are offered here; resolve an import to map to one of its concepts."
-            : "No match yet."}
+          {search.loading ? t("search.loading") : importedOnly ? t("search.importNone") : t("search.none")}
         </p>
       )}
-      {shownError && (
-        <p id={errorId} className="edit-error">
-          {shownError}
-        </p>
+      {search.more && !dismissed && <p className="detail-note">{t("search.narrow", { count: 25 })}</p>}
+      {shownError && (error == null && search.error
+        ? <OperationError failure={{ cause: search.error }} className="edit-error" descriptionId={errorId} />
+        : <p id={errorId} className="edit-error">{shownError}</p>
       )}
     </div>
   );

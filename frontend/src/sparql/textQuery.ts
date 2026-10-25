@@ -4,6 +4,7 @@ FILE: frontend/src/sparql/textQuery.ts
 ================================================================================
 
 SUMMARY
+    File refusals optionally capture client-owned facts beside legacy strings.
     The rules behind writing SPARQL as text (spec sparql-text-and-query-files):
     the 100 KB size limit, the text a new query starts with (the prefixes
     the ontology uses, query-page-rework 5.3), the prefix a failed run was
@@ -29,6 +30,8 @@ EXPECTED OUTPUT
       or the sentence saying why it was not opened.
 ================================================================================
 */
+
+import { makeUiMessage, type UiMessage } from "../i18n/uiMessage";
 
 /** The same 100 KB the server holds query text to. */
 export const MAX_QUERY_BYTES = 100 * 1024;
@@ -110,21 +113,25 @@ export function nameFromFile(fileName: string): string {
   return fileName.replace(/\.(rq|sparql|txt)$/i, "") || fileName;
 }
 
-export type ReadResult = { ok: true; name: string; text: string } | { ok: false; error: string };
+export type ReadResult = { ok: true; name: string; text: string } | { ok: false; error: string; uiMessage?: UiMessage };
 
 /**
  * A chosen .rq file as text, or why not. The size is checked before a byte is
  * read, and the bytes are decoded strictly, so a binary file picked by mistake
  * is refused with a sentence rather than opened as noise.
  */
-export async function readQueryFile(file: File): Promise<ReadResult> {
-  if (file.size > MAX_QUERY_BYTES) return { ok: false, error: TOO_LARGE_TO_OPEN };
+export async function readQueryFile(file: File, withUiMessage = false): Promise<ReadResult> {
+  if (file.size > MAX_QUERY_BYTES) return withUiMessage
+    ? { ok: false, error: TOO_LARGE_TO_OPEN, uiMessage: makeUiMessage("queryPanel.tooLargeOpen", { limit: MAX_QUERY_BYTES }) }
+    : { ok: false, error: TOO_LARGE_TO_OPEN };
   let text: string;
   try {
     const bytes = await file.arrayBuffer();
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
-    return { ok: false, error: NOT_UTF8 };
+    return withUiMessage
+      ? { ok: false, error: NOT_UTF8, uiMessage: makeUiMessage("queryPanel.notUtf8") }
+      : { ok: false, error: NOT_UTF8 };
   }
   return { ok: true, name: nameFromFile(file.name), text: text.replace(/^﻿/, "") };
 }

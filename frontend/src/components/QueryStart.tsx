@@ -38,6 +38,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { formatNumber } from "../i18n/format";
 import { useMemo } from "react";
 import { buildStarters, entryPoints } from "../sparql/starters";
 import type { QueryState } from "../sparql/types";
@@ -66,7 +68,8 @@ export default function QueryStart({
   questions = [],
   onAskQuestion,
 }: Props) {
-  const starters = useMemo(() => buildStarters(schema), [schema]);
+  const { t, locale } = useI18n();
+  const starters = useMemo(() => buildStarters(schema, 5, locale), [schema, locale]);
   const classes = useMemo(() => entryPoints(schema), [schema]);
 
   if (!schema) return null;
@@ -75,10 +78,10 @@ export default function QueryStart({
     <div className="query-start">
       {(starters.length > 0 || questions.length > 0) && (
         <section>
-          <h3>Try one of these</h3>
+          <h3>{t("queryStart.try")}</h3>
           {questions.length > 0 && (
             <>
-              <h4 className="query-start-sub">Questions for this example</h4>
+              <h4 className="query-start-sub">{t("queryStart.questions")}</h4>
               <div className="starter-list question-list">
                 {questions.map((question) => (
                   <button
@@ -102,7 +105,7 @@ export default function QueryStart({
           {starters.length > 0 && (
             <>
               <p className="hint">
-                Ready-made queries for this ontology — run them, then edit anything.
+                {t("queryStart.readyHelp")}
               </p>
               <div className="starter-list">
                 {starters.map((starter) => (
@@ -123,10 +126,9 @@ export default function QueryStart({
 
       {classes.length > 0 && (
         <section>
-          <h3>Or start from</h3>
+          <h3>{t("queryStart.or")}</h3>
           <p className="hint">
-            Pick what the query should be about. You can also click any highlighted node
-            in the graph, or search for it by name.
+            {t("queryStart.pickHelp")}
           </p>
           <div className="chip-cloud">
             {classes.map((cls) => (
@@ -140,7 +142,7 @@ export default function QueryStart({
                 <span className="dot" style={{ background: kindColor(cls.kind, theme, cls.classType) }} />
                 {cls.label}
                 {cls.instances > 0 && (
-                  <span className="chip-count">{cls.instances.toLocaleString()}</span>
+                  <span className="chip-count">{formatNumber(locale, cls.instances)}</span>
                 )}
               </button>
             ))}

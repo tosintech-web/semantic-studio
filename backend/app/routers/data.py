@@ -4,11 +4,19 @@ FILE: backend/app/routers/data.py
 ================================================================================
 
 SUMMARY
+    Preview labels accept a read language without changing mapping decisions.
+    Refused bodies carry current byte caps beside unchanged legacy detail.
     The HTTP surface for data snapshots in a project (csv-data-import Section
     8): inspect a file, preview a mapping, import, list, refresh, switch,
     change or edit the mapping, and remove, under /api/projects/{pid}/data.
 
 BASIC IDEA
+    Translated HTTP refusals carry source codes and facts while keeping the
+    original status and detail payloads intact.
+
+    Domain refusal metadata is forwarded alongside the original status/detail,
+    including workbook picker state and size-limit responses.
+
     Thin, like the other routers: read the body under its cap, hand the work
     to snapshots.py through the editing service (which holds the open
     project's model and its snapshots), and map refusals to status codes in
@@ -54,6 +62,8 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from starlette.concurrency import run_in_threadpool
 
+from ..messages import MessageText, integer_arg, make_message
+from ..messages import UiHTTPException
 from .. import tabular
 from ..editing import NotOpen, editing_service
 from ..projects import UnknownProject
@@ -72,14 +82,33 @@ FILE_TOO_LARGE = (
 )
 
 
+def mapping_too_large() -> MessageText:
+    return MessageText(PATCH_TOO_LARGE, "data.mapping_limit", limit=integer_arg(PATCH_MAX_BYTES))
+
+
+def file_too_large() -> dict:
+    return {
+        "message": MessageText(FILE_TOO_LARGE, "data.file_limit", limit=integer_arg(tabular.MAX_BYTES)),
+        "kind": "too-large",
+    }
+
+
 @contextmanager
 def _errors():
     try:
         yield
     except (UnknownProject, UnknownSnapshot) as exc:
-        raise HTTPException(status_code=404, detail="There is no such project or snapshot.") from exc
+        raise UiHTTPException(
+            status_code=404,
+            detail='There is no such project or snapshot.',
+            ui_message=make_message('project.snapshot_not_found'),
+        ) from exc
     except NotOpen as exc:
-        raise HTTPException(status_code=409, detail="Open the project first.") from exc
+        raise UiHTTPException(
+            status_code=409,
+            detail='Open the project first.',
+            ui_message=make_message('project.not_open'),
+        ) from exc
     except tabular.TabularError as exc:
         status = 413 if exc.kind == "too-large" else 422
         detail = {"message": str(exc), "kind": exc.kind}
@@ -87,8 +116,12 @@ def _errors():
             # A sheet that gave no table still names the sheets and its
             # rows, so the wizard keeps its Sheet and Header row pickers.
             detail["workbook"] = exc.workbook
+        if exc.ui_message is not None:
+            raise UiHTTPException(status_code=status, detail=detail, ui_message=exc.ui_message) from exc
         raise HTTPException(status_code=status, detail=detail) from exc
     except (SnapshotError, UnsupportedMapping) as exc:
+        if exc.ui_message is not None:
+            raise UiHTTPException(status_code=422, detail=str(exc), ui_message=exc.ui_message) from exc
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
@@ -112,8 +145,10 @@ def _bounded(work, *args, **kwargs):
         try:
             return future.result(timeout=limit)
         except FuturesTimeout as exc:
-            raise HTTPException(
-                status_code=504, detail=f"Reading the data took longer than {limit:g} seconds and was stopped."
+            raise UiHTTPException(
+                status_code=504,
+                detail=f'Reading the data took longer than {limit:g} seconds and was stopped.',
+                ui_message=make_message('data.read_timeout', seconds=limit),
             ) from exc
     finally:
         pool.shutdown(wait=False, cancel_futures=True)
@@ -131,7 +166,7 @@ async def _file_bytes(file: Optional[UploadFile]) -> Optional[bytes]:
             break
         total += len(chunk)
         if total > tabular.MAX_BYTES:
-            raise HTTPException(status_code=413, detail={"message": FILE_TOO_LARGE, "kind": "too-large"})
+            raise HTTPException(status_code=413, detail=file_too_large())
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -148,9 +183,17 @@ def _json_field(raw: Optional[str], what: str) -> Optional[dict]:
     try:
         value = json.loads(raw)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=f"The {what} must be JSON.") from exc
+        raise UiHTTPException(
+            status_code=422,
+            detail=f'The {what} must be JSON.',
+            ui_message=make_message('request.field_json', field=what),
+        ) from exc
     if value is not None and not isinstance(value, dict):
-        raise HTTPException(status_code=422, detail=f"The {what} must be an object.")
+        raise UiHTTPException(
+            status_code=422,
+            detail=f'The {what} must be an object.',
+            ui_message=make_message('request.field_object', field=what),
+        )
     return value
 
 
@@ -163,7 +206,11 @@ def _table(
         return service.read(data, options or {}, filename), None
     if snapshot:
         return service.stored_table(pid, snapshot)
-    raise HTTPException(status_code=422, detail="Send a file, or name a snapshot.")
+    raise UiHTTPException(
+        status_code=422,
+        detail='Send a file, or name a snapshot.',
+        ui_message=make_message('data.source_required'),
+    )
 
 
 @router.post("/{pid}/data/inspect")
@@ -198,6 +245,7 @@ async def preview(
     options: Optional[str] = Form(default=None),
     choices: Optional[str] = Form(default=None),
     snapshot: Optional[str] = Form(default=None),
+    lang: Optional[str] = ontologies.LANG_PARAM,
 ) -> dict:
     """Steps 2 to 4 (5.3 to 5.5): the identifier checked, what each column
     can become, and the first rows as sentences with the report to expect."""
@@ -212,6 +260,7 @@ async def preview(
             with editing_service.model_reader(pid) as (model, manifest, names):
                 return editing_service.snapshots.preview(
                     model=model, manifest=manifest, names=names, table=table, choices=chosen, pid=pid,
+                    display_languages=editing_service.display_languages(pid, lang) if lang is not None else None,
                 )
 
     return await run_in_threadpool(_bounded, work)
@@ -227,7 +276,11 @@ async def import_data(
     """Import: a new snapshot, switched on, with its report (5.5)."""
     _known(pid)
     if file is None:
-        raise HTTPException(status_code=422, detail="Send the file to import.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='Send the file to import.',
+            ui_message=make_message('data.file_required'),
+        )
     data = await _file_bytes(file)
     opts = _json_field(options, "options") or {}
     chosen = _json_field(choices, "choices") or {}
@@ -245,10 +298,14 @@ async def import_data(
 
 
 @router.get("/{pid}/data")
-def list_data(pid: str) -> dict:
+def list_data(pid: str, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """The project's snapshots, each with its mapping's text for Edit as RML."""
     with _errors():
-        listing = editing_service.snapshots.listing(pid)
+        if lang is None:
+            listing = editing_service.snapshots.listing(pid)
+        else:
+            with editing_service.model_reader(pid, lang) as (_, _, names):
+                listing = editing_service.snapshots.listing(pid, names=names)
         for entry in listing["snapshots"]:
             try:
                 entry["mappingText"] = editing_service.snapshots.mapping_text(pid, entry["id"])
@@ -270,7 +327,11 @@ async def refresh(
     the wizard's new mapping for it."""
     _known(pid, sid)
     if file is None:
-        raise HTTPException(status_code=422, detail="Send the new version of the file.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='Send the new version of the file.',
+            ui_message=make_message('data.new_file_required'),
+        )
     data = await _file_bytes(file)
     opts = _json_field(options, "options") or {}
     chosen = _json_field(choices, "choices")
@@ -301,14 +362,22 @@ async def patch_data(pid: str, sid: str, request: Request) -> dict:
     async for chunk in request.stream():
         total += len(chunk)
         if total > PATCH_MAX_BYTES:
-            raise HTTPException(status_code=413, detail=PATCH_TOO_LARGE)
+            raise HTTPException(status_code=413, detail=mapping_too_large())
         chunks.append(chunk)
     try:
         body = json.loads(b"".join(chunks) or b"{}")
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="The body must be JSON.") from exc
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be JSON.',
+            ui_message=make_message('request.body_json'),
+        ) from exc
     if not isinstance(body, dict):
-        raise HTTPException(status_code=422, detail="The body must be an object.")
+        raise UiHTTPException(
+            status_code=422,
+            detail='The body must be an object.',
+            ui_message=make_message('request.body_object'),
+        )
 
     def work() -> dict:
         with _errors():
@@ -323,7 +392,11 @@ async def patch_data(pid: str, sid: str, request: Request) -> dict:
                         pid, sid, model=model, manifest=manifest, names=names, choices=body["choices"],
                     )
             else:
-                raise HTTPException(status_code=422, detail="Send enabled, choices or mapping.")
+                raise UiHTTPException(
+                    status_code=422,
+                    detail='Send enabled, choices or mapping.',
+                    ui_message=make_message('data.change_required'),
+                )
             return {"snapshot": made, "generation": service.generation(pid)}
 
     return await run_in_threadpool(_bounded, work)

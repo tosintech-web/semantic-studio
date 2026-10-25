@@ -10,7 +10,9 @@ SUMMARY
     inside a text field, the polite live region, the document switcher, and
     the language menu with the display switch and missing counts; and the
     one-row bar of edit-page-rework 5.2: Turtle, the ⋯ menu by keyboard,
-    Show canvas as a checkbox item, Save primary while unsaved.
+    Show canvas as a checkbox item, Save primary while unsaved. Operation
+    notices follow UI-language changes without new requests, and retain only
+    the result facts needed by their validation and reasoning summaries.
 
 BASIC IDEA
     api.ts is mocked and the real store is opened on a fixed project, so
@@ -26,10 +28,12 @@ EXPECTED OUTPUT
 
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject } =
+const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, updateProject, listData, validateProject, reasonProject, recoverProject, runCommand, getValidationResult, getReasoningResult } =
   vi.hoisted(() => ({
     openProject: vi.fn(),
     undoChange: vi.fn(),
@@ -37,6 +41,13 @@ const { openProject, undoChange, redoChange, saveDocument, getLanguageReport, up
     saveDocument: vi.fn(),
     getLanguageReport: vi.fn(),
     updateProject: vi.fn(),
+    listData: vi.fn(),
+    getValidationResult: vi.fn(),
+    getReasoningResult: vi.fn(),
+    validateProject: vi.fn(),
+    reasonProject: vi.fn(),
+    recoverProject: vi.fn(),
+    runCommand: vi.fn(),
   }));
 
 vi.mock("../api", async (importOriginal) => ({
@@ -47,10 +58,22 @@ vi.mock("../api", async (importOriginal) => ({
   saveDocument,
   getLanguageReport,
   updateProject,
+  listData,
+  validateProject,
+  getValidationResult,
+  getReasoningResult,
+  reasonProject,
+  recoverProject,
+  runCommand,
 }));
 
 import { projectStore } from "../state/projectStore";
 import ProjectHeader from "./ProjectHeader";
+import UiLanguageSelect from "./UiLanguageSelect";
+import type { ReasoningResult, ValidationResult } from "../types";
+import { validationSummary } from "../modeling/shapeSentences";
+import { finishedLine, staleLine } from "../reasoning/reasonSentences";
+import { makeUiMessage } from "../i18n/uiMessage";
 
 const PROJECT = {
   id: "prj-0123456789ab",
@@ -83,7 +106,7 @@ function doc(changes: Record<string, unknown> = {}) {
 let handlers: {
   onSwitchDocument: ReturnType<typeof vi.fn<(doc: string) => void>>;
   onClose: ReturnType<typeof vi.fn<() => void>>;
-  onError: ReturnType<typeof vi.fn<(message: string) => void>>;
+  onError: ReturnType<typeof vi.fn<(error: unknown) => void>>;
   onSaveCopy: ReturnType<typeof vi.fn<() => void>>;
   onTurtle: ReturnType<typeof vi.fn<() => void>>;
 };
@@ -99,7 +122,7 @@ async function renderHeader(changes: Record<string, unknown> = {}) {
   handlers = {
     onSwitchDocument: vi.fn<(doc: string) => void>(),
     onClose: vi.fn<() => void>(),
-    onError: vi.fn<(message: string) => void>(),
+    onError: vi.fn<(error: unknown) => void>(),
     onSaveCopy: vi.fn<() => void>(),
     onTurtle: vi.fn<() => void>(),
   };
@@ -127,7 +150,10 @@ async function fromMenu(name: string | RegExp) {
 }
 const live = () => document.querySelector("[role=status]")!.textContent;
 
-beforeEach(() => projectStore._reset());
+beforeEach(() => { projectStore._reset(); listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  getValidationResult.mockImplementation(async()=>projectStore.getSnapshot().validation);
+  getReasoningResult.mockImplementation(async()=>projectStore.getSnapshot().reasoning);
+});
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -272,7 +298,7 @@ describe("ProjectHeader", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Undo: Created class Invoice" }));
     });
-    expect(handlers.onError).toHaveBeenCalledWith("There is nothing to undo.");
+    expect(handlers.onError).toHaveBeenCalledWith(expect.objectContaining({ message: "There is nothing to undo." }));
   });
 });
 
@@ -406,4 +432,259 @@ describe("ProjectHeader, found in code review", () => {
     });
     expect(screen.queryByRole("menu", { name: "More project actions" })).toBeNull();
   });
+});
+it("distinguishes Japanese save state and edits dictionary display language without changing UI locale", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc({ dirty: true })], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  getLanguageReport.mockResolvedValue({ entities: 3, missing: { en: 0, fr: 1 } });
+  render(<I18nProvider><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  expect(screen.getByText("未保存の変更あり")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "保存" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "プロジェクトのその他の操作" }));
+  await act(async () => { fireEvent.click(screen.getByRole("menuitem", { name: "辞書の表示言語：en…" })); });
+  fireEvent.click(screen.getByRole("radio", { name: /^fr/ }));
+  expect(projectStore.getSnapshot().displayLanguage).toBe("fr");
+  expect(screen.getByRole("button", { name: "保存" })).toBeTruthy();
+});
+
+
+it("renders structured snapshot notices in the current locale without changing their identity", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc()], recovery: { available: false, draftTime: null } });
+  await act(async () => { await projectStore.open(PROJECT.id); });
+  const source = "日本語 <b>{source}</b>.csv";
+  const message = makeUiMessage("dataSnapshot.switchedOff", { source });
+  await act(async () => { await projectStore.dataChanged(message); });
+  const notice = projectStore.getSnapshot().announcement;
+  expect(notice.uiMessage).toBe(message);
+  const view = render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  try {
+    expect(notice.text).toBe(`Switched off ${source}: its data has left every view and validation.`);
+    expect(live()).toBe(`${source}を無効にしました。すべてのビューと検証からデータを除きました。`);
+    const region = screen.getByRole("status");
+    const content = region.firstElementChild;
+    const requests = listData.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(live()).toBe(notice.text);
+    expect(screen.getByRole("status")).toBe(region);
+    expect(region.firstElementChild).toBe(content);
+    expect(projectStore.getSnapshot().announcement).toBe(notice);
+    expect(listData).toHaveBeenCalledTimes(requests);
+    expect(region.querySelector("b")).toBeNull();
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});
+
+
+/** Notifications belong to the operation; switching the UI only renders them again. */
+describe("project operation notices", () => {
+  beforeEach(() => { localStorage.removeItem("semantic-studio.uiLocale.v1"); });
+  afterEach(() => { localStorage.removeItem("semantic-studio.uiLocale.v1"); });
+
+  async function openLocalized() {
+    openProject.mockResolvedValue({ project: PROJECT, documents: [doc()], recovery: { available: false, draftTime: null } });
+    await act(async () => { await projectStore.open(PROJECT.id); });
+    render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  }
+  function locale(value: "ja" | "en") {
+    const before = projectStore.getSnapshot().announcement;
+    const content = screen.getByRole("status").firstElementChild;
+    fireEvent.change(screen.getByRole("combobox", { name: /UI/ }), { target: { value } });
+    expect(projectStore.getSnapshot().announcement).toBe(before);
+    expect(screen.getByRole("status").firstElementChild).toBe(content);
+  }
+
+  it("localizes opening, pending and completed saves, backup names and display language without replaying work", async () => {
+    await openLocalized();
+    expect(live()).toBe("Invoicesを開きました。未保存の変更があります。");
+    locale("en");
+    expect(live()).toBe("Opened Invoices. Unsaved changes.");
+    let resolveSave!: (value: { state: ReturnType<typeof doc> }) => void;
+    saveDocument.mockImplementationOnce(() => new Promise(resolve => { resolveSave = resolve; }));
+    let pending!: ReturnType<typeof projectStore.save>;
+    await act(async () => { pending = projectStore.save(); });
+    expect(live()).toBe("Saving…");
+    locale("ja");
+    expect(live()).toBe("保存中…");
+    expect(saveDocument).toHaveBeenCalledTimes(1);
+    await act(async () => { resolveSave({ state: doc({ dirty: false }) }); await pending; });
+    expect(live()).toBe("保存しました。");
+    locale("en");
+    expect(live()).toBe("Saved.");
+    saveDocument.mockResolvedValueOnce({ state: doc({ dirty: false }) });
+    await act(async () => { await projectStore.save(true); });
+    expect(live()).toBe("Saved. The previous file was kept as model.original.ttl.");
+    locale("ja");
+    expect(live()).toBe("保存しました。変更前のファイルはmodel.original.ttlとして保持しています。");
+    await act(async () => { projectStore.setDisplayLanguage("fr"); });
+    expect(live()).toBe("名称の表示言語：fr。");
+    locale("en");
+    expect(live()).toBe("Showing names in fr.");
+    expect(projectStore.getSnapshot().displayLanguage).toBe("fr");
+    expect(saveDocument).toHaveBeenCalledTimes(2);
+    expect(openProject).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["recover", "discard"] as const)("renders %s and cancelled-save notices in the current locale", async action => {
+    await openLocalized();
+    recoverProject.mockResolvedValueOnce({ documents: [doc()] });
+    await act(async () => { await projectStore.recover(action); });
+    expect(live()).toBe(action === "recover" ? "未保存の変更を復元しました。変更はまだ保存されていません。" : "未保存の変更を破棄しました。");
+    locale("en");
+    expect(live()).toBe(action === "recover" ? "Recovered the unsaved changes. Unsaved changes." : "Discarded the unsaved changes.");
+    expect(recoverProject).toHaveBeenCalledTimes(1);
+    await act(async () => { projectStore.cancelCommentsWarning(); });
+    expect(live()).toBe("Not saved.");
+    locale("ja");
+    expect(live()).toBe("保存していません。");
+  });
+
+  it.each([false, true])("renders validation facts after a pending run (stopped=%s) without retaining panel content", async stopped => {
+    await openLocalized();
+    const result: ValidationResult = {
+      stopped, statements: 24, shapeCount: 3, durationMs: 20, revisions: { model: 3, shapes: 1 },
+      shapes: [{ id: "hidden-witness", name: "hidden-witness", state: "fails", target: null, focusCount: 4, failingCount: 1, problemCount: 1, warningCount: 0, problems: [], problemsTotal: 0, error: null }],
+    };
+    let resolve!: (value: ValidationResult) => void;
+    validateProject.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    let pending!: ReturnType<typeof projectStore.validate>;
+    await act(async () => { pending = projectStore.validate(); });
+    expect(live()).toBe("検証中…");
+    locale("en");
+    expect(live()).toBe("Validating…");
+    await act(async () => { expect(await projectStore.validate()).toBeNull(); });
+    expect(validateProject).toHaveBeenCalledTimes(1);
+    await act(async () => { resolve(result); await pending; });
+    expect(live()).toBe(validationSummary(result, "en"));
+    expect(projectStore.getSnapshot().validation).toBe(result);
+    expect(JSON.stringify(projectStore.getSnapshot().announcement)).not.toContain("hidden-witness");
+    locale("ja");
+    expect(live()).toBe(validationSummary(result, "ja"));
+    expect(validateProject).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["fresh", "stale", "timeout"] as const)("renders %s reasoning completion in the active locale without replaying inference", async ending => {
+    await openLocalized();
+    const result: ReasoningResult = {
+      status: ending === "timeout" ? "timedOut" : "done", key: "synthetic", includeData: false, imports: false,
+      basis: { revision: 3, generation: 1, imports: false }, durationMs: 4200, statements: 12,
+      sentence: ending === "timeout" ? "Original timeout diagnostic." : null,
+      ...(ending === "timeout" ? { uiMessage: { code: "reasoning.timeout", args: { seconds: 7 } } } : {}),
+      problems: [], groups: [{ kind: "kinds", total: 2, offset: 0, items: [{ s: "hidden-witness", p: "urn:p", o: "urn:o", sLabel: "hidden-witness", pLabel: "p", oLabel: "o", sentence: "hidden-witness" }] }],
+      importedFacts: { kind: "imported", total: 0, offset: 0, items: [] }, stale: ending === "stale",
+    };
+    let resolve!: (value: ReasoningResult) => void;
+    reasonProject.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    let pending!: ReturnType<typeof projectStore.reason>;
+    await act(async () => { pending = projectStore.reason(false, false); });
+    expect(live()).toBe("推論を開始しました。");
+    locale("en");
+    expect(live()).toBe("Reasoning started.");
+    await act(async () => { expect(await projectStore.reason(false, false)).toBeNull(); });
+    await act(async () => { resolve(result); await pending; });
+    const english = ending === "stale" ? staleLine(result) : finishedLine(result);
+    expect(live()).toBe(english.endsWith(".") ? english : `${english}.`);
+    expect(projectStore.getSnapshot().reasoning).toBe(result);
+    expect(JSON.stringify(projectStore.getSnapshot().announcement)).not.toContain("hidden-witness");
+    locale("ja");
+    expect(live()).toBe(ending === "stale" ? staleLine(result, "ja") : finishedLine(result, "ja"));
+    expect(reasonProject).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+it("renders a command and its undo/redo labels and announcements from retained metadata in the current language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  openProject.mockResolvedValue({ project: PROJECT, documents: [doc()], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  const name = "犬 <img>{name}";
+  const label = `Created class ${name}`;
+  const wire = { code: "command.created_class", args: { name } } as const;
+  const created = { revision: 4, label, uiMessage: wire, state: doc({ revision: 4, undoLabel: label, undoUiMessage: wire }) };
+  runCommand.mockResolvedValueOnce(created);
+  await act(async () => { await projectStore.command("CreateClass", { label: name, iri: "urn:synthetic:dog" }); });
+  const japaneseLabel = `クラス「${name}」の作成`;
+  expect(screen.getByRole("button", { name: `元に戻す：${japaneseLabel}` })).toBeTruthy();
+  expect(live()).toBe(`${japaneseLabel}が完了しました。未保存の変更があります。`);
+  const notice = projectStore.getSnapshot().announcement;
+  const span = screen.getByRole("status").firstElementChild;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: `Undo: ${label}` })).toBeTruthy();
+  expect(live()).toBe(`${label}. Unsaved changes.`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(screen.getByRole("status").firstElementChild).toBe(span);
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  undoChange.mockResolvedValueOnce({ ...created, revision: 5, state: doc({ revision: 5, dirty: false, canUndo: false, undoLabel: null, canRedo: true, redoLabel: label, redoUiMessage: wire }) });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: `Undo: ${label}` })); });
+  expect(live()).toBe(`Undid: ${label}. Saved.`);
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(live()).toBe(`${japaneseLabel}を元に戻しました。保存済みです。`);
+  expect(screen.getByRole("button", { name: `やり直す：${japaneseLabel}` })).toBeTruthy();
+  redoChange.mockResolvedValueOnce({ ...created, revision: 6, state: doc({ revision: 6, undoLabel: label, undoUiMessage: wire }) });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: `やり直す：${japaneseLabel}` })); });
+  expect(live()).toBe(`${japaneseLabel}をやり直しました。未保存の変更があります。`);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(live()).toBe(`Redid: ${label}. Unsaved changes.`);
+  expect(undoChange).toHaveBeenCalledTimes(1);
+  expect(redoChange).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("status").querySelector("img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps compound rule descriptors and the active shapes document intact across UI language changes", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const shapeName = "犬の確認 <img>{shape}";
+  const custom = "備考 <b>{path}</b>";
+  const wire = Object.freeze({ code: "command.added_rule", args: Object.freeze({ shape_name: shapeName,
+    path: Object.freeze([
+      Object.freeze({ code: "words.path.name", args: Object.freeze({}) }),
+      Object.freeze({ code: "words.path.or", args: Object.freeze({}) }),
+      Object.freeze({ text: custom }),
+    ]),
+  }) });
+  const shapes = { ...doc(), doc: "shapes" as const, ontologyId: `${PROJECT.id}-shapes`, revision: 1, dirty: false, canUndo: false, undoLabel: null };
+  openProject.mockResolvedValue({ project: { ...PROJECT, documents: [...PROJECT.documents, { file: "shapes.ttl", role: "shapes" }] }, documents: [doc({ dirty: false }), shapes], recovery: { available: false, draftTime: null } });
+  await projectStore.open(PROJECT.id);
+  projectStore.switchDocument("shapes");
+  render(<I18nProvider><UiLanguageSelect /><ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} /></I18nProvider>);
+  const english = `Added a rule on name or ${custom} to ${shapeName}`;
+  const japanese = `ルールセット「${shapeName}」への名前または${custom}のルール追加`;
+  const packet = { shape: "urn:synthetic:shape", rule: { path: ["http://www.w3.org/2000/01/rdf-schema#label", "urn:synthetic:notes"], minCount: 1 } };
+  runCommand.mockResolvedValueOnce({ revision: 2, label: english, uiMessage: wire, state: { ...shapes, revision: 2, dirty: true, canUndo: true, undoLabel: english, undoUiMessage: wire } });
+  await act(async () => { await projectStore.command("AddRule", packet); });
+  expect(live()).toBe(`${japanese}が完了しました。未保存の変更があります。`);
+  expect(screen.getByRole("button", { name: `元に戻す：${japanese}` })).toBeTruthy();
+  const notice = projectStore.getSnapshot().announcement;
+  const span = screen.getByRole("status").firstElementChild;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(live()).toBe(`${english}. Unsaved changes.`);
+  expect(screen.getByRole("button", { name: `Undo: ${english}` })).toBeTruthy();
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(screen.getByRole("status").firstElementChild).toBe(span);
+  expect(projectStore.getSnapshot().activeDoc).toBe("shapes");
+  expect(projectStore.getSnapshot().displayLanguage).toBe("en");
+  expect(projectStore.getSnapshot().documents.find(d => d.doc === "shapes")?.undoUiMessage).toBe(wire);
+  expect(runCommand).toHaveBeenCalledExactlyOnceWith(PROJECT.id, "shapes", "AddRule", packet, "en");
+  expect(openProject).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("status").querySelector("img,b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("reports a name-read error once and retries by reselecting the current dictionary language", async () => {
+  getLanguageReport.mockResolvedValue({entities:1,languages:["en","fr"],missing:{en:0,fr:0}});
+  await renderHeader();
+  const result:ValidationResult={stopped:false,statements:1,shapeCount:0,shapes:[],durationMs:1,revisions:{model:3,shapes:null}};
+  validateProject.mockResolvedValueOnce(result);await act(async()=>{await projectStore.validate();});
+  getValidationResult.mockRejectedValueOnce(new Error("Original names failure <img>{raw}"));
+  await fromMenu("Language: en…");
+  await act(async()=>{fireEvent.click(screen.getByRole("radio",{name:/^fr/}));});
+  expect(handlers.onError).toHaveBeenCalledTimes(1);
+  const error=handlers.onError.mock.calls[0][0] as Error;
+  expect(error.message).toBe("Original names failure <img>{raw}");
+  await act(async()=>{fireEvent.click(screen.getByRole("radio",{name:/^fr/}));});
+  expect(getValidationResult).toHaveBeenCalledTimes(2);
+  expect(projectStore.getSnapshot().resultReadError).toBeNull();
+  expect(handlers.onError).toHaveBeenCalledTimes(1);
+  expect(validateProject).toHaveBeenCalledTimes(1);
 });

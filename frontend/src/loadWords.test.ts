@@ -105,7 +105,7 @@ describe("what the live region says", () => {
       reading(35, 22),
       { kind: "downloading", elapsed: 9 },
     ];
-    expect(steps.map(stepAnnouncement)).toEqual([
+    expect(steps.map(step => stepAnnouncement(step))).toEqual([
       "Sending big-file.ttl",
       "Reading big-file.ttl",
       "Still reading big-file.ttl",

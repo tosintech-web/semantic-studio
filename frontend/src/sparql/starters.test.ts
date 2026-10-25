@@ -120,3 +120,15 @@ describe("entryPoints", () => {
     expect(points[points.length - 1].label).toBe("Unused");
   });
 });
+
+it("localizes starter guidance without inflecting Japanese UI labels or changing any query state", () => {
+  const original = buildStarters(schema, 8);
+  const japanese = buildStarters(schema, 8, "ja");
+  expect(japanese[0].title).toBe("Conceptの全件");
+  expect(japanese[0].detail).toBe("このオントロジーに40件");
+  expect(japanese[1].title).toBe("Conceptの件数");
+  expect(japanese.map(starter => starter.state)).toEqual(original.map(starter => starter.state));
+  expect(japanese.map(starter => generateSparql(starter.state, schema.namespaces))).toEqual(original.map(starter => generateSparql(starter.state, schema.namespaces)));
+  const hostile = { ...schema, classes: schema.classes.map(cls => cls.iri === SKOS + "Concept" ? { ...cls, label: "<b>犬</b>" } : cls) };
+  expect(buildStarters(hostile, 8, "ja")[0].title).toBe("<b>犬</b>の全件");
+});

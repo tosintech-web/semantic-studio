@@ -21,7 +21,7 @@ than typing.
 | RDF | rdflib, graphs held in memory |
 | Packaging | Docker and Docker Compose |
 
-Roughly 40,000 lines of source and 30,000 of tests. One FastAPI process
+One FastAPI process
 serves the API and, in production, the built frontend as static files.
 
 ## Running it
@@ -49,12 +49,13 @@ app writes into the real per-user ontology library.
 ## Testing
 
 ```bash
-cd backend  && python -m pytest tests    # 1489 tests (+2 marked `network`, deselected)
-cd frontend && npm run test              # 1763 tests, vitest
+cd backend  && python -m pytest tests    # full suite, including performance budgets
+cd frontend && npm run test              # full suite, including performance budgets
 ```
 
 Both suites must pass before any change is considered done, and locally both
-run everything, budgets included.
+run everything, budgets included. Dated P1 results live in `docs/p1-verification.md`,
+so test counts are not maintained as a second, easily stale copy here.
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to
 `main`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
@@ -62,8 +63,8 @@ run everything, budgets included.
 `vite build`) and `docker` (`docker build .`). `budgets` only reports. A build
 is not done until CI is green on its pull request.
 
-**Timing budgets are separated, not deleted.** Thirty-seven backend tests carry
-`@pytest.mark.perf`; eleven frontend tests have `[budget]` in their title. CI runs
+**Timing budgets are separated, not deleted.** Backend timing tests carry
+`@pytest.mark.perf`; frontend timing tests have `[budget]` in their title. CI runs
 them only in `budgets` (`-m "perf and not network"`, `npm run test:budgets`).
 A command-line `-m` *replaces* `pytest.ini`'s `-m "not network"`, so always name
 `network` again. Count-based budgets (renders, calls) are not timings and stay
@@ -250,12 +251,17 @@ in a module.
 
 ## Load-bearing rules
 
+- Third-party originals are raw bytes keyed by inventory hashes; text-mode normalization breaks their provenance. [Third-party notices preserve original bytes]
+
+- Import message carriers need explicit sibling metadata before JSON persistence; local-only retries keep that metadata with the saved failure. [Import refusal facts persist]
+
 Each line is a rule that was broken once or measured to matter. The reason is
 in `docs/known-state.md`; the bracket is a phrase to search for there. Read it
 before undoing a rule, and add a line here and an entry there when a build
 leaves one behind.
 
 **Security and network**
+- Approval purposes come from source facts; an unknown redirect descriptor keeps the complete original reason visible. [Approval purposes carry source facts]
 - Only `network_broker.py` connects out; policy is asked before any name resolves. [outbound connection]
 - The broker connects to the judged address (`_pinned_url`), the name in `Host` and SNI. [outbound connection]
 - Workers run in `contextvars.copy_context()`, or a just-once grant never reaches them. [outbound connection]
@@ -294,7 +300,13 @@ leaves one behind.
 - The sentence explains the attempt of the format the file claims to be, else the furthest; a message the table knows counts as a sign of RDF. [Load and Shapes]
 - A timed-out query is stopped from outside, on a thread of its own, and only while armed in its query, never inside a SERVICE call, and resent, as a finaliser can swallow one; its end is its thread's end; the worker holds the read lock, and the timeout starts once it has it (D-108). [stopped from outside]
 
+- Managed SPARQL basic patterns check their scoped stop between bindings through `CUSTOM_EVALS`, using rdflib's own ordering/evaluator; outside interruption and the SERVICE broker remain required. [P1 stop inside basic-pattern evaluation]
+
 **Sentences**
+- Partial graph-result notes retain typed counts and render in the current UI language; they never capture an English sentence. [Partial graph result notes keep typed counts]
+- HTTP refusal metadata is attached at its source, preserving status and detail; an unknown Turtle line has a format-only descriptor, never an invented line. [Source-owned HTTP refusal metadata]
+- Binary download failures use the shared API error boundary before reading a blob; original detail and metadata must survive. [Documentation refusal facts]
+- Query/network errors retain source codes through parser and SERVICE layers; new UI classification never matches a completed English refusal. Query failures keep their cause and clear running before a retry. [Query and network failure facts]
 - One a/an rule and one verb rule per side, `sentences.py` and `modeling/sentences.ts`, tested with one table; no module defines its own (`test_sentences.py`, `sentences.test.ts` scan). [one a/an rule]
 - A standard term's definition lives in `explain/glossary.ts` alone; a SKOS mapping's in `MAPPINGS` (D-114). [explain panel]
 - The explain block's kind is `node_kind`, the graph's, never `term_kind`; its words go through `modeling/sentences.ts`, a property's label never read as a verb. [explain panel]
@@ -305,6 +317,11 @@ leaves one behind.
 - A project id or document name is `fullmatch`ed before it is a path; one not issued is 404 on every route. [authoring foundations]
 - The editor's unapplied text lives in the project store; App asks before any exit. [authoring foundations]
 - The project store is module state: a test rendering App calls `cleanup()`. [authoring foundations]
+- Data actions pass their issuing project id to `dataChanged`; a late completion must not announce or refetch another project's data. [P1 structured data notices]
+- Retained project notices store typed descriptors or minimal summary facts, never translated UI text or full result witnesses; language changes render them without moving their id or replaying work. Raw operation failures stay beside legacy strings and render in the current locale with original details. [P1 operation notices]
+- Successful command descriptors follow their exact history step and remain additive to label/undoLabel/redoLabel. An unsupported descriptor keeps the legacy successful action label; never replace it with an operation-failed message. [P1 command history descriptors]
+- Compound message arguments use validated flat literal/zero-argument word parts; no nested templates or captured English noun groups. Resolve words only in the current UI locale and capture mutable parts at the server boundary. [P1 compound message parts]
+- CSV/Excel header-keyed UI maps have no prototype and incoming choices use own-key lookup; `__proto__` and `constructor` are literal headers. [P1 literal import headers]
 - Authoring controls are `aria-disabled`, not `disabled`, so focus is never dropped. [authoring foundations]
 - `pick_label` tests the exact `en` tag before the prefix match. [authoring foundations]
 - `_change` leaves a triple that is in both adds and removes; setting a value to itself deletes nothing. [authoring foundations]
@@ -359,6 +376,7 @@ leaves one behind.
 - A warning carries its `block` and stands under it; only a warning a change brings is announced. [chaining rule]
 
 **SHACL**
+- Timeout tests release and join their own abandoned worker before restoring patches; late result formatting must not enter the next test's counters. [SHACL timeout test cleanup]
 - pySHACL runs with inference, Advanced Features, JavaScript and `owl:imports` off; a test asserts each (D-092). [SHACL validation]
 - The data checked is a plain `Graph`, never a `Dataset`: on a dataset rdflib follows a constraint's `FROM`, past the broker. [SHACL validation]
 - A refused run is repeated shape by shape, a blank-node shape under a temporary IRI: one broken shape never hides the others. [SHACL validation]
@@ -376,6 +394,8 @@ leaves one behind.
 - The Small template ships starter shapes (D-095); a test needing a Small project without them uses `test_editing.py`'s `bare`. [example data]
 
 **Data snapshots**
+- Snapshot label reads project copied summaries and discard replies from older owners, languages or requests; saved metadata never changes. [Snapshot name reads belong to their request]
+- Display-language preview names are projected after suggestions and planning; language-only reads retain controls and reject older responses. [Data-preview names cannot choose another mapping]
 - The engine stops at row 2,000 itself (`rml.run`); `MAX_ROWS` is no setting (D-098). [Data snapshots]
 - An edited mapping's `rml:source` is checked before anything is kept; the engine never opens a file. [Data snapshots]
 - A value that does not fit its type is a plain literal, never ill-typed; the rules are `lexical.py`'s (D-097). [Data snapshots]
@@ -396,6 +416,10 @@ leaves one behind.
 - Links to no row are counted when asked, against the switched-on snapshots, never stored. [Excel workbooks]
 
 **Reasoning**
+- Display-language result reads keep the checked graphs, revisions and owning project; they never rerun validation or inference. [Recorded results keep their checked basis]
+- Capture reasoning display facts at page/about/Why read boundaries; bulk explanation traversal keeps its legacy core, and public causes retain metadata. [Reasoning display facts]
+- One-step reasons and definition noun parts capture metadata only at public Why; keep all legacy candidate expressions and ordering intact. [One-step reasoning descriptions]
+- A Why disclosure owns state for its exact project and RDF fact; translated labels never change that identity. Read failures retain source objects and escaped details across UI locale changes. [Reasoning disclosure targets]
 - The reasoner runs in a `spawn` process on every platform, killed at 30 s or on Stop; only `reasoning_worker.py` imports `owlrl` (D-102). [Reasoning]
 - The worker gives blank nodes back under the labels it was sent, and the server parses its answer with `_SameLabels`: else a restriction's conclusions name blank nodes the server never had. [Reasoning]
 - A statement with a literal subject stays in the worker: N-Triples cannot carry it. [Reasoning]
@@ -452,7 +476,13 @@ leaves one behind.
 - The About backdrop is the dialog's sibling; its key handler is on `document`. [About panel]
 - The Edit side panel lives in `App.tsx`, the detail panel inside it; property forests hold only `subPropertyOf` ends. [Hierarchy view, Edit page]
 
+**Shape-form precision**
+- Count and length values above JavaScript's exact integer range stay read-only in the form; Turtle and SHACL retain them without a new cap. [Shape-form integer precision]
+- Unsupported reason metadata follows the deduplicated legacy strings, and metadata-only names never allocate namespace prefixes. [Shape-form integer precision]
+
 **Edit page**
+- Canvas state belongs to a project/document provider; late saves must not change the next target's failure or generation. UI language does not change that owner. [Canvas failures belong]
+- Unnamed-shape metadata uses the captured fallback carrier; authored identical English names stay literal. [Editing keeps unnamed shapes distinct]
 - An outline section clips its content; open sections have a 120 px minimum and are capped at their rows. [Edit page]
 - One draft, in the project store: the canvas box and the side panel's form share its name; the store makes it in one command. [Edit page]
 - Cancel gives focus back where a draft began, or to the control now standing there (`data-create-from`), never the page. [Edit page]
@@ -460,6 +490,18 @@ leaves one behind.
 - `index.css`'s kind tokens and `canvas/kindColours.ts` say the same values; `kindColours.test.ts` checks both themes. [Edit page]
 - `HierarchyView` never imports from `canvas/`: App reaches `canvas/` only through `React.lazy`. [Edit page]
 - Canvas markers are sized in user space, one per line kind, coloured by CSS. [Edit page]
+
+**P1 read and distribution budgets**
+- Restriction recognition scans a subject once with the same duplicate/unsupported guards; graph label memoization lasts one read only. [P1 budget failures]
+- Alias predicate sweeps never reorder representative names for legacy no-language reads. [P1 budget failures]
+- Runtime notices come from actual emitted modules/installed versions, including generated helpers; unknown or changed originals fail distribution. [Actual distribution inventories]
+
+**Dictionary display language (P1)**
+- Incremental graph/query reads and import notifications retain full view/owner identity; query picks also retain user-intent generation. Fresh entity pages reconcile reference-only selection after structural changes. [P1 asynchronous views]
+- Conflicting SHACL/OWL count bounds use `integer_arg` even when only existing Turtle can hold the huge value. [P1 asynchronous views]
+- Completed import reports project only names from current lists, retaining operation counts and row facts. Old edit/save responses cannot modify a reopened project session. [Retained import reports]
+- Command display-name carriers keep their legacy string value; only message arguments and read-only previews project the selected name. Never use the display language for RDF writes. [command display names]
+- A shape's `displayName` is a read-only title; its original `name` remains the editable value. [command display names]
 
 ## Skills
 

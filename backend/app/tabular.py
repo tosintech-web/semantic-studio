@@ -14,6 +14,9 @@ SUMMARY
     defences have judged the workbook without parsing any of it.
 
 BASIC IDEA
+    Owned refusals add validated display facts at their source. Legacy text,
+    exception types and input-processing rules remain unchanged.
+
     A file is bytes from the browser and untrusted. It is refused past 5 MB
     before anything decodes it, and while the rows are read: more than 100
     columns, or a cell over 32,767 characters (Excel's own limit), stops the
@@ -80,6 +83,7 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
+from .messages import make_message
 import os
 
 # Section 9: openpyxl picks its XML parser once, when it is first imported.
@@ -122,8 +126,10 @@ WHY = "it is for learning how data is mapped to a model, not for loading whole d
 class TabularError(ValueError):
     """A file refused, with the sentence saying why and the wizard's state."""
 
-    def __init__(self, message: str, kind: str = "not-text", workbook: Optional[dict] = None) -> None:
+    def __init__(self, message: str, kind: str = "not-text", workbook: Optional[dict] = None,
+                 *, ui_message: dict | None = None) -> None:
         super().__init__(message)
+        self.ui_message = ui_message
         self.kind = kind
         # A workbook's sheets and the chosen sheet's first rows, when a sheet
         # was read but gave no table: step 1 keeps its pickers with them.
@@ -169,25 +175,32 @@ def _megabytes(size: int) -> str:
 def check_size(size: int) -> None:
     if size > MAX_BYTES:
         raise TabularError(
-            f"This file is {_megabytes(size)}. Semantic Studio imports files of at most "
-            f"{MAX_BYTES // (1024 * 1024)} MB: {WHY}.",
-            "too-large",
+            f'This file is {_megabytes(size)}. Semantic Studio imports files of at most {MAX_BYTES // (1024 * 1024)} MB: {WHY}.',
+            'too-large',
+            ui_message=make_message('tabular.file_too_large', bytes=size, limit=MAX_BYTES // (1024 * 1024)),
         )
 
 
 def decode(data: bytes, encoding: Optional[str] = None) -> tuple[str, str]:
     """The text and the encoding it was read with."""
     if b"\x00" in data:
-        raise TabularError("This file is not CSV text: it holds binary data.")
+        raise TabularError(
+            'This file is not CSV text: it holds binary data.',
+            ui_message=make_message('tabular.binary'),
+        )
     if encoding is not None:
         if encoding not in ENCODINGS:
-            raise TabularError(f"{encoding} is not one of the encodings offered.", "not-text")
+            raise TabularError(
+                f'{encoding} is not one of the encodings offered.',
+                'not-text',
+                ui_message=make_message('tabular.encoding', encoding=str(encoding)),
+            )
         try:
             return data.decode(encoding), encoding
         except UnicodeDecodeError as exc:
             raise TabularError(
-                f"This file cannot be read as {encoding}: the byte at position "
-                f"{exc.start:,} is not valid there. Try another encoding."
+                f'This file cannot be read as {encoding}: the byte at position {exc.start:,} is not valid there. Try another encoding.',
+                ui_message=make_message('tabular.invalid_byte', encoding=str(encoding), position=exc.start),
             ) from exc
     if data.startswith(b"\xef\xbb\xbf"):
         return data.decode("utf-8-sig", errors="strict"), "utf-8-sig"
@@ -199,7 +212,8 @@ def decode(data: bytes, encoding: Optional[str] = None) -> tuple[str, str]:
         return data.decode("windows-1252"), "windows-1252"
     except UnicodeDecodeError as exc:
         raise TabularError(
-            "This file is not CSV text: it is neither UTF-8 nor Windows-1252."
+            'This file is not CSV text: it is neither UTF-8 nor Windows-1252.',
+            ui_message=make_message('tabular.not_csv_encoding'),
         ) from exc
 
 
@@ -249,7 +263,11 @@ def read_table(
     check_size(len(data))
     text, used = decode(data, encoding)
     if separator is not None and separator not in SEPARATORS:
-        raise TabularError("The separator is a comma, a semicolon or a tab.", "not-text")
+        raise TabularError(
+            'The separator is a comma, a semicolon or a tab.',
+            'not-text',
+            ui_message=make_message('tabular.separator'),
+        )
     sep = separator or detect_separator(text)
     reader = csv.reader(io.StringIO(text, newline=""), delimiter=sep)
     head: Optional[list[str]] = None
@@ -264,16 +282,16 @@ def read_table(
                 continue  # a blank line is no row, and is not numbered
             if len(row) > MAX_COLUMNS:
                 raise TabularError(
-                    f"This file has {len(row):,} columns. Semantic Studio imports at most "
-                    f"{MAX_COLUMNS} columns: {WHY}.",
-                    "too-large",
+                    f'This file has {len(row):,} columns. Semantic Studio imports at most {MAX_COLUMNS} columns: {WHY}.',
+                    'too-large',
+                    ui_message=make_message('tabular.column_limit', count=len(row), limit=MAX_COLUMNS),
                 )
             for index, cell in enumerate(row):
                 if len(cell) > MAX_CELL:
                     raise TabularError(
-                        f"Line {line:,}, column {index + 1} holds {len(cell):,} characters. A cell "
-                        f"can hold at most {MAX_CELL:,} characters, as in Excel.",
-                        "too-large",
+                        f'Line {line:,}, column {index + 1} holds {len(cell):,} characters. A cell can hold at most {MAX_CELL:,} characters, as in Excel.',
+                        'too-large',
+                        ui_message=make_message('tabular.cell_limit', row=line, column=index + 1, characters=len(cell), limit=MAX_CELL),
                     )
             if header and head is None:
                 head = row
@@ -288,13 +306,20 @@ def read_table(
         # means a cell far past ours: the same refusal.
         if "field larger than field limit" in str(exc):
             raise TabularError(
-                f"Line {line + 1:,} holds a cell of more than {MAX_CELL:,} characters. A cell "
-                f"can hold at most {MAX_CELL:,} characters, as in Excel.",
-                "too-large",
+                f'Line {line + 1:,} holds a cell of more than {MAX_CELL:,} characters. A cell can hold at most {MAX_CELL:,} characters, as in Excel.',
+                'too-large',
+                ui_message=make_message('tabular.long_cell', row=line + 1, limit=MAX_CELL),
             ) from exc
-        raise TabularError(f"This file is not CSV text: {exc} (line {line + 1:,}).") from exc
+        raise TabularError(
+            f'This file is not CSV text: {exc} (line {line + 1:,}).',
+            ui_message=make_message('tabular.csv_syntax', row=line + 1),
+        ) from exc
     if head is None and not kept:
-        raise TabularError("This file is empty.", "empty")
+        raise TabularError(
+            'This file is empty.',
+            'empty',
+            ui_message=make_message('tabular.empty'),
+        )
     columns, renamed = _named(head or [], width)
     if not header:
         renamed = []  # nothing was named, so nothing was renamed
@@ -337,6 +362,16 @@ _DTD_MARKS = tuple(
 )
 
 
+_FORMAT_CODES = {
+    ".xlsm": "tabular.format.xlsm", ".xltm": "tabular.format.xltm",
+    ".xlsb": "tabular.format.xlsb", ".xls": "tabular.format.xls", ".ods": "tabular.format.ods",
+}
+
+
+def _format_message(suffix: str) -> dict:
+    return make_message(_FORMAT_CODES[suffix])
+
+
 def _suffix(filename: str) -> str:
     name = re.split(r"[\\/]", filename or "")[-1].lower()
     return name[name.rfind("."):] if "." in name else ""
@@ -358,22 +393,37 @@ def check_workbook(data: bytes, filename: str = "") -> None:
     no XML is parsed."""
     suffix = _suffix(filename)
     if suffix in _REFUSED_SUFFIXES:
-        raise TabularError(f"This file is {_REFUSED_SUFFIXES[suffix]}.", "not-text")
+        raise TabularError(
+            f'This file is {_REFUSED_SUFFIXES[suffix]}.',
+            'not-text',
+            ui_message=_format_message(suffix),
+        )
     if data.startswith(_OLE):
         if _ENCRYPTED in data:
             raise TabularError(
-                "This workbook is password protected. Open it in Excel, remove the password, "
-                "and save it again.",
-                "not-text",
+                'This workbook is password protected. Open it in Excel, remove the password, and save it again.',
+                'not-text',
+                ui_message=make_message('tabular.password'),
             )
-        raise TabularError(f"This file is {_REFUSED_SUFFIXES['.xls']}.", "not-text")
+        raise TabularError(
+            f"This file is {_REFUSED_SUFFIXES['.xls']}.",
+            'not-text',
+            ui_message=_format_message(".xls"),
+        )
     if not data.startswith(_ZIP):
-        raise TabularError("This file is not an Excel workbook (.xlsx).", "not-text")
+        raise TabularError(
+            'This file is not an Excel workbook (.xlsx).',
+            'not-text',
+            ui_message=make_message('tabular.not_xlsx'),
+        )
     try:
         archive = zipfile.ZipFile(io.BytesIO(data))
         entries = archive.infolist()
     except (zipfile.BadZipFile, OSError, ValueError) as exc:
-        raise TabularError("This file is not an Excel workbook (.xlsx): it is a damaged ZIP.") from exc
+        raise TabularError(
+            'This file is not an Excel workbook (.xlsx): it is a damaged ZIP.',
+            ui_message=make_message('tabular.damaged_zip'),
+        ) from exc
     unpacked = sum(e.file_size for e in entries)
     packed = sum(e.compress_size for e in entries)
     bomb = (
@@ -382,24 +432,37 @@ def check_workbook(data: bytes, filename: str = "") -> None:
         "size: that is how a decompression bomb looks."
     )
     if unpacked > XLSX_MAX_UNPACKED:
-        raise TabularError(bomb.format(what=f"{unpacked / (1024 * 1024):,.0f} MB"), "too-large")
+        raise TabularError(
+            bomb.format(what=f'{unpacked / (1024 * 1024):,.0f} MB'),
+            'too-large',
+            ui_message=make_message('tabular.unpacked_limit', bytes=unpacked, limit=XLSX_MAX_UNPACKED // (1024 * 1024)),
+        )
     if unpacked > XLSX_MAX_RATIO * max(packed, 1):
-        raise TabularError(bomb.format(what=f"{unpacked // max(packed, 1):,} times its size"), "too-large")
+        raise TabularError(
+            bomb.format(what=f'{unpacked // max(packed, 1):,} times its size'),
+            'too-large',
+            ui_message=make_message('tabular.compression_limit', ratio=unpacked // max(packed, 1), limit=XLSX_MAX_RATIO),
+        )
     for entry in entries:
         if entry.file_size >= _RATIO_FLOOR and entry.file_size > XLSX_MAX_RATIO * max(entry.compress_size, 1):
             raise TabularError(
-                bomb.format(what=f"{entry.file_size // max(entry.compress_size, 1):,} times its size"),
-                "too-large",
+                bomb.format(what=f'{entry.file_size // max(entry.compress_size, 1):,} times its size'),
+                'too-large',
+                ui_message=make_message('tabular.entry_compression_limit', name=str(entry.filename), ratio=entry.file_size // max(entry.compress_size, 1), limit=XLSX_MAX_RATIO),
             )
         if entry.flag_bits & 0x1:
             raise TabularError(
-                "This workbook is password protected. Open it in Excel, remove the password, "
-                "and save it again.",
-                "not-text",
+                'This workbook is password protected. Open it in Excel, remove the password, and save it again.',
+                'not-text',
+                ui_message=make_message('tabular.password'),
             )
     names = {e.filename.lower() for e in entries}
     if any(n.endswith("vbaproject.bin") for n in names):
-        raise TabularError(f"This file is {_REFUSED_SUFFIXES['.xlsm']}.", "not-text")
+        raise TabularError(
+            f"This file is {_REFUSED_SUFFIXES['.xlsm']}.",
+            'not-text',
+            ui_message=_format_message(".xlsm"),
+        )
     try:
         # Every entry is read to its end before openpyxl sees any: its CRC
         # is checked there, so an entry whose data inflates past its
@@ -414,7 +477,10 @@ def check_workbook(data: bytes, filename: str = "") -> None:
     except (zipfile.BadZipFile, OSError, ValueError, EOFError, zlib.error, NotImplementedError) as exc:
         if isinstance(exc, TabularError):
             raise
-        raise TabularError("This file is not an Excel workbook (.xlsx): it is a damaged ZIP.") from exc
+        raise TabularError(
+            'This file is not an Excel workbook (.xlsx): it is a damaged ZIP.',
+            ui_message=make_message('tabular.damaged_zip'),
+        ) from exc
 
 
 _SCAN_CHUNK = 64 * 1024
@@ -431,12 +497,16 @@ def _scan_entry(archive: zipfile.ZipFile, entry: zipfile.ZipInfo) -> None:
         while chunk := stream.read(_SCAN_CHUNK):
             window = tail + chunk
             if contents and b"macroenabled" in window.lower():
-                raise TabularError(f"This file is {_REFUSED_SUFFIXES['.xlsm']}.", "not-text")
+                raise TabularError(
+                    f"This file is {_REFUSED_SUFFIXES['.xlsm']}.",
+                    'not-text',
+                    ui_message=_format_message(".xlsm"),
+                )
             if any(mark in window for mark in _DTD_MARKS):
                 raise TabularError(
-                    f"This workbook holds an XML document type declaration ({entry.filename}), which "
-                    "Excel never writes. It is refused: declarations are how XML entity attacks work.",
-                    "not-text",
+                    f'This workbook holds an XML document type declaration ({entry.filename}), which Excel never writes. It is refused: declarations are how XML entity attacks work.',
+                    'not-text',
+                    ui_message=make_message('tabular.xml_declaration', name=str(entry.filename)),
                 )
             tail = window[-_MARK_TAIL:]
 
@@ -499,15 +569,15 @@ def _sheet_row(sheet_name: str, number: int, cells: list) -> list[str]:
             continue
         if column > MAX_COLUMNS:
             raise TabularError(
-                f"Sheet {sheet_name} has a value in column {column:,} (row {number:,}). Semantic Studio "
-                f"imports at most {MAX_COLUMNS} columns: {WHY}.",
-                "too-large",
+                f'Sheet {sheet_name} has a value in column {column:,} (row {number:,}). Semantic Studio imports at most {MAX_COLUMNS} columns: {WHY}.',
+                'too-large',
+                ui_message=make_message('tabular.sheet_column_limit', name=str(sheet_name), row=number, column=column, limit=MAX_COLUMNS),
             )
         if len(text) > MAX_CELL:
             raise TabularError(
-                f"Sheet {sheet_name}, row {number:,}, column {column} holds {len(text):,} characters. "
-                f"A cell can hold at most {MAX_CELL:,} characters, as in Excel.",
-                "too-large",
+                f'Sheet {sheet_name}, row {number:,}, column {column} holds {len(text):,} characters. A cell can hold at most {MAX_CELL:,} characters, as in Excel.',
+                'too-large',
+                ui_message=make_message('tabular.sheet_cell_limit', name=str(sheet_name), row=number, column=column, characters=len(text), limit=MAX_CELL),
             )
         texts[column] = text
     if not texts:
@@ -552,8 +622,9 @@ def _open_workbook(data: bytes):
     # defusedxml's: the standard library's, or lxml's (Section 9).
     if not parses_through_defusedxml():
         raise TabularError(
-            "Excel workbooks cannot be read safely here: openpyxl is not parsing through defusedxml.",
-            "not-text",
+            'Excel workbooks cannot be read safely here: openpyxl is not parsing through defusedxml.',
+            'not-text',
+            ui_message=make_message('tabular.unsafe_parser'),
         )
     return openpyxl.load_workbook(
         io.BytesIO(data), read_only=True, data_only=True, keep_vba=False, keep_links=False,
@@ -578,20 +649,31 @@ def read_workbook(
     if header_row is not None and (
         isinstance(header_row, bool) or not isinstance(header_row, int) or not 1 <= header_row <= MAX_HEADER_ROW
     ):
-        raise TabularError("The header row is a row number, from 1.", "not-text")
+        raise TabularError(
+            'The header row is a row number, from 1.',
+            'not-text',
+            ui_message=make_message('tabular.header_row'),
+        )
     check_workbook(data, filename)
     try:
         book = _open_workbook(data)
     except TabularError:
         raise
     except Exception as exc:  # noqa: BLE001 - openpyxl and defusedxml raise many kinds
-        raise TabularError(f"This workbook cannot be read: {_reason(exc)}") from exc
+        raise TabularError(
+            f'This workbook cannot be read: {_reason(exc)}',
+            ui_message=make_message('tabular.workbook_unreadable'),
+        ) from exc
     try:
         from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 
         sheets = [ws for ws in book.worksheets if isinstance(ws, ReadOnlyWorksheet)]
         if not sheets:
-            raise TabularError("This workbook has no sheet of cells.", "empty")
+            raise TabularError(
+                'This workbook has no sheet of cells.',
+                'empty',
+                ui_message=make_message('tabular.no_sheets'),
+            )
         if sheet is None:
             chosen = next((ws for ws in sheets if _has_values(ws)), sheets[0])
         else:
@@ -602,9 +684,10 @@ def read_workbook(
             # chosen and no rows read (PR #54 review).
             listing = [{"name": ws.title, "rows": _rows_below_first(ws)} for ws in sheets]
             raise TabularError(
-                f"This workbook has no sheet named {sheet}.",
-                "not-text",
-                {"sheet": "", "headerRow": 1, "top": [], "sheets": listing},
+                f'This workbook has no sheet named {sheet}.',
+                'not-text',
+                {'sheet': '', 'headerRow': 1, 'top': [], 'sheets': listing},
+                ui_message=make_message('tabular.sheet_missing', name=str(sheet)),
             )
         listing = []
         table: Optional[Table] = None
@@ -632,7 +715,10 @@ def read_workbook(
     except TabularError:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise TabularError(f"This workbook cannot be read: {_reason(exc)}") from exc
+        raise TabularError(
+            f'This workbook cannot be read: {_reason(exc)}',
+            ui_message=make_message('tabular.workbook_unreadable'),
+        ) from exc
     finally:
         book.close()
 
@@ -704,11 +790,17 @@ def _read_sheet(ws, header_row: Optional[int]) -> Table:
     if head is None or not any(head):
         # Refused with the rows that are there, so step 1 keeps its pickers.
         if header_row is None or (total == 0 and not any(entry["cells"] for entry in top)):
-            raise TabularError(f"Sheet {name} is empty.", "empty", workbook)
+            raise TabularError(
+                f'Sheet {name} is empty.',
+                'empty',
+                workbook,
+                ui_message=make_message('tabular.sheet_empty', name=str(name)),
+            )
         raise TabularError(
-            f"Row {header_row:,} of sheet {name} is empty: choose the row that holds the column names.",
-            "empty",
+            f'Row {header_row:,} of sheet {name} is empty: choose the row that holds the column names.',
+            'empty',
             workbook,
+            ui_message=make_message('tabular.header_empty', name=str(name), row=header_row),
         )
     columns, renamed = _named(head, width)
     rows = [row + [""] * (width - len(row)) for row in kept]

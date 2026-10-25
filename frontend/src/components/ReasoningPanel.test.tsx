@@ -15,6 +15,12 @@ SUMMARY
     own imports switch.
 
 BASIC IDEA
+    Display metadata translates retained results and accessible labels without
+    changing selection IRIs, open details, focus or the original fetched data.
+
+    Rejected reads preserve their original details and display facts through UI
+    language changes without refetching or replacing retained content.
+
     The run lives in the project store, so the store is opened for real over
     a mocked api.ts, and the controls and the panel are rendered as App
     renders them. A run is a promise the test resolves when it chooses, so
@@ -33,12 +39,13 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectKind, ReasoningGroup, ReasoningResult } from "../types";
 
-const { openProject, listData, reasonProject, stopReasoning, getReasoningPage, getWhy } = vi.hoisted(() => ({
+const { openProject, listData, reasonProject, stopReasoning, getReasoningPage, getWhy, getReasoningResult } = vi.hoisted(() => ({
   openProject: vi.fn(),
   listData: vi.fn(),
   reasonProject: vi.fn(),
   stopReasoning: vi.fn(),
   getReasoningPage: vi.fn(),
+  getReasoningResult: vi.fn(),
   getWhy: vi.fn(),
 }));
 
@@ -49,11 +56,15 @@ vi.mock("../api", async (importOriginal) => ({
   reasonProject,
   stopReasoning,
   getReasoningPage,
+  getReasoningResult,
   getWhy,
 }));
 
 import { ApiError } from "../api";
-import { projectStore } from "../state/projectStore";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { projectStore, useProjectSelector } from "../state/projectStore";
 import ReasoningPanel, { ReasonControls } from "./ReasoningPanel";
 
 const PID = "prj-0123456789ab";
@@ -181,7 +192,7 @@ describe("Reason and the results panel (Section 6)", () => {
     button.focus();
     await press("Reason");
     expect(said()).toBe("Reasoning started.");
-    expect(reasonProject).toHaveBeenCalledWith(PID, false, false);
+    expect(reasonProject).toHaveBeenCalledWith(PID, false, false, "en");
     // One button whose name changes: focus is still on it.
     expect(button.textContent).toBe("Stop");
     expect(document.activeElement).toBe(button);
@@ -289,7 +300,7 @@ describe("Reason and the results panel (Section 6)", () => {
     expect(screen.getByText("The model changed after this run.")).toBeTruthy();
     const again = pending();
     await press("Reason again");
-    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, true);
+    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, true, "en");
     await again.answer(result({ basis: { revision: 3, generation: 0, imports: true } }));
     expect(screen.queryByText("The model changed after this run.")).toBeNull();
   });
@@ -307,7 +318,7 @@ describe("Reason and the results panel (Section 6)", () => {
     expect(screen.getByText(/slower: about a second per 1,000 rows/)).toBeTruthy();
     const first = pending();
     await press("Reason");
-    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, false);
+    expect(reasonProject).toHaveBeenLastCalledWith(PID, false, false, "en");
     await first.answer(result());
     await act(async () => {
       fireEvent.click(box);
@@ -315,7 +326,7 @@ describe("Reason and the results panel (Section 6)", () => {
     expect(box.checked).toBe(true);
     const second = pending();
     await press("Reason");
-    expect(reasonProject).toHaveBeenLastCalledWith(PID, true, false);
+    expect(reasonProject).toHaveBeenLastCalledWith(PID, true, false, "en");
     await second.answer(result());
   });
 
@@ -391,7 +402,8 @@ describe("Reason and the results panel (Section 6)", () => {
     await setup();
     reasonProject.mockRejectedValue(new ApiError("A run is already going.", 409));
     await press("Reason");
-    expect(screen.getByRole("alert").textContent).toBe("A run is already going.");
+    expect(screen.getByRole("alert").textContent).toBe("The run could not be started: The operation could not be completed. Check the details.");
+    expect(screen.getByText("A run is already going.").closest("details")).toBeTruthy();
     // The alert says it; the live region does not say it again.
     expect(said()).toBe("Reasoning started.");
     expect(screen.getByRole("button", { name: "Reason" })).toBeTruthy();
@@ -489,21 +501,23 @@ describe("Focus and endings (PR #55 review)", () => {
   it("says a Stop that failed in the app's words, once, and Stop can be pressed again (PR #55 review)", async () => {
     await setup();
     const run = pending();
-    // What fetch rejects with when the server is gone: never shown.
+    // Fetch diagnostics stay in details; the alert uses the application words.
     stopReasoning.mockRejectedValue(new TypeError("Failed to fetch"));
     await press("Reason");
     await press("Stop");
     expect(screen.getByRole("alert").textContent).toBe(
       "The run could not be stopped: the server did not answer. Press Stop again.",
     );
-    expect(document.body.textContent).not.toContain("Failed to fetch");
+    expect(screen.getByText("Failed to fetch").closest("details")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).not.toContain("Failed to fetch");
     expect(said()).toBe("Reasoning started.");
     // The server's own sentence, when it sent one.
     stopReasoning.mockRejectedValueOnce(new ApiError("There is no such project.", 404));
     await press("Stop");
     expect(screen.getByRole("alert").textContent).toBe(
-      "The run could not be stopped: There is no such project. Press Stop again.",
+      "The run could not be stopped: The operation could not be completed. Check the details. Press Stop again.",
     );
+    expect(screen.getByText("There is no such project.").closest("details")).toBeTruthy();
     expect(said()).toBe("Reasoning started.");
     const button = screen.getByRole("button", { name: "Stop" });
     expect(button.getAttribute("aria-disabled")).toBe("false");
@@ -544,4 +558,157 @@ describe("Focus and endings (PR #55 review)", () => {
     await run.answer(result());
     expect(said()).toBe("Reasoned in 4 s, but the model changed meanwhile: Reason again.");
   });
+});
+
+
+it("changes reasoning controls and result headings without repeating the run", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn();
+  render(<I18nProvider><UiLanguageSelect />{view("ontology", NOW, true)}</I18nProvider>);
+  const data = screen.getByRole("checkbox", { name: "データスナップショットを含める" });
+  fireEvent.click(data);
+  const run = pending();
+  const control = screen.getByRole("button", { name: "推論" });
+  await act(async () => fireEvent.click(control));
+  expect(screen.getByRole("button", { name: "停止" })).toBe(control);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Stop" })).toBe(control);
+  expect((screen.getByRole("checkbox", { name: "Include data snapshots" }) as HTMLInputElement).checked).toBe(true);
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  await run.answer(result());
+  const heading = screen.getByRole("heading", { name: "Results: reasoned in 4 s" });
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(screen.getByRole("heading", { name: "推論結果：4秒で完了" })).toBe(heading);
+  expect(screen.getByRole("heading", { name: "新しい所属関係（2件）" })).toBeTruthy();
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  expect(getReasoningPage).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("renders timeout metadata and keeps original engine details separate", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn();
+  render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  const run = pending();
+  await press("推論");
+  await run.answer(result({ status: "timedOut", problems: [], groups: [], sentence: "Original diagnostic 999", uiMessage: { code: "reasoning.timeout", args: { seconds: 1.5 } } }));
+  expect(document.querySelector(".reasoning-ending")?.textContent).toContain("1.5秒");
+  expect(document.querySelector(".reasoning-ending")?.textContent).not.toContain("999");
+  expect(screen.getByText("Original diagnostic 999").closest("details")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(document.querySelector(".reasoning-ending")?.textContent).toContain("1.5 seconds");
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each([["start", "Original <img>{diagnostic}"], ["stop", "Original <img>{diagnostic}"], ["start", ""]] as const)("renders a %s failure once in the current locale and keeps its original details (%s)", async (phase, diagnostic) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn();
+  const error = new ApiError(diagnostic, 409, undefined, { code: "model.invalid_value", args: { value: "<b>値</b>", datatype: "xsd:integer" } });
+  render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  const run = phase === "stop" ? pending() : null;
+  if (phase === "start") reasonProject.mockRejectedValueOnce(error);
+  else stopReasoning.mockRejectedValueOnce(error);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "推論" })); });
+  if (phase === "stop") await act(async () => { fireEvent.click(screen.getByRole("button", { name: "停止" })); });
+  const japanese = "「<b>値</b>」はxsd:integerの値として使用できません。";
+  expect(screen.getByRole("alert").textContent).toBe(phase === "start" ? `推論を開始できませんでした：${japanese}` : `推論を停止できませんでした：${japanese}もう一度「停止」を押してください。`);
+  expect(projectStore.getSnapshot().reasoningErrorCause).toEqual({ kind: phase, error });
+  expect(document.querySelector(".reasoning details pre")?.textContent).toBe(error.message);
+  expect(document.querySelector(".reasoning img, .reasoning b")).toBeNull();
+  const notice = projectStore.getSnapshot().announcement;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  const english = '“<b>値</b>” is not a valid xsd:integer value.';
+  expect(screen.getByRole("alert").textContent).toBe(phase === "start" ? `The run could not be started: ${english}` : `The run could not be stopped: ${english} Press Stop again.`);
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  expect(stopReasoning).toHaveBeenCalledTimes(phase === "stop" ? 1 : 0);
+  if (run) await run.answer(result());
+  else { reasonProject.mockResolvedValueOnce(result()); await act(async () => { await projectStore.reason(false, false); }); }
+  expect(projectStore.getSnapshot().reasoningErrorCause).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps a rejected result page's facts for current-language rendering and preserves its existing facts", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID);
+  onSelect = vi.fn<(iri: string) => void>();
+  const { container } = render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  const first = fact("alice", "Person", "Alice is a Person");
+  reasonProject.mockResolvedValueOnce(result({ problems: [], groups: [group("memberships", [first], 201)] }));
+  await press("推論");
+  const error = new ApiError("Page error <b>{cause}", 422, undefined,
+    { code: "model.invalid_value", args: { value: "<img>{value}", datatype: "xsd:integer" } });
+  getReasoningPage.mockRejectedValueOnce(error);
+  await press("続きを表示");
+  expect(screen.getByRole("alert").textContent).toBe('「<img>{value}」はxsd:integerの値として使用できません。');
+  expect(screen.getByText(error.message, { selector: "pre" })).toBeTruthy();
+  const factButton = screen.getByRole("button", { name: "Alice is a Person" });
+  const count = getReasoningPage.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("alert").textContent).toBe('“<img>{value}” is not a valid xsd:integer value.');
+  expect(screen.getByRole("button", { name: "Alice is a Person" })).toBe(factButton);
+  expect(getReasoningPage).toHaveBeenCalledTimes(count);
+  expect(reasonProject).toHaveBeenCalledTimes(1);
+  expect(container.querySelector(".reasoning img, .reasoning b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each([true, false])("renders result facts, problems and causes from metadata without changing retained identities (known=%s)", async (known) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await projectStore.open(PID); onSelect = vi.fn();
+  const described = { ...fact("alice", "Person", "Original fact <img>{s}"), uiMessage: { code: "reasoning.fact.type", args: { s: [{ text: "対象 <b>{s}" }], o: [{ text: "分類" }] } } };
+  const returned = result({ groups: [group("memberships", [described])], problems: [{ kind: "irreflexive", subject: X + "alice", sentence: "Original conflict <img>",
+    uiMessage: known ? { code: "reasoning.problem.irreflexive", args: { subject: [{ text: "対象 <b>{s}" }], property: [{ text: "関連" }] } } : { code: "future.conflict", args: {} },
+    causes: [{ ...described, inferred: false }] }] });
+  reasonProject.mockResolvedValueOnce(returned);
+  const { container } = render(<I18nProvider><UiLanguageSelect />{view()}</I18nProvider>);
+  await press("推論");
+  const sentence = "「対象 <b>{s}」は「分類」の個体です。";
+  const buttons = screen.getAllByRole("button", { name: sentence }); expect(buttons.length).toBe(2);
+  const conflict = screen.getByRole("button", { name: known ? "「対象 <b>{s}」は「関連」で自分自身と結ばれていますが、この関係では自己への結び付けが禁止されています。" : "この記述については、推論の元の詳細を確認してください。" });
+  const detail = screen.getByText("Original conflict <img>").closest("details")!; expect(detail).toBeTruthy(); detail.open = true;
+  const summary = within(detail).getByText("技術的な詳細"); summary.focus();
+  const notice = projectStore.getSnapshot().announcement;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getAllByRole("button", { name: "対象 <b>{s} is an instance of 分類." })).toEqual(buttons);
+  expect(screen.getByRole("button", { name: known ? "対象 <b>{s} is linked to itself by 関連, which forbids self-links." : "Check the original reasoning details for this statement." })).toBe(conflict);
+  expect(detail.open).toBe(true); expect(document.activeElement).toBe(summary);
+  fireEvent.click(buttons[0]); expect(onSelect).toHaveBeenCalledWith(X + "alice");
+  expect(projectStore.getSnapshot().announcement).toBe(notice);
+  expect(reasonProject).toHaveBeenCalledTimes(1); expect(getReasoningPage).not.toHaveBeenCalled();
+  expect(container.querySelector(".reasoning img, .reasoning b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("restarts result pages for new read names and ignores the old language page", async () => {
+  openProject.mockResolvedValueOnce({project:{id:PID,name:"Bilingual",createdAt:"",updatedAt:"",baseIri:X,prefix:"x",primaryLanguage:"en",languages:["ja"],documents:[],counts:{},kind:"ontology"},
+    documents:[{doc:"model",ontologyId:PID+"-model",revision:3,dirty:false,canUndo:false,canRedo:false,undoLabel:null,redoLabel:null,triples:39}],recovery:{available:false,draftTime:null}});
+  await projectStore.open(PID);onSelect=vi.fn();
+  const named=(id:string,name:string)=>({...fact(id,"Person",`${name} is a Person`),sLabel:name,
+    uiMessage:{code:"reasoning.fact.type",args:{s:[{text:name}],o:[{text:"Person"}]}}});
+  const english=Array.from({length:200},(_,i)=>named(`n${i}`,`English${i}`));
+  const japanese=Array.from({length:200},(_,i)=>named(`n${i}`,`日本語${i}`));
+  const en=result({problems:[],groups:[group("memberships",english,201)]});
+  const ja=result({problems:[],groups:[group("memberships",japanese,201)]});
+  reasonProject.mockResolvedValueOnce(en);getReasoningResult.mockResolvedValueOnce(ja);
+  function Display(){const language=useProjectSelector(s=>s.displayLanguage)??"en";return <DictionaryLanguageContext.Provider value={language}>{view("ontology",NOW)}</DictionaryLanguageContext.Provider>;}
+  render(<Display/>);await press("Reason");
+  let finish!:(value:unknown)=>void;
+  getReasoningPage.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+  await press("Show more");
+  await act(async()=>{projectStore.setDisplayLanguage("ja");});
+  expect(screen.getByRole("button",{name:"日本語0 is an instance of Person."})).toBeTruthy();
+  await act(async()=>{finish({...group("memberships",[named("late","Old language page")],201),offset:200,stale:false});});
+  expect(screen.queryByRole("button",{name:/Old language page/})).toBeNull();
+  getReasoningPage.mockResolvedValueOnce({...group("memberships",[named("late","日本語末尾")],201),offset:200,stale:false});
+  await press("Show more");
+  expect(getReasoningPage).toHaveBeenLastCalledWith(PID,"memberships",200,false,"ja");
+  expect(screen.getByRole("button",{name:"日本語末尾 is an instance of Person."})).toBeTruthy();
+  expect(reasonProject).toHaveBeenCalledTimes(1);
 });

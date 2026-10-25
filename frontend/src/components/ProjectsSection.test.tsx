@@ -26,9 +26,12 @@ EXPECTED OUTPUT
 
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ProjectCard from "./ProjectsSection";
+import UiLanguageSelect from "./UiLanguageSelect";
 import type { ProjectSummary } from "../types";
 
 const PROJECT: ProjectSummary = {
@@ -197,4 +200,23 @@ describe("ProjectCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "More actions for Invoices" }));
     expect(screen.queryByRole("button", { name: /Change to/ })).toBeNull();
   });
+});
+it("names a Japanese project card's counts and actions without changing the project name", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1"); const open = vi.fn();
+  render(<I18nProvider><ProjectCard project={PROJECT} busy={false} disabled={false} onOpen={open} onRename={vi.fn()}
+    onChangeKind={vi.fn()} onDuplicate={vi.fn()} onExport={vi.fn()} onDelete={vi.fn()} /></I18nProvider>);
+  expect(screen.getByText("クラス2件、プロパティ1件、概念0件")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Invoicesを開く" })); expect(open).toHaveBeenCalledWith(PROJECT.id);
+  fireEvent.click(screen.getByRole("button", { name: "Invoicesのその他の操作" }));
+  expect(screen.getByRole("button", { name: "名前を変更" })).toBeTruthy();
+});
+
+it("localizes sampled project provenance and date on UI switches", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const source = { id: "sample", source: "名簿 <b>{file}.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true, enabled: true };
+  const { container } = render(<I18nProvider><UiLanguageSelect /><ProjectCard project={{ ...PROJECT, data: [source] }} busy={false} disabled={false}
+    onOpen={vi.fn()} onRename={vi.fn()} onChangeKind={vi.fn()} onDuplicate={vi.fn()} onExport={vi.fn()} onDelete={vi.fn()} /></I18nProvider>);
+  expect(container.textContent).toContain("名簿 <b>{file}.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(container.textContent).toContain("from 名簿 <b>{file}.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows");
 });

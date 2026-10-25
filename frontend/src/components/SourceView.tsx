@@ -38,9 +38,12 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { UiMessage } from "../i18n/uiMessage";
+import { useI18n } from "../i18n/I18nProvider";
+import { renderServerError } from "../i18n/serverMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSource } from "../api";
-import { findTargetLine, targetMissingMessage } from "../sourceTarget";
+import { findTargetLine, targetMissingMessage, targetMissingNotice } from "../sourceTarget";
 import type { SourceTarget } from "../sourceTarget";
 import { highlighterFor } from "../sparql/highlight";
 import type { OntologySource } from "../types";
@@ -52,6 +55,8 @@ interface Props {
   target?: SourceTarget | null;
   /** null when the target was found, otherwise the sentence explaining why not. */
   onTargetResolved?: (missing: string | null) => void;
+  /** Structured outcome for locale-independent notice state. */
+  onTargetMessage?: (missing: UiMessage | null) => void;
 }
 
 /** Lines rendered at once; more are revealed on demand or by a search hit. */
@@ -60,16 +65,21 @@ const WINDOW = 800;
 /** The heading focus lands on when the mode switches, and the pane's name. */
 const HEADING_ID = "source-view-heading";
 
-export default function SourceView({ ontologyId, target = null, onTargetResolved }: Props) {
+export default function SourceView({ ontologyId, target = null, onTargetResolved, onTargetMessage }: Props) {
+  const { t } = useI18n();
   const [source, setSource] = useState<OntologySource | null>(null);
   const [pretty, setPretty] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [visible, setVisible] = useState(WINDOW);
   const [query, setQuery] = useState("");
   const [matchIndex, setMatchIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [targetLine, setTargetLine] = useState<number | null>(null);
+  const sourceRef = useRef(source);
+  sourceRef.current = source;
+  const copyTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => { window.clearTimeout(copyTimer.current); sourceRef.current = null; }, []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // Held in a ref rather than listed as a dependency: App re-renders on every
@@ -77,9 +87,13 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
   // and re-announce each time. GraphView holds onExpanded the same way.
   const resolvedRef = useRef(onTargetResolved);
   resolvedRef.current = onTargetResolved;
+  const resolvedMessageRef = useRef(onTargetMessage);
+  resolvedMessageRef.current = onTargetMessage;
 
   useEffect(() => {
     setSource(null);
+    setCopied(false);
+    window.clearTimeout(copyTimer.current);
     setVisible(WINDOW);
     setError(null);
     if (!ontologyId) return;
@@ -87,7 +101,7 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
     let cancelled = false;
     getSource(ontologyId, pretty)
       .then((s) => !cancelled && setSource(s))
-      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : String(e)))
+      .catch((e: unknown) => !cancelled && setError(e))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -137,9 +151,11 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
     setTargetLine(line === -1 ? null : line);
     if (line === -1) {
       resolvedRef.current?.(targetMissingMessage(source.truncated));
+      resolvedMessageRef.current?.(targetMissingNotice(source.truncated));
       return;
     }
     resolvedRef.current?.(null);
+    resolvedMessageRef.current?.(null);
     setVisible((current) => (line + 20 > current ? line + 200 : current));
     // Smooth is motion, so it asks. index.css does carry a global
     // prefers-reduced-motion rule now, and it cannot help here: that rule
@@ -166,15 +182,15 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
     window.setTimeout(() => {
       scrollRef.current
         ?.querySelector(`[data-line="${line}"]`)
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+        ?.scrollIntoView({ block: "center", behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     }, 40);
   };
 
   if (!ontologyId) {
     return (
       <div className="source-view empty">
-        <p>No ontology loaded yet.</p>
-        <p className="hint">Use “Load” to add one, then come back to read it here.</p>
+        <p>{t("source.empty")}</p>
+        <p className="hint">{t("source.emptyHelp")}</p>
       </div>
     );
   }
@@ -189,30 +205,25 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
             arrangement DetailPanel's heading uses. Until now this pane had no
             heading at all, so there was nothing for a mode change to land on
             and nothing naming the region. */}
-        <h2 id={HEADING_ID} ref={headingRef} tabIndex={-1} className="source-title">
-          Source
-        </h2>
+        <h2 id={HEADING_ID} ref={headingRef} tabIndex={-1} className="source-title">{t("source.title")}</h2>
         <div className="mode-switch small">
           <button
             className={pretty ? "mode-tab" : "mode-tab active"}
             onClick={() => setPretty(false)}
-            title="The file exactly as it was uploaded or fetched"
-          >
-            Original
-          </button>
+            title={t("source.originalHelp")}
+          >{t("source.original")}</button>
           <button
             className={pretty ? "mode-tab active" : "mode-tab"}
             onClick={() => setPretty(true)}
-            title="Re-serialized as tidy, prefixed Turtle"
-          >
-            Formatted Turtle
-          </button>
+            title={t("source.formattedHelp")}
+          >{t("source.formatted")}</button>
         </div>
 
         <div className="source-search">
           <input
             type="search"
-            placeholder="Find in file…"
+            aria-label={t("source.find")}
+            placeholder={t("source.find")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -223,13 +234,13 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
             <>
               <span className="source-match-count">
                 {matches.length === 0
-                  ? "no matches"
-                  : `${matchIndex + 1} of ${matches.length.toLocaleString()}`}
+                  ? t("source.none")
+                  : t("source.matches", { index: matchIndex + 1, total: matches.length })}
               </span>
-              <button className="tool-btn" onClick={() => goToMatch(matchIndex - 1)} title="Previous">
+              <button className="tool-btn" onClick={() => goToMatch(matchIndex - 1)} title={t("source.previous")}>
                 ↑
               </button>
-              <button className="tool-btn" onClick={() => goToMatch(matchIndex + 1)} title="Next">
+              <button className="tool-btn" onClick={() => goToMatch(matchIndex + 1)} title={t("source.next")}>
                 ↓
               </button>
             </>
@@ -239,8 +250,7 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
         <div className="spacer" />
         {source && (
           <span className="source-meta">
-            {source.format} · {source.lines.toLocaleString()} lines ·{" "}
-            {(source.bytes / 1024).toLocaleString(undefined, { maximumFractionDigits: 0 })} KB
+            {t("source.meta", { format: source.format, lines: source.lines, kilobytes: Math.round(source.bytes / 1024) })}
           </span>
         )}
         <button
@@ -248,34 +258,38 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
           disabled={!source}
           onClick={() => {
             if (!source) return;
-            void navigator.clipboard?.writeText(source.text);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
+            const captured = source;
+            void (async () => {
+              try {
+                await navigator.clipboard.writeText(captured.text);
+                if (sourceRef.current !== captured) return;
+                window.clearTimeout(copyTimer.current);
+                setCopied(true);
+                copyTimer.current = window.setTimeout(() => setCopied(false), 1500);
+              } catch (error: unknown) {
+                if (sourceRef.current !== captured) return;
+                setCopied(false); setError(error);
+              }
+            })();
           }}
-          title="Copy the whole document"
+          aria-label={copied ? t("source.copied") : t("source.copyTitle")}
+          title={t("source.copyTitle")}
         >
-          {copied ? "✓ Copied" : "⧉ Copy"}
+          {copied ? t("source.copied") : t("source.copy")}
         </button>
       </div>
 
-      {loading && <p className="detail-note">Reading the file…</p>}
-      {error && <p className="detail-error">{error}</p>}
+      {loading && <p className="detail-note">{t("source.reading")}</p>}
+      {!!error && <><p className="detail-error">{renderServerError(error, t)}</p><details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details></>}
 
       {source?.truncated && source.statements && (
         <p className="query-hint">
-          This ontology is too large to format in full: you are reading its first{" "}
-          {source.statements.shown.toLocaleString()} of{" "}
-          {source.statements.total.toLocaleString()} statements. Search and Copy cover only
-          this part — Explore and Query still work across the whole ontology.
+          {t("source.partialStatements", { shown: source.statements.shown, total: source.statements.total })}
         </p>
       )}
       {source?.truncated && !source.statements && (
         <p className="query-hint">
-          This file is too large to show in full: you are reading the first{" "}
-          {lines.length.toLocaleString()} lines (
-          {Math.round(source.text.length / 1024).toLocaleString()} KB of{" "}
-          {Math.round(source.bytes / 1024).toLocaleString()} KB). Search and Copy cover only
-          this portion — Explore and Query still work across the whole ontology.
+          {t("source.partialLines", { lines: lines.length, shown: Math.round(source.text.length / 1024), total: Math.round(source.bytes / 1024) })}
         </p>
       )}
 
@@ -310,7 +324,7 @@ export default function SourceView({ ontologyId, target = null, onTargetResolved
           </pre>
           {visible < lines.length && (
             <button className="ghost show-more" onClick={() => setVisible(visible + WINDOW * 2)}>
-              Show more — {(lines.length - visible).toLocaleString()} lines remaining
+              {t("source.more", { count: lines.length - visible })}
             </button>
           )}
         </div>

@@ -15,7 +15,7 @@ BASIC IDEA
     A project with English primary and French added, a French name on one
     class and none on the other, read through the same endpoints the
     interface reads with ?lang=. The library half uploads an ordinary file and
-    checks that ?lang= changes nothing for it.
+    checks that no-lang keeps legacy choice and explicit ?lang= selects names.
 
 INPUTS / INPUT SOURCES
     - The conftest temp data directory; the small template; inline Turtle.
@@ -154,12 +154,13 @@ def test_the_library_label_choice_is_unchanged():
     assert pick_label(graph, URIRef(PERSON)) == "Chien"
 
 
-def test_lang_is_ignored_for_a_library_ontology():
+def test_explicit_lang_selects_library_names_without_changing_the_default():
     oid = client.post(
         "/api/ontologies/upload",
         files={"file": ("lib-lang.ttl", f'<{PERSON}> a <http://www.w3.org/2002/07/owl#Class> ; <{RDFS.label}> "Person"@en , "Personne"@fr .'.encode())},
     ).json()["id"]
-    assert _graph_labels(oid, "fr") == _graph_labels(oid, None) == {PERSON: "Person"}
+    assert _graph_labels(oid, "fr") == {PERSON: "Personne"}
+    assert _graph_labels(oid, None) == {PERSON: "Person"}
 
 
 # --- the display language ------------------------------------------------------------------

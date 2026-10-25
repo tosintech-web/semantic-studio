@@ -6,13 +6,16 @@ FILE: frontend/src/components/EditSection.test.tsx
 
 SUMMARY
     The editing form (visual-modeling Stage 1): each block sends the command
-    and arguments 5.1 names, a refusal is the server's sentence under the
-    field that caused it, read-only cases say why, names are listed per
+    and arguments 5.1 names, a refusal has a current-language explanation under
+    its field and an untouched original in technical details. Legacy warnings
+    retain original text and fix arguments in their current-language context.
+    Read-only cases say why, names are listed per
     project language, pickers ask for one kind, and the delete flow shows the
     dry run, asks about children only when there are some, and deletes only
     on confirmation.
 
 BASIC IDEA
+    Completed operation notices retain facts and render in either UI locale.
     The component-test pattern: api.ts mocked, the project store opened on a
     mocked project, the form rendered straight from hand-built NodeDetails.
     "Sends the right command" is asserted on runCommand's arguments, which is
@@ -31,8 +34,20 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { P } from "../modeling/entity";
 import { projectStore } from "../state/projectStore";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+function noticeIn(locale: UiLocale): string {
+  return renderProjectAnnouncement(projectStore.getSnapshot().announcement, locale,
+    ((code, args) => translate(locale, code, args)) as Translator);
+}
+
 import type { NodeDetails, TermRef } from "../types";
 import EditSection from "./EditSection";
+import { ApiError } from "../api";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, previewDelete, searchNodes, getAnnotationProperties } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -166,7 +181,8 @@ afterEach(() => {
   projectStore._reset();
 });
 
-const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2);
+// Inspect RDF write arguments; the independent display-language argument is checked at its API/store boundary.
+const lastCommand = () => runCommand.mock.calls[runCommand.mock.calls.length - 1].slice(2, 4);
 
 describe("Names (AC-1)", () => {
   it("lists every project language, a missing one said in text", async () => {
@@ -198,7 +214,8 @@ describe("Names (AC-1)", () => {
       fireEvent.keyDown(field, { key: "Enter" });
     });
     expect(lastCommand()).toEqual(["SetLabel", { iri: EX + "Invoice", value: "", lang: "en" }]);
-    const error = screen.getByText("A label cannot be empty.");
+    const error = screen.getByText("The operation could not be completed. Check the details.");
+    expect(screen.getByText("A label cannot be empty.").tagName).toBe("PRE");
     expect(field.getAttribute("aria-describedby")).toBe(error.id);
     expect(screen.getByRole("textbox", { name: "name in en" })).toBe(field);
   });
@@ -295,7 +312,7 @@ describe("Structure (AC-1, AC-3)", () => {
     fireEvent.change(box, { target: { value: "Doc" } });
     const option = await screen.findByRole("option");
     expect(option.textContent).toBe("Document, from FOAF");
-    expect(searchNodes).toHaveBeenLastCalledWith(OID, "Doc", true, "class");
+    expect(searchNodes).toHaveBeenLastCalledWith(OID, "Doc", true, "class", expect.any(AbortSignal), 26, undefined);
     await act(async () => {
       fireEvent.keyDown(box, { key: "Enter" });
     });
@@ -396,7 +413,7 @@ describe("Structure (AC-1, AC-3)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add broader concept" }));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "St" } });
     await screen.findByRole("option", { name: "Status" });
-    expect(searchNodes).toHaveBeenLastCalledWith(OID, "St", true, "concept");
+    expect(searchNodes).toHaveBeenLastCalledWith(OID, "St", true, "concept", expect.any(AbortSignal), 26, undefined);
     await act(async () => {
       fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
     });
@@ -483,7 +500,9 @@ describe("DeleteFlow (AC-6)", () => {
         { iri: EX + "CreditNote", label: "Credit Note" },
       ]),
     );
-    runCommand.mockResolvedValueOnce(changed("Deleted class Invoice"));
+    runCommand.mockResolvedValueOnce({ ...changed("Deleted class Invoice"),
+      uiMessage: { code: "command.deleted_entity", args: { name: "Invoice", kind: [{ code: "words.kind.class", args: {} }] } },
+    });
     await renderForm(invoice());
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Delete Invoice…" }));
@@ -504,6 +523,8 @@ describe("DeleteFlow (AC-6)", () => {
     expect(lastCommand()).toEqual(["DeleteEntity", { iri: EX + "Invoice", strategy: "orphan" }]);
     expect(onDeleted).toHaveBeenCalledWith(EX + "Invoice");
     expect(projectStore.getSnapshot().announcement.text).toBe("Deleted class Invoice. Undo is available.");
+    expect(noticeIn("ja")).toBe("クラス「Invoice」の削除を行いました。元に戻せます。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
 
   it("offers no strategy when there are no children, and Cancel sends nothing", async () => {
@@ -641,14 +662,15 @@ describe("Stage 2 follow-ups (visual-modeling 5.8)", () => {
     await act(async () => {
       fireEvent.click(within(dateRow()).getByRole("button", { name: /^Remove/ }));
     });
-    expect(within(dateRow()).getByText("Refused for the date.")).toBeTruthy();
+    expect(within(dateRow()).getByText("The operation could not be completed. Check the details.")).toBeTruthy();
+    expect(screen.getByText("Refused for the date.").tagName).toBe("PRE");
     // The same statements, the other way round (a refetch may re-order them).
     const reordered = { ...first, outgoing: [...first.outgoing].reverse() };
     await act(async () => {
       view(<EditSection ontologyId={OID} details={reordered} primaryLanguage="en" languages={["fr"]} onSelect={onSelect} onDeleted={onDeleted} />);
     });
-    expect(within(dateRow()).getByText("Refused for the date.")).toBeTruthy();
-    expect(within(screen.getByText("A-1").closest("li")!).queryByText("Refused for the date.")).toBeNull();
+    expect(within(dateRow()).getByText("The operation could not be completed. Check the details.")).toBeTruthy();
+    expect(within(screen.getByText("A-1").closest("li")!).queryByText("The operation could not be completed. Check the details.")).toBeNull();
   });
 
   it("item 4: a create does not move the selection once the user went elsewhere", async () => {
@@ -698,8 +720,9 @@ describe("Stage 2 follow-ups (visual-modeling 5.8)", () => {
     });
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("alert").textContent).toBe(
-      "What deleting Invoice would take could not be worked out: Service unavailable",
+      "What deleting Invoice would take could not be worked out: The operation could not be completed. Check the details.",
     );
+    expect(within(dialog).getByText("Service unavailable").tagName).toBe("PRE");
     expect(within(dialog).queryByText(/Working out/)).toBeNull();
     expect(within(dialog).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel"]);
   });
@@ -729,24 +752,33 @@ describe("Stage 2 follow-ups (visual-modeling 5.8)", () => {
   });
 
   it("item 11: Copy says Copied; a web link value is a link, any other link value has Copy", async () => {
-    const d = invoice();
-    d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("https://example.org/spec") });
-    d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("urn:isbn:0451450523") });
-    await renderForm(d);
-    const web = screen.getByRole("link", { name: "https://example.org/spec" });
-    expect(web.getAttribute("href")).toBe("https://example.org/spec");
-    expect(screen.queryByRole("link", { name: "urn:isbn:0451450523" })).toBeNull();
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Copy urn:isbn:0451450523" }));
-    });
-    const regions = [...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent);
-    expect(regions).toContain("Copied urn:isbn:0451450523.");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-    });
-    expect([...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent)).toContain(
-      `Copied ${EX}Invoice.`,
-    );
+    const clipboardBefore = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      const d = invoice();
+      d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("https://example.org/spec") });
+      d.outgoing.push({ predicate: uri("http://www.w3.org/2000/01/rdf-schema#seeAlso"), object: uri("urn:isbn:0451450523") });
+      await renderForm(d);
+      const web = screen.getByRole("link", { name: "https://example.org/spec" });
+      expect(web.getAttribute("href")).toBe("https://example.org/spec");
+      expect(screen.queryByRole("link", { name: "urn:isbn:0451450523" })).toBeNull();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy urn:isbn:0451450523" }));
+      });
+      const regions = [...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent);
+      expect(regions).toContain("Copied urn:isbn:0451450523.");
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+      });
+      expect([...document.querySelectorAll('.edit-section [role="status"]')].map((r) => r.textContent)).toContain(
+        `Copied ${EX}Invoice.`,
+      );
+      expect(writeText.mock.calls).toEqual([["urn:isbn:0451450523"], [EX + "Invoice"]]);
+    } finally {
+      if (clipboardBefore) Object.defineProperty(navigator, "clipboard", clipboardBefore);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
   });
 
   it("past 300 boxes the form offers Show on canvas and Hide from canvas (5.6)", async () => {
@@ -904,7 +936,8 @@ describe("relationship form (AC-7)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("checkbox", { name: /At most one/ }));
     });
-    expect(screen.getByRole("alert").textContent).toBe(sentence);
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText(sentence).tagName).toBe("PRE");
     // The box shows the model, which the refusal did not change.
     expect((screen.getByRole("checkbox", { name: /At most one/ }) as HTMLInputElement).checked).toBe(false);
   });
@@ -930,7 +963,7 @@ describe("relationship form (AC-7)", () => {
     fireEvent.click(screen.getByRole("button", { name: "or choose an existing relationship" }));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "em" } });
     const option = await screen.findByRole("option", { name: "employs" });
-    expect(searchNodes).toHaveBeenLastCalledWith(OID, "em", true, "objectProperty");
+    expect(searchNodes).toHaveBeenLastCalledWith(OID, "em", true, "objectProperty", expect.any(AbortSignal), 26, undefined);
     await act(async () => {
       fireEvent.mouseDown(option);
     });
@@ -978,9 +1011,12 @@ describe("relationship form (AC-7)", () => {
       }),
     );
     const list = screen.getByRole("list", { name: "Warnings" });
-    expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "employs should go from Organization to Person.Fix",
-      "Another warning.",
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows.map(row => row.querySelector("span")?.textContent)).toEqual([
+      "There is a warning. Check the details.", "There is a warning. Check the details.",
+    ]);
+    expect(rows.map(row => row.querySelector("pre")?.textContent)).toEqual([
+      "employs should go from Organization to Person.", "Another warning.",
     ]);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Fix: Set employs from Organization to Person" }));
@@ -1239,4 +1275,138 @@ describe("concept relations (AC-9)", () => {
       { concept: EX + "Apple", kind: "exactMatch", target: "http://dbpedia.org/resource/Apple" },
     ]);
   });
+});
+
+
+it("keeps an entity-name draft and RDF language when the edit UI changes language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={["fr"]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  fireEvent.click(screen.getByRole("button", { name: "enの名前を編集" }));
+  const input = screen.getByRole("textbox", { name: "enの名前" });
+  fireEvent.change(input, { target: { value: "<b>請求書</b>" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "name in en" })).toBe(input);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Invoice", value: "<b>請求書</b>", lang: "en" }, "en");
+});
+it("localizes read-only guidance while preserving the source name", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const data = { ...invoice(), importedFrom: "<b>External</b>" };
+  await act(async () => render(<I18nProvider><EditSection ontologyId={OID} details={data} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  expect(screen.getByRole("region", { name: "編集" })).toBeTruthy();
+  expect(screen.getByText("<b>External</b>からの項目のため、読み取り専用です。")).toBeTruthy();
+  expect(document.querySelector("b")).toBeNull();
+});
+
+
+it("keeps the delete strategy and impact across a UI language switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  previewDelete.mockResolvedValue({ dryRun: true, revision: 2, impact: {
+    iri: EX + "Invoice", label: "Invoice", kind: "class", statements: 5, strategy: "reparent",
+    children: [{ iri: EX + "SalesInvoice", label: "Sales Invoice" }],
+    reparentedTo: [{ iri: EX + "Document", label: "Document" }],
+    properties: [{ iri: EX + "belongsTo", label: "belongs to", role: "range", kind: "object property" }],
+    individuals: [{ iri: EX + "i", label: "<b>具体例</b>" }], importMentions: 2,
+  } });
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })));
+  const dialog = screen.getByRole("dialog", { name: "Invoiceを削除しますか？" });
+  expect(within(dialog).getByText("Invoiceを削除すると、5件の記述が削除されます。")).toBeTruthy();
+  const orphan = within(dialog).getByRole("radio", { name: "上位を持たない状態にする" });
+  fireEvent.click(orphan);
+  expect((orphan as HTMLInputElement).checked).toBe(true);
+  // A test can switch the provider without altering the modal's keyboard trap.
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(within(dialog).getByRole("radio", { name: "Leave it without a parent" })).toBe(orphan);
+  expect((orphan as HTMLInputElement).checked).toBe(true);
+  expect(previewDelete).toHaveBeenCalledTimes(1);
+  expect(dialog.querySelector("b")).toBeNull();
+  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Delete" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Invoice", strategy: "orphan" }, "en");
+});
+
+
+it("rephrases a failed delete preview after UI switch while keeping the original error", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  previewDelete.mockRejectedValue(new Error("<b>Service unavailable</b>"));
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })));
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByRole("alert").textContent).toBe("Invoiceの削除による影響を確認できませんでした。理由：操作を完了できませんでした。詳細を確認してください。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(within(dialog).getByRole("alert").textContent).toBe("What deleting Invoice would take could not be worked out: The operation could not be completed. Check the details.");
+  expect(within(dialog).getAllByRole("button").map(b => b.textContent)).toEqual(["Cancel"]);
+  expect(within(dialog).getByText("<b>Service unavailable</b>").tagName).toBe("PRE");
+  expect(dialog.querySelector("b")).toBeNull();
+  expect(previewDelete).toHaveBeenCalledTimes(1);
+});
+
+
+it("rereads delete impact names in the dictionary language while retaining the chosen strategy", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1","en");
+  previewDelete.mockImplementation(async (_pid,_doc,_iri,_strategy,lang)=>({dryRun:true,revision:2,impact:{
+    iri:EX+"Invoice",label:lang === "ja" ? "請求書" : "Invoice",kind:"class",statements:5,strategy:"reparent",
+    children:[{iri:EX+"SalesInvoice",label:lang === "ja" ? "売上請求書" : "Sales Invoice"}],
+    reparentedTo:[{iri:EX+"Document",label:lang === "ja" ? "文書" : "Document"}],properties:[],individuals:[],importMentions:0,
+  }}));
+  const details=invoice();
+  const draw=(lang:string)=><DictionaryLanguageContext.Provider value={lang}><I18nProvider><UiLanguageSelect />
+    <EditSection ontologyId={OID} details={details} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} />
+    </I18nProvider></DictionaryLanguageContext.Provider>;
+  let view!: ReturnType<typeof render>;
+  await act(async()=>{view=render(draw("en"));});
+  await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Delete Invoice…"}));});
+  const orphan=screen.getByRole("radio",{name:"Leave it without a parent"});fireEvent.click(orphan);
+  await act(async()=>{view.rerender(draw("ja"));});
+  expect(screen.getByRole("dialog",{name:"Delete 請求書?"})).toBeTruthy();
+  expect(screen.getByRole("radio",{name:"Leave it without a parent"})).toBe(orphan);
+  expect((orphan as HTMLInputElement).checked).toBe(true);
+  expect(previewDelete).toHaveBeenLastCalledWith(PID,"model",EX+"Invoice","reparent","ja");
+  const reads=previewDelete.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox",{name:"UI language"}),{target:{value:"ja"}});
+  expect(screen.getByRole("dialog",{name:"請求書を削除しますか？"})).toBeTruthy();
+  expect(previewDelete).toHaveBeenCalledTimes(reads);
+  expect(runCommand).not.toHaveBeenCalled();localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("translates a retained delete-preview refusal and preserves the original detail", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const legacy = "Original <b>{reason}";
+  previewDelete.mockRejectedValue(new ApiError(legacy, 409, undefined, { code: "project.not_open", args: {} }));
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} /></I18nProvider>));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })); });
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByRole("alert").textContent).not.toContain(legacy);
+  expect(within(dialog).getByRole("alert").textContent).toContain(translate("ja", "project.not_open"));
+  expect(within(dialog).getByText(legacy).tagName).toBe("PRE");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(within(dialog).getByRole("alert").textContent).toContain(translate("en", "project.not_open"));
+  expect(previewDelete).toHaveBeenCalledTimes(1);
+  expect(runCommand).not.toHaveBeenCalled();
+});
+
+it("clears a failed delete preview while retrying and after a successful language reread", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  let resolve!: (value: unknown) => void;
+  previewDelete.mockRejectedValueOnce(new Error("Old preview <b>{error}"))
+    .mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+  const draw = (language: string) => <DictionaryLanguageContext.Provider value={language}><I18nProvider>
+    <EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} />
+  </I18nProvider></DictionaryLanguageContext.Provider>;
+  const view = render(draw("en"));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })); });
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByRole("alert")).toBeTruthy();
+  await act(async () => { view.rerender(draw("ja")); });
+  expect(within(dialog).queryByRole("alert")).toBeNull();
+  expect(within(dialog).getByRole("status")).toBeTruthy();
+  await act(async () => { resolve({ dryRun: true, revision: 2, impact: { iri: EX + "Invoice", label: "Invoice", kind: "class", statements: 1,
+    strategy: "reparent", children: [], reparentedTo: [], properties: [], individuals: [], importMentions: 0 } }); });
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(within(dialog).queryByRole("alert")).toBeNull();
+  expect(within(dialog).queryByText("Old preview <b>{error}")).toBeNull();
+  expect(within(dialog).getByRole("button", { name: "削除" })).toBeTruthy();
+  expect(previewDelete).toHaveBeenCalledTimes(2);
+  expect(runCommand).not.toHaveBeenCalled();
 });

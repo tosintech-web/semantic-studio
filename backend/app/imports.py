@@ -4,6 +4,7 @@ FILE: backend/app/imports.py
 ================================================================================
 
 SUMMARY
+    Import refusals retain original details and optional source-created UI facts.
     owl:imports, resolved local first (external-access Stage 2, backlog X-5,
     decision D-068). Finds the imports an ontology declares, resolves each one
     and the imports of those, keeps what was downloaded or chosen in a read-only
@@ -71,6 +72,8 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
+from collections import OrderedDict
+
 import hashlib
 import json
 import threading
@@ -85,6 +88,7 @@ from rdflib.graph import ReadOnlyGraphAggregate
 from rdflib.namespace import DC, DCTERMS, OWL, RDF, RDFS
 from rdflib.paths import Path as SparqlPath
 
+from .messages import MessageError, MessageText, integer_arg, make_message
 from . import network_broker
 from .graph_builder import build_viz_graph, ontology_iris
 from .hierarchy import build_hierarchy
@@ -295,7 +299,7 @@ class MergedView(ReadOnlyGraphAggregate):
 # ---------------------------------------------------------------------------
 
 
-class VocabIntegrityError(Exception):
+class VocabIntegrityError(MessageError):
     """A bundled file's bytes do not match its pinned SHA-256."""
 
 
@@ -334,7 +338,8 @@ def bundled_bytes(entry: dict) -> bytes:
     if _sha256(data) != entry["sha256"]:
         raise VocabIntegrityError(
             f"The bundled copy of {entry['title']} does not match its recorded "
-            "checksum, so it was not used."
+            "checksum, so it was not used.",
+            ui_message=make_message("imports.bundled_changed", title=entry["title"]),
         )
     return data
 
@@ -442,7 +447,8 @@ class ImportsCache:
         if _sha256(data) != meta["sha256"]:
             # The provenance says what was fetched; a file that no longer
             # matches it is not that document any more.
-            raise ParseError("The cached copy of this import has changed on disk.")
+            raise ParseError("The cached copy of this import has changed on disk.",
+                             ui_message=make_message("imports.cache_changed"))
         graph, _ = parse_rdf(data, meta.get("format"), timeout=parse_timeout)
         with self._lock:
             self._graphs[key] = graph
@@ -493,6 +499,16 @@ def load_state(ontology: Ontology) -> Optional[dict]:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
+
+
+def _message_fields(text, field: str, ui_message: Optional[dict] = None) -> dict:
+    """Project optional source facts beside unchanged legacy text at boundaries.
+
+    Saved older records and custom exceptions have no facts; their wording is
+    never used to infer a code. JSON persistence needs the explicit sibling.
+    """
+    message = ui_message if ui_message is not None else getattr(text, "ui_message", None)
+    return {field: text, **({field + "UiMessage": message} if message is not None else {})}
 
 
 def save_state(ontology: Ontology, state: dict) -> None:
@@ -551,6 +567,8 @@ class ImportsService:
         return {
             "imports": rows,
             "limit": limit,
+            **({"limitUiMessage": state["limitUiMessage"]}
+               if state and "limitUiMessage" in state else {}),
             "resolving": running,
             "offline": broker.policy.offline,
         }
@@ -583,6 +601,7 @@ class ImportsService:
                 status=FAILED,
                 error="What this import was resolved from is no longer available. "
                 "Resolve imports again.",
+                errorUiMessage=make_message("imports.source_gone"),
             )
         return row
 
@@ -652,7 +671,9 @@ class ImportsService:
         progress.total = len(queue)
 
         def save():
-            state = {"resolvedAt": _now(), "rows": rows, "limit": limit}
+            for row in rows:
+                row.update(_message_fields(row["error"], "error"))
+            state = {"resolvedAt": _now(), "rows": rows, **_message_fields(limit, "limit")}
             save_state(ontology, state)
             return state
 
@@ -669,17 +690,33 @@ class ImportsService:
                 progress.done += 1
                 continue
             if progress.cancel.is_set():
-                row["error"] = "Stopped before this import was resolved."
+                row["error"] = MessageText("Stopped before this import was resolved.", "imports.stopped")
                 progress.done += 1
                 continue
             if depth > MAX_DEPTH:
-                row["error"] = f"Not loaded: imports deeper than {MAX_DEPTH} levels are not followed."
-                limit = limit or f"Imports deeper than {MAX_DEPTH} levels were not followed."
+                row["error"] = MessageText(
+                    f"Not loaded: imports deeper than {MAX_DEPTH} levels are not followed.",
+                    "imports.depth_refused",
+                    limit=integer_arg(MAX_DEPTH),
+                )
+                limit = limit or MessageText(
+                    f"Imports deeper than {MAX_DEPTH} levels were not followed.",
+                    "imports.depth_limit",
+                    limit=integer_arg(MAX_DEPTH),
+                )
                 progress.done += 1
                 continue
             if documents >= MAX_DOCUMENTS:
-                row["error"] = f"Not loaded: the {MAX_DOCUMENTS}-document limit was reached."
-                limit = limit or f"Only the first {MAX_DOCUMENTS} imported documents were loaded."
+                row["error"] = MessageText(
+                    f"Not loaded: the {MAX_DOCUMENTS}-document limit was reached.",
+                    "imports.document_refused",
+                    limit=integer_arg(MAX_DOCUMENTS),
+                )
+                limit = limit or MessageText(
+                    f"Only the first {MAX_DOCUMENTS} imported documents were loaded.",
+                    "imports.document_limit",
+                    limit=integer_arg(MAX_DOCUMENTS),
+                )
                 progress.done += 1
                 continue
 
@@ -704,7 +741,11 @@ class ImportsService:
                 # Worded to stay true whichever way the user answers: after a
                 # Don't allow this row is what the panel shows, with its ways out.
                 host = urlsplit(iri).hostname or iri
-                row["error"] = f"Not loaded: this needs your permission to connect to {host}."
+                row["error"] = MessageText(
+                    f"Not loaded: this needs your permission to connect to {host}.",
+                    "imports.permission_required",
+                    host=host,
+                )
                 questions.extend(question.requests)
                 progress.done += 1
                 continue
@@ -716,15 +757,27 @@ class ImportsService:
                 before = previous.get(key)
                 if before and before["status"] in (FAILED, BLOCKED):
                     row.update(status=before["status"], error=before["error"])
+                    if "errorUiMessage" in before:
+                        row["errorUiMessage"] = before["errorUiMessage"]
                 continue
             if "failure" in found:
                 row.update(status=found["status"], error=found["failure"])
+                if "failureUiMessage" in found:
+                    row["errorUiMessage"] = found["failureUiMessage"]
                 continue
 
             size = found["bytes"]
             if total_bytes + size > MAX_TOTAL_BYTES:
-                row["error"] = "Not loaded: the imports together would pass 150 MB."
-                limit = limit or "Imports were loaded up to the 150 MB total limit."
+                row["error"] = MessageText(
+                    "Not loaded: the imports together would pass 150 MB.",
+                    "imports.bytes_refused",
+                    limit=integer_arg(MAX_TOTAL_BYTES),
+                )
+                limit = limit or MessageText(
+                    "Imports were loaded up to the 150 MB total limit.",
+                    "imports.bytes_limit",
+                    limit=integer_arg(MAX_TOTAL_BYTES),
+                )
                 continue
             total_bytes += size
             documents += 1
@@ -769,8 +822,10 @@ class ImportsService:
         host = (urlsplit(iri).hostname or "").lower()
         same = 1 + sum(1 for p in pending if (urlsplit(p).hostname or "").lower() == host)
         if same == 1:
-            return f'"{own_name}" imports an ontology from this site.'
-        return f'"{own_name}" imports {same} ontologies from this site.'
+            return MessageText(f'"{own_name}" imports an ontology from this site.',
+                               "network.reason.import_one", name=own_name)
+        return MessageText(f'"{own_name}" imports {same} ontologies from this site.',
+                           "network.reason.import_many", name=own_name, count=integer_arg(same))
 
     def _find(self, iri, ontology, *, allow_network, refresh, parse_timeout, max_bytes, reason):
         """One import through the chain. Returns the found document, a failure,
@@ -790,7 +845,7 @@ class ImportsService:
             try:
                 graph = load_bundled(entry)
             except VocabIntegrityError as exc:
-                return {"status": FAILED, "failure": str(exc)}
+                return {"status": FAILED, **_message_fields(str(exc), "failure", getattr(exc, "ui_message", None))}
             return {
                 "graph": graph,
                 "source": SOURCE_BUNDLED,
@@ -854,7 +909,9 @@ class ImportsService:
         try:
             graph = self.cache.graph(meta, parse_timeout)
         except (ParseError, ParseTimeout, OSError) as exc:
-            return {"status": FAILED, "failure": str(exc)}
+            return {"status": FAILED, **_message_fields(
+                str(exc), "failure", getattr(exc, "ui_message", None)
+                or make_message("imports.cache_failed"))}
         return {
             "graph": graph,
             "source": meta["source"],
@@ -879,15 +936,17 @@ class ImportsService:
         except ApprovalRequired:
             raise
         except Offline as exc:
-            return {"status": FAILED, "failure": str(exc)}
+            return {"status": FAILED, **_message_fields(str(exc), "failure", getattr(exc, "ui_message", None))}
         except HostBlocked as exc:
-            return {"status": BLOCKED, "failure": str(exc)}
+            return {"status": BLOCKED, **_message_fields(str(exc), "failure", getattr(exc, "ui_message", None))}
         except (BlockedAddress, TooLarge, FetchFailed) as exc:
-            return {"status": FAILED, "failure": str(exc)}
+            return {"status": FAILED, **_message_fields(str(exc), "failure", getattr(exc, "ui_message", None))}
         if response.status >= 400:
             return {
                 "status": FAILED,
-                "failure": f"The site answered HTTP {response.status} for this import.",
+                **_message_fields(
+                    f"The site answered HTTP {response.status} for this import.",
+                    "failure", make_message("imports.http_failed", status=response.status)),
             }
         fmt = _format_from_response(response)
         try:
@@ -895,9 +954,11 @@ class ImportsService:
         except network_broker.NetworkDecision as exc:
             # A downloaded JSON-LD import naming a remote context asks too; this
             # import fails with the reason, and the rest carry on.
-            return {"status": FAILED, "failure": str(exc)}
+            return {"status": FAILED, **_message_fields(str(exc), "failure", getattr(exc, "ui_message", None))}
         except (ParseError, ParseTimeout) as exc:
-            return {"status": FAILED, "failure": _first_line(str(exc))}
+            return {"status": FAILED, **_message_fields(
+                _first_line(str(exc)), "failure", getattr(exc, "ui_message", None)
+                or make_message("imports.parse_failed"))}
         meta = self.cache.put(
             iri, response.body, graph, used, source=SOURCE_NETWORK, source_url=response.url
         )
@@ -947,10 +1008,13 @@ class ImportsService:
             try:
                 graph, used = parse_rdf(data, detect_format(name), timeout=parse_timeout)
             except network_broker.NetworkDecision as exc:
-                invalid.append({"file": name, "error": str(exc)})
+                invalid.append({"file": name, **_message_fields(
+                    str(exc), "error", getattr(exc, "ui_message", None))})
                 continue
             except (ParseError, ParseTimeout) as exc:
-                invalid.append({"file": name, "error": _first_line(str(exc))})
+                invalid.append({"file": name, **_message_fields(
+                    _first_line(str(exc)), "error", getattr(exc, "ui_message", None)
+                    or make_message("imports.parse_failed"))})
                 continue
             declares = ontology_iris(graph)
             hits = [wanted[n] for n in {normalize_iri(d) for d in declares} if n in wanted]
@@ -1041,12 +1105,9 @@ class ImportsService:
     def derived(self, ontology: Ontology, name, build: Callable[[Graph], dict]) -> dict:
         """A view built over the merged graph, cached beside it (never beside the
         file-only caches, which is the second key the spec asks for)."""
-        view = self.merged(ontology)
-        cache = ontology.merged_cache
-        if name not in cache:
-            with ontology.reading():
-                cache[name] = build(view["graph"])
-        return cache[name]
+        with ontology.reading():
+            view = self.merged(ontology)
+            return _bounded_derived(ontology, view, name, build)
 
     # --- the view with data snapshots (csv-data-import 5.6) ----------------
 
@@ -1126,9 +1187,10 @@ def merged_hierarchy(
     )
 
 
-def merged_query_schema(ontology: Ontology, parse_timeout: Optional[float] = None) -> dict:
+def merged_query_schema(ontology: Ontology, parse_timeout: Optional[float] = None, lang: Optional[str] = None) -> dict:
     imports_service.merged(ontology, parse_timeout)
-    return imports_service.derived(ontology, "schema", build_query_schema)
+    langs = ontology.label_langs(lang)
+    return imports_service.derived(ontology, ("schema", langs), lambda g: build_query_schema(g, langs=langs))
 
 
 def snapshot_graphs(ontology: Ontology) -> tuple[int, list]:
@@ -1137,12 +1199,25 @@ def snapshot_graphs(ontology: Ontology) -> tuple[int, list]:
     return provider() if provider is not None else (0, [])
 
 
+def _bounded_derived(ontology: Ontology, view: dict, name, build: Callable[[Graph], dict]) -> dict:
+    """At most four language projections per captured imports/data source."""
+    with ontology.reading(), ontology.view_lock:
+        held = view.get("derived")
+        if not isinstance(held, OrderedDict):
+            held = OrderedDict(held or {})
+            view["derived"] = held
+        if name in held:
+            held.move_to_end(name)
+            return held[name]
+        value = build(view["graph"])
+        held[name] = value
+        while len(held) > 4:
+            held.popitem(last=False)
+        return value
+
+
 def _data_derived(ontology: Ontology, view: dict, name, build: Callable[[Graph], dict]) -> dict:
-    held = view["derived"]
-    if name not in held:
-        with ontology.reading():
-            held[name] = build(view["graph"])
-    return held[name]
+    return _bounded_derived(ontology, view, name, build)
 
 
 def view_graph(ontology: Ontology, imports: bool, parse_timeout: Optional[float] = None) -> Graph:
@@ -1188,13 +1263,14 @@ def view_hierarchy(
     )
 
 
-def view_query_schema(ontology: Ontology, imports: bool, parse_timeout: Optional[float] = None) -> dict:
+def view_query_schema(ontology: Ontology, imports: bool, parse_timeout: Optional[float] = None, lang: Optional[str] = None) -> dict:
     view = imports_service.reading(ontology, imports, parse_timeout)
     if view is None:
-        return ontology.query_schema()
+        return ontology.query_schema(lang)
     if "dataFrom" not in view:
-        return merged_query_schema(ontology, parse_timeout)
-    return _data_derived(ontology, view, "schema", build_query_schema)
+        return merged_query_schema(ontology, parse_timeout, lang)
+    langs = ontology.label_langs(lang)
+    return _data_derived(ontology, view, ("schema", langs), lambda g: build_query_schema(g, langs=langs))
 
 
 def mark_data_viz(viz: dict, data_from: dict[str, dict]) -> dict:

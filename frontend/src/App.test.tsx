@@ -62,7 +62,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { I18nProvider } from "./i18n/I18nProvider";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { renderEn as render } from "./testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { ApiError } from "./api";
@@ -113,6 +115,8 @@ const {
   listData,
   restoreExamples,
   getResultNodes,
+  getEntities,
+  resolveImports,
 } = vi.hoisted(() => ({
   listOntologies: vi.fn(),
   getGraph: vi.fn(),
@@ -166,6 +170,8 @@ const {
   restoreExamples: vi.fn(),
   // query-page-rework 5.2: a query's hidden results drawn.
   getResultNodes: vi.fn(),
+  getEntities: vi.fn(),
+  resolveImports: vi.fn(),
 }));
 
 // importOriginal rather than a bare factory, so ApiError stays the real class.
@@ -212,11 +218,15 @@ vi.mock("./api", async (importOriginal) => ({
   listData,
   restoreExamples,
   getResultNodes,
+  getEntities,
+  resolveImports,
 }));
 
 /** Every mocked client function, so a test can count what mount actually did. */
 const ALL_API = {
   getResultNodes,
+  getEntities,
+  resolveImports,
   restoreExamples,
   listData,
   listImports,
@@ -449,6 +459,7 @@ beforeEach(() => {
   getGraph.mockResolvedValue(TRUNCATED);
   listImports.mockResolvedValue({ imports: [], limit: null, resolving: null, offline: false });
   searchNodes.mockResolvedValue([]);
+  getEntities.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 50, revision: "one" });
   // The Hierarchy tab fetches this; one class-forest root, off the budgeted
   // graph (whose nodes list is empty), so selecting it draws it.
   fetchHierarchy.mockResolvedValue({
@@ -697,7 +708,7 @@ describe("App startup chooser", () => {
 
     expect(homeShown()).toBe(false);
     expect(document.querySelector(".query-panel")).toBeTruthy();
-    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false, "en");
   });
 
   it("opening a library entry hides the chooser and loads it", async () => {
@@ -705,7 +716,7 @@ describe("App startup chooser", () => {
     await renderAppOpened();
 
     expect(getGraph).toHaveBeenCalledTimes(1);
-    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false, "en");
     expect(homeShown()).toBe(false);
     expect(screen.getByTestId("graph")).toBeTruthy();
     expect(statusBar()).toContain("FIBO");
@@ -843,13 +854,13 @@ describe("App status bar", () => {
     // from stats.budget, so a clamped response doubles from what was granted,
     // not what was asked for.
     await renderAppOpened();
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false, "en");
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /show more/i }));
     });
 
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false, "en");
   });
 });
 
@@ -903,10 +914,10 @@ describe("App graph budget range", () => {
     await renderAppOpened();
     await press(showMore);
     await press(showMore);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 8000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 8000, false, "en");
 
     await press(showLess);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 4000, false, "en");
   });
 
   it("show less clamps to the floor rather than going below", async () => {
@@ -917,10 +928,10 @@ describe("App graph budget range", () => {
     serverLike({ nodeTotal: 40000, serverDefault: 15000 });
     await renderAppOpened();
     await press(showMore);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 30000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 30000, false, "en");
 
     await press(showLess);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 15000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 15000, false, "en");
   });
 
   it("show more and show less are inverses", async () => {
@@ -970,10 +981,10 @@ describe("App graph budget range", () => {
     serverLike({ serverDefault: 500 });
     await renderAppOpened();
     await press(showMore);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 1000, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 1000, false, "en");
 
     await press(showLess);
-    expect(getGraph).toHaveBeenLastCalledWith("o1", 500, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", 500, false, "en");
     expect(showLess().disabled).toBe(true);
   });
 
@@ -1160,12 +1171,44 @@ describe("App expand on demand", () => {
     });
   }
 
+  it.each(["language", "budget"] as const)("ignores late neighbourhood success and failure after a same-ID %s change", async (change) => {
+    let settle!: (value: VizNeighborhood) => void;
+    let reject!: (error: Error) => void;
+    getNeighborhood.mockImplementationOnce(() => new Promise<VizNeighborhood>(resolve => { settle = resolve; }))
+      .mockImplementationOnce(() => new Promise<VizNeighborhood>((_resolve, fail) => { reject = fail; }));
+    getGraph.mockImplementation((_id: string, limit?: number) => Promise.resolve({ ...TRUNCATED, stats: { ...TRUNCATED.stats, budget: limit ?? 2000 } }));
+    await renderAppOpened();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "fake node" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /show its connections/i })); });
+    const changeView = async () => {
+      await act(async () => {
+        if (change === "language") {
+          fireEvent.change(screen.getByRole("combobox", { name: "Dictionary display language" }), { target: { value: "ja" } });
+          fireEvent.click(screen.getByRole("button", { name: "Apply display language" }));
+        } else fireEvent.click(screen.getByRole("button", { name: /show more/i }));
+      });
+    };
+    await changeView();
+    await act(async () => { settle(NEIGHBORHOOD); });
+    expect(screen.getByTestId("graph").getAttribute("data-expansion")).toBe("");
+    // A later request's failure belongs to its old view as well.
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /show its connections/i })); });
+    await act(async () => {
+      if (change === "language") {
+        fireEvent.change(screen.getByRole("combobox", { name: "Dictionary display language" }), { target: { value: "en" } });
+        fireEvent.click(screen.getByRole("button", { name: "Apply display language" }));
+      } else fireEvent.click(screen.getByRole("button", { name: /show less/i }));
+    });
+    await act(async () => { reject(new Error("obsolete neighbourhood")); });
+    expect(document.querySelector(".error-bar")).toBeNull();
+  });
+
   it("the detail panel asks for the selected entity's neighbourhood", async () => {
     // AC-15 from the client's side. The IRI it sends is the selected one, not
     // whatever the panel happens to have loaded: the two can differ while the
     // detail request is still in flight.
     await expandTheSelectedNode();
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/issuedBy", undefined, false);
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/issuedBy", undefined, false, "en");
   });
 
   it("expanding announces the new drawn count", async () => {
@@ -1285,7 +1328,7 @@ describe("App explore column", () => {
     });
     expect(document.querySelector(".detail-panel")).toBeTruthy();
     expect(startPanel()).toBeNull();
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, expect.any(AbortSignal), "en");
 
     // By title rather than by accessible name: that control's name is the glyph
     // it contains, "✕", because name-from-contents wins over a title attribute.
@@ -1427,7 +1470,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Bond", false, expect.any(AbortSignal), "en");
   });
 
   it("clicking a drawn result makes no request", async () => {
@@ -1454,7 +1497,7 @@ describe("App result navigation", () => {
     await clickResultChip();
 
     expect(getNeighborhood).toHaveBeenCalledTimes(1);
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Issuer", undefined, false);
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Issuer", undefined, false, "en");
   });
 
   it("clicking an undrawn result announces what was added", async () => {
@@ -1490,7 +1533,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Issuer", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Issuer", false, expect.any(AbortSignal), "en");
     expect(document.querySelector(".detail-panel")).toBeTruthy();
   });
 
@@ -1556,7 +1599,7 @@ describe("App result navigation", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "fake search hit" }));
     });
-    expect(getQueryNode).toHaveBeenCalledWith("o1", "http://x/Issuer", false);
+    expect(getQueryNode).toHaveBeenCalledWith("o1", "http://x/Issuer", false, "en");
   });
 
   it("view in source switches mode and passes the target", async () => {
@@ -1908,7 +1951,7 @@ describe("App About control", () => {
     // Five now: Home (home-screen), then View / Explore / Query, then Hierarchy
     // (hierarchy-view), each a real view that swaps the main region. About still
     // does not, which is the distinction this test is about.
-    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    expect(screen.getAllByRole("tab")).toHaveLength(6);
     expect(tablist.contains(aboutControl())).toBe(false);
     expect(aboutControl().getAttribute("role")).toBeNull();
     expect(aboutControl().getAttribute("aria-haspopup")).toBe("dialog");
@@ -2102,7 +2145,7 @@ describe("App home screen", () => {
     });
 
     expect(getGraph).toHaveBeenCalledTimes(1);
-    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenCalledWith("o1", undefined, false, "en");
     expect(homeShown()).toBe(false);
     expect(document.querySelector(".query-panel")).toBeTruthy();
   });
@@ -2384,7 +2427,7 @@ describe("App Hierarchy mode", () => {
       .find((el) => el.textContent?.includes("Instrument"))!;
     await act(async () => fireEvent.click(row));
 
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Instrument", undefined, false);
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Instrument", undefined, false, "en");
 
     // And the selection survives into Explore: switching there shows the detail
     // panel rather than the starting panel.
@@ -2405,7 +2448,7 @@ describe("App Hierarchy mode", () => {
     });
     await screen.findByRole("button", { name: /^Classes, \d/ });
     // The third argument: a reasoning result's inferred edges, none here.
-    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, false);
+    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, false, "en");
   });
 
   it("nothing selected shows the detail panel empty state", async () => {
@@ -2448,7 +2491,7 @@ describe("App Hierarchy mode", () => {
     // The panel appears beside the tree (still in Hierarchy mode), naming the
     // entity and listing its statement.
     await waitFor(() => expect(document.querySelector(".detail-panel")).toBeTruthy());
-    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Instrument", false);
+    expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Instrument", false, expect.any(AbortSignal), "en");
     expect(screen.getByRole("heading", { name: /statements/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Contract/ })).toBeTruthy();
     // The tree is still there — the panel is beside it, not instead of it.
@@ -2491,8 +2534,8 @@ describe("App Hierarchy mode", () => {
 
     // It becomes the selection: the panel re-fetches Contract, and — being off
     // the budgeted graph — it is drawn through the shared outside-graph route.
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Contract", false));
-    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Contract", undefined, false);
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/Contract", false, expect.any(AbortSignal), "en"));
+    expect(getNeighborhood).toHaveBeenCalledWith("o1", "http://x/Contract", undefined, false, "en");
   });
 
   it("a selected property shows its connections in the panel", async () => {
@@ -2546,7 +2589,7 @@ describe("App Hierarchy mode", () => {
       .find((el) => el.textContent?.includes("hasParty"))!;
     await act(async () => fireEvent.click(row));
 
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/hasParty", false));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith("o1", "http://x/hasParty", false, expect.any(AbortSignal), "en"));
     // The property's domain and range are shown as connections, the same panel a
     // class uses.
     expect(screen.getByRole("button", { name: /Contract/ })).toBeTruthy();
@@ -2696,7 +2739,7 @@ describe("App imports (external-access Stage 2)", () => {
   it("opening an ontology in Explore asks nothing about its imports (AC-16)", async () => {
     await renderAppOpened();
     expect(listImports).not.toHaveBeenCalled();
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, false, "en");
   });
 
   it("the switch in the imports panel turns every view over to the merged view (AC-20)", async () => {
@@ -2713,7 +2756,7 @@ describe("App imports (external-access Stage 2)", () => {
     await act(async () => {
       fireEvent.click(toggle);
     });
-    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", true, false);
+    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", true, false, "en");
     expect(screen.getByRole("switch", { name: "Include imports" }).getAttribute("aria-checked")).toBe(
       "true",
     );
@@ -2724,19 +2767,19 @@ describe("App imports (external-access Stage 2)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Explore" }));
     });
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true, "en");
   });
 
   it("the switch is remembered per ontology", async () => {
     localStorage.setItem("semantic-studio-include-imports", JSON.stringify({ o1: true }));
     await renderAppOpened();
-    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true);
+    expect(getGraph).toHaveBeenLastCalledWith("o1", undefined, true, "en");
   });
 
   it("the query panel is told the switch and how many imports resolved", async () => {
     // The count is asked for on entering Query mode, not before: the mount
     // test above and the Explore test here hold the other half.
-    getQuerySchema.mockResolvedValue({ classes: [], links: [], namespaces: {}, truncated: false });
+    getQuerySchema.mockResolvedValue({ classes: [], links: [], superClasses: {}, dataProperties: {}, namespaces: {}, truncated: false });
     await renderAppOpened();
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: "Query" }));
@@ -2820,7 +2863,7 @@ describe("App projects (authoring-foundations)", () => {
     expect(screen.getByText("Invoices", { selector: ".project-name" })).toBeTruthy();
     expect(screen.queryByLabelText("ONTOLOGY")).toBeNull();
 
-    getQuerySchema.mockResolvedValue({ classes: [], links: [], namespaces: {}, truncated: false, embeddedQueryCount: 0 });
+    getQuerySchema.mockResolvedValue({ classes: [], links: [], superClasses: {}, dataProperties: {}, namespaces: {}, truncated: false, embeddedQueryCount: 0 });
     await act(async () => {
       fireEvent.click(tab("Query"));
     });
@@ -3102,7 +3145,7 @@ describe("App and the modeling canvas (visual-modeling Stage 2)", () => {
     await act(async () => onSelect("http://x#Invoice"));
     expect(canvasProps.last!.selected).toBe("http://x#Invoice");
     // The form opens on it.
-    expect(getNodeDetails).toHaveBeenCalledWith(OID, "http://x#Invoice", false);
+    expect(getNodeDetails).toHaveBeenCalledWith(OID, "http://x#Invoice", false, expect.any(AbortSignal), "en");
   });
 });
 
@@ -3167,7 +3210,7 @@ describe("App Shapes view (shacl-authoring Stage A)", () => {
     projectStore._reset();
     await openShapes();
     expect(tab("Shapes").getAttribute("aria-selected")).toBe("true");
-    expect(getShapes).toHaveBeenCalledWith(PROJECT.id);
+    expect(getShapes).toHaveBeenCalledWith(PROJECT.id, "en");
     expect(screen.getByRole("heading", { level: 2, name: "Shapes" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Validate" })).toBeTruthy();
   });
@@ -3202,7 +3245,7 @@ describe("App Shapes view (shacl-authoring Stage A)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Validate" }));
     });
-    expect(validateProject).toHaveBeenCalledWith(PROJECT.id);
+    expect(validateProject).toHaveBeenCalledWith(PROJECT.id, "en");
     fireEvent.click(screen.getByRole("button", { name: /Fails\. Person rules/ }));
     getNodeDetails.mockResolvedValue({ iri: "http://example.org/invoices#bob", label: "Bob", outgoing: [], incoming: [] });
     await act(async () => {
@@ -3330,7 +3373,7 @@ describe("App Edit page (edit-page-rework)", () => {
   it("AC-1: the tab is Edit, between Explore and Query; About and Network sit at the right end", async () => {
     await renderApp();
     const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
-    expect(tabs).toEqual(["Home", "View", "Explore", "Edit", "Query"]);
+    expect(tabs).toEqual(["Home", "View", "Explore", "Entities", "Edit", "Query"]);
     const row = document.querySelector(".nav-row")!;
     const last = [...row.children].slice(-4).map((el) => el.getAttribute("aria-label") ?? el.textContent);
     // A spacer, then About, Network and the theme switch at the right end.
@@ -3423,7 +3466,7 @@ describe("App Edit page (edit-page-rework)", () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", parent: X + "Instrument" });
+    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", parent: X + "Instrument" }, "en");
     expect(projectStore.getSnapshot().creating).toBeNull();
   });
 
@@ -3440,8 +3483,8 @@ describe("App Edit page (edit-page-rework)", () => {
     await act(async () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", definition: "A debt." });
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Bond", false));
+    expect(runCommand).toHaveBeenCalledWith(PROJECT.id, "model", "CreateClass", { label: "Bond", definition: "A debt." }, "en");
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Bond", false, expect.any(AbortSignal), "en"));
     // Nothing dropped to the page meanwhile.
     expect(document.activeElement).not.toBe(document.body);
   });
@@ -3536,7 +3579,7 @@ describe("App Edit page (edit-page-rework)", () => {
       await act(async () => {
         fireEvent.click(within(panel).getByRole("button", { name: "Reason" }));
       });
-      expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, true, true);
+      expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, true, true, "en");
     } finally {
       localStorage.removeItem("semantic-studio-include-imports");
     }
@@ -3553,7 +3596,7 @@ describe("App Edit page (edit-page-rework)", () => {
     await act(async () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Reason" }));
     });
-    expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, false, false);
+    expect(reasonProject).toHaveBeenCalledWith(PROJECT.id, false, false, "en");
     // An edit while it runs: the model moves to revision 1.
     await act(async () => {
       projectStore.applied({ state: docState({ revision: 1, dirty: true }), label: "Renamed Instrument" } as Parameters<
@@ -3619,7 +3662,7 @@ describe("App Edit page (edit-page-rework)", () => {
       fireEvent.click(within(panel).getByRole("button", { name: "Instrument is a kind of Asset" }));
     });
     expect(within(panel).getByRole("tab", { name: "Details" }).getAttribute("aria-selected")).toBe("true");
-    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Instrument", false));
+    await waitFor(() => expect(getNodeDetails).toHaveBeenCalledWith(OID, X + "Instrument", false, expect.any(AbortSignal), "en"));
   });
 
   it("Turtle in the project bar opens the document in View's editor", async () => {
@@ -3829,7 +3872,7 @@ describe("App: the graph frames the results (query-page-rework 5.2)", () => {
     const before = frames();
     await click("fake explicit run");
     expect(getResultNodes).toHaveBeenCalledTimes(1);
-    expect(getResultNodes).toHaveBeenCalledWith("o1", ["http://x/Coupon", "http://x/Rate"], false);
+    expect(getResultNodes).toHaveBeenCalledWith("o1", ["http://x/Coupon", "http://x/Rate"], false, "en");
     expect(graph().getAttribute("data-expansion")).toBe("http://x/Coupon http://x/Rate");
     expect(frames()).toBe(before + 1);
     expect(liveRegion()).toContain("3 results shown on the graph.");
@@ -3856,6 +3899,60 @@ describe("App: the graph frames the results (query-page-rework 5.2)", () => {
       "The graph shows 200 of the 340 results it had not drawn.",
     );
     expect(liveRegion()).toContain("200 results shown on the graph.");
+  });
+
+  it("rewords the retained partial graph result count without rerunning or changing explicit dictionary language", async () => {
+    localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+    const hidden = Array.from({ length: 1340 }, (_, i) => `http://x/H${i}`);
+    queryAnswer.results = rows(hidden);
+    getGraph.mockResolvedValue(DRAWN);
+    getResultNodes.mockResolvedValue({ nodes: hidden.slice(0, 200).map(id => ({ id, label: id, kind: "class", degree: 1 })), edges: [], total: 1340, drawn: 200 });
+    try {
+      await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+      await act(async () => { fireEvent.click(cardVerb("Explore", "FIBO")); });
+      await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Apply display language" })); });
+      await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Query" })); });
+      await click("fake explicit run");
+      expect(screen.getByTestId("results-note").textContent).toBe("The graph shows 200 of the 1,340 results it had not drawn.");
+      const graphCalls = getGraph.mock.calls.length;
+      const expansionCalls = getResultNodes.mock.calls.length;
+      await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } }); });
+      expect(screen.getByTestId("results-note").textContent).toBe("グラフには、未描画だった検索結果1,340件のうち200件を表示しています。");
+      expect(getGraph).toHaveBeenCalledTimes(graphCalls);
+      expect(getResultNodes).toHaveBeenCalledTimes(expansionCalls);
+      expect((screen.getByRole("combobox", { name: "辞書の表示言語" }) as HTMLInputElement).value).toBe("en");
+    } finally { localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+  });
+
+  it.each(["language", "budget"] as const)("ignores late result-node success and failure after a same-ID %s change", async (change) => {
+    queryAnswer.results = rows(["http://x/Coupon"]);
+    let settle!: (value: VizNodes) => void;
+    let reject!: (error: Error) => void;
+    getResultNodes.mockImplementationOnce(() => new Promise<VizNodes>(resolve => { settle = resolve; }))
+      .mockImplementationOnce(() => new Promise<VizNodes>((_resolve, fail) => { reject = fail; }));
+    await inQuery();
+    getGraph.mockImplementation((_id: string, limit?: number) => Promise.resolve({ ...DRAWN, stats: { ...DRAWN.stats, budget: limit ?? 2000 } }));
+    await click("fake explicit run");
+    const changeView = async (language: string, budget: RegExp) => {
+      await act(async () => {
+        if (change === "language") {
+          fireEvent.change(screen.getByRole("combobox", { name: "Dictionary display language" }), { target: { value: language } });
+          fireEvent.click(screen.getByRole("button", { name: "Apply display language" }));
+        } else fireEvent.click(screen.getByRole("button", { name: budget }));
+      });
+    };
+    await changeView("ja", /show more/i);
+    const before = frames();
+    await act(async () => { settle({ nodes: [{ id: "http://x/Coupon", label: "stale", kind: "class", degree: 1 }], edges: [], total: 1, drawn: 1 }); });
+    expect(graph().getAttribute("data-expansion")).toBe("");
+    expect(frames()).toBe(before);
+    await click("fake explicit run");
+    await changeView("en", /show less/i);
+    const after = frames();
+    const said = liveRegion();
+    await act(async () => { reject(new Error("obsolete result nodes")); });
+    expect(frames()).toBe(after);
+    expect(liveRegion()).toBe(said);
   });
 
   it("an answer for a run already cleared draws nothing", async () => {
@@ -3939,4 +4036,169 @@ describe("App: a run before the graph is drawn (query-page-rework 5.2)", () => {
       resolveGraph(TRUNCATED);
     });
   });
+});
+
+it("opens the full list without waiting for or requesting graph JSON", async () => {
+  await renderApp();
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
+  await act(async () => { fireEvent.click(cardVerb("Entities", "FIBO")); });
+  expect(getEntities).toHaveBeenCalled(); expect(getGraph).not.toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: "Entities" })).toBeTruthy();
+  expect(screen.queryByTestId("graph")).toBeNull();
+  expect(screen.getByRole("contentinfo").textContent).not.toMatch(/\bnodes\b|\bedges\b/);
+});
+
+it("uses reference-only details and never asks a missing node to open an edit form", async () => {
+  getEntities.mockResolvedValue({ items: [{ iri: "https://example.org/ref", label: "Reference", kind: "other", description: null, match: null, label_language: null, label_fallback: false, label_truncated: false, reference_only: true }], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderApp(); await act(async () => { fireEvent.click(cardVerb("Entities", "FIBO")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Reference" })); });
+  expect(screen.getByRole("complementary", { name: "Reference only" })).toBeTruthy();
+  expect(getNodeDetails).not.toHaveBeenCalled(); expect(getNeighborhood).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Copy full IRI" })).toBeTruthy();
+});
+it.each([[true, false], [false, false], [true, true], [false, true]])("refreshes selected reference classification (reference=%s, remounted=%s)", async (reference, remounted) => {
+  const row = { iri: "http://x/Bond", label: "Bond", kind: "class", description: null, match: null, label_language: "en", label_fallback: false, label_truncated: false, reference_only: reference };
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderProject({ canUndo: true, undoLabel: "Changed Bond", dirty: true });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Bond" })); });
+  expect(!!screen.queryByRole("complementary", { name: "Reference only" })).toBe(reference);
+  getDocumentSource.mockResolvedValue({ text: "", revision: 0, fromEditor: true });
+  if (remounted) await act(async () => { fireEvent.click(tab("View")); });
+  undoChange.mockResolvedValue({ revision: 1, label: "Changed Bond", state: docState({ revision: 1 }) });
+  getEntities.mockResolvedValue({ items: [{ ...row, reference_only: !reference }], total: 1, offset: 0, limit: 50, revision: "two" });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Undo: Changed Bond" })); });
+  if (remounted) await act(async () => { fireEvent.click(tab("Entities")); });
+  expect(!!screen.queryByRole("complementary", { name: "Reference only" })).toBe(!reference);
+  expect(screen.getByRole("row", { name: /Bond/ }).getAttribute("aria-selected")).toBe("true");
+});
+it("clears a selected classification absent from the refreshed structural view after remount", async () => {
+  const row = { iri: "http://x/Bond", label: "Bond", kind: "class", description: null, match: null, label_language: "en", label_fallback: false, label_truncated: false, reference_only: true };
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderProject({ canUndo: true, undoLabel: "Changed Bond", dirty: true });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Bond" })); });
+  getDocumentSource.mockResolvedValue({ text: "", revision: 0, fromEditor: true });
+  await act(async () => { fireEvent.click(tab("View")); });
+  undoChange.mockResolvedValue({ revision: 1, label: "Changed Bond", state: docState({ revision: 1 }) });
+  getEntities.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 50, revision: "two" });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Undo: Changed Bond" })); });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  expect(screen.queryByRole("complementary", { name: "Reference only" })).toBeNull();
+});
+it("keeps the selected entity and refreshes the project list after Undo", async () => {
+  const row = { iri: "http://x/Bond", label: "Bond", kind: "class", description: null, match: null, label_language: "en", label_fallback: false, label_truncated: false, reference_only: false };
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "one" });
+  await renderProject({ canUndo: true, undoLabel: "Changed Bond", dirty: true });
+  await act(async () => { fireEvent.click(tab("Entities")); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Bond" })); });
+  const calls = getEntities.mock.calls.length;
+  undoChange.mockResolvedValue({ revision: 1, label: "Changed Bond", state: docState({ revision: 1 }) });
+  getEntities.mockResolvedValue({ items: [row], total: 1, offset: 0, limit: 50, revision: "two" });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Undo: Changed Bond" })); });
+  expect(getEntities.mock.calls.length).toBe(calls + 1);
+  expect(screen.getByRole("heading", { name: "Bond" })).toBeTruthy();
+  expect(screen.getByRole("row", { name: /Bond/ }).getAttribute("aria-selected")).toBe("true");
+});
+it("names all main navigation jobs in Japanese and changes them with UI language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  for (const name of ["ホーム", "ソース", "探索", "項目一覧", "編集", "検索クエリ"]) expect(screen.getByRole("tab", { name })).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("tab", { name: "Home" })).toBeTruthy(); expect(screen.getByRole("tab", { name: "Entities" })).toBeTruthy();
+});
+it("hides graph budget controls when entering the list from an already drawn graph", async () => {
+  await renderAppOpened(); expect(screen.getByRole("button", { name: "Show more" })).toBeTruthy();
+  const calls = getGraph.mock.calls.length;
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
+  expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  expect(getGraph).toHaveBeenCalledTimes(calls);
+  expect(screen.getByRole("contentinfo").textContent).not.toMatch(/\bnodes\b|\bedges\b/);
+});
+it("translates a retained server error and dismisses it with a keyboard-accessible button", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getGraph.mockRejectedValue(new ApiError("Original graph failure", 400, "Original graph failure", { code: "reasoning.timeout", args: { seconds: 10 } }));
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "FIBOを探索" })); });
+  expect(screen.getByRole("alert").textContent).toContain("推論を10秒で停止しました");
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(screen.getByRole("alert").textContent).toContain("Reasoning stopped after 10 seconds");
+  expect(screen.getByText("Original graph failure")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss error" }));
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("tab", { name: "Explore" }));
+});
+it("keeps a source-target notice translatable after the outcome arrives", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "FIBOで検索クエリを作成" })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "fake source control" })); });
+  expect(document.querySelector(".notice-region")?.textContent).toContain("表示中のソースに見つかりません");
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(document.querySelector(".notice-region")?.textContent).toContain("does not appear in the source text");
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss notice" }));
+  expect(document.querySelector(".notice-region")?.textContent).toBe("");
+});
+it("announces the name of the RDF file that finished loading", async () => {
+  uploadOntology.mockResolvedValue({ ...SUMMARY, id: "loaded", name: "犬.ttl" });
+  await renderApp(); await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open a file" })); });
+  await act(async () => { fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [new File(["x"], "犬.ttl")] } }); });
+  expect(document.querySelector(".notice-region")?.textContent).toBe('Loaded “犬.ttl”.');
+  expect((screen.getByLabelText("ONTOLOGY") as HTMLSelectElement).value).toBe("loaded");
+});
+
+it("localizes workspace controls, their hints and ontology selection independently of names", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  expect(screen.getByRole("tablist", { name: "ワークスペース" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "読み込み" }).title).toContain("ファイル");
+  expect(screen.getByRole("button", { name: "このアプリについて" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "ネットワーク" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "配色を切り替え" })).toBeTruthy();
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "FIBOを探索" })); });
+  expect((screen.getByRole("combobox", { name: "オントロジー" }) as HTMLSelectElement).value).toBe(SUMMARY.id);
+  expect(screen.getByRole("button", { name: "このオントロジーを閉じる" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "項目一覧へ移動" })).toBeTruthy();
+});
+it("translates recovery questions and actions again while the same draft stays pending", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  listProjects.mockResolvedValue([PROJECT]);
+  openProject.mockResolvedValue(opened({}, { available: true, draftTime: "2026-09-28T10:15:00+00:00" }));
+  await act(async () => { render(<I18nProvider><App /></I18nProvider>); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Invoicesを開く" })); });
+  expect(screen.getByRole("dialog", { name: "未保存の変更を復元しますか？" }).textContent).toContain("操作履歴は復元されません");
+  expect(screen.getByRole("button", { name: "復元" })).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("dialog", { name: "Recover unsaved changes?" })).toBeTruthy();
+  expect(recoverProject).not.toHaveBeenCalled();
+});
+
+it("uses the list's own search after entering Entities, keeping reference-only selections on its safe path", async () => {
+  await renderAppOpened();
+  expect(screen.getByRole("button", { name: "fake search hit" })).toBeTruthy();
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
+  expect(screen.queryByRole("button", { name: "fake search hit" })).toBeNull();
+  expect(screen.getByRole("searchbox", { name: "Search dictionary" })).toBeTruthy();
+});
+
+it.each([[false, true], [true, true], [false, false], [true, false]])("scopes an import notification to its dictionary owner (failure=%s, switched=%s)", async (failed, switched) => {
+  localStorage.removeItem("semantic-studio-include-imports");
+  const empty = { imports: [], limit: null, resolving: null, offline: false };
+  const row = { iri: "https://example.org/import", status: "unresolved", source: null, sourceName: null, fetchedAt: null, error: null, documentCount: 0, depth: 1, importedBy: null };
+  let complete!: (value: unknown) => void;
+  let reject!: (error: Error) => void;
+  resolveImports.mockImplementation(() => new Promise((yes, no) => { complete = yes; reject = no; }));
+  listOntologies.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "o2", name: "Second" }]);
+  listImports.mockImplementation((id: string) => Promise.resolve(id === "o1" ? { ...empty, imports: [row] } : empty));
+  await renderAppOpened();
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "View" })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Imports/ })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Resolve imports" })); });
+  if (switched) await act(async () => { fireEvent.change(document.querySelector("#ontology-select")!, { target: { value: "o2" } }); });
+  await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Query" })); });
+  await waitFor(() => expect(screen.getByTestId("query-scope").textContent).toBe("false|0"));
+  const old = { ...empty, imports: Array.from({ length: 9 }, (_, i) => ({ ...row, iri: `https://example.org/import/${i}`, status: "resolved", source: "bundled", documentCount: 1 })) };
+  listImports.mockImplementation((id: string) => Promise.resolve(id === "o1" ? old : empty));
+  await act(async () => { if (failed) reject(new Error("old failure")); else complete(old); });
+  expect(screen.getByTestId("query-scope").textContent).toBe(`false|${switched ? 0 : 9}`);
 });

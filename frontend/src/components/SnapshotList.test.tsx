@@ -14,6 +14,9 @@ SUMMARY
     A list that cannot be read says so once, with Try again (PR #53 review).
 
 BASIC IDEA
+    Owned refusal metadata changes language at render time without losing
+    the original detail nodes, expanded panels or retained snapshot identity.
+
     api.ts is mocked and the real project store is opened on a fixed
     project, so every action's announcement and the refetched list are the
     store's own.
@@ -55,6 +58,8 @@ import { projectStore } from "../state/projectStore";
 import type { SnapshotSummary } from "../types";
 import type { WizardStart } from "./DataWizard";
 import SnapshotList from "./SnapshotList";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const PID = "prj-0123456789ab";
 const PROJECT = {
@@ -78,7 +83,7 @@ const FILE = new File(["id\n1\n"], "people-2.csv");
 
 let onWizard: ReturnType<typeof vi.fn<(start: WizardStart) => void>>;
 
-async function setup(snapshots: SnapshotSummary[] = [SNAP]) {
+async function setup(snapshots: SnapshotSummary[] = [SNAP], localized = false) {
   openProject.mockResolvedValue({ project: PROJECT, documents: [MODEL], recovery: { available: false, draftTime: null } });
   listData.mockResolvedValue({ generation: 1, snapshots });
   await act(async () => {
@@ -86,7 +91,8 @@ async function setup(snapshots: SnapshotSummary[] = [SNAP]) {
   });
   onWizard = vi.fn<(start: WizardStart) => void>();
   await act(async () => {
-    render(<SnapshotList projectId={PID} onWizard={onWizard} />);
+    const list = <SnapshotList projectId={PID} onWizard={onWizard} />;
+    render(localized ? <I18nProvider><UiLanguageSelect />{list}</I18nProvider> : list);
   });
 }
 
@@ -100,7 +106,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   projectStore._reset();
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); localStorage.removeItem("semantic-studio.uiLocale.v1"); });
 
 describe("SnapshotList", () => {
   it("says there is no data yet, and offers the import", async () => {
@@ -160,7 +166,7 @@ describe("SnapshotList", () => {
 
   it("asks the limit's two choices of a larger file, and hands a header mismatch to the wizard", async () => {
     await setup();
-    inspectData.mockResolvedValue({ sample: true, limit: 2000, limitSentence: "This file has 5,000 rows. Semantic Studio imports at most 2,000 rows." });
+    inspectData.mockResolvedValue({ sample: true, total: 5000, kept: 2000, limit: 2000, limitSentence: "This file has 5,000 rows. Semantic Studio imports at most 2,000 rows." });
     await act(async () => {
       fireEvent.change(document.querySelector(".snapshot-row input[type=file]")!, { target: { files: [FILE] } });
     });
@@ -209,13 +215,16 @@ describe("SnapshotList", () => {
     await act(async () => {
       fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
     });
-    expect(screen.getByRole("alert").textContent).toMatch(/^rml:source must name/);
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    const originalDetail = screen.getByText("rml:source must name this snapshot's own source.csv; this mapping names ../model.ttl.");
+    expect(originalDetail.closest("details")?.querySelector("summary")?.textContent).toBe("Technical details");
     const outside = { ...SNAP, mapping: { status: "outside" as const, message: "rml:function is outside what Semantic Studio runs." } };
     updateData.mockResolvedValue({ snapshot: outside, generation: 2 });
     listData.mockResolvedValue({ generation: 2, snapshots: [outside] });
     await press(screen.getByRole("button", { name: "Apply" }));
     expect(updateData).toHaveBeenLastCalledWith(PID, SNAP.id, { mapping: "edited" });
-    expect(screen.getByText("Mapping outside the engine: rml:function is outside what Semantic Studio runs.")).toBeTruthy();
+    expect(screen.getByText("Mapping outside the engine.")).toBeTruthy();
+    expect(screen.getByText("rml:function is outside what Semantic Studio runs.").closest("details")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Refresh…" }).getAttribute("aria-disabled")).toBe("true");
   });
 
@@ -248,9 +257,11 @@ describe("SnapshotList, when the list cannot be read", () => {
     });
 
     const sentence = "The data snapshots could not be read: the server did not answer.";
-    expect(screen.getByText(sentence)).toBeTruthy();
+    expect(screen.getByText("The data snapshots could not be read.")).toBeTruthy();
     expect(projectStore.getSnapshot().announcement.text).toBe(sentence);
-    expect(document.body.textContent).not.toContain("Failed to fetch");
+    const raw = screen.getByText("Failed to fetch").closest("details");
+    expect(raw).toBeTruthy();
+    expect(raw?.open).toBe(false);
     expect(screen.queryByText(/Reading the project's data/)).toBeNull();
 
     // The server's own sentence, when it sent one.
@@ -258,7 +269,8 @@ describe("SnapshotList, when the list cannot be read", () => {
     const again = screen.getByRole("button", { name: "Try again" });
     again.focus();
     await press(again);
-    expect(screen.getByText("The data snapshots could not be read: There is no such project.")).toBeTruthy();
+    expect(screen.getByText("The data snapshots could not be read.")).toBeTruthy();
+    expect(screen.getByText("There is no such project.").closest("details")).toBeTruthy();
 
     listData.mockResolvedValueOnce({ generation: 1, snapshots: [SNAP] });
     const third = screen.getByRole("button", { name: "Try again" });
@@ -297,6 +309,7 @@ describe("SnapshotList, a refresh that goes through step 1 (PR #54 review)", () 
       kind: "refresh", snapshot: ORGS, file: book, options: {}, inspection: null, workbook: refused,
       missing: [], choices: null,
       atFile: "This workbook has no sheet named People. Choose the sheet to refresh from.",
+      atFileMessage: { code: "dataSnapshot.missingSheet", args: { sheet: "People" } },
     });
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -325,4 +338,170 @@ describe("SnapshotList, a refresh that goes through step 1 (PR #54 review)", () 
       kind: "refresh", inspection: found, atFile: "This snapshot was read from a workbook. Check how this CSV file is read.",
     }));
   });
+});
+
+
+describe("Japanese snapshot operations retain facts and mounted state", () => {
+  beforeEach(() => localStorage.removeItem("semantic-studio.uiLocale.v1"));
+
+  it("keeps switches and an open removal confirmation when the UI language changes", async () => {
+    await setup([SNAP], true);
+    expect(screen.getByRole("heading", { name: "データ" })).toBeTruthy();
+    expect(screen.getByText("Person：2,000件 · 1,000個の値を文字列として保持")).toBeTruthy();
+    const toggle = screen.getByRole("checkbox", { name: "有効：すべてのビューに含める" });
+    updateData.mockResolvedValue({ snapshot: { ...SNAP, enabled: false }, generation: 2 });
+    listData.mockResolvedValue({ generation: 2, snapshots: [{ ...SNAP, enabled: false }] });
+    await press(toggle);
+    expect(projectStore.getSnapshot().announcement.uiMessage).toEqual({ code: "dataSnapshot.switchedOff", args: { source: SNAP.source } });
+    expect(updateData).toHaveBeenCalledWith(PID, SNAP.id, { enabled: false });
+    expect(screen.getByRole("checkbox", { name: "無効：ビューから除く" })).toBe(toggle);
+    await press(screen.getByRole("button", { name: "削除…" }));
+    const question = screen.getByRole("group", { name: "people.csvを削除しますか？" });
+    expect(question.textContent).toContain("4,000件の記述");
+    const announcement = projectStore.getSnapshot().announcement;
+    const calls = listData.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "en" } });
+    expect(screen.getByRole("group", { name: "Remove people.csv?" })).toBe(question);
+    expect(screen.getByRole("checkbox", { name: "Off: in no view" })).toBe(toggle);
+    expect(projectStore.getSnapshot().announcement).toBe(announcement);
+    expect(listData).toHaveBeenCalledTimes(calls);
+    expect(removeData).not.toHaveBeenCalled();
+    await press(within(question).getByRole("button", { name: "Keep" }));
+    expect(screen.queryByRole("group", { name: "Remove people.csv?" })).toBeNull();
+  });
+
+  it("derives the limit explanation from counts and keeps the chosen file across locales", async () => {
+    await setup([SNAP], true);
+    inspectData.mockResolvedValue({ sample: true, total: 5000, kept: 2000, limit: 2000, format: "csv", limitSentence: "not a source for translation" });
+    await act(async () => fireEvent.change(document.querySelector(".snapshot-row input[type=file]")!, { target: { files: [FILE] } }));
+    const group = screen.getByRole("group", { name: "取り込み行数の上限" });
+    expect(group.textContent).toContain("5,000行");
+    expect(group.textContent).toContain("2,000行");
+    expect(group.textContent).not.toContain("not a source for translation");
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "en" } });
+    expect(screen.getByRole("group", { name: "More rows than the tool takes" })).toBe(group);
+    expect(inspectData).toHaveBeenCalledTimes(1);
+    expect(refreshData).not.toHaveBeenCalled();
+    refreshData.mockResolvedValue({ status: "mismatch", missing: ["born"], inspection: { columns: [] }, choices: null });
+    await press(screen.getByRole("button", { name: "Use the first 2,000 rows" }));
+    expect(refreshData).toHaveBeenCalledWith(PID, SNAP.id, FILE, { sample: true });
+    expect(onWizard).toHaveBeenCalledWith(expect.objectContaining({ file: FILE, missing: ["born"], options: { sample: true } }));
+  });
+
+  it("keeps the raw failure object and derives action errors in the current language", async () => {
+    await setup([SNAP], true);
+    const error = new ApiError("original <img>{reason}", 422, null, { code: "request.invalid", args: {} });
+    updateData.mockRejectedValue(error);
+    await press(screen.getByRole("checkbox"));
+    expect(screen.getByRole("alert").textContent).toBe("入力値を確認して再試行してください。");
+    expect(screen.getByText(error.message).closest("details")?.querySelector("summary")?.textContent).toBe("技術的な詳細");
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "en" } });
+    expect(screen.getByRole("alert").textContent).toBe("Check the supplied values and try again.");
+    expect(screen.getByText(error.message)).toBeTruthy();
+    expect(updateData).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("img")).toBeNull();
+  });
+
+  it.each([false, true])("keeps the failed list's raw cause through locale changes and retry (metadata=%s)", async (known) => {
+    const cause = known
+      ? new ApiError("original <img>{cause}", 422, null, { code: "request.invalid", args: {} })
+      : new TypeError("Failed to fetch <img>{cause}");
+    openProject.mockResolvedValue({ project: PROJECT, documents: [MODEL], recovery: { available: false, draftTime: null } });
+    listData.mockRejectedValue(cause);
+    await act(async () => { await projectStore.open(PID); });
+    render(<I18nProvider><UiLanguageSelect /><SnapshotList projectId={PID} onWizard={vi.fn()} /></I18nProvider>);
+    expect(screen.getByText("データ一覧を読み込めませんでした。")).toBeTruthy();
+    if (known) expect(screen.getByText("入力値を確認して再試行してください。")).toBeTruthy();
+    expect(projectStore.getSnapshot().dataErrorCause?.error).toBe(cause);
+    expect(projectStore.getSnapshot().announcement.uiMessage).toEqual({ code: "dataSnapshot.readFailed", args: {} });
+    expect(screen.getByText(cause.message).closest("details")).toBeTruthy();
+    const count = listData.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "en" } });
+    expect(screen.getByText("The data snapshots could not be read.")).toBeTruthy();
+    if (known) expect(screen.getByText("Check the supplied values and try again.")).toBeTruthy();
+    expect(listData).toHaveBeenCalledTimes(count);
+    listData.mockResolvedValue({ generation: 2, snapshots: [SNAP] });
+    await press(screen.getByRole("button", { name: "Try again" }));
+    expect(projectStore.getSnapshot().dataErrorCause).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Data" }));
+    expect(document.querySelector("img")).toBeNull();
+  });
+});
+
+it("does not announce or refetch a previous project's completed data action", async () => {
+  await setup();
+  let finish!: (reply: { snapshot: SnapshotSummary; generation: number }) => void;
+  updateData.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  await press(screen.getByRole("checkbox"));
+  expect(updateData).toHaveBeenCalledTimes(1);
+  const nextId = "prj-111111111111";
+  openProject.mockResolvedValue({ project: { ...PROJECT, id: nextId, name: "Other project" },
+    documents: [{ ...MODEL, ontologyId: `${nextId}-model` }], recovery: { available: false, draftTime: null } });
+  listData.mockResolvedValue({ generation: 1, snapshots: [] });
+  await act(async () => { cleanup(); await projectStore.open(nextId); });
+  const announcement = projectStore.getSnapshot().announcement;
+  const calls = listData.mock.calls.length;
+  await act(async () => { finish({ snapshot: { ...SNAP, enabled: false }, generation: 2 }); });
+  expect(projectStore.getSnapshot().project?.id).toBe(nextId);
+  expect(projectStore.getSnapshot().announcement).toBe(announcement);
+  expect(listData).toHaveBeenCalledTimes(calls);
+});
+
+it("renders an unsupported mapping's facts in the active locale without reloading the snapshot", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const name = "rml:fn <b>{name}";
+  const outside: SnapshotSummary = { ...SNAP, mapping: { status: "outside", message: "Original <img>{reason}",
+    uiMessage: { code: "rml.unsupported", args: { name } } } };
+  await setup([outside], true);
+  expect(screen.getByText(`${name}は、このアプリで実行できるRMLの範囲外です。マッピングは他のRMLツールで使えるようそのまま保持し、データは変更しません。`)).toBeTruthy();
+  const pre = screen.getByText("Original <img>{reason}", { selector: "pre" });
+  const calls = listData.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(`${name} is outside the supported RML subset. The mapping is kept unchanged for other RML tools, and the data stays as it was.`)).toBeTruthy();
+  expect(screen.getByText("Original <img>{reason}", { selector: "pre" })).toBe(pre);
+  expect(listData).toHaveBeenCalledTimes(calls);
+});
+
+
+it("rereads snapshot class names while preserving the mounted row and its controls", async () => {
+  await setup(undefined, true);
+  const row = document.querySelector(".snapshot-row");
+  const control = document.querySelector(".snapshot-row button") as HTMLButtonElement;
+  control.focus();
+  listData.mockResolvedValue({ generation: 1, snapshots: [{ ...SNAP, className: "人" }] });
+  await act(async () => { projectStore.setDisplayLanguage("ja"); });
+  expect(screen.getByText(/人：2,000件/)).toBeTruthy();
+  expect(document.querySelector(".snapshot-row")).toBe(row);
+  expect(document.activeElement).toBe(control);
+  const reads = listData.mock.calls.length;
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(listData).toHaveBeenCalledTimes(reads);
+  expect(updateData).not.toHaveBeenCalled(); expect(refreshData).not.toHaveBeenCalled();
+});
+
+
+it("keeps the previous list visible with a retry when a name refresh fails", async () => {
+  await setup(undefined, true);
+  const row = document.querySelector(".snapshot-row");
+  const cause = new ApiError("Original name read <img>{value}", 422, null, { code: "request.invalid", args: {} });
+  listData.mockRejectedValueOnce(cause);
+  await act(async () => { projectStore.setDisplayLanguage("ja"); });
+  expect(screen.getByText("データ一覧を読み込めませんでした。")).toBeTruthy();
+  expect(document.querySelector(".snapshot-row")).toBe(row);
+  const pre = screen.getByText("Original name read <img>{value}", { selector: "pre" });
+  const details = pre.closest("details")!;
+  fireEvent.click(details.querySelector("summary")!);
+  const reads = listData.mock.calls.length;
+  await act(async () => { fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } }); });
+  expect(screen.getByText("The data snapshots could not be read.")).toBeTruthy();
+  expect(screen.getByText("Original name read <img>{value}", { selector: "pre" })).toBe(pre);
+  expect(details.open).toBe(true);
+  expect(listData).toHaveBeenCalledTimes(reads);
+  listData.mockResolvedValueOnce({ generation: 1, snapshots: [{ ...SNAP, className: "人" }] });
+  await press(screen.getByRole("button", { name: "Try again" }));
+  expect(screen.queryByText("The data snapshots could not be read.")).toBeNull();
+  expect(projectStore.getSnapshot().dataError).toBeNull();
+  expect(document.querySelector(".snapshot-row")).toBe(row);
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Data" }));
+  expect(document.querySelector("img")).toBeNull();
 });

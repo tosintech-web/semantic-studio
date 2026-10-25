@@ -27,6 +27,7 @@ INPUTS / INPUT SOURCES
     - The conftest temp data directory; the small template; inline Turtle.
 
 EXPECTED OUTPUT
+    - Existing text/fix fields stay exact; metadata has its separate contract tests.
     - Pass/fail for AC-10, R8, R10, R12, R18 and R19 as the server sees them,
       and the 5.9 budget.
 ================================================================================
@@ -136,7 +137,15 @@ def warnings(pid: str, iri: str) -> list[dict]:
     block each goes under is asserted where it matters."""
     response = client.get(f"/api/ontologies/{pid}-model/node", params={"iri": iri})
     assert response.status_code == 200, response.text
-    return [{k: v for k, v in w.items() if k != "block"} for w in response.json()["warnings"]]
+    # This compatibility view asserts every old field exactly. Descriptor
+    # values are covered independently by test_model_message_metadata.py.
+    out = []
+    for warning in response.json()["warnings"]:
+        legacy = {key: value for key, value in warning.items() if key not in ("block", "uiMessage")}
+        if "fix" in legacy:
+            legacy["fix"] = {key: value for key, value in legacy["fix"].items() if key != "uiMessage"}
+        out.append(legacy)
+    return out
 
 
 def blocks(pid: str, iri: str) -> dict:

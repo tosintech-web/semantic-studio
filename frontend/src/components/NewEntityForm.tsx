@@ -9,6 +9,11 @@ SUMMARY
     primary language, and nothing else unless asked for.
 
 BASIC IDEA
+    UI messages use the active locale. Name, identifier, datatype and More
+    options remain component state across language changes; explicit caller
+    labels stay caller-owned; existing-property conflicts render validated
+    producer facts in the active locale, keeping legacy-only text intact.
+
     Names first (5.1). A learner types "Invoice item" and the server mints the
     IRI from it, as it always has. An expert who wants to choose the IRI opens
     More options and types it there; an attribute's datatype is offered there
@@ -48,8 +53,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { WireMessage } from "../i18n/server-contracts";
+import { historyLabel } from "../modeling/projectNotices";
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { ALREADY_HERE, useOn } from "../modeling/sentences";
+import { useOn } from "../modeling/sentences";
 import { DATATYPES } from "../modeling/values";
 import { useSuggestions } from "./useSuggestions";
 
@@ -85,7 +93,7 @@ interface Props {
   };
   /** A create refused because the name is a property already (5.1's 409):
    *  its sentence, and the same choice the suggestions give. */
-  existing?: { sentence: string; className: string; onUse: () => void; onAnother: () => void } | null;
+  existing?: { sentence: string; uiMessage?: WireMessage | null; className: string; onUse: () => void; onAnother: () => void } | null;
 }
 
 export default function NewEntityForm({
@@ -94,7 +102,7 @@ export default function NewEntityForm({
   datatypes = false,
   busy = false,
   error = null,
-  submitLabel = "Create",
+  submitLabel,
   missing = null,
   children,
   onSubmit,
@@ -107,6 +115,7 @@ export default function NewEntityForm({
   suggest,
   existing = null,
 }: Props) {
+  const { locale, t } = useI18n();
   const id = useId();
   const [ownName, setOwnName] = useState("");
   // Held outside when the caller shares it (the side panel and the canvas).
@@ -152,7 +161,7 @@ export default function NewEntityForm({
         {title}
       </p>
       <label htmlFor={`${id}-name`} className="edit-field-label">
-        Name ({primaryLanguage})
+        {t("newEntity.name", { language: primaryLanguage })}
       </label>
       <input
         id={`${id}-name`}
@@ -166,10 +175,10 @@ export default function NewEntityForm({
       />
       {existing ? (
         <div className="reuse-existing">
-          <p id={`${id}-error`}>{existing.sentence}</p>
+          <p id={`${id}-error`}>{historyLabel(existing.sentence, existing.uiMessage, t)}</p>
           <div className="edit-actions">
             <button type="button" aria-disabled={busy} onClick={() => !busy && existing.onUse()}>
-              {useOn(existing.className)}
+              {useOn(existing.className, locale)}
             </button>
             <button
               type="button"
@@ -179,7 +188,7 @@ export default function NewEntityForm({
                 nameRef.current?.focus();
               }}
             >
-              Choose another name
+              {t("newEntity.another")}
             </button>
           </div>
         </div>
@@ -192,7 +201,7 @@ export default function NewEntityForm({
       )}
       {suggest && suggestions.length > 0 && !existing && (
         <div className="reuse-suggestions">
-          <p className="edit-field-label">{ALREADY_HERE}</p>
+          <p className="edit-field-label">{t("modelSentences.already")}</p>
           <ul className="edit-list">
             {suggestions.map((s) => (
               <li key={s.iri}>
@@ -200,11 +209,11 @@ export default function NewEntityForm({
                 <button
                   type="button"
                   className="ghost edit-btn"
-                  aria-label={`${useOn(suggest.className)} (${s.label})`}
+                  aria-label={t("newEntity.use", { cls: suggest.className, name: s.label })}
                   aria-disabled={busy}
                   onClick={() => !busy && suggest.onUse({ iri: s.iri, label: s.label })}
                 >
-                  {useOn(suggest.className)}
+                  {useOn(suggest.className, locale)}
                 </button>
               </li>
             ))}
@@ -224,11 +233,11 @@ export default function NewEntityForm({
         aria-controls={`${id}-more`}
         onClick={() => setMore((m) => !m)}
       >
-        More options
+        {t("newEntity.more")}
       </button>
       <div id={`${id}-more`} hidden={!more} className="new-entity-more">
         <label htmlFor={`${id}-iri`} className="edit-field-label">
-          Identifier (optional; made from the name when empty)
+          {t("newEntity.identifier")}
         </label>
         <input
           id={`${id}-iri`}
@@ -243,7 +252,7 @@ export default function NewEntityForm({
         {datatypes && (
           <>
             <label htmlFor={`${id}-datatype`} className="edit-field-label">
-              Type of value
+              {t("attributeForm.valueType")}
             </label>
             <select
               id={`${id}-datatype`}
@@ -267,10 +276,10 @@ export default function NewEntityForm({
       {missing && <p className="detail-note">{missing}</p>}
       <div className="edit-actions">
         <button type="submit" className="primary" aria-disabled={blocked}>
-          {busy ? "Saving change…" : submitLabel}
+          {busy ? t("annotation.saving") : submitLabel ?? t("newEntity.create")}
         </button>
         <button type="button" className="ghost" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>

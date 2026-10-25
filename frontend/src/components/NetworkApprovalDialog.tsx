@@ -4,6 +4,7 @@ FILE: frontend/src/components/NetworkApprovalDialog.tsx
 ================================================================================
 
 SUMMARY
+    Source-owned approval facts render at the current locale; custom text stays literal.
     The question Semantic Studio asks before it connects to a site: which site,
     why, what is sent, and what the site will see, with Allow and Don't allow
     and a choice between just this time and always. The one place a network
@@ -48,18 +49,16 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator } from "../i18n/format";
 import { useCallback, useRef, useState } from "react";
 import { alwaysPhrase } from "../networkWords";
 import type { ApprovalRequest } from "../types";
 import { useDialogTrap } from "./useDialogTrap";
 
-export const SERVICE_NOTHING_ELSE =
-  "Nothing else from your ontology is sent. Results are combined on your machine.";
-
-export const WHY_EXPLAINED = [
-  "Some files and queries rely on material published on another site, such as a JSON-LD context or an ontology they import.",
-  "Semantic Studio asks before it connects anywhere, so you always know what leaves this computer and where it goes.",
-] as const;
+export const SERVICE_NOTHING_ELSE = englishTranslator("network.approval.serviceNothingElse");
+export const WHY_EXPLAINED = [englishTranslator("network.approval.whyFirst"), englishTranslator("network.approval.whySecond")] as const;
 
 interface Props {
   requests: ApprovalRequest[];
@@ -67,16 +66,23 @@ interface Props {
 }
 
 export default function NetworkApprovalDialog({ requests, onAnswer }: Props) {
+  const { t } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [remember, setRemember] = useState(true);
   const first = requests[0];
+  // An unknown redirect descriptor must not silently remove part of the
+  // purpose from the primary explanation. The complete legacy text is safe.
+  const knownReason = validWireMessage(first.reasonUiMessage)
+    && (first.redirectUiMessage == null || validWireMessage(first.redirectUiMessage));
+  const knownSends = validWireMessage(first.sendsUiMessage);
+  const reason = knownReason
+    ? [renderServerMessage(first.reasonUiMessage, first.reason, t),
+       validWireMessage(first.redirectUiMessage) ? renderServerMessage(first.redirectUiMessage, "", t) : ""].filter(Boolean).join(" ")
+    : first.reason;
   const hosts = [...new Set(requests.map((r) => r.host))];
   const texts = requests.filter((r) => r.text !== undefined);
-  const heading =
-    hosts.length === 1
-      ? `Allow a connection to ${hosts[0]}?`
-      : `Allow connections to ${hosts.join(", ")}?`;
+  const heading = t(hosts.length === 1 ? "network.approval.headingOne" : "network.approval.headingMany", { hosts: hosts.join(t("common.listSeparator")) });
 
   const decline = useCallback(() => onAnswer(false, false), [onAnswer]);
   useDialogTrap(panelRef, headingRef, decline);
@@ -96,11 +102,17 @@ export default function NetworkApprovalDialog({ requests, onAnswer }: Props) {
         </h2>
 
         <dl className="approval-facts">
-          <dt>Why</dt>
-          <dd>{first.reason}</dd>
-          <dt>What is sent</dt>
+          <dt>{t("network.approval.why")}</dt>
+          <dd>{reason}{knownReason && <details className="technical-details">
+            <summary>{t("common.original")}</summary><pre>{first.reason}</pre>
+          </details>}</dd>
+          <dt>{t("network.approval.sent")}</dt>
           {texts.length === 0 ? (
-            <dd>{first.sends}</dd>
+            <dd>{knownSends ? renderServerMessage(first.sendsUiMessage, first.sends, t) : first.sends}
+              {knownSends && <details className="technical-details">
+                <summary>{t("common.original")}</summary><pre>{first.sends}</pre>
+              </details>}
+            </dd>
           ) : (
             <dd className="approval-sent">
               {texts.map((r, i) => (
@@ -111,47 +123,42 @@ export default function NetworkApprovalDialog({ requests, onAnswer }: Props) {
                   value={r.text}
                   rows={Math.min(12, (r.text ?? "").split("\n").length)}
                   aria-label={
-                    texts.length === 1 ? "Query text sent" : `Query text sent to ${r.url}`
+                    texts.length === 1 ? t("network.approval.queryText") : t("network.approval.queryAt", { url: r.url })
                   }
                 />
               ))}
-              <p className="approval-text-note">{SERVICE_NOTHING_ELSE}</p>
+              <p className="approval-text-note">{t("network.approval.serviceNothingElse")}</p>
             </dd>
           )}
-          <dt>The site sees</dt>
-          <dd>Your internet address and the address of what is requested.</dd>
-          <dt>Address</dt>
+          <dt>{t("network.approval.sees")}</dt>
+          <dd>{t("network.approval.addressInfo")}</dd>
+          <dt>{t("network.approval.address")}</dt>
           <dd className="approval-url">
             {[...new Set(requests.map((r) => r.url))].join(", ")}
           </dd>
           {!first.encrypted && (
             <>
-              <dt>Encryption</dt>
-              <dd>
-                This address starts with http://. Semantic Studio tries an encrypted
-                connection first, but the site may only offer an unencrypted one.
-              </dd>
+              <dt>{t("network.approval.encryption")}</dt>
+              <dd>{t("network.approval.plain")}</dd>
             </>
           )}
         </dl>
 
         <details className="approval-why">
-          <summary>Why am I seeing this?</summary>
-          <p>{WHY_EXPLAINED[0]}</p>
-          <p>{WHY_EXPLAINED[1]}</p>
+          <summary>{t("network.approval.explain")}</summary>
+          <p>{t("network.approval.whyFirst")}</p>
+          <p>{t("network.approval.whySecond")}</p>
         </details>
 
         <fieldset className="approval-scope">
-          <legend>How long should this answer last?</legend>
+          <legend>{t("network.approval.duration")}</legend>
           <label>
             <input
               type="radio"
               name="approval-scope"
               checked={!remember}
               onChange={() => setRemember(false)}
-            />
-            Just this time
-          </label>
+            />{t("network.approval.once")}</label>
           <label>
             <input
               type="radio"
@@ -159,22 +166,14 @@ export default function NetworkApprovalDialog({ requests, onAnswer }: Props) {
               checked={remember}
               onChange={() => setRemember(true)}
             />
-            Always, for {alwaysPhrase(first.capability)} from{" "}
-            {hosts.length === 1 ? "this site" : "these sites"}
+            {t("network.approval.always", { purpose: alwaysPhrase(first.capability, t), sites: t(hosts.length === 1 ? "network.approval.site" : "network.approval.sites") })}
           </label>
-          <p className="approval-hint">
-            Always applies to Don't allow too: the site stays blocked until you change it in
-            Network settings.
-          </p>
+          <p className="approval-hint">{t("network.approval.hint")}</p>
         </fieldset>
 
         <div className="approval-actions">
-          <button className="ghost" onClick={() => onAnswer(false, remember)}>
-            Don't allow
-          </button>
-          <button className="primary" onClick={() => onAnswer(true, remember)}>
-            Allow
-          </button>
+          <button className="ghost" onClick={() => onAnswer(false, remember)}>{t("network.approval.decline")}</button>
+          <button className="primary" onClick={() => onAnswer(true, remember)}>{t("network.approval.allow")}</button>
         </div>
       </div>
     </>

@@ -39,8 +39,12 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { DictionaryViewContext } from "../dictionary/DictionaryViewContext";
 import DetailPanel from "./DetailPanel";
 import type { Explain, NodeDetails } from "../types";
 
@@ -291,7 +295,7 @@ describe("DetailPanel imports (external-access Stage 2)", () => {
 
   it("asks for the merged view only when told to", async () => {
     await renderPanel(detailsWith(1));
-    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, false);
+    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, false, expect.any(AbortSignal), undefined);
     cleanup();
     getNodeDetails.mockResolvedValue(detailsWith(1));
     await act(async () => {
@@ -299,7 +303,7 @@ describe("DetailPanel imports (external-access Stage 2)", () => {
         <DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} imports />,
       );
     });
-    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, true);
+    expect(getNodeDetails).toHaveBeenLastCalledWith("o1", SUBJECT, true, expect.any(AbortSignal), undefined);
   });
 });
 
@@ -477,6 +481,21 @@ describe("DetailPanel: the Inferred block (axioms-and-reasoning 5.7)", () => {
     return onNavigate;
   }
 
+  it("rewords the inferred block without refetching the selected entity", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    getNodeDetails.mockResolvedValue(ROBOT);
+    getReasoningAbout.mockResolvedValue({ iri: ROBOT.iri, neverMembers: true, stale: false, facts: [] });
+    await act(async () => { render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={ROBOT.iri} onNavigate={vi.fn()} onClose={vi.fn()} inferred={INFERRED} /></I18nProvider>); });
+    const block = screen.getByRole("region", { name: "Robotについての推論結果" });
+    expect(within(block).getByText("Robotは所属する個体を持てません。")).toBeTruthy();
+    const calls = [getReasoningAbout.mock.calls.length, getNodeDetails.mock.calls.length];
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("region", { name: "Inferred about Robot" })).toBe(block);
+    expect(within(block).getByText("Robot can never have members.")).toBeTruthy();
+    expect([getReasoningAbout.mock.calls.length, getNodeDetails.mock.calls.length]).toEqual(calls);
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+  });
+
   it("lists what a current result concluded, under the statements, each with Why?", async () => {
     const onNavigate = await show(INFERRED);
     expect(getReasoningAbout).toHaveBeenCalledWith("prj-1", `${X}Robot`, false);
@@ -568,6 +587,25 @@ function crewed(items = CREWED_RULES, rules = true): NodeDetails {
 }
 
 describe("DetailPanel: a class's rules (explore-rules 5.3, AC-3, AC-4)", () => {
+  it("switches rule sentences without changing the loaded rule or Turtle", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    const details = crewed();
+    const original = JSON.stringify(details);
+    getNodeDetails.mockResolvedValue(details);
+    await act(async () => {
+      render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} /></I18nProvider>);
+    });
+    expect(document.querySelector(".rule-sentence")?.textContent).toBe("すべてのCrewed missionは「crew member」の値を1件以上持ちます（Astronautに該当する値）");
+    const calls = getNodeDetails.mock.calls.length;
+    const turtle = document.querySelector(".rule-turtle");
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(document.querySelector(".rule-sentence")?.textContent).toBe("Every Crewed mission has at least one crew member that is an Astronaut");
+    expect(document.querySelector(".rule-turtle")).toBe(turtle);
+    expect(getNodeDetails).toHaveBeenCalledTimes(calls);
+    expect(JSON.stringify(details)).toBe(original);
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+  });
+
   it("shows the rules under Rules, one sentence each, a Turtle item read-only", async () => {
     await renderPanel(crewed());
     const heading = screen.getByRole("heading", { level: 3, name: "Rules" });
@@ -811,4 +849,67 @@ describe("DetailPanel: In plain words (explain-panel 5.1, 5.2, AC-1, AC-2, AC-5)
     expect(screen.getByRole("heading", { level: 2, name: "Crewed mission" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "In plain words" })).toBeNull();
   });
+});
+
+it("refetches on same-flag imports re-resolution and ignores the older detail answer", async () => {
+  let old!: (details: NodeDetails) => void;
+  getNodeDetails.mockImplementationOnce(() => new Promise<NodeDetails>(resolve => { old = resolve; }));
+  getNodeDetails.mockResolvedValue(detailsWith(0));
+  const { rerender } = render(<DictionaryViewContext.Provider value={{ revision: 0, viewGeneration: "1:0" }}>
+    <DetailPanel ontologyId="o1" iri={SUBJECT} imports onNavigate={vi.fn()} onClose={vi.fn()} />
+  </DictionaryViewContext.Provider>);
+  await act(async () => {});
+  rerender(<DictionaryViewContext.Provider value={{ revision: 0, viewGeneration: "2:0" }}>
+    <DetailPanel ontologyId="o1" iri={SUBJECT} imports onNavigate={vi.fn()} onClose={vi.fn()} />
+  </DictionaryViewContext.Provider>);
+  await act(async () => {});
+  expect(getNodeDetails).toHaveBeenCalledTimes(2);
+  expect((getNodeDetails.mock.calls[0][3] as AbortSignal).aborted).toBe(true);
+  await act(async () => { old({ ...detailsWith(0), label: "Old label" }); });
+  expect(screen.queryByText("Old label")).toBeNull();
+});
+
+it("localizes names, limits and controls while keeping RDF values and node fetches unchanged", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getNodeDetails.mockResolvedValue({ ...detailsWith(1), outgoingTotal: 10, incomingTotal: 3, names: [{ lang: "ja", value: null }] });
+  const expand = vi.fn();
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} onExpand={expand} /></I18nProvider>); });
+  expect(screen.getByRole("heading", { name: "名称" })).toBeTruthy();
+  expect(screen.getByText("未登録")).toBeTruthy();
+  expect(screen.getByText("10件中1件のステートメントを表示しています。")).toBeTruthy();
+  expect(screen.getByText("3件中0件の参照を表示しています。")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "関連をグラフに表示" }));
+  expect(expand).toHaveBeenCalledWith(SUBJECT);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(getNodeDetails).toHaveBeenCalledTimes(1);
+  expect(screen.getByText("Paris 0", { exact: false })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Copy IRI" })).toBeTruthy();
+  cleanup();
+});
+it("retains structured node errors so the explanation follows a later locale switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getNodeDetails.mockRejectedValue(Object.assign(new Error("Original parser diagnostic"), { uiMessage: { code: "parse.syntax", args: { format: "Turtle", line: 4 } } }));
+  await act(async () => { render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} /></I18nProvider>); });
+  expect(screen.getByRole("alert").textContent).toContain("Turtleファイルの構文を確認してください（行：4）");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("alert").textContent).toContain("Turtle");
+  expect(screen.getByText("Original parser diagnostic")).toBeTruthy();
+  expect(getNodeDetails).toHaveBeenCalledTimes(1);
+  cleanup();
+});
+
+
+it("updates snapshot provenance in the same view without reloading data", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const source = { id: "people-abc123", source: "people.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true };
+  getNodeDetails.mockResolvedValue({ ...detailsWith(1), fromData: { ...source, row: 7 } });
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(<I18nProvider><UiLanguageSelect /><DetailPanel ontologyId="o1" iri={SUBJECT} onNavigate={vi.fn()} onClose={vi.fn()} /></I18nProvider>); });
+  try {
+    const provenance = screen.getByText("Data from people.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows, row 7 (read-only)");
+    const calls = getNodeDetails.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+    expect(screen.getByText("データ：people.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行、行7（読み取り専用）")).toBe(provenance);
+    expect(getNodeDetails).toHaveBeenCalledTimes(calls);
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
 });

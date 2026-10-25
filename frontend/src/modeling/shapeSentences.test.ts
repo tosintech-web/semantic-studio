@@ -9,6 +9,9 @@ SUMMARY
     live region's summary, and the checks that keep Add disabled.
 
 BASIC IDEA
+    Integer form boundaries preserve exact supported counts and direct larger
+    RDF values to Turtle without changing their meaning or their source.
+
     Every rule and every result is a sentence in the learner's own names
     (Section 7), so each sentence is asserted word for word.
 
@@ -24,6 +27,9 @@ import { describe, expect, it } from "vitest";
 import type { ShapeRule, ValidationPanel, ValidationResult } from "../types";
 import {
   dateTimeBound,
+  everyWord,
+  languageName,
+  offeredTypes,
   panelHeader,
   panelName,
   pathWords,
@@ -260,4 +266,77 @@ describe("Stage A follow-ups fixed in Stage B (5.9)", () => {
     );
     expect(ruleProblem({ ...at, minInclusive: { value: "2020-01-01T10:00:00", datatype: "xsd:dateTime" } })).toBeNull();
   });
+});
+
+
+it("localizes validation panel headings from raw names rather than English inflection", () => {
+  expect(panelHeader(panel({}), "ja")).toBe("Person rules：Person5件中2件が不適合（3件の問題）");
+  expect(panelName(panel({}), "ja")).toBe("不適合。Person rules：Person5件中2件が不適合（3件の問題）");
+  expect(panelHeader(panel({ state: "passes", focusCount: 1 }), "ja")).toBe("Person rules：Person1件が適合");
+  expect(panelHeader(panel({ state: "warnings", warningCount: 1 }), "ja")).toBe("Person rules：警告1件");
+});
+
+
+describe("Japanese shape explanations", () => {
+  it.each([
+    [{ minCount: 1 }, "「name」が1件以上必要です"],
+    [{ maxCount: 1 }, "「name」は1件以下にしてください"],
+    [{ minCount: 2, maxCount: 2 }, "「name」はちょうど2件必要です"],
+    [{ minCount: 1, maxCount: 3 }, "「name」は1〜3件必要です"],
+    [{ minCount: 0, maxCount: 3 }, "「name」は3件以下にしてください"],
+    [{ datatype: "xsd:string", maxLength: 20 }, "「name」の値を指定できます、値の型：テキスト、文字数：20文字以下"],
+    [{ pattern: "<b>{name}</b>" }, "「name」の値を指定できます、パターン：<b>{name}</b>"],
+    [{ minInclusive: { value: "1", datatype: "xsd:integer" }, maxInclusive: { value: "9", datatype: "xsd:integer" } }, "「name」の値を指定できます、範囲：1〜9"],
+  ] as [Partial<ShapeRule>, string][])("reads count and value constraints %j", (fields, expected) => {
+    const rule = { ...name, ...fields };
+    const original = JSON.stringify(rule);
+    expect(ruleSentence(rule, "ja")).toBe(expected);
+    expect(JSON.stringify(rule)).toBe(original);
+  });
+
+  it("preserves relationship names, typed values and target identity", () => {
+    expect(ruleSentence({ ...worksFor, minCount: 2 }, "ja")).toBe("「works for」でOrganizationと結び付きます、件数：2件以上");
+    expect(pathWords({ path: ["http://x#hasLine", "http://x#other"] }, "ja")).toBe("hasLine または other");
+    expect(everyWord({ target: { iri: "http://www.w3.org/2002/07/owl#Class", label: "Class", every: "every class" } }, "ja")).toBe("すべてのクラス");
+    const shape = { target: { iri: "http://x#Person", label: "Person", every: null }, rules: [{ ...name, minCount: 1 }] };
+    expect(shapeSentence(shape, "ja")).toBe("すべてのPerson：「name」が1件以上必要です。");
+    expect(rowSentence(shape, "ja")).toBe("すべてのPerson：ルール1件");
+  });
+
+  it("translates type and language choices without changing their identifiers", () => {
+    expect(offeredTypes("ja").map(type => type.value)).toEqual(offeredTypes().map(type => type.value));
+    expect(offeredTypes("ja")[0].label).toBe("テキスト");
+    expect(languageName("en-US", "ja")).toBe("英語");
+    expect(languageName("unknown", "ja")).toBe("unknown");
+    expect(ruleSentence({ ...name, requiredLanguages: ["ja", "en"], languageIn: ["ja"], uniqueLang: true }, "ja")).toBe("「name」が1件以上必要です（日本語と英語）、言語：日本語のみ、言語ごとに1件");
+  });
+
+  it("keeps validation decisions unchanged and uses Japanese refusal text", () => {
+    expect(ruleProblem({ ...name, minCount: 3, maxCount: 1 }, "ja")).toBe("最小件数3が最大件数1を超えているため、このルールは満たせません。");
+    expect(ruleProblem({ ...name, pattern: "(" }, "ja")).toBe("このツールで読み取れる正規表現ではありません。");
+    expect(ruleProblem({ ...name, minInclusive: { value: "soon", datatype: "xsd:date" } }, "ja")).toBe("「soon」は日付（YYYY-MM-DD）ではありません。");
+    expect(ruleProblem({ ...name, minCount: 1 }, "ja")).toBeNull();
+  });
+});
+
+it("summarizes validation outcomes in Japanese from the original result facts", () => {
+  const result: ValidationResult = {
+    stopped: false, statements: 1200, shapeCount: 3,
+    shapes: [panel({}), panel({ state: "fails" }), panel({ state: "passes", problemCount: 0 })],
+    durationMs: 4, revisions: { model: 1, shapes: 2 },
+  };
+  const original = JSON.stringify(result);
+  expect(validationSummary(result, "ja")).toBe("検証ルールセット3件：適合1件、不適合2件。");
+  expect(problemsFound(result, "ja")).toBe("問題6件");
+  expect(validationSummary({ ...result, shapes: [] }, "ja")).toBe("検証するルールセットはまだありません。");
+  expect(validationSummary({ ...result, stopped: true }, "ja")).toBe("検証に時間がかかったため停止しました（ルールセット3件、ステートメント1,200件）。");
+  expect(problemsFound({ ...result, stopped: true }, "ja")).toBe("停止");
+  expect(JSON.stringify(result)).toBe(original);
+});
+
+it.each(["minCount", "maxCount", "minLength", "maxLength"] as const)("keeps safe %s counts editable and refuses a rounded browser integer", field => {
+  const base = { path: ["https://example.test/name"] };
+  expect(ruleProblem({ ...base, [field]: Number.MAX_SAFE_INTEGER }, "ja")).toBeNull();
+  expect(ruleProblem({ ...base, [field]: Number.MAX_SAFE_INTEGER + 1 }, "ja")).toBe("件数・文字数が9,007,199,254,740,991を超える場合は、値を正確に保持するためTurtleで編集してください。");
+  expect(ruleProblem({ ...base, [field]: Number.MAX_SAFE_INTEGER + 1 }, "en")).toBe("Edit counts or lengths above 9,007,199,254,740,991 in Turtle to preserve their exact value.");
 });

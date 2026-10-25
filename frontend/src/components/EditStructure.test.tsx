@@ -36,6 +36,8 @@ import { projectStore } from "../state/projectStore";
 import type { ClassProperty, NodeDetails, SharePlan } from "../types";
 import { useRunner } from "./EditParts";
 import EditStructure from "./EditStructure";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand, searchNodes, getNodeDetails, planShare } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -235,7 +237,7 @@ describe("the reuse plan in the class form (attribute-reuse 5.2)", () => {
       property: HR + "hasName",
       class: HR + "Contractor",
       how: "union",
-    });
+    }, "en");
     expect(projectStore.getSnapshot().announcement.text).toContain("hasName is now shared by Employee and Contractor.");
     // A finished choice: the form closes, focus on the class's attribute list.
     expect(screen.queryByRole("group", { name: "Use hasName" })).toBeNull();
@@ -264,7 +266,7 @@ describe("the reuse plan in the class form (attribute-reuse 5.2)", () => {
       class: HR + "Contractor",
       how: "parent",
       parentLabel: "Worker",
-    });
+    }, "en");
   });
 
   it("an imported class is never offered a parent, and the plan says why", async () => {
@@ -340,4 +342,24 @@ describe("found in code review", () => {
     const plan = await screen.findByRole("group", { name: "Use hasName" });
     expect(within(plan).getByText(/^Share hasName between Engineer and Employee\./)).toBeTruthy();
   });
+});
+
+
+it("localizes property groups and keeps their original references", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  runCommand.mockResolvedValue({ revision: 3, label: "Created class", state: STATE });
+  render(<I18nProvider><UiLanguageSelect /><Harness details={classDetails("Manager", MANAGER)} /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "構造" })).toBeTruthy();
+  expect(screen.getAllByRole("heading", { name: "Employeeを通じて利用" })).toHaveLength(2);
+  expect(screen.getByText("（Contractorと共有）")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "hasName" }));
+  expect(onSelect).toHaveBeenCalledWith(HR + "hasName");
+  fireEvent.click(screen.getByRole("button", { name: "下位クラスを追加" }));
+  const input = screen.getByRole("textbox", { name: "名前（en）" });
+  fireEvent.change(input, { target: { value: "<b>主任</b>" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("textbox", { name: "Name (en)" })).toBe(input);
+  expect((input as HTMLInputElement).value).toBe("<b>主任</b>");
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Create" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "<b>主任</b>", parent: HR + "Manager", iri: undefined }, "en");
 });

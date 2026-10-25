@@ -4,6 +4,7 @@ FILE: backend/app/sparql_exec.py
 ================================================================================
 
 SUMMARY
+    Query refusals retain source-owned display facts through their legacy types.
     Safe execution of SPARQL SELECT queries, built visually or typed. Parses a
     query, refuses anything that is not a read-only SELECT, classifies its
     SERVICE blocks, runs it against an ontology's graph under a hard time
@@ -30,6 +31,11 @@ BASIC IDEA
         while it is still inside the query. A worker still alive two seconds
         later (inside a C call or a network wait) keeps its ontology's key,
         and a new query on that ontology is refused until it ends (D-108).
+
+    Managed queries also check their stop between basic-pattern bindings,
+    through rdflib's public evaluator extension. This ends first-row work
+    even when GC finalizers swallow an asynchronous stop; rdflib still orders
+    and evaluates the pattern, and the broker still owns every SERVICE call.
 
 INPUTS / INPUT SOURCES
     - A raw SPARQL query string (from the frontend via the /sparql endpoint).
@@ -65,12 +71,14 @@ from typing import Callable, Optional
 # two halves of prepareQuery, called apart because the SERVICE blocks have to
 # be read from the parse tree before translation reorders it.
 from rdflib import BNode, Graph, Literal, URIRef
+from rdflib.plugins.sparql import CUSTOM_EVALS, evaluate as sparql_evaluate
 from rdflib.plugins.sparql.algebra import translateQuery
 from rdflib.plugins.sparql.parser import expandUnicodeEscapes, parseQuery
 
 # Reuse the shared label/prefix helpers so URI cells carry a readable label.
+from .messages import MessageError, integer_arg, make_message
 from . import sparql_service
-from .graph_builder import pick_label, prefixed
+from .graph_builder import labeler, prefixed
 from .network_broker import NetworkDecision
 
 # Server-side result cap, independent of the query's own LIMIT.
@@ -79,15 +87,15 @@ MAX_ROWS = 1000
 DEFAULT_TIMEOUT_SECONDS = 30.0
 
 
-class QueryError(Exception):
+class QueryError(MessageError):
     """The query is malformed or not permitted (maps to HTTP 400)."""
 
 
-class QueryTimeout(Exception):
+class QueryTimeout(MessageError):
     """The query took longer than the allowed wall-clock time (maps to HTTP 504)."""
 
 
-class QueryBusy(Exception):
+class QueryBusy(MessageError):
     """A timed-out query of the same ontology is still stopping (maps to HTTP 409)."""
 
 
@@ -96,6 +104,42 @@ class QueryStopped(BaseException):
 
     A BaseException, as KeyboardInterrupt is, so an ``except Exception``
     somewhere in rdflib's evaluation cannot swallow it and carry on."""
+
+
+_query_stop: contextvars.ContextVar[Optional[threading.Event]] = contextvars.ContextVar(
+    "semantic_studio_query_stop", default=None,
+)
+
+
+def _stoppable_bgp(ctx, part):
+    """Keep rdflib's pattern evaluation, checking cancellation per binding.
+
+    ORDER BY consumes a whole pattern before it yields the first result row.
+    Async stops can all be swallowed in GC finalizers; an explicit check here
+    still ends that work as soon as it resumes. The context belongs only to
+    this worker, so pySHACL and other rdflib callers keep their normal path.
+    """
+    stop = _query_stop.get()
+    if stop is None or part.name != "BGP":
+        raise NotImplementedError
+    # This is rdflib evalPart's own bound-term ordering, followed by its own
+    # evalBGP. No local join, filtering or binding semantics are substituted.
+    triples = sorted(part.triples, key=lambda t: len([n for n in t if ctx[n] is None]))
+
+    def bindings():
+        if stop.is_set():
+            raise QueryStopped
+        for binding in sparql_evaluate.evalBGP(ctx, triples):
+            if stop.is_set():
+                raise QueryStopped
+            yield binding
+
+    return bindings()
+
+
+# A public rdflib extension, alongside the existing SERVICE handler. Other
+# algebra nodes fall through and SERVICE still runs only through the broker.
+CUSTOM_EVALS["semantic-studio-query-stop"] = _stoppable_bgp
 
 
 BUSY_DETAIL = "The last query is still stopping. Try again in a few seconds."
@@ -244,7 +288,10 @@ def find_services(node, depth: int = 0) -> list:
     refusal, not a pass.
     """
     if depth > MAX_ALGEBRA_DEPTH:
-        raise QueryError(DEEP_QUERY_REFUSED_DETAIL)
+        raise QueryError(
+            DEEP_QUERY_REFUSED_DETAIL,
+            ui_message=make_message("query.too_deep", limit=integer_arg(MAX_ALGEBRA_DEPTH)),
+        )
     if getattr(node, "name", None) == SERVICE_NODE_NAME:
         return [node]
     found: list = []
@@ -278,17 +325,18 @@ def _prepare(query: str):
         matched = sparql_service.match_blocks(text, parsed)
         prepared = translateQuery(parsed)
     except sparql_service.ServiceRefused as exc:
-        raise QueryError(str(exc)) from exc
+        raise QueryError(str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
     except Exception as exc:  # rdflib raises parser-specific errors
         # A parse failure includes UPDATE syntax, which is not a query at all.
-        raise QueryError(f"Could not parse the SPARQL query: {exc}") from exc
+        raise QueryError(f"Could not parse the SPARQL query: {exc}", ui_message=make_message("query.parse_failed")) from exc
     # The parsed algebra names the query form; anything but SelectQuery (i.e.
     # CONSTRUCT / DESCRIBE / ASK) is refused.
     name = getattr(prepared.algebra, "name", "")
     if name != "SelectQuery":
         raise QueryError(
             "Only SELECT queries can be executed here. "
-            "Updates and other query forms are not supported."
+            "Updates and other query forms are not supported.",
+            ui_message=make_message("query.select_only"),
         )
     # SELECT-only is not enough on its own: a SERVICE clause is legal inside a
     # SELECT and makes the server call the address the query names. Each one
@@ -300,7 +348,7 @@ def _prepare(query: str):
     try:
         return prepared, sparql_service.plan_services(matched, services)
     except sparql_service.ServiceRefused as exc:
-        raise QueryError(str(exc)) from exc
+        raise QueryError(str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
 
 
 def prepare_select(query: str):
@@ -314,7 +362,7 @@ def prepare_select(query: str):
     return _prepare(query)[0]
 
 
-def _term_json(graph: Graph, term, cache: dict[str, dict]):
+def _term_json(graph: Graph, term, cache: dict[str, dict], langs=None):
     """Serialize one result cell to JSON.
 
     URIs are enriched with a label and prefixed form (and cached, since the
@@ -331,7 +379,7 @@ def _term_json(graph: Graph, term, cache: dict[str, dict]):
             entry = {
                 "type": "uri",
                 "value": key,
-                "label": pick_label(graph, term),
+                "label": labeler(graph, langs)(term),
                 "prefixed": prefixed(graph, term),
             }
             cache[key] = entry
@@ -356,6 +404,7 @@ def execute_select(
     timeout: Optional[float] = None,
     key: Optional[str] = None,
     reading: Callable[[], contextlib.AbstractContextManager] = contextlib.nullcontext,
+    langs=None,
 ) -> dict:
     """Run a SELECT query and return JSON-serializable results.
 
@@ -372,7 +421,7 @@ def execute_select(
         with _abandoned_lock:
             stuck = _abandoned.get(key)
             if stuck is not None and stuck.is_alive():
-                raise QueryBusy(BUSY_DETAIL)
+                raise QueryBusy(BUSY_DETAIL, ui_message=make_message("query.still_stopping"))
             _abandoned.pop(key, None)
     # Validate/parse first so a bad query fails before we spin up a thread.
     prepared, plan = _prepare(query)
@@ -416,13 +465,14 @@ def execute_select(
         # row's labels are of the revision it was computed on. The cache
         # dedupes label lookups across rows.
         cache: dict[str, dict] = {}
-        serialized = [[_term_json(graph, term, cache) for term in row] for row in rows]
+        serialized = [[_term_json(graph, term, cache, langs) for term in row] for row in rows]
         return variables, serialized, hit_cap
 
     # The worker holds the read lock itself, so a stopped query lets go of it
     # in its own cleanup rather than reading on after the request let go.
     def run():
         token = sparql_service.begin_run(run_state)
+        cancellation = _query_stop.set(stop)
         held = sparql_service.hold_stop.set(stopper.held)
         try:
             with reading():
@@ -442,6 +492,7 @@ def execute_select(
         except BaseException as exc:  # handed to the request thread
             outcome.append(exc)
         finally:
+            _query_stop.reset(cancellation)
             sparql_service.hold_stop.reset(held)
             sparql_service.end_run(token)
             entered.set()
@@ -489,17 +540,21 @@ def execute_select(
         raise QueryTimeout(
             f"The query exceeded the {timeout:.0f}s time limit. "
             "Try adding filters, reducing LIMIT, or avoiding unbounded "
-            "path modifiers such as * and +."
+            "path modifiers such as * and +.",
+            ui_message=make_message("query.time_limit", seconds=timeout),
         )
     if isinstance(answer, (QueryError, NetworkDecision)):
         # Already the right types; main.py maps the broker's decisions.
         raise answer
     if isinstance(answer, sparql_service.ServiceFailed):
         # Its sentence already names the endpoint and what went wrong.
-        raise QueryError(str(answer)) from answer
+        raise QueryError(str(answer), ui_message=getattr(answer, "ui_message", None)) from answer
     if isinstance(answer, BaseException):
         # Any other evaluation error becomes a QueryError (HTTP 400).
-        raise QueryError(f"The query could not be evaluated: {answer}") from answer
+        raise QueryError(
+            f"The query could not be evaluated: {answer}",
+            ui_message=make_message("query.evaluation_failed"),
+        ) from answer
     variables, serialized, truncated = answer
     response = {
         "vars": variables,

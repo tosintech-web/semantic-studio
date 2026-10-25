@@ -27,40 +27,47 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import type { Translator } from "../i18n/types";
+import { englishTranslator } from "../i18n/format";
 import type { ProjectKind, ProjectTemplate } from "../types";
 
 /** The two kinds a project can be, asked first (relationships 5.1). The
  *  sentences are the spec's, word for word: they are what a learner reads to
  *  choose, so a paraphrase here is a change to the product. */
-export const KIND_CHOICES: {
+export interface KindChoice {
   kind: ProjectKind;
   label: string;
   sentence: string;
   templates: { value: ProjectTemplate; label: string }[];
-}[] = [
+}
+
+export function kindChoices(t: Translator = englishTranslator): KindChoice[] { return [
   {
     kind: "ontology",
-    label: "Ontology",
+    label: t("project.ontology"),
     sentence:
-      "Classes of things, their attributes and the relationships between them. For example: a Person works for an Organization.",
+      t("project.ontologyHelp"),
     templates: [
-      { value: "empty", label: "Empty ontology" },
-      { value: "small", label: "Small ontology (two classes, one relationship)" },
+      { value: "empty", label: t("project.template.empty") },
+      { value: "small", label: t("project.template.small") },
     ],
   },
   {
     kind: "taxonomy",
-    label: "Taxonomy",
+    label: t("project.taxonomy"),
     sentence:
-      "A vocabulary of concepts arranged from broad to narrow, with related terms. For example: Apple is narrower than Fruit.",
+      t("project.taxonomyHelp"),
     templates: [
-      { value: "taxonomy-empty", label: "Empty taxonomy (one concept scheme)" },
-      { value: "taxonomy-small", label: "Small taxonomy (a scheme with a few concepts)" },
+      { value: "taxonomy-empty", label: t("project.template.taxonomy-empty") },
+      { value: "taxonomy-small", label: t("project.template.taxonomy-small") },
     ],
   },
-];
+]; }
 
-export const CHOOSE_KIND = "Choose Ontology or Taxonomy.";
+/** Legacy pure callers retain explicitly English choices. */
+export const KIND_CHOICES = kindChoices();
+
+export const CHOOSE_KIND = englishTranslator("project.chooseKind");
 
 export function slugify(name: string): string {
   const slug = name
@@ -99,19 +106,19 @@ export interface NewProjectFields {
 
 export type FieldErrors = Partial<Record<keyof NewProjectFields, string>>;
 
-export function validate(fields: NewProjectFields): FieldErrors {
+export function validate(fields: NewProjectFields, t: Translator = englishTranslator): FieldErrors {
   const errors: FieldErrors = {};
-  if (!fields.name.trim()) errors.name = "Give the project a name.";
-  else if (fields.name.trim().length > 120) errors.name = "A name can be at most 120 characters.";
+  if (!fields.name.trim()) errors.name = t("project.error.name");
+  else if (fields.name.trim().length > 120) errors.name = t("project.error.nameLength");
   if (!BASE_IRI.test(fields.baseIri.trim())) {
     errors.baseIri =
-      "The base IRI must be an absolute IRI ending in # or /, for example http://example.org/invoices#.";
+      t("project.error.base");
   }
   if (!PREFIX.test(fields.prefix.trim())) {
-    errors.prefix = "The prefix must start with a letter and use only letters, digits, - and _.";
+    errors.prefix = t("project.error.prefix");
   }
   if (!validLanguageTag(fields.primaryLanguage.trim())) {
-    errors.primaryLanguage = "Use a language tag such as en, en-US or fr.";
+    errors.primaryLanguage = t("project.error.language");
   }
   return errors;
 }

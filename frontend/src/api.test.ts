@@ -4,12 +4,14 @@ FILE: frontend/src/api.test.ts
 ================================================================================
 
 SUMMARY
+    Declined approvals retain unique raw hosts as flat locale-independent facts.
     Proves every call in api.ts that changes something on the server sends the
     X-Semantic-Studio header, and that read-only calls are plain GETs. Also
     proves the approval round trip in `send` (external-access Stage 1): a 409
     asks the registered handler, Allow repeats the same request with the grant
     id, Don't allow fails with a sentence naming the host and sends nothing
-    more. Covers
+    more. Nested parser metadata survives both fetch and upload failures, and
+    documentation downloads retain both root and nested refusal metadata. Covers
     AC-4 of the external-access spec, Stage 0 (backlog S-6, decision D-065):
     the backend refuses a state-changing request without the header, so a
     mutating call that forgot it would break in the application while every
@@ -127,6 +129,7 @@ const CALLS: Record<string, () => Promise<unknown>> = {
   cancelLoad: () => api.cancelLoad("0b8a3f5e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"),
   deleteOntology: () => api.deleteOntology("ont-1"),
   getGraph: () => api.getGraph("ont-1"),
+  getEntities: () => api.getEntities("ont-1", {}),
   getNeighborhood: () => api.getNeighborhood("ont-1", "http://example.org/a"),
   getResultNodes: () => api.getResultNodes("ont-1", ["http://example.org/a"]),
   fetchHierarchy: () => api.fetchHierarchy("ont-1"),
@@ -208,6 +211,8 @@ const CALLS: Record<string, () => Promise<unknown>> = {
   // axioms-and-reasoning: a run, its Stop, a page, the facts about one
   // entity and one fact's reason.
   reasonProject: () => api.reasonProject("prj-1", false, false),
+  getValidationResult: () => api.getValidationResult("prj-1"),
+  getReasoningResult: () => api.getReasoningResult("prj-1", false),
   stopReasoning: () => api.stopReasoning("prj-1"),
   getReasoningPage: () => api.getReasoningPage("prj-1", "memberships", 200, false),
   getReasoningAbout: () => api.getReasoningAbout("prj-1", "http://example.org/A", false),
@@ -439,6 +444,20 @@ describe("approval round trip (external-access Stage 1)", () => {
       "Semantic Studio did not connect to json-ld.org, so nothing was sent.",
     );
     expect(recorded).toHaveLength(1);
+    expect(error.uiMessage).toEqual({ code: "network.approval.declined", args: { hosts: [{ text: "json-ld.org" }] } });
+  });
+
+  it("retains unique declined hosts as literal parts and a locale-dependent separator", async () => {
+    api.setApprovalHandler(async () => null);
+    const names = ["first.example", "second.<img>{raw}", "first.example"];
+    answers = [new Response(JSON.stringify({ detail: { code: "approval_required",
+      requests: names.map(host => ({ ...QUESTION, host })) } }), { status: 409 })];
+    const error = await api.getGraph("ont-1").catch(e => e);
+    expect(error.uiMessage).toEqual({ code: "network.approval.declined", args: { hosts: [
+      { text: names[0] }, { code: "words.host_separator", args: {} }, { text: names[1] },
+    ] } });
+    expect(error.message).toBe(`Semantic Studio did not connect to ${names[0]}, ${names[1]}, so nothing was sent.`);
+    expect(recorded).toHaveLength(1);
   });
 
   it("says what was needed when no dialog is registered", async () => {
@@ -652,4 +671,144 @@ describe("loads that can be followed and cancelled (load-progress 5.2, 5.3)", ()
       { url: `/api/ontologies/loads/${LOAD_ID}/cancel`, method: "POST", headers: { "X-Semantic-Studio": "1" } },
     ]);
   });
+});
+
+describe("explicit dictionary language", () => {
+  it("takes precedence over the legacy project module language on every label API", async () => {
+    api.setDisplayLanguage("en");
+    try {
+      await api.getGraph("lib", undefined, false, "ja");
+      await api.getNeighborhood("lib", "urn:dog", undefined, false, "ja");
+      await api.getResultNodes("lib", ["urn:dog"], false, "ja");
+      await api.fetchHierarchy("lib", false, false, "ja");
+      await api.getNodeDetails("lib", "urn:dog", false, undefined, "ja");
+      await api.searchNodes("lib", "犬", false, undefined, undefined, undefined, "ja");
+      await api.getQuerySchema("lib", false, "ja");
+      await api.getQueryNode("lib", "urn:dog", false, "ja");
+      await api.runSparql("lib", "SELECT ?s WHERE { ?s ?p ?o }", false, "ja");
+      expect(recorded).toHaveLength(9);
+      for (const request of recorded) {
+        expect(new URL(request.url, "http://localhost").searchParams.getAll("lang")).toEqual(["ja"]);
+      }
+    } finally { api.setDisplayLanguage(null); }
+  });
+});
+
+describe("entity list API", () => {
+  it("passes explicit paging/filter/language/sort and cancellation without project language leakage", async () => {
+    api.setDisplayLanguage("fr");
+    const controller = new AbortController();
+    try {
+      await api.getEntities("ont-1", { q: "犬 & 猫", kind: "concept", lang: "ja", imports: true, offset: 50, limit: 50, sort: "iri" }, controller.signal);
+      const request = recorded[0];
+      const url = new URL(request.url, "http://localhost");
+      expect(url.pathname).toBe("/api/ontologies/ont-1/entities");
+      expect(Object.fromEntries(url.searchParams)).toEqual({ q: "犬 & 猫", kind: "concept", lang: "ja", imports: "true", offset: "50", limit: "50", sort: "iri" });
+      expect(request.method).toBe("GET");
+      expect(vi.mocked(fetch).mock.calls[0][1]?.signal).toBe(controller.signal);
+    } finally { api.setDisplayLanguage(null); }
+  });
+});
+
+it("retains additive server metadata on ApiError alongside the original detail", async () => {
+  const uiMessage = { code: "reasoning.timeout", args: { seconds: 10 } };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Original English.", uiMessage }), { status: 400 })));
+  const error = await api.getGraph("one").catch(e => e);
+  expect(error).toBeInstanceOf(api.ApiError); expect(error.message).toBe("Original English.");
+  expect(error.detail).toBe("Original English."); expect(error.uiMessage).toEqual(uiMessage);
+});
+
+it("keeps the already-defined payload and forwards validated display facts without parsing its sentence", () => {
+  const detail = { code: "already_defined", message: "Original <b>{name}", property: { iri: "https://example.test/p" } };
+  const wire = { code: "editing.guard.property_exists", args: { name: "<b>{name}", kind: [{ code: "words.kind.datatypeProperty", args: {} }] } };
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail, wire))).toEqual({ ...detail, uiMessage: wire });
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail))).toBe(detail);
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 409, detail, { code: "unknown", args: {} }))).toBe(detail);
+  expect(api.alreadyDefined(new api.ApiError(detail.message, 422, detail, wire))).toBeNull();
+});
+
+
+it("keeps nested parser metadata and original fields on fetch and upload errors", async () => {
+  const uiMessage = { code: "parse.undeclared_prefix", args: { line: 4, prefix: "<img>{prefix}:" } };
+  const detail = { code: "parse_error", message: "Original parse explanation", line: 4, format: "Turtle", technical: "Original parser <img>", uiMessage };
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({ detail }), { status: 422 })));
+  for (const attempt of [
+    () => api.fetchOntology("https://example.test/sample.ttl"),
+    () => api.uploadOntology(new File(["x"], "sample.ttl")),
+  ]) {
+    const error = await attempt().catch(e => e);
+    expect(error).toBeInstanceOf(api.ApiError);
+    expect(error.message).toBe(detail.message);
+    expect(error.detail).toEqual(detail);
+    expect(error.uiMessage).toEqual(uiMessage);
+  }
+});
+
+it.each(["root", "nested"])("keeps %s metadata and original detail on a documentation download refusal", async (placement) => {
+  const uiMessage = { code: "export.too_frequent", args: {} };
+  const detail = placement === "root" ? "Original export refusal <img>{limit}" : { message: "Original export refusal <img>{limit}", uiMessage };
+  const body = placement === "root" ? { detail, uiMessage } : { detail };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 400 })));
+  const error = await api.downloadDocumentation("ont-synthetic").catch(e => e);
+  expect(error).toBeInstanceOf(api.ApiError);
+  expect(error.status).toBe(400);
+  expect(error.detail).toEqual(detail);
+  expect(error.uiMessage).toEqual(uiMessage);
+  expect(error.message).toBe("Original export refusal <img>{limit}");
+});
+
+it("passes explicit project read languages without writing them into RDF actions or using a global preference", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    await api.getShapes("prj-one","ja");
+    await api.getShapeSuggestions("prj-one","https://synthetic.example/C",undefined,"ja");
+    await api.validateProject("prj-one","ja");
+    await api.reasonProject("prj-one",false,false,"ja");
+    await api.getReasoningPage("prj-one","memberships",200,false,"ja");
+    await api.getReasoningAbout("prj-one","https://synthetic.example/a",false,"ja");
+    await api.getWhy("prj-one",{s:"https://synthetic.example/a",p:"https://synthetic.example/p",o:"https://synthetic.example/C"},"ja");
+    await api.getCanvas("prj-one","model",null,"ja");
+    await api.getValidationResult("prj-one","ja");
+    await api.getReasoningResult("prj-one",false,"ja");
+    expect(recorded).toHaveLength(10);
+    for (const request of recorded) expect(new URL(request.url,"http://localhost").searchParams.get("lang")).toBe("ja");
+  } finally { api.setDisplayLanguage(null); }
+});
+
+
+it("uses the explicit data-preview language while preserving the multipart mapping", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    const choices = { classIri: "https://synthetic.example/C", idColumn: "id", columns: { field: { as: "attribute" as const, property: "https://synthetic.example/p" } } };
+    await api.previewData("prj-one", { file: new File(["id,field\n1,synthetic"], "synthetic.csv") }, {}, choices, "ja");
+    expect(new URL(recorded[0].url,"http://localhost").searchParams.get("lang")).toBe("ja");
+    const form = vi.mocked(fetch).mock.calls[0][1]?.body as FormData;
+    expect(JSON.parse(String(form.get("choices")))).toEqual(choices);
+  } finally { api.setDisplayLanguage(null); }
+});
+
+
+it("sends a snapshot-list display preference without using a previous dictionary's global preference", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    await api.listData("prj-one", "ja");
+    await api.listData("prj-one");
+    expect(new URL(recorded[0].url,"http://localhost").searchParams.get("lang")).toBe("ja");
+    expect(new URL(recorded[1].url,"http://localhost").searchParams.get("lang")).toBeNull();
+  } finally { api.setDisplayLanguage(null); }
+});
+
+
+it("sends explicit command/preview display names separately from RDF command arguments", async () => {
+  api.setDisplayLanguage("fr");
+  try {
+    const args = { iri: "https://synthetic.example/C", value: "Primary text", lang: "en" };
+    await api.runCommand("prj-one","model","SetComment",args,"ja");
+    await api.previewDelete("prj-one","model",args.iri,"orphan","ja");
+    await api.planShare("prj-one","https://synthetic.example/p",args.iri,"ja");
+    expect(recorded).toHaveLength(3);
+    for (const request of recorded) expect(new URL(request.url,"http://localhost").searchParams.get("lang")).toBe("ja");
+    const sent = JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body));
+    expect(sent.args).toEqual(args); expect(sent).not.toHaveProperty("lang");
+  } finally { api.setDisplayLanguage(null); }
 });

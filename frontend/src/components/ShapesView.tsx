@@ -4,6 +4,8 @@ FILE: frontend/src/components/ShapesView.tsx
 ================================================================================
 
 SUMMARY
+    Row titles use selected display names without remounting a selected form.
+    Read names follow the selected dictionary language independently of UI locale.
     The Shapes view of a project (shacl-authoring 5.1, 5.2), in two columns
     (load-and-shapes 5.3): on the left the list of shapes, each a short
     sentence with its last result as a word and a coloured dot, with
@@ -11,6 +13,13 @@ SUMMARY
     (the selected shape's form) and Results (the result panels).
 
 BASIC IDEA
+    Standard unnamed-shape labels may carry display metadata. Their original
+    names and ids still control selection and recovery after a Turtle apply.
+
+    Fetch failures retain their original cause. Display metadata follows the UI
+    locale at render time, with escaped original details kept separately.
+
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     One shape at a time, as Imran asked (D-093). + opens a short chooser --
     *Rules for a class* in an ontology, *Rules for concepts* in a taxonomy,
     and *Check my model* in both -- and the shape it creates opens in the
@@ -56,12 +65,15 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
+import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { getShapes } from "../api";
-import { STATE_WORDS, problemsFound, rowSentence } from "../modeling/shapeSentences";
+import { panelStateWord, problemsFound, rowSentence } from "../modeling/shapeSentences";
 import { projectStore, useProjectSelector } from "../state/projectStore";
-import type { PanelState, ProjectKind, ShapeForm as Shape, ShapesListing } from "../types";
-import { useRunner, useReturnFocus } from "./EditParts";
+import type { PanelState, ProjectKind, ShapeForm as Shape, ShapesListing, ValidationResult } from "../types";
+import { RunnerErrorDetails, useRunner, useReturnFocus } from "./EditParts";
 import EntityPicker from "./EntityPicker";
 import ResultPanels, { ValidateButton, isStale } from "./ResultPanels";
 import ShapeForm from "./ShapeForm";
@@ -90,6 +102,8 @@ export default function ShapesView({
   onEditInTurtle,
   onError,
 }: Props) {
+  const { t, locale } = useI18n();
+  const readingLanguage = useDictionaryDisplayLanguage();
   const documents = useProjectSelector((s) => s.documents);
   const validation = useProjectSelector((s) => s.validation);
   const validating = useProjectSelector((s) => s.validating);
@@ -97,7 +111,7 @@ export default function ShapesView({
   const shapesRevision = documents.find((d) => d.doc === "shapes")?.revision ?? null;
   const revisions = `${modelRevision}|${shapesRevision}`;
   const [listing, setListing] = useState<ShapesListing | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
+  const [listError, setListError] = useState<{ error: unknown } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [choosing, setChoosing] = useState<null | "menu" | "class">(null);
   const runner = useRunner("shapes");
@@ -107,17 +121,17 @@ export default function ShapesView({
 
   useEffect(() => {
     let live = true;
-    getShapes(projectId)
+    (readingLanguage === undefined ? getShapes(projectId) : getShapes(projectId, readingLanguage))
       .then((l) => {
         if (!live) return;
         setListing(l);
         setListError(null);
       })
-      .catch((e: unknown) => live && setListError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => live && setListError({ error: e }));
     return () => {
       live = false;
     };
-  }, [projectId, revisions]);
+  }, [projectId, revisions, readingLanguage]);
 
   const shapes = listing?.shapes ?? [];
   // The selection is kept by id even while the list does not hold it: an
@@ -166,7 +180,7 @@ export default function ShapesView({
   const [tab, setTab] = useState<ShapesTab>(() => (projectStore.getSnapshot().validating ? "results" : "shape"));
   const tabNow = useRef(tab);
   tabNow.current = tab;
-  const [resultsBadge, setResultsBadge] = useState<string | null>(null);
+  const [resultsBadge, setResultsBadge] = useState<ValidationResult | null>(null);
   const chooseTab = useCallback((next: ShapesTab) => {
     setTab(next);
     if (next === "results") setResultsBadge(null);
@@ -179,11 +193,12 @@ export default function ShapesView({
   useEffect(() => {
     if (validation === lastResult.current) return;
     lastResult.current = validation;
-    if (validation && tabNow.current !== "results") setResultsBadge(problemsFound(validation));
+    if (validation && tabNow.current !== "results") setResultsBadge(validation);
   }, [validation]);
+  const badgeText = resultsBadge ? problemsFound(resultsBadge, locale) : null;
   const tabs: TabSpec<ShapesTab>[] = [
-    { id: "shape", name: "Shape" },
-    { id: "results", name: "Results", badge: resultsBadge ? { shown: resultsBadge, spoken: resultsBadge } : null },
+    { id: "shape", name: t("shapesView.shapeTab") },
+    { id: "results", name: t("shapesView.resultsTab"), badge: badgeText ? { shown: badgeText, spoken: badgeText } : null },
   ];
 
   const create = useCallback(
@@ -209,17 +224,17 @@ export default function ShapesView({
       <div className="shapes-list">
         <div className="shapes-list-head">
           <h2 id="shapes-view-heading" tabIndex={-1}>
-            Shapes
+            {t("shapesView.title")}
           </h2>
           <ValidateButton onError={onError} onStart={() => chooseTab("results")} />
           <button
             ref={plusRef}
             type="button"
             className="shapes-add"
-            aria-label="Add a shape"
+            aria-label={t("shapesView.add")}
             aria-expanded={choosing === "menu"}
             aria-controls={menuId}
-            title="Add rules for a class, or check your model"
+            title={t("shapesView.addHint")}
             onClick={() => setChoosing((c) => (c === "menu" ? null : "menu"))}
           >
             +
@@ -242,15 +257,15 @@ export default function ShapesView({
             <>
               {kind === "taxonomy" ? (
                 <button type="button" className="ghost" onClick={() => void create({ target: SKOS_CONCEPT })}>
-                  Rules for concepts
+                  {t("shapesView.concepts")}
                 </button>
               ) : (
                 <button type="button" className="ghost" onClick={() => setChoosing("class")}>
-                  Rules for a class
+                  {t("shapesView.class")}
                 </button>
               )}
               <button type="button" className="ghost" onClick={() => void create({ preset: "modelCheck" })}>
-                Check my model
+                {t("shapesView.modelCheck")}
               </button>
             </>
           )}
@@ -259,7 +274,7 @@ export default function ShapesView({
           <EntityPicker
             ontologyId={modelOntologyId}
             kind="class"
-            label="Rules for which class?"
+            label={t("shapesView.classPicker")}
             busy={runner.busy}
             error={runner.errors.create}
             onPick={(iri) => void create({ target: iri })}
@@ -270,14 +285,15 @@ export default function ShapesView({
           />
         )}
         {choosing === null && runner.errors.create && <p className="edit-error">{runner.errors.create}</p>}
-        {listError && <p className="edit-error">{listError}</p>}
+        {listError && <><p className="edit-error">{renderServerError(listError.error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{listError.error instanceof Error ? listError.error.message : String(listError.error)}</pre></details></>}
         {listing && shapes.length === 0 ? (
-          <p className="detail-note">No shapes yet. Press + to add rules for a class, or check your model.</p>
+          <p className="detail-note">{t("shapesView.empty")}</p>
         ) : (
           <ul className="shapes-rows">
             {shapes.map((shape) => {
               const state = resultOf(shape.id);
-              const word = state ? STATE_WORDS[state] : "Not checked";
+              const word = state ? panelStateWord(state, t) : t("shapesView.notChecked");
               return (
                 <li key={shape.id}>
                   <button
@@ -289,12 +305,12 @@ export default function ShapesView({
                       chooseTab("shape");
                     }}
                   >
-                    <span className="shapes-row-name">{shape.name}</span>
-                    <span className="shapes-row-sentence">{rowSentence(shape)}</span>
+                    <span className="shapes-row-name">{validWireMessage(shape.nameUiMessage) ? renderServerMessage(shape.nameUiMessage, shape.name, t) : (shape.displayName ?? shape.name)}</span>
+                    <span className="shapes-row-sentence">{rowSentence(shape, locale)}</span>
                     <span className={`shapes-row-result result-dot-${state ?? "none"}`}>
                       <span className="result-dot" aria-hidden="true" />
                       {word}
-                      {state && stale ? " (stale)" : ""}
+                      {state && stale ? t("shapesView.stale") : ""}
                       {!shape.editable ? " · Turtle" : ""}
                     </span>
                   </button>
@@ -309,7 +325,7 @@ export default function ShapesView({
         tab={tab}
         onTab={chooseTab}
         tabs={tabs}
-        label="Shape and results"
+        label={t("shapesView.tabs")}
         className="side-panel shapes-panel"
       >
         {/* Shape stays mounted while Results shows: Validate switches tabs,
@@ -331,7 +347,7 @@ export default function ShapesView({
               />
             ) : (
               <p className="detail-note shapes-form-empty">
-                {shapes.length ? "Choose a shape to see its rules." : "A shape says what good data looks like: every Person has a name, for example."}
+                {t(shapes.length ? "shapesView.choose" : "shapesView.intro")}
               </p>
             )}
           </div>
@@ -339,11 +355,12 @@ export default function ShapesView({
           <div className="shapes-results">
             {/* Seen, not announced: the store's live region says Validating…
                 and the summary. */}
-            {validating && <p className="detail-note results-progress">Checking the model against every shape…</p>}
+            {validating && <p className="detail-note results-progress">{t("shapesView.checking")}</p>}
             <ResultPanels onSelect={onSelectEntity} />
           </div>
         )}
       </SideTabs>
+      <RunnerErrorDetails runner={runner} />
     </section>
   );
 }

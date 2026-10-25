@@ -12,8 +12,10 @@ SUMMARY
     its ontology, a worker that cannot be stopped at once holds off a new
     query on its ontology alone until it ends, a query finishing as the
     timeout fires is never hit by a stale stop (D-108), and the
-    schema/query-node/saved-query endpoints behave.
+    schema/query-node/saved-query endpoints behave. A pattern also stops
+    cooperatively if every asynchronous stop is lost in a finalizer.
     SERVICE to a public endpoint (D-069) is test_sparql_service.py's.
+    Real query timeouts also retain their actual duration as UI metadata.
 
 BASIC IDEA
     Uploads the demo ontology through the HTTP layer, then runs known queries
@@ -552,6 +554,7 @@ def test_a_timed_out_query_stops_at_its_next_row(graph):
     timed_out = time.perf_counter()
     # The sentence and the cap are unchanged by the stop.
     assert "exceeded the 0s time limit" in str(excinfo.value)
+    assert excinfo.value.ui_message == {"code": "query.time_limit", "args": {"seconds": 0.3}}
     time.sleep(0.5)
     # Many more rows were there to read; at most the one in hand when the
     # timeout fired was read after it.
@@ -584,6 +587,7 @@ def test_a_query_while_an_abandoned_one_runs_is_refused(ontology_id, monkeypatch
         first = client.post(f"/api/ontologies/{ontology_id}/sparql", json={"query": EVERYTHING})
         assert first.status_code == 504
         assert first.json()["detail"].startswith("The query exceeded the")
+        assert first.json()["uiMessage"] == {"code": "query.time_limit", "args": {"seconds": 0.2}}
 
         second = client.post(f"/api/ontologies/{ontology_id}/sparql", json={"query": PLANETS})
         assert second.status_code == 409
@@ -802,3 +806,36 @@ def test_a_stop_lost_in_a_finaliser_is_sent_again(graph, monkeypatch):
     assert swallowing.swallowed == 1
     # Stopped by a later stop, it does not keep its key.
     assert execute_select(graph, PLANETS, key="swallowed")["rowCount"] > 0
+
+
+def test_a_lost_async_stop_still_ends_a_pattern_before_its_first_result(monkeypatch):
+    from rdflib.plugins.sparql import evaluate
+
+    release = threading.Event()
+    ended = threading.Event()
+    key = "lost-async-stop-synthetic"
+
+    # Model a finalizer swallowing every externally injected stop. Yielding
+    # bindings still gives ORDER BY no first result until the pattern ends.
+    # The explicit release keeps even a failing baseline bounded and leak-free.
+    def bindings(ctx, patterns):
+        try:
+            while not release.wait(0.001):
+                yield ctx.solution()
+        finally:
+            ended.set()
+
+    monkeypatch.setattr(evaluate, "evalBGP", bindings)
+    monkeypatch.setattr(sparql_exec, "_set_async_exc", lambda *args: 1)
+    try:
+        with pytest.raises(sparql_exec.QueryTimeout):
+            execute_select(Graph(), STUCK, timeout=0.03, key=key)
+        assert ended.wait(0.2), "a lost async stop left the pattern running"
+    finally:
+        release.set()
+        assert ended.wait(3), "the synthetic pattern was not released"
+        with sparql_exec._abandoned_lock:
+            worker = sparql_exec._abandoned.pop(key, None)
+        if worker is not None:
+            worker.join(3)
+            assert not worker.is_alive()

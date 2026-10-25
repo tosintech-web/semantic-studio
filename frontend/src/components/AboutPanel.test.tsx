@@ -37,7 +37,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AboutPanel, { ABOUT } from "./AboutPanel";
 // The repository's licence, one directory above the frontend. Vite's ?raw
@@ -119,6 +121,18 @@ describe("AboutPanel content", () => {
     expect(link.getAttribute("href")).toBe(ABOUT.repository);
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noreferrer");
+  });
+
+  it("distinguishes the unofficial fork and its notice from upstream", () => {
+    open();
+    expect(panelText()).toContain("Unofficial modified version");
+    expect((screen.getByRole("link", { name: /modified version source/i }) as HTMLAnchorElement).href)
+      .toBe("https://github.com/tosintech-web/semantic-studio");
+    expect((screen.getByRole("link", { name: /third-party notices/i }) as HTMLAnchorElement).href)
+      .toBe("https://github.com/tosintech-web/semantic-studio/blob/main/THIRD_PARTY_NOTICES.md");
+    expect(panelText()).toContain("Data and dependencies retain their own licences.");
+    expect((screen.getByRole("link", { name: /view source/i }) as HTMLAnchorElement).href)
+      .toBe("https://github.com/imrankhan1984/semantic-studio");
   });
 
   it("the licence facts match the LICENSE file", () => {
@@ -315,4 +329,24 @@ describe("AboutPanel typography", () => {
     // and put a horizontal scrollbar on the whole application.
     expect(rule("\\.about-panel")).toMatch(/max-width:\s*calc\(100vw - 32px\)/);
   });
+});
+
+it("explains the modified application in Japanese while preserving legal attribution", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><AboutPanel onClose={vi.fn()} /></I18nProvider>);
+  expect(screen.getByRole("dialog").textContent).toContain("非公式の改変版");
+  expect(screen.getByRole("dialog").textContent).toContain(ABOUT.licence);
+  expect(screen.getByRole("dialog").textContent).toContain(ABOUT.warranty);
+  expect(screen.getByRole("link", { name: "改変版のソースコードと問い合わせ →" }).getAttribute("href")).toBe("https://github.com/tosintech-web/semantic-studio");
+  expect(screen.getByRole("link", { name: "第三者ライセンスの通知 →" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "アプリについてを閉じる" })).toBeTruthy();
+});
+
+it("links to the notices shipped with a production frontend", () => {
+  vi.stubEnv("PROD", true);
+  try {
+    open();
+    const link = screen.getByRole("link", {name:"Notices included with this build →"});
+    expect(link.getAttribute("href")).toBe(new URL("/THIRD_PARTY_NOTICES.md", window.location.href).href);
+  } finally { vi.unstubAllEnvs(); }
 });

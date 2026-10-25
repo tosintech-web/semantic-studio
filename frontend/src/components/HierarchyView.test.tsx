@@ -39,6 +39,8 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HierarchyView, { _resetOutline } from "./HierarchyView";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
 import type { Hierarchy, HierarchyForest } from "../types";
 // The stylesheet as text: jsdom has no layout, so the CF-9 height rule is
@@ -434,7 +436,7 @@ describe("HierarchyView imports (external-access Stage 2)", () => {
     fetchHierarchy.mockResolvedValue(mixed());
     render(<HierarchyView ontologyId="o1" selected={null} onSelect={vi.fn()} imports />);
     await screen.findByText("Alpha");
-    expect(fetchHierarchy).toHaveBeenCalledWith("o1", true, false);
+    expect(fetchHierarchy).toHaveBeenCalledWith("o1", true, false, undefined);
   });
 });
 
@@ -591,7 +593,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       await projectStore.createDraft();
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateConcept", { prefLabel: "Ice", broader: EX + "Water" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateConcept", { prefLabel: "Ice", broader: EX + "Water" }, "en");
   });
 
   it("adds a subclass from the menu under that class", async () => {
@@ -603,7 +605,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       await projectStore.createDraft();
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Delta", parent: EX + "Alpha" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label: "Delta", parent: EX + "Alpha" }, "en");
   });
 
   it("renames in place in the primary language; Escape cancels and sends nothing", async () => {
@@ -624,7 +626,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       fireEvent.keyDown(field, { key: "Enter" });
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Alpha", value: "First", lang: "en" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetLabel", { iri: EX + "Alpha", value: "First", lang: "en" }, "en");
   });
 
   it("treats Enter on an unchanged name as a cancel (found in review)", async () => {
@@ -663,7 +665,7 @@ describe("HierarchyView in a project (visual-modeling 5.2, AC-5)", () => {
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Alpha", strategy: "reparent" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "DeleteEntity", { iri: EX + "Alpha", strategy: "reparent" }, "en");
     expect(onDeleted).toHaveBeenCalledWith(EX + "Alpha");
   });
 
@@ -800,16 +802,20 @@ describe("HierarchyView, Stage 2 follow-ups (visual-modeling 5.8)", () => {
     // canvas beside the outline. A fold that told the parent anything would
     // re-render the canvas with it.
     function Page() {
-      const [, setCounts] = useState<unknown>(null);
+      const [counts, setCounts] = useState<unknown>(null);
       return (
         <>
           {view({ onCounts: setCounts })}
           <StubCanvas />
+          <span data-testid="model-counts-ready">{counts === null ? "waiting" : "ready"}</span>
         </>
       );
     }
     render(<Page />);
     await waitFor(() => expect(itemByLabel("Alpha")).toBeTruthy());
+    // Seeing the first row can precede its passive onCounts effect. Include
+    // that initial parent render in the baseline, then measure only folds.
+    await waitFor(() => expect(screen.getByTestId("model-counts-ready").textContent).toBe("ready"));
     const before = canvasRenders;
     for (let i = 0; i < 10; i++) {
       await act(async () => fireEvent.click(screen.getByRole("button", { name: named("Concepts") })));
@@ -1109,7 +1115,7 @@ describe("HierarchyView inferred edges (axioms-and-reasoning 5.7)", () => {
   it("asks for the inferred edges while marks show, and drops them at once when they go", async () => {
     fetchHierarchy.mockResolvedValue(concluded());
     const { rerender } = render(view(true));
-    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, true);
+    expect(fetchHierarchy).toHaveBeenCalledWith("o1", false, true, undefined);
     await waitFor(() => expect(itemByLabel("Agent")).toBeTruthy());
     await act(async () => fireEvent.click(screen.getByRole("button", { name: /expand all/i })));
     const inferredRows = () => items().filter((el) => el.querySelector('[aria-label="inferred, derived"]'));
@@ -1118,7 +1124,7 @@ describe("HierarchyView inferred edges (axioms-and-reasoning 5.7)", () => {
     // inferred row is gone already (found in Chrome, R5).
     fetchHierarchy.mockReturnValue(new Promise(() => {}));
     rerender(view(false));
-    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, false);
+    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, false, undefined);
     expect(inferredRows()).toEqual([]);
     // Employee is still under Person, as stated.
     expect(items().filter((el) => el.querySelector(".hierarchy-label")!.textContent === "Employee")).toHaveLength(1);
@@ -1190,7 +1196,7 @@ describe("HierarchyView inferred edges (axioms-and-reasoning 5.7)", () => {
     // Reason again with the data ticked: same revision, a new result.
     rerender(marked(2));
     await waitFor(() => expect(fetchHierarchy.mock.calls.length).toBe(before + 1));
-    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, true);
+    expect(fetchHierarchy).toHaveBeenLastCalledWith("o1", false, true, undefined);
   });
 
   it("renders each of 200 inferred rows once (count, not timing)", async () => {
@@ -1303,4 +1309,102 @@ describe("the side panel's counts (edit-page-rework 5.4)", () => {
     // The outline still lists them: the header counts what it shows.
     expect(screen.getByRole("button", { name: named("Classes") }).getAttribute("aria-label")).toBe("Classes, 3");
   });
+});
+
+
+it("keeps outline expansion, filter and row focus across UI locale changes without refetching", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  fetchHierarchy.mockResolvedValue(mixed());
+  const select = vi.fn();
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="localized-tree" selected={EX + "Beta"} onSelect={select} /></I18nProvider>);
+  try {
+    await screen.findByRole("button", { name: "クラス、2件" });
+    const alpha = itemByLabel("Alpha")!;
+    await act(async () => alpha.focus());
+    fireEvent.keyDown(alpha, { key: "ArrowRight" });
+    const beta = itemByLabel("Beta")!;
+    expect(beta).toBeTruthy();
+    const filter = screen.getByRole("searchbox", { name: "ツリーを名前で絞り込み" });
+    fireEvent.change(filter, { target: { value: "Bet" } });
+    await act(async () => beta.focus());
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("searchbox", { name: "Filter the outline by name" })).toBe(filter);
+    expect((filter as HTMLInputElement).value).toBe("Bet");
+    expect(document.activeElement).toBe(beta);
+    expect(beta.getAttribute("aria-selected")).toBe("true");
+    fireEvent.change(filter, { target: { value: "" } });
+    expect(itemByLabel("Beta")).toBe(beta);
+    expect(alpha.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(beta);
+    expect(select).toHaveBeenCalledWith(EX + "Beta");
+    expect(fetchHierarchy).toHaveBeenCalledTimes(1);
+  } finally { view.unmount(); }
+});
+it("keeps raw outline errors and exposes a localized keyboard-reachable dismiss action", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  fetchHierarchy.mockRejectedValue(new Error("<b>Unavailable</b>"));
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="error-tree" selected={null} onSelect={vi.fn()} /></I18nProvider>);
+  try {
+    expect((await screen.findByRole("alert")).textContent).toContain("操作を完了できませんでした。");
+    expect(screen.getByText("<b>Unavailable</b>")).toBeTruthy();
+    expect(document.querySelector("b")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    const dismiss = screen.getByRole("button", { name: "Dismiss error" });
+    dismiss.focus();
+    expect(document.activeElement).toBe(dismiss);
+    fireEvent.click(dismiss);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(fetchHierarchy).toHaveBeenCalledTimes(1);
+  } finally { view.unmount(); }
+});
+
+it("keeps a row rename draft and its primary RDF language across a UI switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  projectStore._reset();
+  const pid = "prj-0123456789ab";
+  const state = { doc: "model" as const, ontologyId: `${pid}-model`, revision: 2, dirty: true, canUndo: true, undoLabel: "x", canRedo: false, redoLabel: null, triples: 10 };
+  openProject.mockResolvedValue({ project: { id: pid, name: "Synthetic", createdAt: "", updatedAt: "", baseIri: EX, prefix: "ex", primaryLanguage: "en", languages: [], documents: [{ file: "model.ttl", role: "model" }], counts: {} }, documents: [state], recovery: { available: false, draftTime: null } });
+  await projectStore.open(pid);
+  runCommand.mockReset();
+  runCommand.mockResolvedValue({ revision: 3, label: "Renamed", state });
+  fetchHierarchy.mockResolvedValue(mixed());
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="localized-edit" selected={null} onSelect={vi.fn()} editing={{ primaryLanguage: "en" }} /></I18nProvider>);
+  try {
+    await screen.findByRole("button", { name: "クラス、2件" });
+    const alpha = itemByLabel("Alpha")!;
+    alpha.focus();
+    fireEvent.keyDown(alpha, { key: "F10", shiftKey: true });
+    fireEvent.click(screen.getByRole("menuitem", { name: "名前を変更" }));
+    const input = screen.getByRole("textbox", { name: "Alphaの新しい名前" });
+    fireEvent.change(input, { target: { value: "<b>新しい名前</b>" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("textbox", { name: "New name for Alpha" })).toBe(input);
+    expect((input as HTMLInputElement).value).toBe("<b>新しい名前</b>");
+    await act(async () => fireEvent.keyDown(input, { key: "Enter" }));
+    expect(runCommand).toHaveBeenCalledWith(pid, "model", "SetLabel", { iri: EX + "Alpha", value: "<b>新しい名前</b>", lang: "en" }, "en");
+    expect(fetchHierarchy).toHaveBeenCalledTimes(1);
+  } finally { view.unmount(); projectStore._reset(); }
+});
+
+
+it("updates snapshot provenance in the same view without reloading data", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const classes = forestOf({ [EX + "Person"]: node("Person") }, {}, [EX + "Person"]);
+  const examples = forestOf({
+    [EX + "Person"]: node("Person", "class", true),
+    [EX + "data/person/7"]: { ...node("Person 7", "individual"), fromData: "people-abc123" },
+  }, { [EX + "Person"]: [EX + "data/person/7"] }, [EX + "Person"]);
+  const tree: Hierarchy = { ...hierarchyOf(classes, EMPTY), examples, counts: { classes: 1, concepts: 0, examples: 1 } };
+  fetchHierarchy.mockResolvedValue(tree);
+  const source = { id: "people-abc123", source: "people.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true };
+  const view = render(<I18nProvider><UiLanguageSelect /><HierarchyView ontologyId="localized-data-tree" selected={null} onSelect={vi.fn()} editing={{ primaryLanguage: "en" }} dataSources={[source]} /></I18nProvider>);
+  try {
+    await unfold("Examples");
+    const provenance = screen.getByText("from people.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows");
+    const calls = fetchHierarchy.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+    expect(screen.getByText("people.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行")).toBe(provenance);
+    expect(fetchHierarchy).toHaveBeenCalledTimes(calls);
+    expect(provenance.closest("[role=treeitem]")?.querySelector(".hierarchy-menu-btn")).toBeNull();
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
 });

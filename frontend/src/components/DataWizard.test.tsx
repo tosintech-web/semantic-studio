@@ -15,6 +15,9 @@ SUMMARY
     step 4 naming the links that match no row yet (5.8, 5.9). X-12: a
     refresh through step 1, the class reading keyed on the sheet and header
     row, the announcement's count of things, and a taxonomy's labels.
+    Locale changes retain the File/options/mapping/drafts and live API work;
+    original error objects keep structured messages, and literal prototype
+    header names survive the preview and complete import payload.
 
 BASIC IDEA
     api.ts is mocked; the real project store is opened on a fixed project,
@@ -30,6 +33,10 @@ EXPECTED OUTPUT
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { makeUiMessage } from "../i18n/uiMessage";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
 
 const { openProject, runCommand, inspectData, previewData, importData, fetchHierarchy, listData, updateData, refreshData } =
   vi.hoisted(() => ({
@@ -58,6 +65,7 @@ vi.mock("../api", async (importOriginal) => ({
 }));
 
 import { projectStore } from "../state/projectStore";
+import { ApiError } from "../api";
 import type { DataInspection, DataPreview, SnapshotSummary } from "../types";
 import DataWizard, { type WizardStart } from "./DataWizard";
 
@@ -116,7 +124,7 @@ const FILE = new File(["id,name,born,age\n1,Bob,yesterday,41\n"], "people.csv", 
 
 let onClose: ReturnType<typeof vi.fn<() => void>>;
 
-async function setup() {
+async function setup(localized = false) {
   openProject.mockResolvedValue({ project: PROJECT, documents: [MODEL], recovery: { available: false, draftTime: null } });
   listData.mockResolvedValue({ generation: 1, snapshots: [] });
   await projectStore.open(PID);
@@ -127,7 +135,8 @@ async function setup() {
   previewData.mockResolvedValue(preview());
   onClose = vi.fn<() => void>();
   await act(async () => {
-    render(<DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={false} start={{ kind: "new" }} onClose={onClose} />);
+    const wizard = <DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={false} start={{ kind: "new" }} onClose={onClose} />;
+    render(localized ? <I18nProvider><UiLanguageSelect />{wizard}</I18nProvider> : wizard);
   });
 }
 
@@ -151,7 +160,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   projectStore._reset();
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); localStorage.removeItem("semantic-studio.uiLocale.v1"); });
 
 describe("step 1: the file (5.2)", () => {
   it("shows what was detected, each changeable, and reads the file again on a change", async () => {
@@ -196,7 +205,8 @@ describe("step 1: the file (5.2)", () => {
     await act(async () => {
       fireEvent.change(input, { target: { files: [FILE] } });
     });
-    expect(screen.getByRole("alert").textContent).toBe("Too large. This file has 101 columns. Semantic Studio imports at most 100 columns.");
+    expect(screen.getByRole("alert").textContent).toBe("Too large. The operation could not be completed. Check the details.");
+    expect(screen.getByText("This file has 101 columns. Semantic Studio imports at most 100 columns.").closest("details")).toBeTruthy();
   });
 });
 
@@ -249,7 +259,7 @@ describe("steps 2 to 4 (5.3 to 5.5)", () => {
     expect(runCommand).toHaveBeenCalledTimes(1);
     expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", {
       label: "age", domain: `${X}Person`, datatype: "http://www.w3.org/2001/XMLSchema#integer",
-    });
+    }, "en");
     expect((within(table).getByLabelText("age") as HTMLSelectElement).value).toBe(`attribute ${X}age`);
 
     // Cancel asks, once the columns are mapped.
@@ -329,7 +339,8 @@ describe("the PR #53 review fixes", () => {
     previewData.mockRejectedValueOnce(new Error("The server did not answer."));
     await chooseClass(`${X}Person`);
     const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("The server did not answer.");
+    expect(alert.textContent).toContain("The operation could not be completed. Check the details.");
+    expect(screen.getByText("The server did not answer.").closest("details")).toBeTruthy();
     expect(next().getAttribute("aria-disabled")).toBe("true");
     expect(screen.getByText("The identifier could not be checked. Try again.")).toBeTruthy();
     await press(next());
@@ -445,9 +456,8 @@ describe("Stage B: an Excel workbook (5.8) and links (5.9)", () => {
     await act(async () => {
       fireEvent.change(screen.getByLabelText("Header row"), { target: { value: "2" } });
     });
-    expect(screen.getByRole("alert").textContent).toBe(
-      "Not readable. Row 2 of sheet Orgs is empty: choose the row that holds the column names.",
-    );
+    expect(screen.getByRole("alert").textContent).toBe("Not readable. The operation could not be completed. Check the details.");
+    expect(screen.getByText("Row 2 of sheet Orgs is empty: choose the row that holds the column names.").closest("details")).toBeTruthy();
     expect(next().getAttribute("aria-disabled")).toBe("true");
     // Another sheet that cannot be read: its rows are offered by number,
     // never labelled with the last sheet's cells (code review).
@@ -478,7 +488,8 @@ describe("Stage B: an Excel workbook (5.8) and links (5.9)", () => {
     await act(async () => {
       fireEvent.change(input, { target: { files: [BOOK] } });
     });
-    expect(screen.getByRole("alert").textContent).toBe(`Not readable. ${sentence}`);
+    expect(screen.getByRole("alert").textContent).toBe("Not readable. The operation could not be completed. Check the details.");
+    expect(screen.getByText(sentence).closest("details")).toBeTruthy();
     const sheet = screen.getByLabelText("Sheet") as HTMLSelectElement;
     expect([...sheet.options].map((o) => o.text)).toEqual(["Cover (0 rows)", "Orgs (41 rows)"]);
     expect((screen.getByLabelText("Header row") as HTMLSelectElement).value).toBe("1");
@@ -590,7 +601,7 @@ describe("the X-12 tidy-up", () => {
     sheets: [{ name: "Notes", rows: 0 }, { name: "Staff", rows: 1 }],
   };
 
-  async function mount(start: WizardStart, taxonomy = false) {
+  async function mount(start: WizardStart, taxonomy = false, localized = false) {
     openProject.mockResolvedValue({ project: PROJECT, documents: [MODEL], recovery: { available: false, draftTime: null } });
     listData.mockResolvedValue({ generation: 1, snapshots: [] });
     await projectStore.open(PID);
@@ -601,9 +612,28 @@ describe("the X-12 tidy-up", () => {
     previewData.mockResolvedValue(preview());
     onClose = vi.fn<() => void>();
     await act(async () => {
-      render(<DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={taxonomy} start={start} onClose={onClose} />);
+      const wizard = <DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={taxonomy} start={start} onClose={onClose} />;
+      render(localized ? <I18nProvider><UiLanguageSelect />{wizard}</I18nProvider> : wizard);
     });
   }
+
+  it("keeps a structured refresh explanation current without replaying the file inspection", async () => {
+    localStorage.removeItem("semantic-studio.uiLocale.v1");
+    const gone = { sheet: "", headerRow: 1, top: [], sheets: WORKBOOK.sheets };
+    const snapshot = { ...SNAPSHOT, source: "staff.xlsx", workbook: { sheet: "People", headerRow: 1 } };
+    const start: WizardStart = { kind: "refresh", snapshot, file: BOOK, options: {}, inspection: null, workbook: gone, missing: [], choices: null, atFile: "legacy reason", atFileMessage: makeUiMessage("dataSnapshot.missingSheet", { sheet: "People" }) };
+    try {
+      await mount(start, false, true);
+      const explanation = screen.getByText("このブックには「People」というシートがありません。更新に使うシートを選択してください。");
+      const sheet = screen.getByLabelText("シート");
+      const inspections = inspectData.mock.calls.length;
+      fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+      expect(screen.getByText("This workbook has no sheet named People. Choose the sheet to refresh from.")).toBe(explanation);
+      expect(screen.getByLabelText("Sheet")).toBe(sheet);
+      expect(inspectData).toHaveBeenCalledTimes(inspections);
+      expect(screen.queryByText("legacy reason")).toBeNull();
+    } finally { localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+  });
 
   it("T-5: a refresh whose sheet is gone starts at step 1, with the sheet to choose and the old one named", async () => {
     const atFile = "This workbook has no sheet named People. Choose the sheet to refresh from.";
@@ -707,4 +737,244 @@ describe("the X-12 tidy-up", () => {
     const id = screen.getByLabelText(/Each row is identified by column/);
     expect(id.getAttribute("aria-describedby")).toBe(sentence.id);
   });
+});
+
+
+describe("the import wizard follows UI locale without changing the mapping", () => {
+  beforeEach(() => localStorage.removeItem("semantic-studio.uiLocale.v1"));
+  const language = (locale: string) => fireEvent.change(screen.getByRole("combobox", { name: /UI/ }), { target: { value: locale } });
+
+  it("keeps the same file, options, class, attribute draft, cancel dialog and exact import payload", async () => {
+    await setup(true);
+    expect(screen.getByRole("heading", { name: "手順1/4：ファイル" })).toBe(document.activeElement);
+    await chooseFile();
+    const encoding = screen.getByLabelText("文字コード");
+    await act(async () => fireEvent.change(encoding, { target: { value: "windows-1252" } }));
+    const reads = inspectData.mock.calls.length;
+    language("en");
+    expect(screen.getByLabelText("Encoding")).toBe(encoding);
+    expect((encoding as HTMLSelectElement).value).toBe("windows-1252");
+    expect(inspectData).toHaveBeenCalledTimes(reads);
+    await press(next());
+    const cls = screen.getByLabelText("Each row is");
+    await act(async () => fireEvent.change(cls, { target: { value: `${X}Person` } }));
+    const queries = previewData.mock.calls.length;
+    const classReads = fetchHierarchy.mock.calls.length;
+    language("ja");
+    expect(screen.getByLabelText("各行が表すクラス")).toBe(cls);
+    expect((cls as HTMLSelectElement).value).toBe(`${X}Person`);
+    expect(screen.getByRole("heading", { name: "手順2/4：行が表すもの" })).toBeTruthy();
+    expect(previewData).toHaveBeenCalledTimes(queries);
+    expect(fetchHierarchy).toHaveBeenCalledTimes(classReads);
+    await press(screen.getByRole("button", { name: "次へ" }));
+    const columns = screen.getByRole("table");
+    expect((within(columns).getByLabelText("name") as HTMLSelectElement).value).toBe("name");
+    expect((within(columns).getByLabelText("born") as HTMLSelectElement).value).toBe(`attribute ${X}birthDate`);
+    fireEvent.change(within(columns).getByLabelText("age"), { target: { value: "new" } });
+    const field = screen.getByLabelText("名前");
+    const type = screen.getByLabelText("型");
+    const name = "年齢 <b>{value}</b>";
+    fireEvent.change(field, { target: { value: name } });
+    language("en");
+    expect(screen.getByLabelText("Name")).toBe(field);
+    expect(screen.getByLabelText("Type")).toBe(type);
+    expect((field as HTMLInputElement).value).toBe(name);
+    expect((type as HTMLSelectElement).value).toBe("integer");
+    runCommand.mockResolvedValue({ revision: 2, label: "Created datatype property age", state: { ...MODEL, revision: 2, dirty: true, canUndo: true }, created: `${X}age` });
+    await press(screen.getByRole("button", { name: "Create attribute" }));
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateDatatypeProperty", { label: name, domain: `${X}Person`, datatype: "http://www.w3.org/2001/XMLSchema#integer" }, "en");
+    await press(screen.getByRole("button", { name: "Cancel" }));
+    const leave = screen.getByRole("group", { name: "Leave the wizard?" });
+    language("ja");
+    expect(screen.getByRole("group", { name: "取り込みを終了しますか？" })).toBe(leave);
+    expect(onClose).not.toHaveBeenCalled();
+    await press(screen.getByRole("button", { name: "続ける" }));
+    await press(screen.getByRole("button", { name: "次へ" }));
+    expect(screen.getByText("1行 → 3件の記述")).toBeTruthy();
+    const previewRow = screen.getByText('BobはPersonです。 Bobの「birth date」は"yesterday"で、日付ではないため文字列として保持します。');
+    const previews = previewData.mock.calls.length;
+    language("en");
+    expect(screen.getByText('Bob is a Person. Bob\'s birth date is "yesterday" — not a date, kept as text.')).toBe(previewRow);
+    expect(previewData).toHaveBeenCalledTimes(previews);
+    importData.mockResolvedValue({ snapshot: SNAPSHOT, generation: 2 });
+    listData.mockResolvedValue({ generation: 2, snapshots: [SNAPSHOT] });
+    await press(screen.getByRole("button", { name: "Import" }));
+    expect(importData).toHaveBeenCalledWith(PID, FILE, { encoding: "windows-1252", sample: false }, { classIri: `${X}Person`, idColumn: "id", columns: {
+      id: { as: "ignore" }, name: { as: "name" }, born: { as: "attribute", property: `${X}birthDate` }, age: { as: "attribute", property: `${X}age` },
+    } });
+    expect(projectStore.getSnapshot().announcement.uiMessage).toEqual({ code: "projectNotice.dataImported.one", args: { source: SNAPSHOT.source, count: 1 } });
+    const imported = screen.getByRole("heading", { name: "Imported" });
+    language("ja");
+    expect(screen.getByRole("heading", { name: "取り込み完了" })).toBe(imported);
+    expect(screen.getByRole("status").textContent).toBe("1行、Personを1件");
+    expect(importData).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(".data-wizard b")).toBeNull();
+    await press(screen.getByRole("button", { name: "完了" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps workbook pickers during a pending read and preserves a known error through a locale switch", async () => {
+    await setup(true);
+    const book = new File(["PK"], "日本語.xlsx");
+    const workbook = { sheet: "Data", headerRow: 1, sheets: [{ name: "Data", rows: 10 }], top: [{ row: 1, cells: ["id", "name"] }, { row: 3, cells: ["id", "name"] }] };
+    inspectData.mockResolvedValue(inspection({ format: "xlsx", workbook }));
+    await act(async () => fireEvent.change(document.querySelector(".data-wizard input[type=file]")!, { target: { files: [book] } }));
+    const sheet = screen.getByLabelText("シート");
+    const header = screen.getByLabelText("見出し行");
+    let reject!: (error: unknown) => void;
+    inspectData.mockImplementation(() => new Promise((_resolve, no) => { reject = no; }));
+    await act(async () => fireEvent.change(header, { target: { value: "3" } }));
+    const calls = inspectData.mock.calls.length;
+    expect(screen.getByText("読み込み中…")).toBeTruthy();
+    language("en");
+    expect(screen.getByLabelText("Sheet")).toBe(sheet);
+    expect(screen.getByLabelText("Header row")).toBe(header);
+    expect((header as HTMLSelectElement).value).toBe("3");
+    expect(inspectData).toHaveBeenCalledTimes(calls);
+    const failure = new ApiError("original <img>{problem}", 422, { workbook }, { code: "request.invalid", args: {} });
+    await act(async () => reject(failure));
+    expect(screen.getByRole("alert").textContent).toContain("Check the supplied values and try again.");
+    language("ja");
+    expect(screen.getByRole("alert").textContent).toContain("入力値を確認して再試行してください。");
+    expect(screen.getByLabelText("シート")).toBe(sheet);
+    expect(screen.getByLabelText("見出し行")).toBe(header);
+    expect(screen.getByText(failure.message).closest("details")).toBeTruthy();
+    expect(document.querySelector(".data-wizard img")).toBeNull();
+    expect(inspectData).toHaveBeenCalledTimes(calls);
+  });
+
+  it("keeps an unsuccessful new-class draft and its structured refusal", async () => {
+    await setup(true);
+    await chooseFile();
+    await press(screen.getByRole("button", { name: "次へ" }));
+    fireEvent.change(screen.getByLabelText("各行が表すクラス"), { target: { value: "new" } });
+    const field = screen.getByLabelText("新しいクラスの名前");
+    const label = "日本語 <b>{class}</b>";
+    fireEvent.change(field, { target: { value: label } });
+    runCommand.mockRejectedValue(new ApiError("original refusal <img>", 422, null, { code: "request.invalid", args: {} }));
+    await press(screen.getByRole("button", { name: "クラスを作成" }));
+    expect(screen.getByRole("alert").textContent).toBe("入力値を確認して再試行してください。");
+    const requests = fetchHierarchy.mock.calls.length;
+    language("en");
+    expect(screen.getByLabelText("Name of the new class")).toBe(field);
+    expect((field as HTMLInputElement).value).toBe(label);
+    expect(screen.getByRole("alert").textContent).toBe("Check the supplied values and try again.");
+    expect(screen.getByText("original refusal <img>").closest("details")).toBeTruthy();
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "CreateClass", { label }, "en");
+    expect(fetchHierarchy).toHaveBeenCalledTimes(requests);
+  });
+
+  it("keeps an identifier-check refusal and retries only when explicitly asked", async () => {
+    await setup(true);
+    await chooseFile();
+    await press(screen.getByRole("button", { name: "次へ" }));
+    previewData.mockRejectedValueOnce(new ApiError("original <img> check", 422, null, { code: "request.invalid", args: {} }));
+    await act(async () => fireEvent.change(screen.getByLabelText("各行が表すクラス"), { target: { value: `${X}Person` } }));
+    expect(screen.getByRole("alert").textContent).toContain("入力値を確認して再試行してください。");
+    const requests = previewData.mock.calls.length;
+    language("en");
+    expect(screen.getByRole("button", { name: "Next" }).getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByText("The identifier could not be checked. Try again.")).toBeTruthy();
+    expect(previewData).toHaveBeenCalledTimes(requests);
+    expect(screen.getByText("original <img> check").closest("details")).toBeTruthy();
+    await press(screen.getByRole("button", { name: "Try again" }));
+    expect(screen.getByRole("button", { name: "Next" }).getAttribute("aria-disabled")).toBe("false");
+    expect(previewData).toHaveBeenCalledTimes(requests + 1);
+  });
+});
+
+it("keeps a literal __proto__ header, its raw first cell and its saved mapping", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await setup(true);
+  const key = "__proto__", value = "<img>{value}";
+  const file = new File([`id,${key}\n1,${value}\n`], "literal-header.csv", { type: "text/csv" });
+  const report = { ...REPORT, statements: 2, keptAsText: [{ column: key, datatype: "date", count: 1, rows: [1] }] };
+  previewData.mockResolvedValue(preview({ report, suggestions: Object.fromEntries([[key, { as: "attribute", property: `${X}birthDate` }]]),
+    rows: [{ row: 1, subject: `${X}data/person/1`, name: null, values: [{ column: key, label: "birth date", value, kind: "value", datatype: "date", fits: false }] }],
+  }));
+  inspectData.mockResolvedValue(inspection({ columns: [profile("id"), profile(key)], rows: [["1", value]], nameSuggestion: null }));
+  await act(async () => fireEvent.change(document.querySelector(".data-wizard input[type=file]")!, { target: { files: [file] } }));
+  await press(screen.getByRole("button", { name: "次へ" }));
+  await act(async () => fireEvent.change(screen.getByLabelText("各行が表すクラス"), { target: { value: `${X}Person` } }));
+  await press(screen.getByRole("button", { name: "次へ" }));
+  const selector = screen.getByLabelText(key) as HTMLSelectElement;
+  expect(selector.value).toBe(`attribute ${X}birthDate`);
+  expect(selector.closest("tr")?.querySelector("td")?.textContent).toBe(value);
+  expect(document.querySelector(".data-wizard img")).toBeNull();
+  await press(screen.getByRole("button", { name: "次へ" }));
+  const snapshot = { ...SNAPSHOT, source: file.name, statements: 2, report };
+  importData.mockResolvedValue({ snapshot, generation: 2 });
+  listData.mockResolvedValue({ generation: 2, snapshots: [snapshot] });
+  await press(screen.getByRole("button", { name: "取り込む" }));
+  expect(importData).toHaveBeenCalledWith(PID, file, {}, { classIri: `${X}Person`, idColumn: "id", columns: Object.fromEntries([
+    ["id", { as: "ignore" }], [key, { as: "attribute", property: `${X}birthDate` }],
+  ]) });
+  const choices = importData.mock.calls[0][3];
+  expect(Object.prototype.hasOwnProperty.call(JSON.parse(JSON.stringify(choices.columns)), key)).toBe(true);
+});
+
+
+it("rereads dictionary names while keeping chosen columns and the UI language", async () => {
+  await setup(); cleanup();
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const start: WizardStart = { kind: "refresh", snapshot: SNAPSHOT, file: FILE, options: {}, inspection: inspection(), missing: [],
+    choices: { classIri: `${X}Person`, idColumn: "id", columns: { name: { as: "name" }, born: { as: "attribute", property: `${X}birthDate` } } } };
+  const japanese = preview({ className: "人", fields: [{ property: `${X}birthDate`, label: "生年月日", kind: "attribute", datatype: "xsd:date", text: false }],
+    rows: [{ row: 1, subject: `${X}data/person/1`, name: "Bob", values: [{ column: "born", label: "生年月日", value: "yesterday", kind: "value", datatype: "date", fits: false }] }] });
+  let resolveOlder!: (value: DataPreview) => void;
+  const older = new Promise<DataPreview>(resolve => { resolveOlder = resolve; });
+  previewData.mockImplementation((_pid, _source, _options, _choices, lang) => lang === "fr" ? older : Promise.resolve(lang === "ja" ? japanese : preview()));
+  const draw = (lang: string) => <DictionaryLanguageContext.Provider value={lang}><I18nProvider><UiLanguageSelect />
+    <DataWizard projectId={PID} modelOntologyId={`${PID}-model`} taxonomy={false} start={start} onClose={onClose} />
+  </I18nProvider></DictionaryLanguageContext.Provider>;
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(draw("en")); });
+  const column = screen.getByLabelText("born") as HTMLSelectElement;
+  expect(column.value).toBe(`attribute ${X}birthDate`);
+  column.focus();
+  await act(async () => { view.rerender(draw("fr")); });
+  expect(document.activeElement).toBe(column);
+  await act(async () => { view.rerender(draw("ja")); });
+  await act(async () => { resolveOlder(preview()); });
+  expect(document.activeElement).toBe(column);
+  expect(within(column).getByRole("option", { name: "attribute: 生年月日" })).toBeTruthy();
+  expect(screen.getByLabelText("born")).toBe(column);
+  expect(column.value).toBe(`attribute ${X}birthDate`);
+  expect(screen.getByRole("heading", { name: "Step 3 of 4: the columns" })).toBeTruthy();
+  await press(next());
+  expect(screen.getByText(/Bob is a 人/)).toBeTruthy();
+  expect(screen.getByText(/生年月日/)).toBeTruthy();
+  const count = previewData.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(previewData).toHaveBeenCalledTimes(count);
+  expect(runCommand).not.toHaveBeenCalled(); expect(importData).not.toHaveBeenCalled();
+});
+
+
+it("refreshes completed report names without replacing operation counts or importing again", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  await setup(true); await chooseFile(); await press(next());
+  await act(async () => { fireEvent.change(screen.getByLabelText("Each row is"), {target:{value:`${X}Person`}}); });
+  await press(next()); await press(next());
+  const made = {...SNAPSHOT,report:{...REPORT,unmatched:[{column:"org",classIri:`${X}Organization`,className:"Organization",count:12,rows:[3,9]}]}};
+  importData.mockResolvedValue({snapshot:made,generation:2});
+  listData.mockImplementation((_pid,language) => Promise.resolve({generation:2,snapshots:[language === "ja"
+    ? {...made,className:"人",report:{...made.report,individuals:999,unmatched:[{column:"org",classIri:`${X}Organization`,className:"組織",count:999,rows:[99]}]}}
+    : made]}));
+  await press(screen.getByRole("button",{name:"Import"}));
+  const status = screen.getByRole("status");
+  expect(status.textContent).toBe("1 row, 1 Person");
+  const done = screen.getByRole("button",{name:"Done"}); done.focus();
+  await act(async () => { projectStore.setDisplayLanguage("ja"); });
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status.textContent).toBe("1 row, 1 人");
+  expect(screen.getByText("org: 12 values match no 組織 row (rows 3, 9 and 10 more)")).toBeTruthy();
+  expect(document.activeElement).toBe(done);
+  const requests = listData.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox",{name:"UI language"}),{target:{value:"ja"}});
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status.textContent).toBe("1行、人を1件");
+  expect(listData).toHaveBeenCalledTimes(requests);
+  expect(importData).toHaveBeenCalledTimes(1);
+  expect(runCommand).not.toHaveBeenCalled();
 });

@@ -40,8 +40,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { Fragment, type ReactNode } from "react";
-import { CATALOGUE, type CatalogueEntry } from "../catalogue";
+import { useI18n } from "../i18n/I18nProvider";
+import { Fragment, useMemo, type ReactNode } from "react";
+import { catalogueEntries, type CatalogueEntry } from "../catalogue";
 
 interface Props {
   /** The entry being downloaded right now, or null. */
@@ -55,9 +56,11 @@ interface Props {
 }
 
 export default function CatalogueList({ fetchingId, busy, onPick, status, statusId }: Props) {
+  const { t } = useI18n();
+  const entries = useMemo(() => catalogueEntries(t), [t]);
   return (
     <div className="catalogue">
-      {CATALOGUE.map((entry) => (
+      {entries.map((entry) => (
         <Fragment key={entry.id}>
           <button
             className="catalogue-entry"
@@ -69,7 +72,7 @@ export default function CatalogueList({ fetchingId, busy, onPick, status, status
             <span className="catalogue-name">
               {entry.name}
               {fetchingId === entry.id && (
-                <span className="catalogue-loading"> · downloading…</span>
+                <span className="catalogue-loading">{t("catalogue.downloading")}</span>
               )}
             </span>
             <span className="catalogue-desc">{entry.description}</span>

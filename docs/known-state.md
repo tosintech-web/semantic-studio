@@ -2312,3 +2312,811 @@ EXPECTED OUTPUT
   entity's links go to its 50 best-connected neighbours, the ones the
   budget draws first, and GraphView's merge keeps those whose other end is
   on the canvas, as it does for a neighbourhood.
+
+- **P1 reasoning predicate dispatch** (2026-10-24). The existing
+  6,000-conclusion filter/group/explain budget exceeded its 300 ms limit on
+  Python 3.14.4: 430.487 ms in the isolated synthetic two-snapshot fixture.
+  Fixed predicate groups now use set membership, and fact wording and the
+  explainer's initial choice share a predicate-to-form lookup. The original
+  candidate order and wording are preserved; twelve predicate-meaning cases
+  guard the latter alongside the existing reasoning tests.
+
+  With the same fixture, median of five and budget factor 1, the unprofiled
+  work took 272.903 ms after the change. Profiles taken after the timed
+  samples show namespace attribute resolutions falling from 176,184 to
+  38,010, and RDF-term comparisons from 381,018 to 263,944. This speeds the
+  service's ordinary fact and premise paths as well as the budget's batch
+  traversal. The inference engine, limits and selected facts use the same
+  rules. Full-suite results are tracked separately from this isolated
+  measurement.
+
+- **P1 canvas label scans and cold snapshot reads** (2026-10-24).
+  Existing factor-1 median-of-five API budgets failed on Python 3.14.4:
+  the 20,000-statement model with 1,000 union-domain attributes took
+  175.052 ms against 150 ms, and reopening two full 2,000-row snapshots
+  took 1,324.454 ms against 1,000 ms. Profiles inside the TestClient's
+  service thread found repeated label-predicate lookups, URIRef comparison
+  overhead and per-triple context bookkeeping during snapshot parsing.
+
+  The canvas now indexes its four naming predicates for each explicit-language
+  view and uses the existing `preferred_literal` rank. Library labels retain
+  their original lookup path: a predicate-wide scan can change insertion order,
+  which would change the Library's first-label rule. The index is local to one
+  build, including a separate imported view, so it cannot outlive revision or
+  import invalidation. URIRef-only sets sort by their string keys, preserving
+  their order; fixed RDF union terms are resolved once while every malformed,
+  shared, cyclic and oversized-list check remains in `axioms.py`.
+
+  Snapshot N-Triples reopen into rdflib's bundled SimpleMemory store: each
+  snapshot is a plain graph, with no named contexts. Views still join those
+  graphs through `MergedView`. SimpleMemory's length operation is linear,
+  unlike Memory's; existing snapshot, union, query and validation tests cover
+  its use here. Plain/language-tagged string normalization is an identity and
+  is skipped; all typed values retain rdflib's conversion and validation.
+  Lexical strings, tags, datatypes, Python values, escaped text and the
+  hand-edited-Turtle fallback are checked against rdflib. No parsed graph is
+  retained across close and no third-party internals are bypassed.
+
+  The same API harness, with the unprofiled median measured before a separate
+  profiled call, then measured 131.269 ms and 941.137 ms. Budgets, fixtures,
+  warm-ups, cache invalidation and sample counts are unchanged. These are
+  local measurements, not a claim about browser performance or CI.
+
+- **P1 stop inside basic-pattern evaluation** (2026-10-24). Two full backend
+  runs reproduced a timed-out ORDER BY query retaining its worker and ontology
+  key. Async QueryStopped exceptions were reported as unraisable inside GC
+  finalizers. All resend attempts during the two-second grace can be lost;
+  checking cancellation only after the first result cannot stop ORDER BY's
+  collection of a Cartesian product. The surviving worker reached about 18 GB
+  and invalidated later timing measurements. The same test passed alone, so
+  an isolated rerun was insufficient evidence.
+
+  `sparql_exec` now registers a context-scoped BGP handler using rdflib's
+  public CUSTOM_EVALS extension. It uses rdflib's same bound-term ordering
+  and evalBGP implementation, checking the existing cancellation event between
+  bindings before ORDER BY consumes them. Other algebra falls through; the
+  SERVICE handler, broker, external stop, read lock, grace and caps remain.
+  Unmanaged rdflib calls have no cancellation context and retain their normal
+  path. The worker resets its context in cleanup. This complements outside
+  interruption; it cannot interrupt a C call or a pattern that yields no binding.
+
+  A bounded synthetic regression makes every async injection a no-op and
+  yields bindings without a first sorted result. Before the change it left
+  the worker alive; after it ends cooperatively. Its explicit release event
+  also cleans up the failing baseline. The original stop, cleanup-race,
+  SELECT, row-cap and SERVICE tests remain in place. The endpoint and SERVICE
+  suites passed 71 tests after the change; final full-suite verification is
+  recorded separately rather than inferred from that subset.
+
+- **P1 structured data notices** (2026-10-24). A data action's notification
+  stores a typed code and arguments. ProjectHeader renders it in the current UI
+  locale, retaining the same counter and live-region span when locale changes.
+  The English `text` field and plain-string callers remain compatible during
+  migration; English text is never parsed to reconstruct a notification.
+  Read failures also retain their original error object separately, so known
+  metadata can be localized and the diagnostic remains in technical details.
+
+  The full catalog's message union was too large for TypeScript to distribute
+  through project state and wizard-start conditions. ProjectNotice admits its
+  actual data-notice codes and the projectNotice family; RefreshReason admits
+  only its three actual retry reasons. Both use UiMessageFor, preserving the
+  exact code/argument relation rather than accepting arbitrary string keys.
+
+  A separate regression exposed an old asynchronous boundary: after opening
+  another project, an earlier snapshot switch could announce the old source
+  and refetch the new project's list. Every internal data action now passes its
+  issuing project id to dataChanged. A mismatching or closed project leaves the
+  current notice and list alone. The already-issued server action is unchanged.
+  The wizard still retains its selected File, inspection and options across UI
+  changes; its refresh explanation carries metadata beside the legacy string.
+
+- **P1 literal import headers** (2026-10-25). A CSV or workbook header is
+  source text, including `__proto__`, `constructor` and `toString`.
+  `initialColumns` previously inherited choices from an empty suggestions
+  object; assigning `__proto__` to an ordinary result object could drop that
+  column. The wizard's first-value map could then return Object.prototype
+  instead of the cell string and React refused to render it.
+
+  Choice-result and first-value records now have no prototype. Incoming
+  previous/suggestion maps are checked for own keys. The choice serialization,
+  one-name rule, type inference and RDF/API identifiers are unchanged.
+  Pure regressions cover all three names, including genuine own suggestions
+  and JSON round trips. A wizard regression imports an actual synthetic CSV
+  with the `__proto__` header and checks its raw first cell, selected property
+  and complete payload. Restoring just the old first-value map reproduces
+  React's invalid-child failure; the safe map passes that same test.
+
+  The four wizard steps now use whole UI templates and locale-aware choice
+  labels. Stored File/options, mapping identities, drafts and pending reads
+  survive locale changes; errors retain original objects and structured
+  refresh mismatches retain their actual missing-column array. Import notices
+  carry source/count facts, keeping the legacy English text via ProjectNotice.
+
+
+### Project operation notices follow UI locale (P1)
+
+Open/save/recovery/display-language and validation/reasoning announcements
+retain a typed descriptor or minimal summary facts, with the original English
+text kept for existing callers. ProjectHeader renders these in the current UI
+locale without changing the notice counter, live-region node or operation.
+Summary notices contain counts/states/end metadata rather than full validation
+panels, reasoning witnesses or inferred graphs: a notice can outlive a closed
+project. The result itself remains in the existing session result field.
+Creation and reasoning failures retain raw errors beside legacy string fields;
+known metadata is translated at render time, while unknown diagnostic text stays
+in native details. The reasoning alert is still announced once, without a second
+error announcement in the project live region. Command/undo labels and other
+server producers remain subject to the separate backend metadata migration.
+
+
+### Additive command and history descriptors (P1)
+
+A successful command can return `uiMessage` beside the unchanged English
+`label`. Its in-memory Change and Step retain the descriptor, and document state
+can expose `undoUiMessage` and `redoUiMessage` beside the original labels.
+Absent metadata fields stay absent for legacy producers; defaulted dataclass
+fields preserve positional callers. CreateClass, CreateObjectProperty,
+CreateDatatypeProperty, CreateConcept and CreateAnnotationProperty currently
+produce descriptors from their raw names. The API regression takes each through
+undo and redo and compares RDF graphs before/after by isomorphism.
+ProjectHeader renders both action names and completion announcements from these
+descriptors. The latter keeps action/save status separately and preserves the
+original English announcement text for existing callers. Older producers and unsupported metadata versions keep
+their original successful action label: generic error text would incorrectly
+claim the operation failed. Producer migration remains separate; metadata is
+never guessed from that English text. Neither the history data nor UI language
+changes the RDF delta, revision, save point or stored document.
+
+
+### Model operation descriptors use operands rather than English fragments (P1)
+
+Annotation add/remove/replace, subclass/subproperty hierarchy, broader/related
+concept links, IRI rename, swapping ends, clearing an inverse, creating an example,
+restriction add/replace/remove, disjointness and class equivalence carry explicit
+command descriptors. Each producer takes names from the same pre-change reading
+as its unchanged legacy label. It never splits that label to infer operands.
+The API regression uses distinct literal names and checks each through undo/redo
+against isomorphic RDF graphs. The UI tests preserve every literal operand in
+both locales and check Japanese hierarchy direction and annotation ownership.
+These are display-only additions; the RDF deltas and refusal algorithms stay
+unchanged. Conditional and composite operation labels remain a separate migration.
+
+
+### Compound server noun groups stay structural (P1)
+
+The shared version-1 message schema accepts `parts` as well as existing scalar
+argument declarations. A flat part is a captured literal (`{text: string}`) or a
+registered, zero-argument `words.*` token (`{code, args: {}}`). The server and
+browser reject other shapes, nested templates, unknown tokens and extra fields.
+Validation does not recursively evaluate anything or impose a new path-length
+limit. `make_message` copies mutable part structures before a history step keeps
+them. Generated display argument types remain strings; only the wire value can
+be a part list. The browser resolves words in the current UI locale before
+interpolating the whole outer sentence. Literal names and legacy English fields
+are untouched. This extends the plan's original scalar-only metadata interface:
+arbitrary alternative paths cannot be represented by a finite set of compound
+message codes without freezing English or replacing friendly terms with IRIs.
+
+`shapes_form.path_parts` follows the same IRI/path-shape decisions as the unchanged
+English `path_label`: standard name/definition/description meanings, the existing
+name-collision distinction, alternative separators and raw custom display names.
+All rule-set command labels now have additive descriptors, including changed
+paths, severity, message removal and CheckInData's new/existing-shape branches.
+API tests take them through undo/redo and RDF isomorphism. An 80-term alternative
+path retains all 159 noun/separator parts. The project header test keeps the same
+shapes document, notice and API request across UI-language changes.
+
+
+### Every editing operation carries a display descriptor (P1)
+
+All 57 `_change` producer sites in editing.py now attach message metadata;
+`apply_text` also returns the descriptor of its direct Change. The text setter
+keeps its label/comment mode and language, endpoint setters retain the selected
+side(s), shared-domain cases keep literal class names and a localized conjunction,
+characteristics use the actual enum and property kind, mappings use the mapping
+enum, and deletion uses Context.kind's semantic classification. Example values
+branch on URIRef versus literal and keep subject, target and field names separate.
+No descriptor infers facts from a finished English label, `_linked` phrase or
+joined English list. The previous labels, deltas and refusal rules are intact.
+
+API tests cover all characteristic/mapping enums, nine deletion kinds, the
+sharing cases, literal/link modes and source apply on both documents. They take
+each through undo/redo with graph isomorphism; source redo also keeps the exact
+Turtle text including its comment. The old scalar and flat-parts wire contracts
+are unchanged by these producers. This completes success-label producers only;
+custom client announcement callbacks and known refusals/warnings/results still
+require their own migration and end-to-end verification.
+
+
+### Shape-form integer precision and read-only reasons (P1)
+
+SHACL count and length values remain unrestricted RDF integers in Turtle and
+validation. The form reads counts above JavaScript's exact integer range as
+read-only and leaves their triples untouched. `ruleProblem` also rejects unsafe
+integer drafts, so entering a large count cannot submit a rounded Number.
+Ordinary safe integers keep the existing editing behavior. Bounds and literal
+values remain strings; this safeguard does not add a dataset or validator cap.
+
+Read-only reasons retain their original strings, order and deduplication. An
+optional `unsupportedUiMessages` array aligns display facts with those unique
+strings. Metadata-only IRI display uses existing bindings without allocating a
+prefix: allocating one before the legacy name is computed would change it from
+`ns1:S` to `ns2:S`. Authored shape labels stay data; only an unlabeled blank
+shape gets the translated unnamed-shape marker. Original reasons remain in
+keyboard-accessible details, and Edit in Turtle receives the same shape object.
+
+### Reasoning disclosure targets and read failures (P1)
+
+A Why disclosure keeps its loaded reason and open state while UI labels change
+language. That state belongs to the exact project and RDF fact, not just the
+component's position: a new target mounts a new inner disclosure, keyed by the
+project id and the three original term strings. Cleanup guards ignore late
+responses to the former target. The localized label is deliberately outside
+that key.
+
+Why and inferred-detail read failures keep their original objects, including
+validated display metadata. Explanations render in the current UI language;
+unknown failures use the common explanation with the untouched original in
+a native technical-details disclosure. Inferred-detail errors also carry the
+request identity, so a new target cannot briefly show a previous error before
+its effect clears it. Locale changes do not repeat the request, close details,
+or replace the focused summary.
+
+### Reasoning display facts at read boundaries (P1)
+
+Facts, contradiction families and their causes expose additive `uiMessage`
+metadata. Raw RDF names remain literal parts; unnamed blank nodes use an owned
+word token. An authored literal or label that says the same English words stays
+authored. The original sentence, sort keys, RDF term strings, groups and true
+counts remain intact. UI locale changes render retained metadata, without a new
+reasoning run or a change to selection. Unknown engine diagnostics remain in
+escaped original details under an owned explanation.
+
+Fact metadata is projected for the requested page/about rows. The internal
+explainer retains its legacy traversal by default; `Outcome.why` explicitly
+requests display metadata for the one reason being read. Causes created for
+public problems also capture it. An initial eager implementation generated
+12,000 premise descriptors during the 6,000-conclusion budget: with the same
+fixture and median of five, the previous code took 257.562 ms and the eager
+version 351.302 ms. After projection moved to the read boundary, a paired run
+took 247.892 ms before and 244.385 ms after, within the unchanged 300 ms limit
+(Python 3.14.4, factor 1). The regression test separately proves that public Why
+still returns each premise's metadata while the core bulk walk generates none.
+
+The initial migration covered fact/problem descriptions and fact premises.
+The following entry records the separate one-step explanation migration; P1's
+remaining language-routing and integration audits are tracked by the plan.
+
+### One-step reasoning descriptions and definitions (P1)
+
+Every existing candidate's legacy expression is preserved inside a lazy string
+carrier. Only `explain(ui_metadata=True)`, called by public Why, captures the
+selected explanation's source names and definition facts. All 25 candidate
+producers retain their ordering and premise selection. Stated facts and the
+unsupported-family ending have their own descriptors. Definitions on blank
+nodes retain their existing subject and null object, not an invented IRI.
+
+An expression uses validated flat noun parts: named classes, an AND separator
+and property/value conditions. Some-values rules say “at least one” followed by
+the raw filler name; has-value rules keep the actual value; a rule the existing
+reader cannot describe retains its original generic stated-rule meaning. These
+are source RDF facts and zero-argument words, not nested message templates or
+captured English clauses. Japanese rendering never passes names through the
+legacy English article, plural or verb rules. The legacy English remains in
+original details.
+
+Minimal witnesses cover 27 candidate cases (including both at-most-one
+predicates and the owner/no-owner only-values variants), both stated/unsupported
+endings and five definition-expression variants. A differential against
+9fe5888 found all legacy fields identical across 29 public reason records after
+removing only the added metadata. With the unchanged median-of-five
+6,000-conclusion budget on Python 3.14.4, a paired measurement was 270.838 ms
+before and 271.772 ms after, within the existing 300 ms limit at factor 1.
+
+The separate two-full-snapshots *engine* budget also missed its unchanged
+8-second limit during one full run (9,679.538 ms). Its run-time functions and
+summary projections are structurally identical to 9fe5888; the new explanation
+code is used by Why. A sequential normal-seed diagnostic measured
+7,811.078/8,231.099 ms before/after, with substantial variation inside the
+unchanged worker. To control order and seed while diagnosing it, five
+interleaved pairs with child hash seed 0 measured 7,557.366/7,480.970 ms. That
+controlled experiment is not a substitute for the normal full suite: the normal
+verification keeps its original thresholds, random-seed behavior and all tests.
+
+The subsequent full backend suite under normal conditions passed 2,331 tests
+(1 skipped, 2 network tests deselected) in 321.05 seconds, including both
+reasoning budgets. No seed, budget factor, limit, assertion or inference
+algorithm was changed to obtain that result. The diagnostic run remains
+separate from this verification.
+
+### Source-owned HTTP refusal metadata (P1)
+
+Fixed and parameterized HTTP refusals attach validated descriptors at their
+source. The original status and detail expression remain unchanged, including
+structured load-cancellation and Turtle-error details. The HTTP exception
+subclass carries metadata through the existing handler; there is no runtime
+lookup by English text. Unknown domain/third-party fallbacks keep their original
+paths and details. ReasoningRefused retains its ValueError identity and original
+arguments, with optional source metadata for its ontology-only refusal.
+
+A Turtle error with no known line uses a separate format-only descriptor. The
+server never invents a line or asks the person to set a missing line field.
+Other syntax details, including the original parser trace, remain intact.
+
+Real API tests cover missing resources, saved-query guards, closed/dirty
+projects, reasoning-result reads, JSON field/body failures, import inputs and
+network-setting guards. They compare model statements, source/revision/dirty
+state and data generation before and after refusals. Controlled remote-status
+responses use no external connection. A source check rejects newly introduced
+literal HTTP refusals without metadata. This does not declare the remaining
+size-limit, parser, timeout and network-purpose producers complete.
+
+
+### Source-owned failed-load explanations (P1)
+
+`parse_errors.py` attaches optional `uiMessage` to each explanation its existing
+selection table produces. Known reasons capture the parsed line and undeclared
+prefix; generic reasons capture the selected format and a line only when known.
+XML/JSON without a line have separate whole-sentence contracts. Non-RDF guidance
+keeps the existing binary/header tests and table-extension hint. No parser,
+format selection, line extraction or refusal predicate changes for translation.
+
+The original `message`, `line`, `format` and `technical` fields remain intact.
+A mid-parse refusal without attempts remains an unknown original detail, rather
+than being assigned an invented parser cause. LoadDialog already retains the
+validated descriptor: changing UI language re-renders the same error while its
+technical disclosure stays open and no upload is repeated. Prefixes and traces
+containing markup-like text or placeholder braces remain literal text.
+
+Tests exercise all explanation contracts, real upload and controlled fetch
+responses, the client boundary on both upload and fetch, and the mounted dialog
+through a language switch. This covers failed-load explanation generation; size
+limits, timeout producers and network decision descriptions remain separate work.
+
+
+### Source-owned capacity and parse-time limits (P1)
+
+The early Content-Length guards and the streaming readers retain their existing
+predicates, limits, multipart allowance, refusal statuses and legacy details.
+Each now captures its current byte limit at the refusal boundary, including
+configuration changed after import. The descriptors use actual bytes rather
+than parsing an English MB sentence. Integer counts beyond JavaScript's exact
+range travel as decimal text; this adds no cap to the original configuration.
+The normal JSON and multipart paths retain their existing envelope shapes.
+
+`detail_body` forwards only source-created `MessageText` metadata, including a
+structured detail's message, or an explicitly supplied exception descriptor.
+It does not match sentences or assign codes to unknown external errors. The
+central HTTP handler retains its existing fallback and response headers.
+`ParseTimeout` retains its exception identity and original arguments, with
+optional metadata from the file/Turtle parser's actual timeout branch. Unknown
+manually-created timeouts retain their original HTTP detail without a code.
+
+Tests compare both refusal boundaries for uploads, Turtle, layout, node IRIs,
+data mappings/files and the imports total, using small current caps and an
+unchanged synthetic project. Existing fetch tests assert metadata while counting
+that oversized declared downloads pull zero chunks and streamed downloads stop
+early. Deterministic executor replies test timeout facts through both APIs;
+existing real-worker and allocation tests continue to verify the limits. An AST
+comparison confirms the same branch predicates and loop inputs in twelve guard
+and parser functions. The SPARQL timeout path is separate and is not covered by
+this migration.
+
+
+### Query and network failure facts (P1)
+
+Query refusals, broker decisions, address gates and SERVICE errors keep their
+original exception classes, arguments, statuses and detail strings. Optional
+source-created descriptors now cross the existing exception boundaries. A
+JSON-LD context refusal retains its descriptor through ParseError and the
+no-attempt load explanation. Manually constructed unknown errors keep no
+descriptor; equality with a known English sentence does not identify a cause.
+
+The new SERVICE address explanation follows the address gate's code, not its
+English text. The legacy sentence retains the old mapping for compatibility.
+SPARQL JSON result validation keeps native ValueError, its messages and args;
+the actual endpoint supplies optional display context. Failed SILENT calls add
+errorUiMessage beside the original report error. Success, joins, grants,
+SELECT-only enforcement, limits, pinning and cancellation are unchanged.
+
+QueryPanel and the schema reader retain causes rather than locale-specific
+strings. OperationError renders a known frame or the common explanation with a
+native, initially closed disclosure of escaped original text. A locale change
+keeps that disclosure, editor selection and query text, without running the
+query again. The existing Add PREFIX helper still reads the unchanged original
+parser error. Embedded query restrictions/SHACL notes carry optional source
+descriptors; authored names and notes remain literal. Direct legacy file-reading
+and SERVICE-summary callers keep their original returns; the UI explicitly asks
+for current-language facts and presents raw SERVICE errors separately.
+
+A failed explicit query cleared its results through show(null), which advanced
+the request token. Its finally then could not clear running, leaving Run
+disabled. A regression test failed on that disabled button before the fix:
+the current catch now settles running after clearing, and a corrected query can
+run. Stale-run checks still precede the catch's state changes.
+
+Verification includes real HTTP gates and query execution, controlled broker
+responses, context parsing, SILENT/non-SILENT propagation and zero private-hop
+requests, plus mounted language-switch/retry/editor/file tests. Twenty-two
+query/network/parser functions retain identical branch predicates and loop
+inputs. A differential check of 167 result payloads matches the previous values
+or native error text/args. No comparison, RDF mutation or connection-policy
+algorithm was changed to obtain localization.
+
+
+### Documentation refusal facts (P1)
+
+The six documentation-export refusal constructors attach the actual bytes or
+term/entity count and the current corresponding limit. Their existing text,
+arguments, classes and attributes remain unchanged, including the older MB
+wording. Large integer facts cross JSON as exact decimal text. Generation,
+truncation refusals, rate limiting, original-source inclusion and the ZIP layout
+are unchanged by this message migration.
+
+The HTTP boundary forwards an optional descriptor with the original 400 detail.
+A manually constructed unknown DocsExportError remains a legacy-only refusal.
+The documentation download used a separate parser that discarded the original
+structured detail and UI metadata. It now calls the same error boundary as other
+binary downloads before reading a blob. Success, filename selection, headers and
+request flags are unchanged. Root/nested metadata and original payloads survive.
+
+Tests exercise all six constructors with current small/large caps through HTTP,
+check their original arguments and unchanged synthetic project state, preserve
+unknown refusals, and verify the real download client. The mounted Home screen
+switches language on a retained export refusal without another download, keeping
+its original details and disclosure state. Existing export tests continue to
+cover actual generation and each resource guard.
+
+
+### Picker search failure details (P1)
+
+EntityPicker already kept the search cause and translated its primary message,
+but discarded the original from the rendered view. It now uses OperationError
+for search failures while keeping the existing caller-supplied form error path.
+The input's aria-describedby points to the primary explanation alone, rather
+than a container containing the technical disclosure. UI language changes retain
+the same field, description id and open disclosure without another search.
+A mounted test covers hostile original text, the linked description, and the
+request count. Real keyboard/AX verification remains part of the P1 browser gate.
+
+### Import refusal facts persist beside legacy text (P1)
+
+Import row errors and the first closure-limit notice retain source-created facts
+beside their original text. JSON string serialization discards attributes, so the
+resolver explicitly projects optional errorUiMessage/limitUiMessage fields before
+saving. Listing forwards the saved facts without parsing, connecting or rewriting
+state. A local-only retry retains a previous failure's descriptor along with its
+status and text. A missing library/cache source gets a fresh descriptor only on
+the returned listing. Depth, document and byte predicates and resolution order
+are unchanged; byte metadata names the actual configured limit while the original
+150 MB legacy text remains untouched.
+
+Network exception metadata survives the download and parser boundaries. Cache
+and import parsing add context-specific fallback descriptions without identifying
+an exception by its English text. Bundled/cache checksum failures capture facts
+where they are raised. Chosen-file failures keep the original first line and
+optional facts. The panel retains those failures as data and renders them in the
+current UI language, with escaped original details in native disclosures. Opening
+a disclosure and changing language does not repeat a request or lose focus.
+Approval reason/sends translation and stale operation lifecycle checks remain
+separate outstanding P1 work.
+
+An explicitly ordered test run exposed a fixture leak: the message-contract HTTP
+test started the application lifespan and left its seeded FOAF example in the
+shared library. Later import tests then resolved FOAF from that library instead
+of the bundled vocabulary. The HTTP test now removes only the library entries its
+lifespan added, preserving entries that existed before the test. The same ordered
+run now passes, including bundled integrity and resolution-priority assertions.
+
+### Approval purposes carry source facts (P1)
+
+Fixed fetch, context and SERVICE purposes and the per-import purpose retain
+source facts through MessageText; authored ontology names remain literal. The
+broker and the SERVICE plan's separate approval path both attach optional
+reasonUiMessage/sendsUiMessage fields. Redirect metadata stays separate, so
+extending the original reason sentence does not erase its original facts.
+Legacy reason/sends/text fields, capability definitions, grants, approval order,
+redirect limits, address judgement and outgoing payloads are unchanged.
+
+The dialog validates these optional descriptors at render time. Known reasons
+and sends use the current UI language; native disclosures retain escaped original
+text and preserve focus/open state through a language switch. Exact SERVICE text
+stays in its read-only textarea. Unknown/custom reasons and unknown sends stay
+literal, including an unknown reason that happens to equal a known English
+purpose. If supplied redirect metadata is unknown, the complete original purpose
+remains the primary explanation rather than losing its redirect clause.
+
+A declined approval retains unique raw hosts and a flat separator token beside
+the unchanged ApiError message/status. The explanation and host separator render
+in the current locale without another request. Recording-server tests prove a
+redirect target sees zero requests before approval. The full browser keyboard/AX
+check and stale-operation lifecycle checks remain part of the final P1 gate.
+
+### Canvas failures belong to their target (P1)
+
+The canvas's read, layout-save and shown-set failures retain their original
+cause. Save failures carry a typed client context; a known server reason appears
+in the current UI language beside it, and original details stay escaped in a
+native disclosure. UI language changes do not fetch, save or move boxes. A new
+failure resets its disclosure; changing the language preserves the current
+failure's disclosure and focus. The save notice's polite live container exists
+before the message arrives.
+
+ModelCanvas keys its React Flow provider by project and document, keeping the
+provider, hook refs, pending saves and rendered view with their owner. Previously
+a target change retained the previous view until the new fetch finished, and a
+late save could put its failure or saved generation into the next target. A
+remount prevents both, including a late success that would have made the next
+target's fresh layout look stale. UI/display language and ordinary revisions do
+not change this key. The debounce, flush-on-close, generation comparison, unsaved
+position tracking and RDF commands remain as before. Mounted tests reproduce
+both project/document switches and late save success/failure, and retain moved
+boxes after a failed save through a successful retry. Real browser focus/AX
+verification remains part of the P1 final gate.
+
+### Editing keeps unnamed shapes distinct from authored names (P1)
+
+The existing shape reader already distinguished its unnamed default through
+nameUiMessage, and the form/list already rendered it. Editing history and
+refusals still captured the separate "the shape" fallback as literal data.
+The original name reader now gives only that fallback a MessageText carrier;
+metadata projects its word token without another graph read. Authored names,
+including identical "the shape" and "Unnamed shape" labels, stay literal.
+The read-only edit guard forwards ownership from the existing shape reading.
+Seventeen metadata sites in sixteen message fields permit either a literal
+string or flat word parts; legacy English labels and details stay unchanged.
+A differential check of 38 synthetic command/refusal cases against the previous
+commit finds identical legacy text/codes and isomorphic resulting RDF, including
+Japanese label/message writes. The model, graph comparisons and command deltas
+are unchanged.
+
+### Recorded results keep their checked basis when names change (P1)
+
+The optional project-view `lang` parameter chooses display labels independently
+of UI language and the project's primary/required RDF languages. Shape suggestions
+use the choice for names only; their suggested language constraints retain the
+configured project languages. An omitted parameter keeps the old reading order.
+
+GET `/api/projects/{pid}/validate` returns null before a check and otherwise reads
+the recorded check. Its private checked graphs and report can be formatted in
+another label language without rerunning validation or reading a newer model.
+The original revisions, duration and counts remain the basis of that result. A
+late check cannot replace a newer check or a closed-and-reopened project's result.
+Recorded reasoning similarly shares the stated/closure indexes and fact
+membership, rebuilding only labels, sentences and display order. Names still
+come from stated facts only, preserving the owl:sameAs label rule.
+
+Changing dictionary language reads existing results through GET requests. It
+does not issue Validate or Reason again. The store and paged/disclosed results
+discard replies from older owners, languages or result identities. Failed name
+reads retain the previous result and report an error with original details;
+selecting the current language again retries. Changing UI language only rerenders
+messages and does not trigger these reads. Browser checks remain in the P1 gate.
+
+### Data-preview names cannot choose another mapping (P1)
+
+POST `/api/projects/{pid}/data/preview` accepts optional `lang` for display
+labels. Suggestions, including their tie order for ambiguous column names,
+and RML planning keep the original project reading. Only the returned class,
+field, range, preview-row and unmatched-target names use the display choice.
+The same synthetic input produces identical RDF and suggestions in either
+language; literal cell values and primary-language annotations stay unchanged.
+
+The wizard rereads names when dictionary language changes. Its structural
+basis includes project, class, identifier, sheet and header row; a separate
+read identity includes language. A language-only refresh retains existing
+controls, chosen columns, inline drafts and focus until names arrive. Old
+responses cannot replace the latest reading, including a field-created
+callback. UI language changes only rerender messages and do not reread files,
+run previews or import data. Browser focus/AX checks remain in the P1 gate.
+
+### Partial graph result notes keep typed counts (P1)
+
+A partial query-result expansion keeps its drawn/total counts as a typed
+notice rather than a completed English sentence. The results header renders
+it with the current UI translator, including numeric grouping, without
+requesting result nodes again or moving the camera. The legacy pure sentence
+helper keeps its default English contract. A mounted test covers a 200-of-1,340
+result through a UI-language switch with no new graph/expansion request,
+while the explicitly selected dictionary language stays English.
+
+The existing Library language rule remains as specified: an unselected
+dictionary follows UI language, while an explicit per-dictionary choice
+survives UI-language changes and reloads.
+
+### Snapshot name reads belong to their request (P1)
+
+GET `/api/projects/{pid}/data?lang=…` projects class names and unmatched
+relationship target names from the open model. Summaries and unmatched rows
+are fresh objects, so the read never rewrites snapshot.json, source files,
+RML mappings, RDF, snapshot generations or project languages. Omitting `lang`
+keeps the original listing, including listing a closed project's saved data.
+Explicit live name selection requires the model to be open. Create, refresh
+and remap keep their original model-reader language order.
+
+The project store refreshes the snapshot list on a dictionary-language
+change, even while its first list is pending. Only the latest request for
+that project owner and language may publish data, errors or announcements.
+Closing/reopening the same project invalidates an older request too. A
+language-only refresh keeps mounted snapshot rows and controls, preserving
+focus. A failed refresh keeps those rows visible and shows the original error
+in a native disclosure with a retry; a successful retry removes the error and
+focuses the list heading. Changing UI language preserves the disclosure and
+only rerenders text, making no new list request.
+
+The taxonomy row kind has always used the app-owned legacy word "concept".
+Snapshot summaries and previews now attach classNameUiMessage for that source
+identity, without changing className or persisting a new field. The shared
+name renderer in preview, report and list translates valid metadata; authored
+identical names and unknown descriptors keep their original text.
+
+### Third-party notices preserve original bytes (P1)
+
+License notice paths are content addresses: each inventory SHA-256 must match
+the actual notice bytes. A complete check found four copied texts normalized
+to LF while their source hashes described CRLF: @asamuzakjp/css-color 6.0.5,
+@asamuzakjp/dom-selector 8.3.0, decimal.js 10.6.0 and TypeScript 5.6.3. The
+installed packages match those exact inventory versions, and their raw license
+files match the recorded hashes. Copying those bytes restores the originals
+without changing the inventory hashes. Text-mode copies must not normalize
+license originals; the existing binary Git attributes preserve them afterward.
+
+The saxes 6.0.0 registry metadata identifies source commit
+211fa0ebec9b628affc09219199639887174bfc3. Its upstream LICENSE is retained
+verbatim, with its source URL and byte hash in the inventory. This is marked
+upstream-text-collected to distinguish it from collection out of an installed
+package. All 227 notice references match their files after collection/repair.
+This byte check does not approve another version or prove what is distributed:
+actual frontend/Docker/ZIP notice inclusion remains a separate P1 gate.
+
+### Command display names preserve RDF and editing values (P1)
+
+Commands can read names in an explicit dictionary display language while their
+primary-language rules, legacy labels and RDF stay unchanged. DisplayName is a
+string with the original lexical value and a separate selected display name.
+Only source-owned message arguments and read-only preview records project the
+selected value. Context.languages and Context.primary remain the writing basis.
+Actual command, refusal, delete-impact and reuse-plan tests compare legacy text,
+unchanged choices and isomorphic model/shapes graphs with and without lang.
+
+Undo/Redo keep the operand names captured when the operation was issued; these
+are historical facts, including names of deleted resources. Their UI templates
+follow the current UI locale. Shape listings expose a separate optional
+displayName for row/heading titles; name stays the original editable value, so a
+name draft and its focused input survive a dictionary-language reread.
+
+Reuse plans are owned by project/property/class, with a new key for a new target.
+Late responses cannot fill another target's form. A language reread keeps its
+choice and custom-parent draft, and initial focus runs only once per target.
+Delete previews likewise reread selected names while keeping the chosen strategy.
+
+### Retained import reports and project sessions (P1)
+
+A completed wizard keeps the operation's counts, source and row facts. It takes
+only class names, keyed by IRI, from the current snapshot listing. Changing the
+dictionary language updates those names without importing again or replacing
+historical unmatched-row counts with the listing's current counts. The status
+region and its sibling controls retain their identity across both language changes.
+Model edits, undo/redo and Turtle apply refresh snapshot names; each list read is
+also tied to the model revision so an older list cannot restore an obsolete name.
+Known empty lists need no new GET per edit. Pending lists get a replacement;
+a background name-read failure retains the edit announcement and exposes its
+error and retry in the Data tab.
+
+Each opened project session has its own counter, including reopen of the same
+project id. Command, undo/redo, Turtle apply and save responses from a previous
+session do not change documents, drafts, warnings, busy state or announcements.
+The first shapes command checks ownership again after reading the new document
+list. Save all stops before continuing into another session's documents.
+Successful reuse-plan name reads clear an earlier read error, making a language
+change a usable retry rather than leaving a successful response hidden forever.
+
+### P1 performance and real-browser layout
+
+Synthetic 1k/10k/40k entity budgets measure cold index construction separately
+from warm search/list reads, taking five medians with GC paused. The optimized isolated
+40k result is 1022.90ms raw index, 2193.07ms full cold view, 211.57ms search
+and 210.55ms list at factor1.
+The response-to-click UI budgets use seven samples after warm-up, and the real
+Chrome scenario measures the same boundary with actual page flips and clicks.
+Main/P1 graph comparisons retain identical bounded response bytes and remain
+inside the existing budget-selection limit; final full 40k construction measured
+1048.13/988.37ms for Main/P1. Timing observations are kept separate from budget assertions.
+The reproducible measurements and limitations are in docs/p1-verification.md.
+
+A real Chrome screenshot found what jsdom could not: the global button nowrap
+let a 200-character entity name paint over other columns, and the global fixed
+button height let wrapped text overlap its following report. Entity-open now
+bounds width and grows in height. The locale selectors and translated controls
+also need a wrapping header with a minimum height, rather than a fixed 58px
+row. Browser geometry tests enforce text/button bounds and header control bounds
+at 1000px and 80% CSS zoom. Both light and dark screenshots were inspected.
+
+### Actual distribution inventories (P1)
+
+Vite's output module graph identifies bundled package versions rather than
+assuming every production dependency or dev dependency is distributed. Generated
+preload/CommonJS helpers are attributed to Vite with its complete original
+license, which also includes its bundled CommonJS plugin notices. Unclassified
+generated modules and unconfirmed/mismatched package notices fail the build.
+Module identities are package-relative, never local machine paths. About links
+to the bundled notice index only for production builds.
+
+Docker checks the actual installed Python application packages against collected
+versions and raw notice bytes. A cached certifi2026.10.19 was correctly refused
+against the reviewed2026.10.23; the distribution constraints now hold the same
+35-package Linux/Python3.12 closure as the source inventory without adding a new
+dependency. The application inventory excludes base-image installer tooling;
+its own installed notices are retained. html5rdf/et_xmlfile author lists are
+also collected from the installed distributions. Source inventory byte checks
+are distinct from inspecting actual image/frontend/ZIP artifacts.
+
+The documentation ZIP carries the original MIT for generated viewer code and a
+separate NOTICE for data rights; index.html links to both. The exact original
+source remains in the ZIP even when the rendered page excludes individuals.
+Its website prose stays English in P1; the in-app export dialogs/errors follow
+UI language. Output-localization and sanitized public releases are not silently
+claimed by the P1 UI translation work.
+
+### P1 budget failures keep their original limits
+
+The final whole-suite rule-graph budget initially measured1015ms, and isolated
+execution1042ms against the unchanged1000ms limit. Profiling found repeated
+subject reads in restriction recognition and duplicate name projections across
+rule edges and nodes. A restriction now captures predicate/object pairs once,
+rejecting any repeated predicate before applying the same supported-form guards.
+The graph build memoizes its label function only inside that immutable read;
+subsequent edits and language reads get a new function. Empty language metadata
+is not merged into legacy nodes. Counter tests and every existing rule/Turtle
+refusal test preserve behavior; the new isolated rule median is827.33ms.
+
+Measuring raw index time separately exposed a3081.78ms cold40k view, above the
+unchanged3000ms limit. Alias fields now sweep their predicates once, while
+representative-name reads keep their original per-resource value order for
+legacy compatibility. Search fields reuse those exact literal name pairs and
+retain canonical deduplication/sorting. The final cold40k view is2193.07ms.
+No threshold, corpus seed or budget factor was weakened to obtain these passes.
+
+Project reload and language-setting responses also check the project-session
+counter after their await. A late reading cannot replace a reopened project's
+manifest/documents or its current language settings, including the same id.
+
+### P1 asynchronous views keep their owner and user intent
+
+A graph expansion is an incremental read of the complete view, not only an
+ontology id. Language, budget, revision, data or imports changes invalidate its
+success, error and cleanup. An opaque render-time token also rejects a reply
+from before leaving and reopening the same view. Query-node picks carry both
+that dictionary identity and an independent query-intent generation: opening a
+saved/text query or clearing the visual query invalidates a pending pick.
+
+Import completion may outlive its panel. Its parent notification still updates
+a different tab of the same dictionary, but a dictionary owner token refuses it
+after switching away, including a return to the same id. Entity selection's
+reference-only classification likewise belongs to the structural read source;
+fresh page facts reconcile it across Undo and tab remounts without using old
+rows while the new read is pending.
+
+Both SHACL and OWL conflicting-count refusals use integer_arg on each bound.
+The existing Turtle may contain a huge OWL cardinality even when new commands
+cap their own input. Number-or-string message contracts retain those exact
+counts across JSON and JavaScript, preserving refusal status and RDF state.
+
+A schema request's in-flight marker is not a completed cache entry. Cancelling
+it on a Query-tab exit clears that marker so returning retries; completed
+schema reads keep the existing cache behavior. A delete-preview language
+reread similarly clears the previous failure when starting and on success,
+without replacing the modal or its chosen strategy.
+
+### SHACL timeout test cleanup
+
+The API intentionally abandons a timed-out validation worker, which may still
+render its discarded result. A timeout test that merely slept left that worker
+running after monkeypatch teardown. In the faster non-perf CI subset, two late
+MinCount descriptors entered the next test's global metadata counter (202
+instead of its unchanged200 cap). The same file order reproduced it locally;
+thread-name tracing identified the two ThreadPoolExecutor calls beside the200
+MainThread calls. The timeout test now gates its worker with an event and joins
+that exact worker in finally. It also asserts the worker is still alive when
+the API reports stopped. The application's behavior and the200-call assertion
+stay unchanged; no delay, threshold relaxation or thread filtering masks work.

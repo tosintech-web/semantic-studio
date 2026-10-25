@@ -5,10 +5,9 @@ FILE: frontend/src/components/GraphView.test.tsx
 ================================================================================
 
 SUMMARY
-    Tests for GraphView. Two groups: the theme-aware pill drawn behind the
-    hovered or selected node's label — the fix for a white-on-white label in
-    dark mode — and the node and edge reducers, which decide what is dimmed and
-    which used to throw when the selection was not a node in the drawn graph.
+    Guards GraphView label contrast, real reducer callbacks, graph lifecycle,
+    layout and camera interaction, query results and expansions, and localized
+    controls that preserve the same renderer and graph state.
 
 BASIC IDEA
     The drawing function is a plain canvas callback, so it is tested by calling
@@ -51,7 +50,10 @@ EXPECTED OUTPUT
 
 import { Profiler } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { PALETTES } from "../types";
 import { EDGES } from "../theme/kinds";
 import { limitMs } from "../budget";
@@ -2117,4 +2119,62 @@ describe("many results (query-page-rework 5.2, code review)", () => {
     expect(res.color).not.toBe(PALETTES.dark.dimNode);
     view.unmount();
   });
+});
+
+it("localizes graph controls and its accessible equivalent without recreating Sigma", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const { default: GraphView } = await import("./GraphView");
+  try {
+    await act(async () => { render(<I18nProvider><UiLanguageSelect /><GraphView data={DATA} theme="dark" hiddenKinds={new Set()} selected={null} onSelect={vi.fn()} focusTick={0} /></I18nProvider>); });
+    expect(screen.getByRole("group", { name: "ズーム操作" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "画像として保存" })).toBeTruthy();
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("3件中3件を描画");
+    const renderer = sigmaCalls.last;
+    const zooms = cameraMoves.zoomIn;
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "拡大" })); });
+    expect(cameraMoves.zoomIn).toBe(zooms + 1);
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(screen.getByRole("button", { name: "Zoom in" })).toBeTruthy();
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("3 of 3 entities drawn");
+    expect(sigmaCalls.last).toBe(renderer);
+  } finally { cleanup(); }
+});
+
+it("updates rule labels in the same graph without moving nodes on a UI language switch", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const { default: GraphView } = await import("./GraphView");
+  try {
+    await act(async () => { render(<I18nProvider><UiLanguageSelect /><GraphView data={WITH_RULES} theme="light" hiddenKinds={new Set()} selected="http://x/Order" onSelect={vi.fn()} focusTick={0} /></I18nProvider>); });
+    const renderer = sigmaCalls.last;
+    const graph = renderer.graph;
+    const labels = () => graph.edges().map((key: string) => graph.getEdgeAttribute(key, "label")).sort();
+    expect(labels()).toEqual(["1件以上・has line", "3件以下・has line"]);
+    const positions = graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")]);
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(labels()).toEqual(["at least 1 · has line", "at most 3 · has line"]);
+    expect(sigmaCalls.last).toBe(renderer);
+    expect(graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")])).toEqual(positions);
+  } finally { cleanup(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});
+
+it("localizes unnamed edge kinds and preserves unknown kinds and actual labels", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const { default: GraphView } = await import("./GraphView");
+  const data = { ...DATA, edges: [
+    { ...DATA.edges[0], label: "" },
+    { ...DATA.edges[0], kind: "assertion", label: "has line <b>{name}</b>" },
+    { ...DATA.edges[0], kind: "constructor", label: "" },
+  ] };
+  try {
+    await act(async () => { render(<I18nProvider><UiLanguageSelect /><GraphView data={data} theme="light" hiddenKinds={new Set()} selected={null} onSelect={vi.fn()} focusTick={0} /></I18nProvider>); });
+    const renderer = sigmaCalls.last;
+    const graph = renderer.graph;
+    const labels = () => Object.fromEntries(graph.edges().map((key: string) => [graph.getEdgeAttribute(key, "kind"), graph.getEdgeAttribute(key, "label")]));
+    expect(labels()).toEqual({ subClassOf: "下位クラス", assertion: "has line <b>{name}</b>", constructor: "constructor" });
+    const positions = graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")]);
+    fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+    expect(labels()).toEqual({ subClassOf: "subclass of", assertion: "has line <b>{name}</b>", constructor: "constructor" });
+    expect(sigmaCalls.last).toBe(renderer);
+    expect(graph.nodes().map((id: string) => [id, graph.getNodeAttribute(id, "x"), graph.getNodeAttribute(id, "y")])).toEqual(positions);
+  } finally { cleanup(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
 });

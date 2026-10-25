@@ -4,12 +4,18 @@ FILE: frontend/src/types.ts
 ================================================================================
 
 SUMMARY
+    Shape display titles stay separate from editable names.
+    Snapshot/preview class names can identify an app-owned word beside legacy text.
+    Approval facts optionally describe reasons, redirects and sent content.
+    Import rows, limits and chosen-file failures carry optional source UI facts.
+    Optional SERVICE error metadata remains additive to the original error string.
     The shared, app-wide TypeScript types that mirror the backend's JSON
     shapes (ontology summaries, graph, node details, query schema, SPARQL
     results, saved queries, the network broker's policy and activity), plus the theme-aware colour palettes and label
     maps used to render the graph.
 
 BASIC IDEA
+    Warning, reasoning and fix descriptors are additive; original text and RDF facts stay intact.
     One source of truth for the data shapes crossing the API boundary keeps the
     frontend honest about what the backend sends. The palette/label section
     lives here too because colours are keyed by the same node/edge "kind"
@@ -17,7 +23,7 @@ BASIC IDEA
     (The query-builder-specific state model lives in sparql/types.ts.)
 
 INPUTS / INPUT SOURCES
-    - None at runtime; these are type declarations and colour constants.
+    - API data shapes, the central theme palette and an optional UI translator.
 
 EXPECTED OUTPUT
     - Types imported across the app; PALETTES / kindColor / nodeColor /
@@ -26,6 +32,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+export type { WireMessage } from "./i18n/server-contracts";
+import type { WireMessage } from "./i18n/server-contracts";
+import type { Translator } from "./i18n/types";
+import { kindLabelMessage } from "./i18n/kindLabel";
+import type { EntityMatchWire } from "./entities/types";
 import type { QueryState } from "./sparql/types";
 import {
   EDGES,
@@ -55,7 +66,10 @@ export interface ApprovalRequest {
   host: string;
   url: string;
   reason: string;
+  reasonUiMessage?: WireMessage | null;
+  redirectUiMessage?: WireMessage | null;
   sends: string;
+  sendsUiMessage?: WireMessage | null;
   encrypted: boolean;
   // SPARQL SERVICE only: the exact query text that will be sent, which the
   // dialog shows in full (external-access Section 6).
@@ -98,7 +112,7 @@ export type { Theme } from "./theme/kinds";
 // on none of them and is why it is not a tab. Home is a VIEW rather than a reset
 // — switching to it keeps the loaded ontology, the selection and any query in
 // progress. See D-026. `hierarchy` is the tree view over subClassOf / broader.
-export type AppMode = "view" | "explore" | "query" | "home" | "hierarchy" | "shapes";
+export type AppMode = "view" | "explore" | "query" | "home" | "hierarchy" | "shapes" | "entities";
 
 // Response of GET /source: the file text plus render/truncation metadata.
 export interface OntologySource {
@@ -207,6 +221,8 @@ export interface SparqlResults {
 // the endpoint's answer passed the 10,000-row per-call cap; `error` is set
 // when the call failed and SERVICE SILENT let the query carry on without it.
 export interface ServiceCall {
+  /** Additive source facts; original error remains available for disclosure. */
+  errorUiMessage?: WireMessage | null;
   endpoint: string;
   host: string;
   rows: number;
@@ -264,6 +280,11 @@ export interface OntologyDeletion {
 
 // One node in the graph view.
 export interface VizNode {
+  match?: EntityMatchWire;
+  label_language?: string | null;
+  label_fallback?: boolean;
+  label_truncated?: boolean;
+  names_truncated?: boolean;
   id: string;
   label: string;
   kind: string;    // colours the node and keys the legend
@@ -578,6 +599,7 @@ export interface DomainReading {
 export interface SharePlan {
   case: "A" | "B" | "C" | "D" | "separate" | null;
   refused?: string;
+  refusedUiMessage?: WireMessage | null;
   property: { iri: string; label: string; kind: "attribute" | "relationship" | null };
   class?: { iri: string; label: string; type: "owl" | "rdfs" };
   domain: { form: DomainForm; classes: { iri: string; label: string; type: "owl" | "rdfs" }[] };
@@ -596,6 +618,7 @@ export interface SharePlan {
 /** The 409 a create answers when the name is a property of its kind
  *  already (attribute-reuse 5.1). */
 export interface AlreadyDefined {
+  uiMessage?: WireMessage | null;
   code: "already_defined";
   message: string;
   property: {
@@ -716,7 +739,7 @@ export interface ClassRules {
   items: RuleItem[];
   // The 5.10 warnings: a class that can never have members. `disjoint` names
   // the class of the disjoint rule it stands under; without it, the block.
-  warnings: { text: string; disjoint?: string }[];
+  warnings: { text: string; uiMessage?: WireMessage | null; disjoint?: string }[];
   choices: RuleChoices | null;
 }
 
@@ -743,6 +766,7 @@ export interface ExampleField {
 
 export interface ModelWarning {
   text: string;
+  uiMessage?: WireMessage | null;
   // The block it concerns, where the form shows it: "characteristics" (What
   // else is true, How many values), "inverse" (The other way round) or
   // "domain" (Belongs to, From: two domain lines, attribute-reuse 5.4).
@@ -750,7 +774,7 @@ export interface ModelWarning {
   code?: string;
   // `needs`: what the form must ask before the fix can run (a shared
   // parent's name).
-  fix?: { command: string; args: Record<string, unknown>; label: string; needs?: "parentName" };
+  fix?: { command: string; args: Record<string, unknown>; label: string; uiMessage?: WireMessage | null; needs?: "parentName" };
 }
 
 /* --- theme-aware palettes ------------------------------------------------ */
@@ -858,9 +882,10 @@ export const KIND_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-/** A kind in words; an unknown or inherited kind is "Other" (X-6). */
-export function kindLabel(kind: string): string {
-  return own(KIND_LABELS, kind) ?? KIND_LABELS.other;
+/** A kind in the current UI language; legacy callers default to English.
+ * Unknown or inherited keys remain Other (X-6), independently of the palette. */
+export function kindLabel(kind: string, t?: Translator): string {
+  return t ? kindLabelMessage(kind, t) : own(KIND_LABELS, kind) ?? KIND_LABELS.other;
 }
 
 /* --- owl:imports (external-access Stage 2) --------------------------------- */
@@ -877,6 +902,7 @@ export interface ImportRow {
   sourceName: string | null;
   fetchedAt: string | null;
   error: string | null;
+  errorUiMessage?: WireMessage | null;
   documentCount: number;
   depth: number;
   importedBy: string | null;
@@ -889,6 +915,7 @@ export interface ImportRow {
 export interface ImportsListing {
   imports: ImportRow[];
   limit: string | null;
+  limitUiMessage?: WireMessage | null;
   resolving: { done: number; total: number } | null;
   offline: boolean;
 }
@@ -899,7 +926,7 @@ export interface ImportFilesResult {
   matched: { iri: string; file: string }[];
   unmatched: string[];
   mismatch: { file: string; declares: string | null; forIri: string }[];
-  invalid: { file: string; error: string }[];
+  invalid: { file: string; error: string; errorUiMessage?: WireMessage | null }[];
   imports: ImportsListing;
 }
 
@@ -945,8 +972,10 @@ export interface ProjectDocumentState {
   dirty: boolean;
   canUndo: boolean;
   undoLabel: string | null;
+  undoUiMessage?: WireMessage | null;
   canRedo: boolean;
   redoLabel: string | null;
+  redoUiMessage?: WireMessage | null;
   triples: number;
 }
 
@@ -960,6 +989,7 @@ export interface OpenedProject {
 export interface ChangeResult {
   revision: number;
   label: string;
+  uiMessage?: WireMessage | null;
   state: ProjectDocumentState;
   // A create or rename: the entity's IRI, as the server resolved it, so it
   // can be selected.
@@ -1202,6 +1232,9 @@ export interface ShapeForm {
   id: string;
   iri: string | null;
   name: string;
+  /** Read-only title in the dictionary language; name remains the editable value. */
+  displayName?: string;
+  nameUiMessage?: WireMessage | null;
   named: boolean;
   target: ShapeTarget | null;
   severity: "violation" | "warning" | "info";
@@ -1209,6 +1242,8 @@ export interface ShapeForm {
   rules: ShapeRule[];
   editable: boolean;
   unsupported: string[];
+  /** Aligned with the deduplicated unsupported strings; absent on older servers. */
+  unsupportedUiMessages?: (WireMessage | null)[];
 }
 
 export interface ShapesListing {
@@ -1240,15 +1275,20 @@ export interface ValidationProblem {
   // The individual's IRI, the link's target; null for a blank node.
   focus: string | null;
   focusLabel: string;
+  focusLabelUiMessage?: WireMessage | null;
   group: string;
+  groupUiMessage?: WireMessage | null;
   sentence: string;
+  uiMessage?: WireMessage | null;
   value: string | null;
+  valueUiMessage?: WireMessage | null;
   severity: "violation" | "warning" | "info";
 }
 
 export interface ValidationPanel {
   id: string;
   name: string;
+  nameUiMessage?: WireMessage | null;
   state: PanelState;
   target: { iri: string; label: string; one: string; many: string } | null;
   focusCount: number;
@@ -1258,6 +1298,7 @@ export interface ValidationPanel {
   problems: ValidationProblem[];
   problemsTotal: number;
   error: string | null;
+  errorUiMessage?: WireMessage | null;
   // The data snapshots whose individuals this shape checked, by id
   // (csv-data-import 5.6).
   data?: string[];
@@ -1322,13 +1363,14 @@ export interface WorkbookChoice {
 export interface SnapshotSummary extends DataSource {
   enabled: boolean;
   className: string | null;
+  classNameUiMessage?: WireMessage | null;
   classIri: string | null;
   statements: number;
   individuals: number;
   report: ImportReportData;
   // "outside": an edited mapping uses something the engine does not run;
   // the last good data is kept and `message` says why.
-  mapping: { status: "ok" | "outside"; message: string | null };
+  mapping: { status: "ok" | "outside"; message: string | null; uiMessage?: WireMessage | null };
   mappingText?: string | null;
   // Set when the source was an Excel workbook.
   workbook?: WorkbookChoice | null;
@@ -1450,6 +1492,7 @@ export interface DataPreview {
   fields: DataField[];
   suggestions: Record<string, ColumnChoice>;
   className?: string;
+  classNameUiMessage?: WireMessage | null;
   rows?: PreviewRow[];
   report?: ImportReportData;
 }
@@ -1480,6 +1523,7 @@ export interface ReasoningFact {
   pLabel: string;
   oLabel: string;
   sentence: string;
+  uiMessage?: WireMessage | null;
 }
 
 /** One line of a reason: a fact used, or a class's rule (no `o`, no link). */
@@ -1491,6 +1535,7 @@ export interface ReasoningPremise {
   pLabel?: string;
   oLabel?: string;
   sentence: string;
+  uiMessage?: WireMessage | null;
   inferred: boolean;
 }
 
@@ -1513,6 +1558,7 @@ export type ReasoningProblemKind =
 export interface ReasoningProblem {
   kind: ReasoningProblemKind;
   sentence: string;
+  uiMessage?: WireMessage | null;
   // The entity the sentence is about, a link; null for the reasoner's words.
   subject: string | null;
   // The stated facts that cause it, each a link to its subject.
@@ -1533,6 +1579,7 @@ export interface ReasoningResult {
   statements: number;
   // The ending's sentence for anything but done.
   sentence: string | null;
+  uiMessage?: WireMessage | null;
   problems: ReasoningProblem[];
   groups: ReasoningGroup[];
   importedFacts: ReasoningGroup;
@@ -1556,5 +1603,6 @@ export interface ReasoningAbout {
 export interface WhyReason {
   family: string | null;
   sentence: string;
+  uiMessage?: WireMessage | null;
   premises: ReasoningPremise[];
 }

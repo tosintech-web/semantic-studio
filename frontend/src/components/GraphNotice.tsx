@@ -13,7 +13,7 @@ BASIC IDEA
     believing an 18,717-entity ontology contains 2,000 — so the two numbers are
     stated in plain words, as digits.
 
-    The budget is a range with two ends. "Show more" doubles it, "Show less"
+    The budget is a range with two ends. t("graph.more") doubles it, t("graph.less")
     halves it, and each is disabled at its own end with the reason in its title,
     because a control that silently stops working is worse than one that
     explains why. Halving is the exact inverse of doubling, so the sequence a
@@ -55,6 +55,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useRef } from "react";
 import type { VizGraph } from "../types";
 
@@ -82,6 +83,7 @@ export default function GraphNotice({
   onShowLess,
   onFocusRestored,
 }: Props) {
+  const { t } = useI18n();
   const moreRef = useRef<HTMLButtonElement>(null);
   const lessRef = useRef<HTMLButtonElement>(null);
 
@@ -124,9 +126,9 @@ export default function GraphNotice({
   // the user most wanted Show less.
   if (!stats.truncated && !canReduce) return null;
 
-  const drawn = stats.nodeCount.toLocaleString();
-  const total = stats.nodeTotal.toLocaleString();
-  const floor = defaultBudget.toLocaleString();
+  const drawn = stats.nodeCount;
+  const total = stats.nodeTotal;
+  const floor = defaultBudget;
 
   return (
     // role="status" + aria-live="polite" announces the counts when a truncated
@@ -144,15 +146,14 @@ export default function GraphNotice({
           // returns every entity. "Showing all 18,717" is the truer of the two
           // sentences there, and the reason Show more is dead is the ontology
           // rather than the ceiling.
-          <>Showing all {total} entities.</>
+          <>{t("graph.all", { total })}</>
         ) : atMaximum ? (
           <>
-            Showing {drawn} of {total} entities. This is the maximum this view will draw.
+            {t("graph.maximum", { drawn, total })}
           </>
         ) : (
           <>
-            Showing the {drawn} most connected of {total} entities. Search for anything
-            that is not drawn.
+            {t("graph.partial", { drawn, total })}
           </>
         )}
         {/* Beside the counts, in the same live region, so a budget change that
@@ -163,8 +164,7 @@ export default function GraphNotice({
         {clearedExpansions > 0 && (
           <>
             {" "}
-            {clearedExpansions.toLocaleString()} expanded{" "}
-            {clearedExpansions === 1 ? "entity was" : "entities were"} cleared.
+            {t(`graph.cleared.${clearedExpansions === 1 ? "one" : "many"}`, { count: clearedExpansions })}
           </>
         )}
       </span>
@@ -174,10 +174,8 @@ export default function GraphNotice({
         ref={lessRef}
         onClick={onShowLess}
         disabled={!canReduce}
-        title={canReduce ? "Draw half as many entities" : `${floor} entities is the smallest view.`}
-      >
-        Show less
-      </button>
+        title={canReduce ? t("graph.lessHelp") : t("graph.floor", { floor })}
+      >{t("graph.less")}</button>
       <button
         className="ghost"
         ref={moreRef}
@@ -185,14 +183,12 @@ export default function GraphNotice({
         disabled={noMoreToDraw}
         title={
           allDrawn
-            ? "Every entity is already drawn."
+            ? t("graph.allHelp")
             : atMaximum
-              ? `The maximum of ${drawn} entities is already drawn.`
-              : "Draw twice as many entities"
+              ? t("graph.maximumHelp", { drawn })
+              : t("graph.moreHelp")
         }
-      >
-        Show more
-      </button>
+      >{t("graph.more")}</button>
     </div>
   );
 }

@@ -12,6 +12,14 @@ SUMMARY
     rule, with the individual's name as a link that selects it.
 
 BASIC IDEA
+    Shape-engine refusals render validated display facts in the current UI
+    language and retain escaped engine text in original-details disclosures.
+
+    Owned controls, headers and count guidance follow the current UI locale;
+    result identity, open panels and navigation facts remain unchanged. Generated
+    violations, group and focus labels use producer facts; authored RDF text and
+    legacy-only results stay literal, and original diagnostics remain available.
+
     Shown in the Shapes view and under the Turtle editor of shapes.ttl,
     reading one result from the project store, so both places show the same
     check. Nothing validates on its own: only the button runs a check
@@ -50,10 +58,12 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useId, useMemo, useState } from "react";
 import {
   STATE_SIGNS,
-  STATE_WORDS,
+  panelStateWord,
   panelHeader,
   panelName,
 } from "../modeling/shapeSentences";
@@ -95,6 +105,7 @@ interface ButtonProps {
  *  it and tied to it with aria-describedby: a tooltip alone reaches neither
  *  a keyboard nor a screen reader (Stage A follow-up 7). */
 export function ValidateButton({ onError, blocked = null, onStart }: ButtonProps) {
+  const { t } = useI18n();
   const validating = useProjectSelector((s) => s.validating);
   const reasonId = useId();
   return (
@@ -104,14 +115,14 @@ export function ValidateButton({ onError, blocked = null, onStart }: ButtonProps
         className="primary validate-btn"
         aria-disabled={validating || blocked !== null}
         aria-describedby={blocked !== null ? reasonId : undefined}
-        title={blocked ?? "Check the model, unsaved changes included, against every shape"}
+        title={blocked ?? t("results.validateHint")}
         onClick={() => {
           if (validating || blocked !== null) return;
           onStart?.();
           projectStore.validate().catch((e: unknown) => onError(e instanceof Error ? e.message : String(e)));
         }}
       >
-        {validating ? "Validating…" : "Validate"}
+        {t(validating ? "results.validating" : "results.validate")}
       </button>
       {blocked !== null && (
         <span id={reasonId} className="detail-note validate-reason">
@@ -127,6 +138,7 @@ interface Props {
 }
 
 export default function ResultPanels({ onSelect }: Props) {
+  const { t } = useI18n();
   const result = useProjectSelector((s) => s.validation);
   const validating = useProjectSelector((s) => s.validating);
   const documents = useProjectSelector((s) => s.documents);
@@ -141,7 +153,7 @@ export default function ResultPanels({ onSelect }: Props) {
   if (!result) {
     return (
       <p className="detail-note results-empty">
-        Nothing has been checked yet. Press Validate to check the model against every shape.
+        {t("results.empty")}
       </p>
     );
   }
@@ -155,23 +167,22 @@ export default function ResultPanels({ onSelect }: Props) {
   return (
     <div className={validating ? "result-panels busy" : "result-panels"} aria-busy={validating}>
       {stale && (
-        <p className="results-stale">The model, the shapes or the data changed since this check. Validate again.</p>
+        <p className="results-stale">{t("results.stale")}</p>
       )}
       {result.stopped ? (
         <p className="results-stopped" role="alert">
-          The check took too long and was stopped. It was checking {result.shapeCount}{" "}
-          {result.shapeCount === 1 ? "shape" : "shapes"} against {result.statements.toLocaleString()} statements.
+          {t(result.shapeCount === 1 ? "results.stopped.one" : "results.stopped.many", { shapes: result.shapeCount, statements: result.statements })}
         </p>
       ) : result.shapes.length === 0 ? (
-        <p className="detail-note">There are no shapes to check yet.</p>
+        <p className="detail-note">{t("results.noShapes")}</p>
       ) : (
         <>
           <div className="results-toolbar">
             <button type="button" className="ghost" onClick={() => setOpen(new Set(result.shapes.map((p) => p.id)))}>
-              Expand all
+              {t("hierarchy.expand")}
             </button>
             <button type="button" className="ghost" onClick={() => setOpen(new Set())}>
-              Collapse all
+              {t("hierarchy.collapse")}
             </button>
           </div>
           <ul className="result-panel-list">
@@ -202,6 +213,7 @@ interface PanelProps {
 }
 
 function Panel({ panel, expanded, onToggle, onSelect, data = [] }: PanelProps) {
+  const { locale, t } = useI18n();
   const id = useId();
   return (
     <li className={`result-panel result-${panel.state}`}>
@@ -211,19 +223,19 @@ function Panel({ panel, expanded, onToggle, onSelect, data = [] }: PanelProps) {
           className="result-panel-header"
           aria-expanded={expanded}
           aria-controls={`${id}-body`}
-          aria-label={panelName(panel)}
+          aria-label={panelName(panel, locale)}
           onClick={onToggle}
         >
           <span className="result-sign" aria-hidden="true">
             {STATE_SIGNS[panel.state]}
           </span>
-          <span className="result-word">{STATE_WORDS[panel.state]}</span>
-          <span className="result-text">{panelHeader(panel)}</span>
+          <span className="result-word">{panelStateWord(panel.state, t)}</span>
+          <span className="result-text">{panelHeader(panel, locale)}</span>
         </button>
       </h4>
       {data.map((source) => (
         <p key={source.id} className="result-data">
-          Checked data {dataLabel(source)}
+          {t("results.checkedData", { source: dataLabel(source, locale) })}
         </p>
       ))}
       <div id={`${id}-body`} className="result-panel-body" hidden={!expanded}>
@@ -234,6 +246,7 @@ function Panel({ panel, expanded, onToggle, onSelect, data = [] }: PanelProps) {
 }
 
 function PanelBody({ panel, onSelect }: { panel: ValidationPanel; onSelect: (iri: string) => void }) {
+  const { t } = useI18n();
   const groups = useMemo(() => {
     const out = new Map<string, ValidationPanel["problems"]>();
     for (const problem of panel.problems) {
@@ -245,52 +258,59 @@ function PanelBody({ panel, onSelect }: { panel: ValidationPanel; onSelect: (iri
   }, [panel.problems]);
   if (panel.state === "error") {
     return (
-      <p className="result-error-text">
-        pySHACL could not check this shape: {panel.error}
-      </p>
+      <>
+        <p className="result-error-text">
+          {t("results.shapeError", { error: renderServerMessage(panel.errorUiMessage, panel.error ?? "", t) })}
+        </p>
+        <details className="technical-details"><summary>{t("common.details")}</summary><pre>{panel.error}</pre></details>
+      </>
     );
   }
   if (panel.state === "nothing") {
     // Stage B made "add one" true: a class's form has *Add an example*
     // (5.8, follow-up 8). Concepts and every class are the model itself.
-    const label = panel.target?.label ?? "match";
+    const label = panel.target?.label ?? t("shapePanel.match.one");
     const ofClass = panel.target !== null && !MODEL_TARGETS.has(panel.target.iri);
     return (
       <p className="detail-note">
-        No {label} is in the data yet, so there is nothing to check.{" "}
-        {ofClass
-          ? `Add an example from the ${label} form, then validate again.`
-          : "Add one, then validate again."}
+        {t(ofClass ? "results.nothingClass" : "results.nothingOther", { label })}
       </p>
     );
   }
   if (panel.state === "passes") {
-    return <p className="detail-note">Nothing breaks this shape's rules.</p>;
+    return <p className="detail-note">{t("results.passes")}</p>;
   }
   const more = panel.problemsTotal - panel.problems.length;
   return (
     <>
       {groups.map(([group, problems]) => (
         <section key={group} className="result-group">
-          <h5>{group}</h5>
+          <h5>{validWireMessage(problems[0]?.groupUiMessage) ? renderServerMessage(problems[0].groupUiMessage, group, t) : group}</h5>
           <ul>
-            {problems.map((p, i) => (
-              <li key={`${p.focus}-${i}`} className={`result-problem severity-${p.severity}`}>
+            {problems.map((p, i) => {
+              const focusLabel = validWireMessage(p.focusLabelUiMessage) ? renderServerMessage(p.focusLabelUiMessage, p.focusLabel, t) : p.focusLabel;
+              // Missing metadata can be authored RDF or an older server. Keep it
+              // literal; a new unknown violation gets context plus original details.
+              const described = p.uiMessage != null;
+              const sentence = !described ? p.sentence : validWireMessage(p.uiMessage)
+                ? renderServerMessage(p.uiMessage, p.sentence, t) : t("validation.unknown");
+              return <li key={`${p.focus}-${i}`} className={`result-problem severity-${p.severity}`}>
                 {p.focus ? (
                   <button type="button" className="link-btn result-who" onClick={() => onSelect(p.focus!)}>
-                    {p.focusLabel}
+                    {focusLabel}
                   </button>
                 ) : (
-                  <span className="result-who">{p.focusLabel}</span>
+                  <span className="result-who">{focusLabel}</span>
                 )}
-                <span className="result-sentence">{p.sentence}</span>
-                {p.value !== null && <span className="result-value">Value: {p.value}</span>}
-              </li>
-            ))}
+                <span className="result-sentence">{sentence}</span>
+                {p.value !== null && <span className="result-value">{t("results.value", { value: validWireMessage(p.valueUiMessage) ? renderServerMessage(p.valueUiMessage, p.value, t) : p.value })}</span>}
+                {described && <details className="technical-details"><summary>{t("common.details")}</summary><pre>{p.sentence}</pre></details>}
+              </li>;
+            })}
           </ul>
         </section>
       ))}
-      {more > 0 && <p className="detail-note result-more">and {more.toLocaleString()} more</p>}
+      {more > 0 && <p className="detail-note result-more">{t("results.more", { count: more })}</p>}
     </>
   );
 }

@@ -14,6 +14,7 @@ SUMMARY
     sentence builder.
 
 BASIC IDEA
+    Shared runner errors retain their original text in a keyboard-accessible disclosure.
     The rules come with the panel's /node details, read by the server
     (axioms.py), and refetch with it on every revision, so the block shows
     what the server holds; the sentences are modeling/ruleSentences.ts's.
@@ -40,14 +41,17 @@ INPUTS / INPUT SOURCES (props)
     - onSelect: select another entity (a class named in a rule).
 
 EXPECTED OUTPUT
-    - Commands through the runners; the block's markup.
+    - Commands through the runners; current-locale notices and warning rows
+      from selected rule facts, with original warning details.
 ================================================================================
 */
 
-import { useEffect, useRef, useState } from "react";
+import { useI18n } from "../i18n/I18nProvider";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   EMPTY_BUILDER,
   itemKey,
+  itemNarrative,
   itemSentence,
   openWorldNote,
   partsOf,
@@ -55,10 +59,12 @@ import {
   stateOf,
   type BuilderState,
 } from "../modeling/ruleSentences";
+import { refusalNotice, ruleNotice, ruleCheckNotice } from "../modeling/projectNotices";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { ClassRules, RuleItem, RuleKey, RuleRestriction } from "../types";
-import { useRunner, type Runner } from "./EditParts";
+import { RunnerErrorDetails, useRunner, type Runner } from "./EditParts";
 import { useWarningAnnouncer } from "./RelationshipForm";
+import WarningMessage from "./WarningMessage";
 import RuleBuilder from "./RuleBuilder";
 
 interface Props {
@@ -75,6 +81,7 @@ interface Props {
 type Open = null | { initial: BuilderState | null; replacing: RuleKey | null; from: string; token: number };
 
 export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props) {
+  const { t, locale } = useI18n();
   const { busy, errors, run, clear } = runner;
   const shapes = useRunner("shapes");
   const [open, setOpenState] = useState<Open>(null);
@@ -101,15 +108,21 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
     });
   }, [draft, iri, rules.choices]);
 
-  const focusAdd = () => window.setTimeout(() => addRef.current?.focus(), 0);
-  const focusItem = (key: string) =>
-    window.setTimeout(() => {
-      const row = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-rule]") ?? []).find(
-        (el) => el.dataset.rule === key,
-      );
-      if (row) row.focus();
-      else addRef.current?.focus();
-    }, 0);
+  const [focusRequest, setFocusRequest] = useState<string | null>(null);
+  const focusAdd = () => setFocusRequest("add");
+  const focusItem = (key: string) => setFocusRequest(key);
+  // A timer can beat a concurrent commit that replaces the builder with its
+  // opener. Resolve the target only after that DOM exists, before the next key.
+  useLayoutEffect(() => {
+    if (focusRequest === null) return;
+    const row = focusRequest === "add" ? undefined : Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>("[data-rule]") ?? [],
+    ).find(el => el.dataset.rule === focusRequest);
+    const target = row ?? addRef.current;
+    if (!target) return;
+    target.focus();
+    setFocusRequest(null);
+  }, [focusRequest, open, items]);
 
   useEffect(() => {
     const wait = pending.current;
@@ -132,8 +145,8 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
     const key = itemKey(item);
     const next = items.slice(index + 1).find((i) => itemKey(i) !== key) ?? items.slice(0, index).reverse()[0];
     pending.current = { gone: key, next: next ? itemKey(next) : "add" };
-    const sentence = itemSentence(name, item) ?? "the rule";
-    const done = await run(`rule:${key}`, command.name, command.args, (r) => `Removed: ${sentence}. ${r.label}.`, say);
+    const narrative = itemNarrative(name, item);
+    const done = await run(`rule:${key}`, command.name, command.args, (r) => ruleNotice("removed", narrative, r), say);
     if (!done) pending.current = null;
   };
 
@@ -144,7 +157,7 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
       `check:${key}`,
       "CheckInData",
       { class: iri, restriction: item.key },
-      (r) => `${r.label}. Validate checks it in your data.`,
+      (r) => ruleCheckNotice(r),
       say,
     );
   };
@@ -158,36 +171,36 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
 
   return (
     <section className="rules-block" aria-labelledby={`rules-${cssId(iri)}`}>
-      <h5 id={`rules-${cssId(iri)}`}>What is true of every {name}</h5>
+      <h5 id={`rules-${cssId(iri)}`}>{t("rules.heading", { name })}</h5>
       {general.length > 0 && (
-        <ul className="form-warnings" aria-label="Warnings">
+        <ul className="form-warnings" aria-label={t("rules.warnings")}>
           {general.map((w) => (
             <li key={w.text} className="form-warning">
-              {w.text}
+              <WarningMessage warning={w} />
             </li>
           ))}
         </ul>
       )}
       {items.length === 0 ? (
-        <p className="detail-note">No rules yet.</p>
+        <p className="detail-note">{t("rules.empty")}</p>
       ) : (
         <ul className="edit-list rules-list" ref={listRef}>
           {items.map((item, index) => {
             const key = itemKey(item);
-            const sentence = itemSentence(name, item);
+            const sentence = itemSentence(name, item, locale);
             const mine = warningsFor(item);
             return (
               <li key={key} className="rule-item" data-rule={key} tabIndex={-1}>
                 {item.type === "turtle" ? (
                   <>
-                    <p className="detail-note">Written in Turtle, outside the sentences this form writes:</p>
+                    <p className="detail-note">{t("rules.turtle")}</p>
                     <pre className="rule-turtle">{item.turtle}</pre>
                     <button
                       type="button"
                       className="ghost edit-btn"
                       onClick={() => projectStore.showInEditor([`<${iri}>`, ...prefixedFind(iri)])}
                     >
-                      Edit in Turtle
+                      {t("rules.editTurtle")}
                     </button>
                   </>
                 ) : (
@@ -207,46 +220,46 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
                           <button
                             type="button"
                             className="ghost edit-btn"
-                            aria-label={`Edit: ${sentence}`}
+                            aria-label={t("rules.editLabel", { sentence: sentence ?? "" })}
                             onClick={() => setOpen({ initial: stateOf(item), replacing: item.key, from: key })}
                           >
-                            Edit
+                            {t("rules.edit")}
                           </button>
                         )}
                         <button
                           type="button"
                           className="ghost edit-btn"
-                          aria-label={`Remove: ${sentence}`}
+                          aria-label={t("rules.removeLabel", { sentence: sentence ?? "" })}
                           aria-disabled={busy}
                           onClick={() => void remove(item, index)}
                         >
-                          Remove
+                          {t("rules.remove")}
                         </button>
                       </span>
                     ) : (
-                      !item.editable && <span className="detail-note"> (read-only)</span>
+                      !item.editable && <span className="detail-note">{t("rules.readonly")}</span>
                     )}
                     {mine.length > 0 && (
-                      <ul className="form-warnings" aria-label="Warnings">
+                      <ul className="form-warnings" aria-label={t("rules.warnings")}>
                         {mine.map((w) => (
                           <li key={w.text} className="form-warning">
-                            {w.text}
+                            <WarningMessage warning={w} />
                           </li>
                         ))}
                       </ul>
                     )}
                     {item.type === "restriction" && (
                       <div className="rule-note">
-                        <p className="detail-note">{openWorldNote(name, partsOf(item))}</p>
+                        <p className="detail-note">{openWorldNote(name, partsOf(item), locale)}</p>
                         {item.editable && canEdit && (
                           <button
                             type="button"
                             className="link-btn"
                             aria-disabled={shapes.busy}
-                            aria-label={`Check it in data too: ${sentence}`}
+                            aria-label={t("rules.checkLabel", { sentence: sentence ?? "" })}
                             onClick={() => !shapes.busy && void checkInData(item)}
                           >
-                            Check it in data too
+                            {t("rules.check")}
                           </button>
                         )}
                         {shapes.errors[`check:${key}`] && (
@@ -270,8 +283,8 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
                     busy={busy}
                     error={errors.rule || null}
                     onCancel={() => close(key)}
-                    onSubmit={async (command, said) => {
-                      const result = await run("rule", command.name, command.args, (r) => `Changed: ${said}. ${r.label}.`, say);
+                    onSubmit={async (command, _said, narrative) => {
+                      const result = await run("rule", command.name, command.args, (r) => ruleNotice("changed", narrative, r), say);
                       if (result) close("add");
                     }}
                   />
@@ -291,26 +304,27 @@ export default function RulesBlock({ iri, name, rules, runner, onSelect }: Props
           busy={busy}
           error={errors.rule || null}
           onCancel={() => close("add")}
-          onSubmit={async (command, said) => {
-            const result = await run("rule", command.name, command.args, (r) => `Added: ${said}. ${r.label}.`, say);
+          onSubmit={async (command, _said, narrative) => {
+            const result = await run("rule", command.name, command.args, (r) => ruleNotice("added", narrative, r), say);
             if (result) close("add");
           }}
         />
       ) : (
         canEdit && (
           <button ref={addRef} type="button" className="ghost" onClick={() => setOpen({ initial: null, replacing: null, from: "add" })}>
-            Add a rule
+            {t("rules.add")}
           </button>
         )
       )}
+      <RunnerErrorDetails runner={shapes} />
     </section>
   );
 }
 
 /** A refusal stands under the builder or the rule, and is said in the live
  *  region too (Section 6). */
-function say(message: string): void {
-  projectStore.say(message);
+function say(message: string, error: unknown): void {
+  projectStore.say(refusalNotice(message, error));
 }
 
 /** An id-safe form of a key: IRIs carry characters ids should not. */

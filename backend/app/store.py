@@ -66,8 +66,9 @@ EXPECTED OUTPUT
       third, `data_cache`, holds a project model's views with its data
       snapshots joined (csv-data-import 5.6).
     - Raises ParseError for unparseable input, carrying every attempt's
-      message, and ParseTimeout when a bounded parse runs out of time; the
-      router maps them to HTTP 422 (explained by parse_errors.py) and 504.
+      message and source-owned context refusals, and ParseTimeout with source
+      metadata when a bounded parse runs out of time; the router maps them to HTTP 422 (explained by
+      parse_errors.py) and 504.
       LoadCancelled, before anything is written, for a load whose mark was
       set (D-115); the router answers 409.
       The broker's decisions (ApprovalRequired, Offline, HostBlocked) pass
@@ -88,6 +89,8 @@ from __future__ import annotations
 #   sys       - detect the operating system to pick the OS-standard data dir
 #   threading - locks so concurrent requests do not double-parse or corrupt state
 #   uuid      - generate stable, collision-free ontology ids
+from collections import OrderedDict
+
 import contextlib
 import contextvars
 import json
@@ -170,14 +173,20 @@ class ParseError(Exception):
         message: str,
         attempts: Optional[list[tuple[str, str]]] = None,
         suggested: Optional[str] = None,
+        *, ui_message: dict | None = None,
     ) -> None:
         super().__init__(message)
         self.attempts: list[tuple[str, str]] = list(attempts or [])
         self.suggested = suggested
+        self.ui_message = ui_message
 
 
 class ParseTimeout(Exception):
     """Raised when a parse outlasts its wall-clock budget (maps to HTTP 504)."""
+
+    def __init__(self, *args, ui_message: dict | None = None):
+        super().__init__(*args)
+        self.ui_message = ui_message
 
 
 def default_data_dir() -> Path:
@@ -256,7 +265,7 @@ def _parse_rdf_blocking(data: bytes, fmt: Optional[str]) -> tuple[Graph, str]:
             # for the parser to act on the document and ask for a resource we
             # refused, so trying the remaining formats would only bury the one
             # message that explains what happened. Stop and lead with it.
-            raise ParseError(str(exc)) from exc
+            raise ParseError(str(exc), ui_message=getattr(exc, "ui_message", None)) from exc
         except Exception as exc:  # rdflib raises many parser-specific errors
             # Record why this candidate failed and keep trying the next one.
             errors.append((candidate, str(exc)))
@@ -302,10 +311,13 @@ def parse_rdf(
         except FuturesTimeout as exc:
             # Do not block shutting the pool down on the abandoned worker.
             pool.shutdown(wait=False, cancel_futures=True)
+            from .messages import make_message
+
             raise ParseTimeout(
                 f"This file took longer than {timeout:g} seconds to parse and "
                 "was stopped. You can raise the limit with "
-                "SEMANTIC_STUDIO_PARSE_TIMEOUT."
+                "SEMANTIC_STUDIO_PARSE_TIMEOUT.",
+                ui_message=make_message("parse.file_timeout", seconds=timeout),
             ) from exc
 
 
@@ -349,6 +361,14 @@ class Ontology:
     # The sentence builder's choices for a project class's form (axioms 5.9):
     # (key, the view they were read from, value), built once per revision.
     choices_cache: Optional[tuple] = field(default=None, repr=False)
+    # Dictionary projections are bounded per ontology and protected after the
+    # document lock. Their own key includes imports identity and data generation.
+    entity_cache: OrderedDict = field(default_factory=OrderedDict, repr=False, compare=False)
+    entity_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
+    # Current tuple slots stay compatible; bounded per-view language variants
+    # prevent alternating between Library preferences rebuilding every time.
+    language_variants: dict = field(default_factory=dict, repr=False, compare=False)
+    view_lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
     # A project model's snapshots, supplied by editing.py on open:
     # () -> (generation, [(graph, info)]). None everywhere else.
     snapshots: Optional[Callable[[], tuple]] = field(default=None, repr=False, compare=False)
@@ -373,12 +393,13 @@ class Ontology:
     def label_langs(self, display: Optional[str] = None) -> Optional[tuple]:
         """The ordered label languages for a view: display, then primary.
 
-        None for the library, which keeps English-then-untagged. A display
+        No explicit language keeps the library's legacy label rule. An
+        explicit Library preference is independent of project languages. A display
         language the project does not carry falls back to the primary rather
         than being refused, so a stale switch in the browser cannot break a view.
         """
         if not self.languages:
-            return None
+            return (display,) if display else None
         primary = self.languages[0]
         chosen = display if display in self.languages else primary
         return (chosen, primary)
@@ -389,13 +410,26 @@ class Ontology:
         return self.lock if self.lock is not None else contextlib.nullcontext()
 
     def _cached(self, slot: str, key, build: Callable[[], object]):
-        held = getattr(self, slot)
-        if held is not None and held[0] == key:
-            return held[1]
-        with self.reading():
-            value = build()
-        setattr(self, slot, (key, value))
-        return value
+        with self.reading(), self.view_lock:
+            held = getattr(self, slot)
+            if held is not None and held[0] == key:
+                return held[1]
+            variants = self.language_variants.setdefault(slot, OrderedDict()) if slot in {"viz_cache", "hierarchy_cache", "schema_cache"} else None
+            if variants is not None:
+                if held is not None:
+                    variants[held[0]] = held[1]
+                if key in variants:
+                    value = variants[key]
+                    variants.move_to_end(key)
+                else:
+                    value = build()
+                    variants[key] = value
+                while len(variants) > 4:
+                    variants.popitem(last=False)
+            else:
+                value = build()
+            setattr(self, slot, (key, value))
+            return value
 
     def ensure_loaded(self) -> Graph:
         """Parse the persisted RDF on first use (lazy restore).
@@ -462,10 +496,11 @@ class Ontology:
                 return self.source_provider()
         return self.data_path.read_bytes()
 
-    def query_schema(self) -> dict:
+    def query_schema(self, lang: Optional[str] = None) -> dict:
         """Class-level schema for the visual query builder (cached)."""
+        langs = self.label_langs(lang)
         return self._cached(
-            "schema_cache", self.revision, lambda: build_query_schema(self.ensure_loaded())
+            "schema_cache", (self.revision, langs), lambda: build_query_schema(self.ensure_loaded(), langs=langs)
         )
 
     def hierarchy(self, lang: Optional[str] = None) -> dict:

@@ -34,7 +34,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import GraphNotice from "./GraphNotice";
 import type { VizGraph } from "../types";
@@ -280,4 +282,11 @@ describe("GraphNotice", () => {
     expect(showMore().disabled).toBe(true);
     expect(document.activeElement).toBe(showLess());
   });
+});
+it("announces Japanese true totals and translated graph budget controls", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><GraphNotice stats={truncatedStats()} defaultBudget={2000} atMaximum={false} restoreFocus={null}
+    onShowMore={vi.fn()} onShowLess={vi.fn()} onFocusRestored={vi.fn()} /></I18nProvider>);
+  expect(screen.getByRole("status").textContent).toContain("18,717件");
+  expect(screen.getByRole("button", { name: "表示を増やす" })).toBeTruthy();
 });

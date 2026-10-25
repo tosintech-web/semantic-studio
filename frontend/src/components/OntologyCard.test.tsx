@@ -33,8 +33,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import OntologyCard from "./OntologyCard";
 import type { CardSketch, OntologySummary } from "../types";
 
@@ -237,7 +240,7 @@ describe("OntologyCard verbs", () => {
     const { container } = renderCard();
     const verbs = [...container.querySelectorAll(".onto-verb")].map((b) => b.textContent);
 
-    expect(verbs).toEqual(["Explore", "Query", "View"]);
+    expect(verbs).toEqual(["Explore", "Entities", "Query", "View"]);
   });
 
   it("a verb reports the ontology and the mode together", () => {
@@ -259,7 +262,7 @@ describe("OntologyCard verbs", () => {
     // "＋" and "－".
     renderCard();
 
-    for (const verb of ["Explore", "Query", "View"]) {
+    for (const verb of ["Explore", "Entities", "Query", "View"]) {
       const button = screen.getByRole("button", { name: `${verb} FIBO quickstart` });
       // The visible text and the spoken name agree, so the two cannot drift.
       expect(button.textContent).toBe(verb);
@@ -405,7 +408,7 @@ describe("OntologyCard row layout", () => {
     const { container } = renderCard({}, { layout: "row" });
 
     expect(container.querySelector(".onto-card")?.classList.contains("onto-row")).toBe(true);
-    expect(container.querySelectorAll(".onto-verb")).toHaveLength(3);
+    expect(container.querySelectorAll(".onto-verb")).toHaveLength(4);
     expect(menuButton()).toBeTruthy();
     expect(container.querySelector(".onto-mini svg")).toBeTruthy();
   });
@@ -423,4 +426,23 @@ describe("OntologyCard row layout", () => {
       expect(button.hasAttribute("tabindex")).toBe(false);
     }
   });
+});
+
+
+it("rewords composition-band titles without changing their SVG or proportions", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const handlers = { onOpen: vi.fn(), onEnterMode: vi.fn(), onViewSource: vi.fn(), onDownloadDocs: vi.fn(), onRemove: vi.fn() };
+  const { container } = render(<I18nProvider><UiLanguageSelect /><OntologyCard summary={summary()} theme="dark" layout="card" busy={false} working={false} {...handlers} /></I18nProvider>);
+  const bands = [...container.querySelectorAll<HTMLElement>(".onto-bar-band")];
+  const widths = bands.map(band => band.style.width);
+  const svg = container.querySelector(".onto-mini svg");
+  expect(svg).toBeTruthy();
+  expect(bands[0].title).toBe("クラス：11,208件");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(bands[0].title).toBe("Class: 11,208");
+  expect(bands.map(band => band.style.width)).toEqual(widths);
+  expect([...container.querySelectorAll(".onto-bar-band")]).toEqual(bands);
+  expect(container.querySelector(".onto-mini svg")).toBe(svg);
+  expect(Object.values(api).every(mock => mock.mock.calls.length === 0)).toBe(true);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

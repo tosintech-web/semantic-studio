@@ -76,6 +76,8 @@ EXPECTED OUTPUT
 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useI18n } from "../i18n/I18nProvider";
+import { renderServerError } from "../i18n/serverMessage";
 import { downloadDocumentation } from "../api";
 import { triggerDownload } from "../download";
 import { libraryEntries } from "../home/libraryOrder";
@@ -87,7 +89,7 @@ import type { AppMode, OntologySummary, ProjectSummary, Theme } from "../types";
 export interface HomeProjects extends ProjectActions {
   list: ProjectSummary[];
   loading: boolean;
-  error: string | null;
+  error: unknown;
   /** The project an action is running on, or null. */
   busyId: string | null;
   onNew: () => void;
@@ -112,20 +114,12 @@ export type HomeLayout = "cards" | "rows";
  *  header tabs are no longer disabled, so pressing Explore with an empty canvas
  *  is answerable — and answering it teaches the model the disabled tabs used to
  *  hide: modes act on an ontology. */
-const PENDING_HEADING: Record<AppMode, string> = {
-  explore: "Choose an ontology to explore",
-  query: "Choose an ontology to query",
-  view: "Choose an ontology to view",
-  hierarchy: "Choose an ontology to see its hierarchy",
-  // Never pending in practice: the Shapes tab shows only with a project open.
-  shapes: "Open a project to work on its shapes",
-  home: "Your library",
-};
+
 
 interface Props {
   ontologies: OntologySummary[];
   loading: boolean;
-  error: string | null;
+  error: unknown;
   theme: Theme;
   /** The entry App is currently working on — counting an ontology's saved
    *  queries before its removal dialog — so that card can say so and the rest
@@ -196,6 +190,7 @@ export default function HomeScreen({
   projects,
   onStartProject,
 }: Props) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   // DOC-1. The ontology whose documentation is being generated, the one waiting
   // on a fetch-source confirmation, the last error, and where the progress
@@ -203,7 +198,7 @@ export default function HomeScreen({
   // on a download that produces a file the browser saves rather than app state.
   const [docsBusyId, setDocsBusyId] = useState<string | null>(null);
   const [docsConfirm, setDocsConfirm] = useState<OntologySummary | null>(null);
-  const [docsError, setDocsError] = useState<string | null>(null);
+  const [docsError, setDocsError] = useState<unknown>(null);
   const [docsStatus, setDocsStatus] = useState<"" | "preparing" | "ready">("");
   // The opt-in (DOC-1 D-038): off by default, reset each time the dialog opens,
   // so the safe path is never carried over from a previous export.
@@ -310,7 +305,7 @@ export default function HomeScreen({
       triggerDownload(blob, filename);
       setDocsStatus("ready");
     } catch (e: unknown) {
-      setDocsError(e instanceof Error ? e.message : String(e));
+      setDocsError(e);
       setDocsStatus("");
     } finally {
       docsRestorePending.current = true;
@@ -426,18 +421,8 @@ export default function HomeScreen({
   // Documentation generation leads — it is a deliberate action the user is
   // waiting on — and its "ready" holds until the next search keystroke clears
   // it (see the search onChange).
-  const announcement =
-    docsStatus === "preparing"
-      ? "Preparing documentation…"
-      : docsStatus === "ready"
-        ? "Documentation ready."
-        : needle
-          ? matching.length === 1
-            ? "1 entry matches"
-            : `${matching.length} entries match`
-          : "";
-
-  const heading = pendingMode ? PENDING_HEADING[pendingMode] : "Your library";
+  const announcement = docsStatus === "preparing" ? t("home.preparing") : docsStatus === "ready" ? t("home.ready") : needle ? matching.length === 1 ? t("home.matches.one") : t("home.matches.many", { count: matching.length }) : "";
+  const heading = pendingMode ? t(`home.pending.${pendingMode}`) : t("home.library");
 
   return (
     // Both class names on purpose. `start-screen` is what carries the layout
@@ -448,8 +433,8 @@ export default function HomeScreen({
         <h1 id="home-screen-title">Semantic Studio</h1>
         <p className="start-lede">
           {pendingMode
-            ? "Pick an ontology below and it opens straight into that mode."
-            : "Open an ontology to begin. Nothing loads until you pick."}
+            ? t("home.pick")
+            : t("home.begin")}
         </p>
 
         {/* Rendered even when idle: a live region added to the DOM at the same
@@ -468,18 +453,14 @@ export default function HomeScreen({
                   className="primary large"
                   onClick={projects.onNew}
                   disabled={projectBusyId !== null}
-                >
-                  New project
-                </button>
+                >{t("home.newProject")}</button>
               )}
               {/* Search and the view toggle are absent while the library is
                   empty: a search box over nothing is a control that cannot do
                   anything. */}
               {!listsLoading && entries.length > 0 && (
                 <>
-                  <label className="visually-hidden" htmlFor="home-search">
-                    Search your library by name
-                  </label>
+                  <label className="visually-hidden" htmlFor="home-search">{t("home.search")}</label>
                   <input
                     id="home-search"
                     type="search"
@@ -496,23 +477,19 @@ export default function HomeScreen({
                     // a placeholder that invited a concept name would return
                     // nothing and teach the user the feature is broken rather
                     // than absent.
-                    placeholder="Search your library by name"
+                    placeholder={t("home.search")}
                   />
-                  <div className="home-view-toggle" role="group" aria-label="Library view">
+                  <div className="home-view-toggle" role="group" aria-label={t("home.view")}>
                     <button
                       className={layout === "cards" ? "active" : undefined}
                       aria-pressed={layout === "cards"}
                       onClick={() => chooseLayout("cards")}
-                    >
-                      Cards
-                    </button>
+                    >{t("home.cards")}</button>
                     <button
                       className={layout === "rows" ? "active" : undefined}
                       aria-pressed={layout === "rows"}
                       onClick={() => chooseLayout("rows")}
-                    >
-                      Rows
-                    </button>
+                    >{t("home.rows")}</button>
                   </div>
                 </>
               )}
@@ -521,26 +498,22 @@ export default function HomeScreen({
 
           {/* Each list fails alone: what did load is still shown, and the file
               routes below stay usable. */}
-          {error && (
+          {!!error && (
             <div className="start-error">
-              <p className="detail-error">{error}</p>
-              <button className="ghost" onClick={onRetry}>
-                Try again
-              </button>
+              <p className="detail-error">{renderServerError(error, t)}</p><details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details>
+              <button className="ghost" onClick={onRetry}>{t("home.retry")}</button>
             </div>
           )}
-          {projects?.error && <p className="detail-error">{projects.error}</p>}
+          {!!projects?.error && <><p className="detail-error">{renderServerError(projects.error, t)}</p><details><summary>{t("common.details")}</summary><pre>{projects.error instanceof Error ? projects.error.message : String(projects.error)}</pre></details></>}
 
           {listsLoading ? (
-            <p className="start-empty">Loading your library…</p>
+            <p className="start-empty">{t("home.loading")}</p>
           ) : entries.length === 0 ? (
             !error && !projects?.error && (
-              <p className="start-empty">
-                Nothing here yet. Start a project, or open a file below.
-              </p>
+              <p className="start-empty">{t("home.empty")}</p>
             )
           ) : matching.length === 0 ? (
-            <p className="start-empty">Nothing in your library matches “{query.trim()}”.</p>
+            <p className="start-empty">{t("home.noMatch", { query: query.trim() })}</p>
           ) : (
             <div className={layout === "rows" ? "onto-grid onto-grid-rows" : "onto-grid"}>
               {matching.map((entry, i) =>
@@ -582,18 +555,14 @@ export default function HomeScreen({
           {/* A refusal (the graph is over the embed guard) or a generation
               failure, named beneath the library rather than in a way that
               leaves a broken file behind. */}
-          {docsError && <p className="detail-error">{docsError}</p>}
+          {!!docsError && <><p className="detail-error">{renderServerError(docsError, t)}</p><details><summary>{t("common.details")}</summary><pre>{docsError instanceof Error ? docsError.message : String(docsError)}</pre></details></>}
         </section>
 
         <section className="start-section" aria-labelledby="home-or-heading">
-          <h2 id="home-or-heading">Or</h2>
+          <h2 id="home-or-heading">{t("home.or")}</h2>
           <div className="start-routes">
-            <button ref={openFileRef} disabled={busy} onClick={() => onOpenDialog("file")}>
-              Open a file
-            </button>
-            <button disabled={busy} onClick={() => onOpenDialog("url")}>
-              Load from a URL
-            </button>
+            <button ref={openFileRef} disabled={busy} onClick={() => onOpenDialog("file")}>{t("home.file")}</button>
+            <button disabled={busy} onClick={() => onOpenDialog("url")}>{t("home.url")}</button>
           </div>
         </section>
       </div>
@@ -619,19 +588,12 @@ export default function HomeScreen({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="modal-header">
-                  <h2 id="docs-confirm-title">Generate documentation?</h2>
+                  <h2 id="docs-confirm-title">{t("home.docsQuestion")}</h2>
                 </div>
                 {host && (
-                  <p>
-                    <strong>{docsConfirm.name}</strong> was fetched from{" "}
-                    <code>{host}</code>. Its publisher may already document it.
-                  </p>
+                  <p>{t("home.docsOrigin", { name: docsConfirm.name, host })}</p>
                 )}
-                <p>
-                  The documentation covers the schema. Instance data (named
-                  individuals and their assertions) is left out unless you ask
-                  for it below.
-                </p>
+                <p>{t("home.docsScope")}</p>
                 {individuals > 0 && (
                   <>
                     <label className="docs-optin">
@@ -640,30 +602,22 @@ export default function HomeScreen({
                         checked={docsInclude}
                         onChange={(e) => setDocsInclude(e.target.checked)}
                       />
-                      Include instance examples (adds{" "}
-                      {individuals.toLocaleString()}{" "}
-                      {individuals === 1 ? "individual" : "individuals"},{" "}
-                      {assertions.toLocaleString()}{" "}
-                      {assertions === 1 ? "assertion" : "assertions"})
+                      {t(`home.docsInclude.${individuals === 1 ? "one" : "many"}_${assertions === 1 ? "one" : "many"}`, { individuals, assertions })}
                     </label>
                     {docsInclude && (
-                      <p className="hint docs-optin-warning">
-                        This publishes instance data, not only the model.
-                      </p>
+                      <p className="hint docs-optin-warning">{t("home.docsWarn")}</p>
                     )}
                   </>
                 )}
                 <div className="modal-actions">
                   <button className="ghost" onClick={cancelDocs}>
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                   <button
                     ref={docsConfirmBtn}
                     className="primary"
                     onClick={() => void generateDocs(docsConfirm, docsInclude)}
-                  >
-                    Generate documentation
-                  </button>
+                  >{t("home.generate")}</button>
                 </div>
               </div>
             </div>

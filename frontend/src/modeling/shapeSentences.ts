@@ -13,6 +13,17 @@ SUMMARY
     checks the rule editor makes before Add is allowed.
 
 BASIC IDEA
+    Count/length drafts must be exact browser integers; larger valid RDF counts
+    remain editable as Turtle instead of silently rounding through Number.
+
+    Result names use validated display metadata when available; original names
+    remain the compatibility fallback and identity never depends on translation.
+
+    Whole catalog templates provide rule descriptions, choices, editor checks
+    and result-panel headers in the UI locale. English morphology stays in
+    English branches; other locales preserve original labels and values.
+    Validation-result summaries also derive from raw result counts.
+
     Every rule and every result is a sentence in the learner's own names
     (Section 7), so the sentences are built in one place and tested without
     rendering. Names come from the server, already in the display language;
@@ -42,41 +53,73 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { englishTranslator, translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
 import type { PanelState, ShapeForm, ShapeRule, ValidationPanel, ValidationResult } from "../types";
 import { a, mustVerb } from "./sentences";
 
-const DATATYPE_WORDS: Record<string, string> = {
-  "xsd:string": "text",
-  "rdf:langString": "text in a language",
-  "xsd:integer": "a whole number",
-  "xsd:decimal": "a number",
-  "xsd:boolean": "true or false",
-  "xsd:date": "a date",
-  "xsd:dateTime": "a date and time",
-  "xsd:anyURI": "a web address",
-};
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
+const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
+const DATATYPES = {
+  "xsd:string": "shapeWords.datatype.string",
+  "rdf:langString": "shapeWords.datatype.langString",
+  "xsd:integer": "shapeWords.datatype.integer",
+  "xsd:decimal": "shapeWords.datatype.decimal",
+  "xsd:boolean": "shapeWords.datatype.boolean",
+  "xsd:date": "shapeWords.datatype.date",
+  "xsd:dateTime": "shapeWords.datatype.dateTime",
+  "xsd:anyURI": "shapeWords.datatype.anyURI",
+} as const;
+const LANGUAGE_CODES = {
+  ar: "shapeWords.language.ar",
+  ca: "shapeWords.language.ca",
+  cs: "shapeWords.language.cs",
+  da: "shapeWords.language.da",
+  de: "shapeWords.language.de",
+  el: "shapeWords.language.el",
+  en: "shapeWords.language.en",
+  es: "shapeWords.language.es",
+  fi: "shapeWords.language.fi",
+  fr: "shapeWords.language.fr",
+  he: "shapeWords.language.he",
+  hi: "shapeWords.language.hi",
+  hu: "shapeWords.language.hu",
+  it: "shapeWords.language.it",
+  ja: "shapeWords.language.ja",
+  ko: "shapeWords.language.ko",
+  la: "shapeWords.language.la",
+  nb: "shapeWords.language.nb",
+  nl: "shapeWords.language.nl",
+  no: "shapeWords.language.no",
+  pl: "shapeWords.language.pl",
+  pt: "shapeWords.language.pt",
+  ro: "shapeWords.language.ro",
+  ru: "shapeWords.language.ru",
+  sv: "shapeWords.language.sv",
+  tr: "shapeWords.language.tr",
+  uk: "shapeWords.language.uk",
+  zh: "shapeWords.language.zh",
+} as const;
 
-/** The seven value types of E-6, as the rule editor offers them. */
-export const OFFERED_TYPES: { value: string; label: string }[] = [
-  { value: "xsd:string", label: "Text" },
-  { value: "xsd:integer", label: "Whole number" },
-  { value: "xsd:decimal", label: "Number" },
-  { value: "xsd:boolean", label: "True or false" },
-  { value: "xsd:date", label: "Date" },
-  { value: "xsd:dateTime", label: "Date and time" },
-  { value: "xsd:anyURI", label: "Web address" },
-];
+/** Type identities stay stable when their display words change. */
+export function offeredTypes(locale: UiLocale = "en"): { value: string; label: string }[] {
+  const t = tFor(locale);
+  return [
+    { value: "xsd:string", label: t("shapeWords.offered.string") },
+    { value: "xsd:integer", label: t("shapeWords.offered.integer") },
+    { value: "xsd:decimal", label: t("shapeWords.offered.decimal") },
+    { value: "xsd:boolean", label: t("shapeWords.offered.boolean") },
+    { value: "xsd:date", label: t("shapeWords.offered.date") },
+    { value: "xsd:dateTime", label: t("shapeWords.offered.dateTime") },
+    { value: "xsd:anyURI", label: t("shapeWords.offered.anyURI") },
+  ];
+}
+export const OFFERED_TYPES = offeredTypes();
 
-const LANGUAGES: Record<string, string> = {
-  ar: "Arabic", ca: "Catalan", cs: "Czech", da: "Danish", de: "German", el: "Greek",
-  en: "English", es: "Spanish", fi: "Finnish", fr: "French", he: "Hebrew", hi: "Hindi",
-  hu: "Hungarian", it: "Italian", ja: "Japanese", ko: "Korean", la: "Latin", nb: "Norwegian",
-  nl: "Dutch", no: "Norwegian", pl: "Polish", pt: "Portuguese", ro: "Romanian", ru: "Russian",
-  sv: "Swedish", tr: "Turkish", uk: "Ukrainian", zh: "Chinese",
-};
-
-export function languageName(tag: string): string {
-  return LANGUAGES[tag.split("-")[0].toLowerCase()] ?? tag;
+export function languageName(tag: string, locale: UiLocale = "en"): string {
+  const base = tag.split("-")[0].toLowerCase();
+  return own(LANGUAGE_CODES, base) ? tFor(locale)(LANGUAGE_CODES[base as keyof typeof LANGUAGE_CODES]) : tag;
 }
 
 const IRREGULAR: Record<string, string> = {
@@ -108,10 +151,10 @@ export function plural(phrase: string): string {
 
 /** What a rule is about, in words: its label, or the path's last name when
  *  it has none -- never "undefined" (Stage A follow-up 5). */
-export function pathWords(rule: Pick<ShapeRule, "path" | "pathLabel">): string {
+export function pathWords(rule: Pick<ShapeRule, "path" | "pathLabel">, locale: UiLocale = "en"): string {
   if (rule.pathLabel) return rule.pathLabel;
   const names = rule.path.map((iri) => iri.slice(Math.max(iri.lastIndexOf("#"), iri.lastIndexOf("/")) + 1) || iri);
-  return names.join(" or ") || "value";
+  return names.join(tFor(locale)("shapeWords.pathOr")) || tFor(locale)("shapeWords.value");
 }
 
 /** A date and time as the server reads one: a field that shows no seconds
@@ -120,126 +163,122 @@ export function dateTimeBound(value: string): string {
   return /T\d{2}:\d{2}$/.test(value) ? `${value}:00` : value;
 }
 
-function listWords(items: string[], last = "and"): string {
+function listWords(items: string[], last: "and" | "or", t: Translator): string {
   if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} ${last} ${items[items.length - 1]}`;
+  return t("shapeWords.list", { head: items.slice(0, -1).join(t("shapeWords.separator")), join: t(`shapeWords.${last}`), tail: items[items.length - 1] });
 }
-
-function typeWord(datatype: string): string {
-  return DATATYPE_WORDS[datatype] ?? `of the type ${datatype}`;
+function typeWord(datatype: string, t: Translator): string {
+  return own(DATATYPES, datatype) ? t(DATATYPES[datatype as keyof typeof DATATYPES]) : t("shapeWords.typeUnknown", { datatype });
 }
-
-function times(n: number): string {
-  return n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
+function times(n: number, t: Translator): string {
+  return n === 1 ? t("shapeWords.once") : n === 2 ? t("shapeWords.twice") : t("shapeWords.times", { count: n });
 }
-
 function valueWord(v: { value: string; label?: string; kind: string }): string {
   return v.kind === "link" ? v.label ?? v.value : v.value;
 }
 
 /** What each value must be, in the order a learner reads them. */
-function qualifiers(rule: ShapeRule, relationship: boolean): string[] {
+function qualifiers(rule: ShapeRule, relationship: boolean, locale: UiLocale): string[] {
+  const t = tFor(locale);
   const out: string[] = [];
-  if (rule.datatype) out.push(`as ${typeWord(rule.datatype)}`);
-  if (rule.class && !relationship) out.push(`pointing to ${a(rule.classLabel ?? rule.class)}`);
+  if (rule.datatype) out.push(t("shapeWords.as", { type: typeWord(rule.datatype, t) }));
+  if (rule.class && !relationship) out.push(t("shapeWords.pointing", { target: locale === "en" ? a(rule.classLabel ?? rule.class) : rule.classLabel ?? rule.class }));
   const { minLength: lo, maxLength: hi } = rule;
-  if (lo !== undefined && hi !== undefined) out.push(`of ${lo} to ${hi} characters`);
-  else if (lo !== undefined) out.push(`of at least ${lo} ${lo === 1 ? "character" : "characters"}`);
-  else if (hi !== undefined) out.push(`of at most ${hi} ${hi === 1 ? "character" : "characters"}`);
-  if (rule.pattern) out.push(`matching the pattern ${rule.pattern}`);
+  if (lo !== undefined && hi !== undefined) out.push(t("shapeWords.length.between", { low: lo, high: hi }));
+  else if (lo !== undefined) out.push(t(lo === 1 ? "shapeWords.length.min.one" : "shapeWords.length.min.many", { count: lo }));
+  else if (hi !== undefined) out.push(t(hi === 1 ? "shapeWords.length.max.one" : "shapeWords.length.max.many", { count: hi }));
+  if (rule.pattern) out.push(t("shapeWords.pattern", { pattern: rule.pattern }));
   const low = rule.minInclusive?.value;
   const high = rule.maxInclusive?.value;
-  if (low !== undefined && high !== undefined) out.push(`between ${low} and ${high}`);
-  else if (low !== undefined) out.push(`at least ${low}`);
-  else if (high !== undefined) out.push(`at most ${high}`);
-  if (rule.in && rule.in.length) out.push(`one of: ${rule.in.map(valueWord).join(", ")}`);
-  if (rule.languageIn && rule.languageIn.length) {
-    out.push(`only in ${listWords(rule.languageIn.map(languageName), "or")}`);
-  }
-  if (rule.uniqueLang) out.push("one per language");
+  if (low !== undefined && high !== undefined) out.push(t("shapeWords.range.between", { low, high }));
+  else if (low !== undefined) out.push(t("shapeWords.range.min", { value: low }));
+  else if (high !== undefined) out.push(t("shapeWords.range.max", { value: high }));
+  if (rule.in?.length) out.push(t("shapeWords.allowed", { values: rule.in.map(valueWord).join(t("shapeWords.separator")) }));
+  if (rule.languageIn?.length) out.push(t("shapeWords.languages", { languages: listWords(rule.languageIn.map(tag => languageName(tag, locale)), "or", t) }));
+  if (rule.uniqueLang) out.push(t("shapeWords.unique"));
   return out;
 }
 
 /** One rule, as the form lists it and the editor reads it back (5.3). */
-export function ruleSentence(rule: ShapeRule): string {
-  const label = pathWords(rule);
-  // At least 0 says nothing: *between 0 and 3* reads *at most 3* (follow-up 5).
+export function ruleSentence(rule: ShapeRule, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const label = pathWords(rule, locale);
+  const noun = locale === "en" ? plural(label) : label;
+  const one = locale === "en" ? a(label) : label;
   const min = rule.minCount === 0 ? undefined : rule.minCount;
   const max = rule.maxCount;
   const required = rule.requiredLanguages ?? [];
   if (rule.pathKind === "relationship") {
-    const to = rule.class ? ` ${a(rule.classLabel ?? rule.class)}` : "";
+    const target = rule.class ? locale === "en" ? a(rule.classLabel ?? rule.class) : rule.classLabel ?? rule.class : t("shapeWords.something");
     let count = "";
-    if (min !== undefined && max !== undefined && min === max) count = `exactly ${times(min)}`;
-    else if (min !== undefined && max !== undefined) count = `between ${min} and ${max} times`;
-    else if (min !== undefined && min > 0) count = min === 1 ? "at least once" : `at least ${min} times`;
-    else if (max !== undefined) count = `at most ${times(max)}`;
-    const head = `${label}${to || " something"}`;
-    return [head, count, ...qualifiers(rule, true)].filter(Boolean).join(", ");
+    if (min !== undefined && max !== undefined && min === max) count = t("shapeWords.rel.exactly", { times: times(min, t) });
+    else if (min !== undefined && max !== undefined) count = t("shapeWords.rel.between", { low: min, high: max });
+    else if (min !== undefined && min > 0) count = min === 1 ? t("shapeWords.rel.min.one") : t("shapeWords.rel.min.many", { count: min });
+    else if (max !== undefined) count = t("shapeWords.rel.max", { times: times(max, t) });
+    return [t("shapeWords.relation", { label, target }), count, ...qualifiers(rule, true, locale)].filter(Boolean).join(t("shapeWords.separator"));
   }
   let head: string;
-  if (min === 1 && max === 1) head = `must have exactly one ${label}`;
-  else if (min !== undefined && max !== undefined && min === max) head = `must have exactly ${min} ${plural(label)}`;
-  else if (min !== undefined && max !== undefined) head = `must have between ${min} and ${max} ${plural(label)}`;
-  else if (min !== undefined && min > 0) head = min === 1 ? `must have ${a(label)}` : `must have at least ${min} ${plural(label)}`;
-  else if (max === 1) head = `may have at most one ${label}`;
-  else if (max !== undefined) head = `may have at most ${max} ${plural(label)}`;
-  else if (required.length) head = `must have ${a(label)}`;
-  else head = `may have ${plural(label)}`;
-  if (required.length) {
-    head += ` in ${listWords(required.map(languageName))}`;
+  if (min === 1 && max === 1) head = t("shapeWords.count.exactlyOne", { label });
+  else if (min !== undefined && max !== undefined && min === max) head = t("shapeWords.count.exactly", { count: min, label: noun });
+  else if (min !== undefined && max !== undefined) head = t("shapeWords.count.between", { low: min, high: max, label: noun });
+  else if (min !== undefined && min > 0) head = min === 1 ? t("shapeWords.count.required", { label: one }) : t("shapeWords.count.min", { count: min, label: noun });
+  else if (max === 1) head = t("shapeWords.count.maxOne", { label });
+  else if (max !== undefined) head = t("shapeWords.count.max", { count: max, label: noun });
+  else if (required.length) head = t("shapeWords.count.required", { label: one });
+  else head = t("shapeWords.count.any", { label: noun });
+  if (required.length) head = t("shapeWords.requiredLanguages", { head, languages: listWords(required.map(tag => languageName(tag, locale)), "and", t) });
+  const quals = qualifiers(rule, false, locale);
+  // Only English folds the datatype and length into one phrase and adds
+  // "each". Japanese uses explicit field descriptions with unchanged names.
+  const lengthAt = rule.class ? 2 : 1;
+  if (locale === "en" && rule.datatype && !rule.class && (rule.minLength !== undefined || rule.maxLength !== undefined)) {
+    quals.splice(0, 2, t("shapeWords.typeLength", { type: quals[0], length: quals[lengthAt] }));
   }
-  const quals = qualifiers(rule, false);
-  // A type and the length after it are one phrase: *as text of at most 20
-  // characters*, not *as text, of at most* (follow-up 5).
-  if (rule.datatype && quals.length > 1 && quals[1].startsWith("of ")) {
-    quals.splice(0, 2, `${quals[0]} ${quals[1]}`);
+  if (locale === "en" && quals.length && (max === undefined || max > 1) && !(min === 1 && max === 1)) {
+    quals[0] = t("shapeWords.each", { qualifier: rule.datatype ? quals[0].slice(t("shapeWords.as", { type: "" }).length) : quals[0] });
   }
-  // "may have phone numbers, each text of at most 20 characters".
-  if (quals.length && (max === undefined || max > 1) && !(min === 1 && max === 1)) {
-    quals[0] = `each ${quals[0].replace(/^as /, "")}`;
-  }
-  return [head, ...quals].join(", ");
+  return [head, ...quals].join(t("shapeWords.separator"));
 }
 
 /** Who a shape is about: *Every Person*, *Every class*, *Every concept*. */
-export function everyWord(shape: Pick<ShapeForm, "target">): string {
-  if (!shape.target) return "Every match";
-  if (shape.target.every) return shape.target.every[0].toUpperCase() + shape.target.every.slice(1);
-  return `Every ${shape.target.label}`;
+export function everyWord(shape: Pick<ShapeForm, "target">, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  if (!shape.target) return t("shapeWords.everyMatch");
+  if (locale === "en" && shape.target.every) return shape.target.every[0].toUpperCase() + shape.target.every.slice(1);
+  if (locale !== "en") {
+    const iri = shape.target.iri;
+    if (iri === "http://www.w3.org/2002/07/owl#Class" || iri === "http://www.w3.org/2000/01/rdf-schema#Class") return t("shapeWords.everyClass");
+    if (iri === "http://www.w3.org/2004/02/skos/core#Concept") return t("shapeWords.everyConcept");
+  }
+  return t("shapeWords.every", { name: shape.target.label });
 }
 
-/** The whole shape read back, built from its rules (5.3). */
-export function shapeSentence(shape: Pick<ShapeForm, "target" | "rules">): string {
-  const who = everyWord(shape);
-  if (!shape.rules.length) return `${who}: no rules yet.`;
-  // A relationship's rule starts with its label, read after *must* by the
-  // verb rule (sentences.ts): *must use a Car*, never *must be uses* (T-19).
-  const parts = shape.rules.map((rule) => {
-    const sentence = ruleSentence(rule);
-    if (rule.pathKind !== "relationship") return sentence;
-    const label = pathWords(rule);
-    return `must ${mustVerb(label)}${sentence.slice(label.length)}`;
+export function shapeSentence(shape: Pick<ShapeForm, "target" | "rules">, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const target = everyWord(shape, locale);
+  if (!shape.rules.length) return t("shapeWords.shapeEmpty", { target });
+  const parts = shape.rules.map(rule => {
+    const sentence = ruleSentence(rule, locale);
+    if (locale !== "en" || rule.pathKind !== "relationship") return sentence;
+    const label = pathWords(rule, locale);
+    return t("shapeWords.must", { verb: mustVerb(label), tail: sentence.slice(label.length) });
   });
-  // Rules carry their own commas, so the last one is joined by ", and":
-  // *…exactly one name, as text, and must work for an Organization*
-  const joined = parts.length > 1 ? `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}` : parts[0];
-  return `${who} ${joined}.`;
+  const rules = parts.length > 1 ? t("shapeWords.joinRules", { head: parts.slice(0, -1).join(t("shapeWords.separator")), last: parts[parts.length - 1] }) : parts[0];
+  return t("shapeWords.shape", { target, rules });
 }
 
-/** A list row's short sentence (5.1): *Every Person: 3 rules*. */
-export function rowSentence(shape: Pick<ShapeForm, "target" | "rules">): string {
-  const n = shape.rules.length;
-  return `${everyWord(shape)}: ${n === 1 ? "1 rule" : `${n} rules`}`;
+export function rowSentence(shape: Pick<ShapeForm, "target" | "rules">, locale: UiLocale = "en"): string {
+  const count = shape.rules.length;
+  return tFor(locale)(count === 1 ? "shapeWords.row.one" : "shapeWords.row.many", { target: everyWord(shape, locale), count });
 }
 
 /** The word a result is said with, beside its colour: never colour alone. */
+export function panelStateWord(state: PanelState, t: Translator = englishTranslator): string {
+  return t(`shapePanel.state.${state}`);
+}
 export const STATE_WORDS: Record<PanelState, string> = {
-  fails: "Fails",
-  passes: "Passes",
-  warnings: "Warnings",
-  nothing: "Nothing to check",
-  error: "Could not run",
+  fails: panelStateWord("fails"), passes: panelStateWord("passes"),
+  warnings: panelStateWord("warnings"), nothing: panelStateWord("nothing"), error: panelStateWord("error"),
 };
 
 export const STATE_SIGNS: Record<PanelState, string> = {
@@ -251,78 +290,82 @@ export const STATE_SIGNS: Record<PanelState, string> = {
 };
 
 /** A panel's header text after its sign (5.7). */
-export function panelHeader(panel: ValidationPanel): string {
-  const one = panel.target?.one ?? "match";
-  const many = panel.target?.many ?? "matches";
+export function panelHeader(panel: ValidationPanel, locale: UiLocale = "en"): string {
+  const t = ((code, args) => translate(locale, code, args)) as Translator;
+  // English inflections from the server are presentation for English only.
+  const one = (locale === "en" ? panel.target?.one : panel.target?.label) ?? t("shapePanel.match.one");
+  const many = (locale === "en" ? panel.target?.many : panel.target?.label) ?? t("shapePanel.match.many");
+  const name = validWireMessage(panel.nameUiMessage) ? renderServerMessage(panel.nameUiMessage, panel.name, t) : panel.name;
   switch (panel.state) {
-    case "fails": {
-      const problems = panel.problemCount === 1 ? "1 problem" : `${panel.problemCount.toLocaleString()} problems`;
-      const of = `${panel.failingCount.toLocaleString()} of ${panel.focusCount.toLocaleString()} ${panel.focusCount === 1 ? one : many}`;
-      return `${panel.name}: ${of} ${panel.failingCount === 1 ? "fails" : "fail"} (${problems})`;
-    }
+    case "fails":
+      return t(panel.failingCount === 1 ? "shapePanel.fail.one" : "shapePanel.fail.many", {
+        name, failing: panel.failingCount, focus: panel.focusCount, target: panel.focusCount === 1 ? one : many,
+        problems: t(panel.problemCount === 1 ? "shapePanel.problems.one" : "shapePanel.problems.many", { count: panel.problemCount }),
+      });
     case "passes":
-      return panel.focusCount === 1
-        ? `${panel.name}: the one ${one} passes`
-        : `${panel.name}: all ${panel.focusCount.toLocaleString()} ${many} pass`;
+      return panel.focusCount === 1 ? t("shapePanel.pass.one", { name, target: one }) : t("shapePanel.pass.many", { name, count: panel.focusCount, target: many });
     case "warnings":
-      return `${panel.name}: ${panel.warningCount === 1 ? "1 warning" : `${panel.warningCount.toLocaleString()} warnings`}`;
+      return t(panel.warningCount === 1 ? "shapePanel.warning.one" : "shapePanel.warning.many", { name, count: panel.warningCount });
     case "nothing":
-      return `${panel.name}: no ${panel.target?.label ?? "match"} in the data yet`;
+      return t("shapePanel.nothing", { name, target: panel.target?.label ?? t("shapePanel.match.one") });
     case "error":
-      return `${panel.name}: this shape could not be checked`;
+      return t("shapePanel.error", { name });
   }
 }
 
 /** A panel's accessible name: the state word, then the header with counts. */
-export function panelName(panel: ValidationPanel): string {
-  return `${STATE_WORDS[panel.state]}. ${panelHeader(panel)}`;
+export function panelName(panel: ValidationPanel, locale: UiLocale = "en"): string {
+  const t = ((code, args) => translate(locale, code, args)) as Translator;
+  return t("shapePanel.name", { state: panelStateWord(panel.state, t), header: panelHeader(panel, locale) });
 }
 
 /** What the Results tab carries when a run ends while Shape is showing
  *  (load-and-shapes 5.3): the problems found, in words, never a bare number. */
-export function problemsFound(result: ValidationResult): string {
-  if (result.stopped) return "stopped";
-  const n = result.shapes.reduce((sum, p) => sum + p.problemCount, 0);
-  if (n === 0) return "no problems";
-  return n === 1 ? "1 problem" : `${n.toLocaleString()} problems`;
+export function problemsFound(result: ValidationResult, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  if (result.stopped) return t("shapeSummary.stopped");
+  const count = result.shapes.reduce((sum, p) => sum + p.problemCount, 0);
+  if (count === 0) return t("shapeSummary.noProblems");
+  return count === 1 ? t("shapeSummary.problem.one") : t("shapeSummary.problem.many", { count });
 }
 
-/** What the live region says after a run (Section 6). */
-export function validationSummary(result: ValidationResult): string {
-  if (result.stopped) {
-    return `The check took too long and was stopped (${result.shapeCount} shapes, ${result.statements.toLocaleString()} statements).`;
-  }
-  const n = result.shapes.length;
-  if (n === 0) return "There are no shapes to check yet.";
+/** Only summary facts are needed by a retained live-region notice. */
+export type ValidationSummaryInput = Pick<ValidationResult, "stopped" | "shapeCount" | "statements"> & {
+  shapes: readonly Pick<ValidationPanel, "state">[];
+};
+
+/** The live summary is derived from result facts, never stored English. */
+export function validationSummary(result: ValidationSummaryInput, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  if (result.stopped) return t("shapeSummary.timeout", { shapes: result.shapeCount, statements: result.statements });
+  const count = result.shapes.length;
+  if (count === 0) return t("shapeSummary.empty");
   const counts: Partial<Record<PanelState, number>> = {};
-  for (const p of result.shapes) counts[p.state] = (counts[p.state] ?? 0) + 1;
-  const words: [PanelState, string, string][] = [
-    ["passes", "passes", "pass"],
-    ["fails", "fails", "fail"],
-    ["warnings", "has warnings", "have warnings"],
-    ["nothing", "has nothing to check", "have nothing to check"],
-    ["error", "could not run", "could not run"],
-  ];
-  const parts = words
-    .filter(([state]) => counts[state])
-    .map(([state, one, many]) => `${counts[state]} ${counts[state] === 1 ? one : many}`);
-  return `${n} ${n === 1 ? "shape" : "shapes"}: ${parts.join(", ")}.`;
+  for (const panel of result.shapes) counts[panel.state] = (counts[panel.state] ?? 0) + 1;
+  const states: PanelState[] = ["passes", "fails", "warnings", "nothing", "error"];
+  const parts = states.filter(state => counts[state]).map(state => {
+    const count = counts[state]!;
+    return t(`shapeSummary.state.${state}.${count === 1 ? "one" : "many"}`, { count });
+  }).join(t("shapeWords.separator"));
+  return t(count === 1 ? "shapeSummary.total.one" : "shapeSummary.total.many", { count, parts });
 }
 
 /** Why a rule cannot be added yet, or null when it can (Section 6: invalid
  *  values keep Add disabled, with a sentence). */
-export function ruleProblem(rule: ShapeRule): string | null {
+export function ruleProblem(rule: ShapeRule, locale: UiLocale = "en"): string | null {
+  const t = tFor(locale);
   const { minCount: min, maxCount: max, minLength: lo, maxLength: hi } = rule;
   for (const [n, what] of [[min, "number"], [max, "number"], [lo, "length"], [hi, "length"]] as const) {
-    if (n !== undefined && (!Number.isInteger(n) || n < 0)) return `Each ${what} is a whole number, 0 or more.`;
+    if (n !== undefined && (!Number.isInteger(n) || n < 0)) return t(`shapeWords.problem.${what}`);
+    if (n !== undefined && !Number.isSafeInteger(n)) return t("shapeWords.problem.precision", { limit: Number.MAX_SAFE_INTEGER });
   }
-  if (min !== undefined && max !== undefined && min > max) return `At least ${min} is more than at most ${max}; the rule could never be met.`;
-  if (lo !== undefined && hi !== undefined && lo > hi) return "The shortest length is longer than the longest.";
+  if (min !== undefined && max !== undefined && min > max) return t("shapeWords.problem.counts", { low: min, high: max });
+  if (lo !== undefined && hi !== undefined && lo > hi) return t("shapeWords.problem.lengths");
   if (rule.pattern !== undefined) {
     try {
       new RegExp(rule.pattern);
     } catch {
-      return "That pattern is not a regular expression this tool can read.";
+      return t("shapeWords.problem.pattern");
     }
   }
   const low = rule.minInclusive;
@@ -337,19 +380,19 @@ export function ruleProblem(rule: ShapeRule): string | null {
         ? /^-?\d{4,}-\d{2}-\d{2}/.test(bound.value)
         : bound.value.trim() !== "" && Number.isFinite(Number(bound.value));
     if (!ok) {
-      if (withTime) return `"${bound.value}" is not a date and time (YYYY-MM-DDThh:mm:ss).`;
-      return isDate ? `"${bound.value}" is not a date (YYYY-MM-DD).` : `"${bound.value}" is not a number.`;
+      if (withTime) return t("shapeWords.problem.dateTime", { value: bound.value });
+      return isDate ? t("shapeWords.problem.date", { value: bound.value }) : t("shapeWords.problem.numeric", { value: bound.value });
     }
   }
   if (low && high && low.datatype === high.datatype) {
     const lower = low.datatype.startsWith("xsd:date") ? low.value > high.value : Number(low.value) > Number(high.value);
-    if (lower) return "The minimum is above the maximum; the rule could never be met.";
+    if (lower) return t("shapeWords.problem.range");
   }
-  if (rule.in && rule.in.length === 0) return "List at least one allowed value.";
-  if (rule.languageIn && rule.languageIn.length === 0) return "Choose at least one language.";
+  if (rule.in && rule.in.length === 0) return t("shapeWords.problem.allowed");
+  if (rule.languageIn && rule.languageIn.length === 0) return t("shapeWords.problem.languages");
   const says = [
     min, max, lo, hi, rule.datatype, rule.class, rule.pattern, low, high, rule.in,
     rule.languageIn, rule.uniqueLang || undefined, rule.requiredLanguages?.length ? rule.requiredLanguages : undefined,
   ].some((v) => v !== undefined && v !== "");
-  return says ? null : "Choose at least one thing to check.";
+  return says ? null : t("shapeWords.problem.empty");
 }

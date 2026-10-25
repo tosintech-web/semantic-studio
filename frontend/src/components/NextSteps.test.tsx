@@ -28,8 +28,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderEn as render } from "../testutils/i18n";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import NextSteps from "./NextSteps";
 import type { NextStepOption } from "./NextSteps";
 
@@ -257,4 +260,19 @@ describe("NextSteps filtering and staleness", () => {
     expect(chips()).toHaveLength(0);
     expect(toggle()!.getAttribute("aria-expanded")).toBe("false");
   });
+});
+
+it("keeps an open continuation filter on language changes and selects the same option object", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const options = optionsWith(4); const add = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><NextSteps options={options} stepCount={1} onAdd={add} /></I18nProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "ステップを追加、候補4件" }));
+  fireEvent.change(screen.getByRole("searchbox", { name: "追加できるステップを絞り込む" }), { target: { value: "Target 2" } });
+  expect(chips()).toHaveLength(1);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect((screen.getByRole("searchbox", { name: "Filter the available steps" }) as HTMLInputElement).value).toBe("Target 2");
+  expect(add).not.toHaveBeenCalled();
+  fireEvent.click(chips()[0]);
+  expect(add.mock.calls[0][0]).toBe(options[2]);
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Add a step, 4 options" }));
 });

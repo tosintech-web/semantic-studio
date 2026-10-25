@@ -12,7 +12,8 @@ BASIC IDEA
     to a real DOM node. This is that bootstrap — deliberately tiny, so all real
     logic lives in App and its children.
 
-    The one thing it does beyond mounting is wrap the tree in ErrorBoundary. It
+    The locale provider wraps ErrorBoundary so even recovery UI can change
+    language. ErrorBoundary wraps the application. It
     belongs here rather than inside App because a throw in App's own render is
     exactly the case that used to blank the page, and a boundary inside the
     component it is protecting cannot catch that.
@@ -31,6 +32,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { I18nProvider } from "./i18n/I18nProvider";
 // Global styles (CSS variables, themes, and every component's classes).
 import "./index.css";
 
@@ -39,8 +41,10 @@ import "./index.css";
 // lifecycles to surface side-effect bugs; it has no effect in production.
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <I18nProvider>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </I18nProvider>
   </React.StrictMode>,
 );

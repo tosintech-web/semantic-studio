@@ -40,6 +40,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { makeUiMessage, renderUiMessage, type UiMessage } from "./i18n/uiMessage";
+import type { Translator } from "./i18n/types";
+import { englishTranslator } from "./i18n/format";
+
 /** Above this many, the dialog states a count instead of listing names. */
 const MAX_NAMED = 3;
 
@@ -50,42 +54,23 @@ const MAX_NAMED = 3;
  * @param savedQueries how many queries will go with it, or null if unknown
  * @param names        their names, used only when all of them fit
  */
-export function removalPrompt(
-  name: string,
-  savedQueries: number | null,
-  names: string[] = [],
-): string {
-  // Unknown, not zero. Warn without naming a number we do not have.
-  if (savedQueries === null) {
-    return (
-      `Remove “${name}”? This deletes its stored copy and any queries saved ` +
-      `against it, which cannot be undone.`
-    );
-  }
-
-  // Nothing extra to lose, so nothing extra to say. A warning shown every time
-  // is a warning nobody reads, and this is the case that keeps it rare.
-  if (savedQueries === 0) {
-    return `Remove “${name}” and delete its stored copy? It will no longer appear after a restart.`;
-  }
-
-  const plural = savedQueries === 1 ? "1 saved query" : `${savedQueries} saved queries`;
-  // Only list names when every one of them is listed: "2 saved queries
-  // (“Bonds by issuer”)" would read as though the second were unnamed.
-  const listed =
-    savedQueries <= MAX_NAMED && names.length === savedQueries
-      ? ` (${names.map((n) => `“${n}”`).join(", ")})`
-      : "";
-  return `Remove “${name}”? This deletes its stored copy and ${plural}${listed}, which cannot be undone.`;
+export function removalPrompt(name: string, savedQueries: number | null, names: string[] = [], t: Translator = englishTranslator): string {
+  if (savedQueries === null) return t("remove.unknown", { name });
+  if (savedQueries === 0) return t("remove.zero", { name });
+  const suffix = savedQueries === 1 ? "one" : "many";
+  if (savedQueries <= MAX_NAMED && names.length === savedQueries) return t(`remove.named.${suffix}`, {
+    name, count: savedQueries,
+    names: names.map(value => t("common.quote", { value })).join(t("common.listSeparator")),
+  });
+  return t(`remove.count.${suffix}`, { name, count: savedQueries });
 }
 
-/**
- * The message shown after the removal has happened. Returns null when there is
- * nothing extra to report, because a confirmation of the ordinary case is
- * noise: the ontology visibly disappeared.
- */
-export function removalConfirmation(name: string, deletedQueries: number): string | null {
+export function removalConfirmationNotice(name: string, deletedQueries: number): UiMessage | null {
   if (deletedQueries <= 0) return null;
-  const plural = deletedQueries === 1 ? "1 saved query" : `${deletedQueries} saved queries`;
-  return `Removed ${name} and ${plural}.`;
+  return makeUiMessage(`remove.done.${deletedQueries === 1 ? "one" : "many"}`, { name, count: deletedQueries });
+}
+
+export function removalConfirmation(name: string, deletedQueries: number, t: Translator = englishTranslator): string | null {
+  const notice = removalConfirmationNotice(name, deletedQueries);
+  return notice ? renderUiMessage(notice, t) : null;
 }

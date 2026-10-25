@@ -5,6 +5,7 @@ FILE: frontend/src/components/QueryPanel.test.tsx
 ================================================================================
 
 SUMMARY
+    Retained failures re-render without new work; a failed run can be retried.
     The first test for QueryPanel, and it covers exactly one thing: that the
     results area can be emptied without destroying the query, and that the
     control which does it cannot be mistaken for the path bar's Clear path.
@@ -34,6 +35,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import QueryPanel, { queryScopeText } from "./QueryPanel";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import type { useQueryBuilder } from "../sparql/useQueryBuilder";
 import type { QueryState } from "../sparql/types";
 
@@ -298,7 +301,7 @@ describe("QueryPanel imports (external-access Stage 2, AC-20)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /Execute/ }));
     });
-    expect(runSparql).toHaveBeenCalledWith("ont-1", expect.any(String), true);
+    expect(runSparql).toHaveBeenCalledWith("ont-1", expect.any(String), true, undefined);
   });
 });
 
@@ -681,4 +684,102 @@ describe("only the latest answer is shown (query-page-rework 5.2)", () => {
       vi.useRealTimers();
     }
   });
+});
+
+
+it("keeps a save-name draft and query switches when the UI language changes", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const builder = builderStub();
+  saveQuery.mockReset().mockResolvedValue({ id: "ja-query", name: "日本語検索", ontologyId: "ont-1", mode: "visual", state: STATE, sparql: builder.sparql, updatedAt: "2026-10-01T00:00:00Z" });
+  await act(async () => render(<I18nProvider><UiLanguageSelect /><QueryPanel ontologyId="ont-1" theme="light" builder={builder} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} includeImports importsCount={2} /></I18nProvider>));
+  expect(screen.getByRole("complementary", { name: "クエリビルダー" })).toBeTruthy();
+  expect(screen.getByText("このオントロジーと2件のインポートを検索します。")).toBeTruthy();
+  expect(document.querySelector(".plain-english")?.textContent).toBe("すべてのBondを起点にします。最大100行を返します。");
+  fireEvent.click(screen.getByRole("button", { name: "自動" }));
+  fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+  const input = screen.getByPlaceholderText("クエリ名");
+  fireEvent.change(input, { target: { value: "日本語検索" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByPlaceholderText("Query name")).toBe(input);
+  expect(document.querySelector(".plain-english")?.textContent).toBe("Start from every bond. Return at most 100 rows.");
+  expect((input as HTMLInputElement).value).toBe("日本語検索");
+  expect(screen.getByRole("button", { name: "Auto" }).getAttribute("aria-pressed")).toBe("false");
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+  expect(saveQuery).toHaveBeenCalledWith(expect.objectContaining({ name: "日本語検索", sparql: builder.sparql, state: STATE }));
+  expect(runSparql).not.toHaveBeenCalled();
+  expect(listSavedQueries).toHaveBeenCalledTimes(2);
+});
+it("does not claim the query was copied when the clipboard is unavailable", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+  try {
+    await act(async () => render(<I18nProvider><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} /></I18nProvider>));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "⧉ コピー" })));
+    expect(await screen.findByRole("button", { name: "コピーできませんでした" })).toBeTruthy();
+  } finally {
+    if (previous) Object.defineProperty(navigator, "clipboard", previous);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
+});
+
+
+it("updates snapshot provenance in the same view without reloading data", async () => {
+  localStorage.setItem("semantic-studio.uiLocale.v1", "en");
+  const source = { id: "people-abc123", source: "people.csv", importedAt: "2026-10-02T12:00:00Z", rows: 2000, total: 12480, sample: true };
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(<I18nProvider><UiLanguageSelect /><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} dataSources={[source]} /></I18nProvider>); });
+  try {
+    const provenance = screen.getByText("Includes data from people.csv, imported 2 October 2026; sample: first 2,000 of 12,480 rows.");
+    const queries = listSavedQueries.mock.calls.length;
+    fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+    expect(screen.getByText("データも含みます：people.csvから、2026年10月2日に取り込み；サンプル：全12,480行のうち先頭2,000行。")).toBe(provenance);
+    expect(runSparql).not.toHaveBeenCalled();
+    expect(listSavedQueries).toHaveBeenCalledTimes(queries);
+  } finally { view.unmount(); localStorage.removeItem("semantic-studio.uiLocale.v1"); }
+});
+
+it("retains a query error for both UI languages without running or fetching again", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const cause = Object.assign(new Error("Original timeout <img>{seconds}"), { uiMessage: { code: "query.time_limit", args: { seconds: 1234.5 } } });
+  runSparql.mockRejectedValue(cause);
+  render(<I18nProvider><UiLanguageSelect /><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /実行/ })));
+  const explanation = document.querySelector(".operation-explanation")!;
+  expect(explanation.textContent).toContain("制限時間の1,234.5秒を超えました");
+  const details = document.querySelector<HTMLDetailsElement>("details.technical-details")!;
+  expect(details.querySelector("pre")?.textContent).toBe(cause.message);
+  expect(details.open).toBe(false);
+  details.open = true;
+  const reads = listSavedQueries.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(explanation.textContent).toContain("The query exceeded 1,234.5 seconds");
+  expect(document.querySelector("details.technical-details")).toBe(details);
+  expect(details.open).toBe(true);
+  expect(details.querySelector("img")).toBeNull();
+  expect(runSparql).toHaveBeenCalledTimes(1);
+  expect(listSavedQueries).toHaveBeenCalledTimes(reads);
+});
+
+it("puts an unknown query error under original details with a localized operation explanation", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  runSparql.mockRejectedValue(new Error("External unknown <img>{query}"));
+  render(<I18nProvider><QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} /></I18nProvider>);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /実行/ })));
+  expect(document.querySelector(".operation-explanation")?.textContent).toBe("操作を完了できませんでした。詳細を確認してください。");
+  const details = document.querySelector<HTMLDetailsElement>("details.technical-details")!;
+  expect(details.open).toBe(false);
+  expect(details.querySelector("pre")?.textContent).toBe("External unknown <img>{query}");
+  expect(details.querySelector("img")).toBeNull();
+});
+
+it("allows a corrected query to run after a failed explicit request", async () => {
+  runSparql.mockRejectedValueOnce(new Error("Synthetic failure")).mockResolvedValueOnce(RESULTS);
+  render(<QueryPanel ontologyId="ont-1" theme="light" builder={builderStub()} onPickIri={vi.fn()} onViewInSource={vi.fn()} ontologyTriples={0} />);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: /Execute/ })));
+  const run = document.querySelector<HTMLButtonElement>("button.primary")!;
+  expect(run.disabled).toBe(false);
+  await act(async () => fireEvent.click(run));
+  expect(runSparql).toHaveBeenCalledTimes(2);
+  expect(document.querySelector(".results-table")).not.toBeNull();
 });

@@ -4,6 +4,7 @@ FILE: frontend/src/modeling/dataSentences.ts
 ================================================================================
 
 SUMMARY
+    Completed reports may refresh names without replacing their operation facts.
     The words the data import says (csv-data-import 5.2 to 5.7): the label
     every place puts on snapshot data (*from people.csv, imported 2 October
     2026; sample: first 2,000 of 12,480 rows*), the preview's rows as
@@ -24,185 +25,198 @@ BASIC IDEA
     place can show where data came from and forget that it is a sample
     (5.6, AC-6).
 
-    Dates are written in words with a fixed month list, not the browser's
-    locale, so "2 October 2026" reads the same everywhere and in tests.
+    An explicit UI locale (English by default for embedded callers) controls
+    whole message templates and the local calendar date format. English keeps
+    its original day-month-year wording and inflections; Japanese never
+    inflects authors' class names. Unknown type identities stay literal.
 
 INPUTS / INPUT SOURCES
     - DataSource, PreviewRow, ImportReportData and IdCheck, as the server
       sends them.
 
 EXPECTED OUTPUT
-    - dataLabel, sampleWords, importedOn, rowList, previewSentences,
+    - dataClassName, dataLabel, sampleWords, importedOn, rowList, previewSentences,
       reportLines, unmatchedLines, reportWord, idProblems, typeWord;
-      sheetOption and headerRowOption for a workbook's pickers (5.8).
+      sheetOption and headerRowOption for a workbook's pickers (5.8), and
+      rowLimitSentence from the actual inspection counts.
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import { renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import type { WireMessage } from "../i18n/server-contracts";
+import type { Translator, UiLocale } from "../i18n/types";
 import { a } from "./sentences";
 import { plural } from "./shapeSentences";
-import type { DataSource, IdCheck, ImportReportData, PreviewRow, RowList } from "../types";
+import type { DataInspection, DataSource, IdCheck, ImportReportData, PreviewRow, RowList, SnapshotSummary } from "../types";
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
+const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 
-const count = (n: number) => n.toLocaleString("en-US");
+/** Ownership comes from server facts; an authored identical name stays literal. */
+export function dataClassName(value: { className?: string | null; classNameUiMessage?: WireMessage | null }, t: Translator): string {
+  const legacy = value.className ?? t("dataWords.defaultClass");
+  return validWireMessage(value.classNameUiMessage) ? renderServerMessage(value.classNameUiMessage, legacy, t) : legacy;
+}
 
-/** "2 October 2026", in the browser's own time zone. */
-export function importedOn(iso: string): string {
+const TYPE_WORDS = {
+  date: "date", dateTime: "dateTime", integer: "integer", decimal: "number",
+  double: "number", float: "number", boolean: "boolean", gYear: "year",
+} as const;
+
+/** In the browser's own time zone, preserving the English day-month order. */
+export function importedOn(iso: string, locale: UiLocale = "en"): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "ja-JP", {
+    day: "numeric", month: "long", year: "numeric",
+  }).format(date);
 }
 
-/** "sample: first 2,000 of 12,480 rows", or null for a whole file. */
-export function sampleWords(source: Pick<DataSource, "rows" | "total" | "sample">): string | null {
-  return source.sample ? `sample: first ${count(source.rows)} of ${count(source.total)} rows` : null;
+export function sampleWords(source: Pick<DataSource, "rows" | "total" | "sample">, locale: UiLocale = "en"): string | null {
+  return source.sample ? tFor(locale)("dataWords.sample", { rows: source.rows, total: source.total }) : null;
 }
 
-/** The label snapshot data carries everywhere it is shown (5.6). */
-export function dataLabel(source: Pick<DataSource, "source" | "importedAt" | "rows" | "total" | "sample">): string {
-  const label = `from ${source.source}, imported ${importedOn(source.importedAt)}`;
-  const sample = sampleWords(source);
-  return sample ? `${label}; ${sample}` : label;
+/** The sample stays part of the provenance label itself, in every view. */
+export function dataLabel(source: Pick<DataSource, "source" | "importedAt" | "rows" | "total" | "sample">, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const label = t("dataWords.source", { source: source.source, date: importedOn(source.importedAt, locale) });
+  const sample = sampleWords(source, locale);
+  return sample ? t("dataWords.sourceSample", { label, sample }) : label;
 }
 
-/** "row 7", "rows 2 and 4", "rows 7, 19, 230 and 11 more". */
-export function rowList(list: RowList): string {
-  const shown = list.rows.map(count);
+export function rowList(list: RowList, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const shown = list.rows.map(n => n.toLocaleString(locale));
   const more = list.count - list.rows.length;
   if (shown.length === 0) return "";
-  if (shown.length === 1 && more === 0) return `row ${shown[0]}`;
-  if (more > 0) return `rows ${shown.join(", ")} and ${count(more)} more`;
-  return `rows ${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
+  if (shown.length === 1 && more === 0) return t("dataWords.row.one", { row: list.rows[0] });
+  if (more > 0) return t("dataWords.row.more", { shown: shown.join(t("dataWords.separator")), more });
+  return t("dataWords.row.many", { head: shown.slice(0, -1).join(t("dataWords.separator")), last: shown[shown.length - 1] });
 }
 
-// What a value that does not fit was supposed to be.
-const TYPE_WORDS: Record<string, [string, string]> = {
-  date: ["a date", "dates"],
-  dateTime: ["a date and time", "dates and times"],
-  integer: ["a whole number", "whole numbers"],
-  decimal: ["a number", "numbers"],
-  double: ["a number", "numbers"],
-  float: ["a number", "numbers"],
-  boolean: ["true or false", "true or false"],
-  gYear: ["a year", "years"],
-};
-
-/** "a date" (one), or "dates" (many), for an XML Schema type's short name. */
-export function typeWord(datatype: string | null | undefined, many = false): string {
-  const words = TYPE_WORDS[datatype ?? ""] ?? [`a ${datatype ?? "value of its type"}`, `${datatype ?? "values of the type"}`];
-  return many ? words[1] : words[0];
+/** Known XML Schema short names; unknown values are never catalog keys. */
+export function typeWord(datatype: string | null | undefined, many = false, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  const key = datatype ?? "";
+  const number = many ? "many" : "one";
+  if (own(TYPE_WORDS, key)) return t(`dataWords.type.${TYPE_WORDS[key as keyof typeof TYPE_WORDS]}.${number}`);
+  return t(`dataWords.type.unknown.${number}`, { type: datatype ?? t(`dataWords.type.default.${number}`) });
 }
 
 function quoted(value: string): string {
   return `"${value}"`;
 }
 
-/** Step 4's preview: one row read as sentences, in the model's names. */
-export function previewSentences(row: PreviewRow, className: string): string[] {
-  if (row.skipped || !row.subject) {
-    return [`Row ${count(row.row)} has no id, so nothing is made from it.`];
-  }
-  const who = row.name ?? `Row ${count(row.row)}`;
-  const sentences = [`${who} is ${a(className)}.`];
+export function previewSentences(row: PreviewRow, className: string, locale: UiLocale = "en"): string[] {
+  const t = tFor(locale);
+  if (row.skipped || !row.subject) return [t("dataWords.preview.skipped", { row: row.row })];
+  const who = row.name ?? t("dataWords.rowName", { row: row.row });
+  const sentences = [t("dataWords.preview.class", { who, kind: locale === "en" ? a(className) : className })];
   for (const value of row.values) {
     if (value.kind === "link") {
-      sentences.push(`${who}'s ${value.label}: the one with id ${quoted(value.value)}.`);
+      sentences.push(t("dataWords.preview.link", { who, name: value.label, value: quoted(value.value) }));
     } else if (value.fits === false) {
-      sentences.push(
-        `${who}'s ${value.label} is ${quoted(value.value)} — not ${typeWord(value.datatype)}, kept as text.`,
-      );
-    } else if (value.datatype) {
-      sentences.push(`${who}'s ${value.label} is ${value.value}.`);
+      sentences.push(t("dataWords.preview.invalid", { who, name: value.label, value: quoted(value.value), type: typeWord(value.datatype, false, locale) }));
     } else {
-      sentences.push(`${who}'s ${value.label} is ${quoted(value.value)}.`);
+      sentences.push(t("dataWords.preview.value", { who, name: value.label, value: value.datatype ? value.value : quoted(value.value) }));
     }
   }
   return sentences;
 }
 
-function rows(n: number): string {
-  return n === 1 ? "1 row" : `${count(n)} rows`;
+function rows(n: number, locale: UiLocale): string {
+  return tFor(locale)(n === 1 ? "dataWords.rows.one" : "dataWords.rows.many", { count: n });
 }
 
-/** The import report's lines (5.5), in order. `source` adds the sample's
- *  words to the first line when the file was cut. */
 export function reportLines(
   report: ImportReportData,
   className: string,
   source?: Pick<DataSource, "rows" | "total" | "sample">,
+  locale: UiLocale = "en",
 ): string[] {
-  const made = report.individuals === 1 ? `1 ${className}` : `${count(report.individuals)} ${plural(className)}`;
-  const sample = sampleWords(source ?? { rows: report.rowsRead, total: report.total, sample: report.sample });
-  const lines = [`${rows(report.rowsRead)}, ${made}${sample ? ` (${sample})` : ""}`];
-  if (report.skipped.count) {
-    lines.push(`${rows(report.skipped.count)} without an id (${rowList(report.skipped)})`);
-  }
-  if (report.repeated.count) {
-    lines.push(
-      `${rows(report.repeated.count)} repeat an id already used, so they add to that individual (${rowList(report.repeated)})`,
-    );
-  }
+  const t = tFor(locale);
+  const kind = locale === "en" && report.individuals !== 1 ? plural(className) : className;
+  const made = t("dataWords.made", { count: report.individuals, kind });
+  const sample = sampleWords(source ?? { rows: report.rowsRead, total: report.total, sample: report.sample }, locale);
+  const lines = [t("dataWords.reportSummary", { rows: rows(report.rowsRead, locale), made, sample: sample ? t("dataWords.sampleParen", { sample }) : "" })];
+  if (report.skipped.count) lines.push(t("dataWords.skipped", { rows: rows(report.skipped.count, locale), where: rowList(report.skipped, locale) }));
+  if (report.repeated.count) lines.push(t("dataWords.repeated", { rows: rows(report.repeated.count, locale), where: rowList(report.repeated, locale) }));
   for (const kept of report.keptAsText) {
-    const values = kept.count === 1 ? "1 value is not" : `${count(kept.count)} values are not`;
-    lines.push(`${kept.column}: ${values} ${typeWord(kept.datatype, kept.count !== 1)}, kept as text (${rowList(kept)})`);
+    lines.push(t(kept.count === 1 ? "dataWords.kept.one" : "dataWords.kept.many", { column: kept.column, count: kept.count, type: typeWord(kept.datatype, kept.count !== 1, locale), where: rowList(kept, locale) }));
   }
-  for (const empty of report.empty) {
-    lines.push(`${empty.column}: ${count(empty.count)} empty, nothing written`);
-  }
-  for (const line of unmatchedLines(report)) lines.push(line);
-  if (report.clean) lines.push("Every row has an id and every value fits its type.");
+  for (const empty of report.empty) lines.push(t("dataWords.empty", { column: empty.column, count: empty.count }));
+  lines.push(...unmatchedLines(report, locale));
+  if (report.clean) lines.push(t("dataWords.clean"));
   return lines;
 }
 
-/** "org: 12 values match no Organization row (rows 3, 9 and 10 more)" (5.9):
- *  links still written, so a Points to rule reports them. */
-export function unmatchedLines(report: ImportReportData): string[] {
-  return (report.unmatched ?? []).map((u) => {
-    const values = u.count === 1 ? "1 value matches" : `${count(u.count)} values match`;
-    return `${u.column}: ${values} no ${u.className} row (${rowList(u)})`;
-  });
+export function unmatchedLines(report: ImportReportData, locale: UiLocale = "en"): string[] {
+  const t = tFor(locale);
+  return (report.unmatched ?? []).map(u => t(u.count === 1 ? "dataWords.unmatched.one" : "dataWords.unmatched.many", {
+    column: u.column, count: u.count, kind: u.className, where: rowList(u, locale),
+  }));
 }
 
-/** The word a snapshot's row gives its report (5.7): "clean", or what is not. */
-export function reportWord(report: ImportReportData): string {
+export function reportWord(report: ImportReportData, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
   const kept = report.keptAsText.reduce((sum, k) => sum + k.count, 0);
   const unmatched = (report.unmatched ?? []).reduce((sum, u) => sum + u.count, 0);
   const parts: string[] = [];
-  if (kept) parts.push(kept === 1 ? "1 value kept as text" : `${count(kept)} values kept as text`);
-  if (unmatched) parts.push(unmatched === 1 ? "1 link to no row" : `${count(unmatched)} links to no row`);
-  if (report.skipped.count) parts.push(`${rows(report.skipped.count)} without an id`);
-  if (report.repeated.count) parts.push(`${rows(report.repeated.count)} repeating an id`);
-  return parts.length ? parts.join(", ") : "clean";
+  if (kept) parts.push(t(kept === 1 ? "dataWords.word.kept.one" : "dataWords.word.kept.many", { count: kept }));
+  if (unmatched) parts.push(t(unmatched === 1 ? "dataWords.word.unmatched.one" : "dataWords.word.unmatched.many", { count: unmatched }));
+  if (report.skipped.count) parts.push(t("dataWords.word.skipped", { rows: rows(report.skipped.count, locale) }));
+  if (report.repeated.count) parts.push(t("dataWords.word.repeated", { rows: rows(report.repeated.count, locale) }));
+  return parts.length ? parts.join(t("dataWords.separator")) : t("dataWords.word.clean");
 }
 
-/** Step 2's check of the identifier column, as sentences (5.3). */
-export function idProblems(check: IdCheck): string[] {
+export function idProblems(check: IdCheck, locale: UiLocale = "en"): string[] {
+  const t = tFor(locale);
   const out: string[] = [];
-  if (check.missing.count) {
-    const have = check.missing.count === 1 ? "1 row has" : `${count(check.missing.count)} rows have`;
-    out.push(`${have} no ${check.column} (${rowList(check.missing)}).`);
-  }
-  if (check.repeats) {
-    const values = check.repeats === 1 ? "1 value repeats" : `${count(check.repeats)} values repeat`;
-    out.push(`${check.column} is not unique: ${values} (${rowList(check.repeated)}).`);
-  }
+  if (check.missing.count) out.push(t(check.missing.count === 1 ? "dataWords.id.missing.one" : "dataWords.id.missing.many", {
+    count: check.missing.count, column: String(check.column), where: rowList(check.missing, locale),
+  }));
+  if (check.repeats) out.push(t(check.repeats === 1 ? "dataWords.id.repeated.one" : "dataWords.id.repeated.many", {
+    count: check.repeats, column: String(check.column), where: rowList(check.repeated, locale),
+  }));
   return out;
 }
 
-/** A sheet as the sheet picker offers it (5.8): "Orgs (41 rows)". */
-export function sheetOption(sheet: { name: string; rows: number }): string {
-  return `${sheet.name} (${rows(sheet.rows)})`;
+export function sheetOption(sheet: { name: string; rows: number }, locale: UiLocale = "en"): string {
+  return tFor(locale)("dataWords.sheet", { name: sheet.name, rows: rows(sheet.rows, locale) });
 }
 
-/** A physical row as the header row picker offers it (5.8): "Row 3: id,
- *  name, founded, …" from its first cells, or "Row 2 (empty)". */
-export function headerRowOption(row: { row: number; cells: string[]; unread?: boolean }): string {
-  // A sheet that could not be read: its rows are offered by number.
-  if (row.unread) return `Row ${count(row.row)}`;
-  if (row.cells.length === 0) return `Row ${count(row.row)} (empty)`;
-  const shown = row.cells.map((c) => (c.length > 24 ? `${c.slice(0, 23)}…` : c));
-  return `Row ${count(row.row)}: ${shown.join(", ")}`;
+export function headerRowOption(row: { row: number; cells: string[]; unread?: boolean }, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  if (row.unread) return t("dataWords.rowName", { row: row.row });
+  if (row.cells.length === 0) return t("dataWords.headerEmpty", { row: row.row });
+  const shown = row.cells.map(c => c.length > 24 ? `${c.slice(0, 23)}…` : c);
+  return t("dataWords.header", { row: row.row, cells: shown.join(t("dataWords.separator")) });
+}
+
+/** The actual file/sheet counts and cap, never a parsed server sentence. */
+export function rowLimitSentence(inspection: Pick<DataInspection, "format" | "total" | "limit">, locale: UiLocale = "en"): string {
+  return tFor(locale)(inspection.format === "xlsx" ? "dataImport.limit.sheet" : "dataImport.limit.file", {
+    total: inspection.total, limit: inspection.limit,
+  });
+}
+
+
+/** Project only names from a current listing; counts and row facts belong to the import. */
+export function snapshotDisplayNames(saved: SnapshotSummary, current?: SnapshotSummary): SnapshotSummary {
+  if (!current || current.id !== saved.id) return saved;
+  const names = new Map<string, string>();
+  if (current.classIri && current.className !== null) names.set(current.classIri, current.className);
+  for (const item of current.report.unmatched ?? []) names.set(item.classIri, item.className);
+  return {
+    ...saved,
+    ...(current.classIri === saved.classIri
+      ? { className: current.className, classNameUiMessage: current.classNameUiMessage } : {}),
+    report: {
+      ...saved.report,
+      ...(saved.report.unmatched ? { unmatched: saved.report.unmatched.map(item => ({
+        ...item, className: names.get(item.classIri) ?? item.className,
+      })) } : {}),
+    },
+  };
 }

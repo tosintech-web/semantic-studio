@@ -12,6 +12,9 @@ SUMMARY
     subclass*, or the panel's own button -- this is the one form.
 
 BASIC IDEA
+    Current-language guidance never replaces the store-owned creation token,
+    name or extra facts. Locale switches preserve this form and its inputs.
+
     The draft lives in the project store, not here: a class's name is the
     canvas draft box's name too, so typing in either shows in both, and
     Enter in either makes it. Creating is the store's one command; a refusal
@@ -27,6 +30,9 @@ BASIC IDEA
     control the creation began from. Nothing here is `disabled`: Create is
     aria-disabled while the name is empty (NewEntityForm).
 
+    Creation failures keep their raw metadata and diagnostic; the primary
+    explanation follows the UI locale, with the original in native details.
+
 INPUTS / INPUT SOURCES (props)
     - ontologyId: the model, for the pickers' searches.
     - primaryLanguage: the language a name is written in.
@@ -38,6 +44,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { renderServerError } from "../i18n/serverMessage";
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import { useState } from "react";
 import { projectStore, useProjectSelector, type Creating } from "../state/projectStore";
 import type { CreatingKind } from "../types";
@@ -56,18 +66,18 @@ interface Pick {
 }
 
 /** The form's title, which names what is being made (5.5). */
-export function creatingTitle(kind: CreatingKind, parent: Pick | null): string {
+export function creatingTitle(kind: CreatingKind, parent: Pick | null, t: Translator = englishTranslator): string {
   switch (kind) {
     case "class":
-      return parent ? `New kind of ${parent.label}` : "New class";
+      return parent ? t("create.classParent", { parent: parent.label }) : t("create.class");
     case "concept":
-      return parent ? `New concept narrower than ${parent.label}` : "New concept";
+      return parent ? t("create.conceptParent", { parent: parent.label }) : t("create.concept");
     case "objectProperty":
-      return "New relationship";
+      return t("create.relationship");
     case "datatypeProperty":
-      return "New attribute";
+      return t("create.attribute");
     case "example":
-      return "New example";
+      return t("create.example");
   }
 }
 
@@ -83,8 +93,10 @@ export default function CreateForm(props: Props) {
 }
 
 function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: Props & { creating: Creating }) {
+  const { t } = useI18n();
   const busy = useProjectSelector((s) => s.creatingBusy);
   const error = useProjectSelector((s) => s.creatingError);
+  const failure = useProjectSelector((s) => s.creatingErrorCause);
   // Shown here; what is made is the store's copy (setCreatingExtra).
   const [definition, setDefinition] = useState("");
   const [domain, setDomainShown] = useState<Pick | null>(null);
@@ -124,13 +136,13 @@ function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: 
       picker(words, set)
     ) : (
       <p className="detail-note create-choice">
-        {words}: {value ? value.label : required ? "not chosen yet (required)" : "none"}{" "}
+        {t("create.choice", { label: words, value: value ? value.label : t(required ? "editStructure.noTarget" : "editParts.none") })}{" "}
         <button type="button" className="link-btn" onClick={() => setPicking(which)}>
-          {value ? "Change" : "Choose"}
+          {t(value ? "editStructure.change" : "create.choose")}
         </button>
         {value && !required && (
           <button type="button" className="link-btn" onClick={() => set(null)}>
-            Clear
+            {t("attributeForm.clear")}
           </button>
         )}
       </p>
@@ -140,18 +152,18 @@ function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: 
   // waits for the class it points to (visual-modeling 5.8 item 10).
   const missing =
     kind === "example" && !cls
-      ? "Choose the class it is an example of."
+      ? t("create.missingExample")
       : kind === "objectProperty" && !range
-        ? "Choose the class it points to."
+        ? t("editStructure.chooseTarget")
         : null;
 
   return (
     <div className="create-form">
       <NewEntityForm
-        title={creatingTitle(kind, parent)}
+        title={creatingTitle(kind, parent, t)}
         primaryLanguage={primaryLanguage}
         busy={busy}
-        error={error}
+        error={failure ? t("create.failed", { reason: renderServerError(failure.error, t) }) : error}
         missing={missing}
         datatypes={kind === "datatypeProperty"}
         name={creating.name}
@@ -171,14 +183,14 @@ function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: 
         {box &&
           choice(
             "parent",
-            kind === "class" ? "Kind of" : "Narrower than",
+            t(kind === "class" ? "create.parentClass" : "create.parentConcept"),
             parent,
             (p) => projectStore.setCreatingParent(p),
           )}
         {box && (
           <>
             <label className="edit-field-label" htmlFor="create-definition">
-              Definition (optional)
+              {t("create.definition")}
             </label>
             <textarea
               id="create-definition"
@@ -193,10 +205,11 @@ function DraftForm({ ontologyId, primaryLanguage, focusName = true, creating }: 
           </>
         )}
         {(kind === "objectProperty" || kind === "datatypeProperty") &&
-          choice("domain", kind === "objectProperty" ? "From" : "Belongs to", domain, setDomain)}
-        {kind === "objectProperty" && choice("range", "To", range, setRange, true)}
-        {kind === "example" && choice("cls", "Example of", cls, setCls, true)}
+          choice("domain", t(kind === "objectProperty" ? "relationshipForm.from" : "attributeForm.belongs"), domain, setDomain)}
+        {kind === "objectProperty" && choice("range", t("relationshipForm.to"), range, setRange, true)}
+        {kind === "example" && choice("cls", t("create.exampleClass"), cls, setCls, true)}
       </NewEntityForm>
+      {failure && <details><summary>{t("common.details")}</summary><pre>{failure.error instanceof Error ? failure.error.message : String(failure.error)}</pre></details>}
     </div>
   );
 }

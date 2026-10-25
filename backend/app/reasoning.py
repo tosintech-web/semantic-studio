@@ -4,6 +4,7 @@ FILE: backend/app/reasoning.py
 ================================================================================
 
 SUMMARY
+    Recorded results offer isolated label-language views without running inference.
     Reasoning on demand for a project (axioms-and-reasoning Stage A, 5.1 to
     5.7, D-102 to D-104): OWL 2 RL through OWL-RL in a process of its own,
     under a 30-second limit and a 200,000-statement ceiling, one run per
@@ -13,6 +14,12 @@ SUMMARY
     memory, keyed on what it was computed from, and never written anywhere.
 
 BASIC IDEA
+    Facts and contradictions keep their legacy sort sentences and identities.
+    Additive display metadata captures raw RDF names, never inflected English;
+    fact metadata is projected only for the requested page or entity. One-step
+    explanations capture their selected rule and flat source definition parts
+    only at the public Why boundary; bulk traversal keeps its legacy core.
+
     The engine boundary is one function, `reason(model_nt, data_nt, probes,
     ...) -> RawResult`, with one implementation: reasoning_worker.main in a
     multiprocessing process started with "spawn" on every platform, so Linux
@@ -85,6 +92,7 @@ from rdflib.util import from_n3
 from . import reasoning_worker
 from .graph_builder import pick_label_in
 from .sentences import a, verb
+from .messages import literal_part, make_message, word_part, MessageText
 
 # Fixed, never settings (5.10, as D-098's row limit is). A test lowers the
 # limit through the module attribute, which is all it reads.
@@ -111,7 +119,10 @@ _SHOWN = {
     OWL.equivalentProperty: "same",
     OWL.sameAs: "same",
 }
-_SYMMETRIC = (OWL.equivalentClass, OWL.equivalentProperty, OWL.sameAs)
+# These fixed predicate groups are membership tests, never an iteration order.
+# Resolving namespaces/building tuples for every fact costs work at data scale.
+_SYMMETRIC = frozenset((OWL.equivalentClass, OWL.equivalentProperty, OWL.sameAs))
+_TYPING_PREDICATES = frozenset((RDF.type, RDFS.subClassOf, RDFS.subPropertyOf))
 _PROPERTY_TYPES = (
     OWL.ObjectProperty, OWL.DatatypeProperty, RDF.Property, OWL.TransitiveProperty,
     OWL.SymmetricProperty, OWL.FunctionalProperty, OWL.InverseFunctionalProperty,
@@ -156,6 +167,7 @@ class RawResult:
     message: Optional[str] = None   # a failure's first line, or the timed-out sentence
     duration_ms: float = 0.0
     probe_ms: float = 0.0           # the probe run's share, measured in the worker
+    limit_seconds: Optional[float] = None  # the actual timeout, never parsed from message
 
 
 class RunHandle:
@@ -207,7 +219,7 @@ def reason(
             if handle.stop_requested.is_set():
                 return RawResult("stopped", duration_ms=elapsed())
             if time.perf_counter() >= deadline:
-                return RawResult("timedOut", message=timed_out_sentence(limit), duration_ms=elapsed())
+                return RawResult("timedOut", message=timed_out_sentence(limit), duration_ms=elapsed(), limit_seconds=limit)
             if receiver.poll(_POLL_SECONDS):
                 try:
                     answer = receiver.recv()
@@ -366,12 +378,25 @@ class Outcome:
         facts: Optional[dict] = None,
         problems: Optional[list] = None,
         never: Optional[set] = None,
+        limit_seconds: Optional[float] = None,
     ) -> None:
         self.status = status
         self.key = key
         self.statements = statements
         self.duration_ms = duration_ms
         self.message = message
+        self.limit_seconds = TIME_LIMIT_SECONDS if limit_seconds is None else limit_seconds
+        # Capture the facts at creation. UI locale never enters the engine,
+        # and a client need not read a number back out of English prose.
+        self.ui_message = None
+        if status == "stopped":
+            self.ui_message = make_message("reasoning.stopped")
+        elif status == "failed":
+            self.ui_message = make_message("reasoning.failed")
+        elif status == "timedOut":
+            self.ui_message = make_message("reasoning.timeout", seconds=self.limit_seconds)
+        elif status == "tooLarge":
+            self.ui_message = make_message("reasoning.too_large", count=statements, limit=MAX_STATEMENTS)
         self.stated = stated
         self.closure = closure
         self.names = names
@@ -379,6 +404,46 @@ class Outcome:
         self.problems = problems or []
         self.never = never or set()
         self.shown = {f["t"] for listed in self.facts.values() for f in listed}
+        # Only analyse supplies the source events needed to reword a result.
+        # Custom/manual outcomes retain their legacy behavior.
+        self._display_languages: Optional[tuple] = None
+        self._problem_sources: Optional[tuple] = None
+        self._display_views: dict[tuple, Outcome] = {}
+        self._display_lock = threading.RLock()
+
+    def for_languages(self, languages: Iterable[str]) -> "Outcome":
+        """A cached read view of the same result, without another reasoner run.
+
+        Indexes and membership stay with the original result. Only labels,
+        sentences and their display order are rebuilt from recorded facts and
+        problem events; another reader cannot change this result's names.
+        """
+        chosen = tuple(languages)
+        if self.status != "done" or self._display_languages is None or chosen == self._display_languages:
+            return self
+        with self._display_lock:
+            found = self._display_views.get(chosen)
+            if found is not None:
+                return found
+            names = _name_reader(self.stated, chosen)
+            facts = {}
+            for kind, listed in self.facts.items():
+                rows = [{**fact, **triple_json(fact["t"], names),
+                         "sentence": fact_sentence(fact["t"], names)} for fact in listed]
+                rows.sort(key=lambda fact: (_natural(fact["sentence"]), fact["s"], fact["o"]))
+                facts[kind] = rows
+            errors, probe_errors, probes = self._problem_sources
+            problems, never = _problem_rows(errors, probe_errors, probes, self.stated, self.closure, names)
+            found = Outcome(
+                self.status, self.key, statements=self.statements, duration_ms=self.duration_ms,
+                message=self.message, stated=self.stated, closure=self.closure, names=names,
+                facts=facts, problems=problems, never=never, limit_seconds=self.limit_seconds,
+            )
+            found._display_languages = chosen
+            found._problem_sources = self._problem_sources
+            self._display_views[chosen] = found
+            return found
+
 
     # --- what the routes answer ---
 
@@ -394,7 +459,7 @@ class Outcome:
                 "with fewer imports."
             )
         if self.status == "timedOut":
-            return self.message or timed_out_sentence(TIME_LIMIT_SECONDS)
+            return self.message or timed_out_sentence(self.limit_seconds)
         return ENDINGS.get(self.status)
 
     def summary(self, current: Optional[Key] = None) -> dict:
@@ -409,6 +474,7 @@ class Outcome:
             "durationMs": round(self.duration_ms),
             "statements": self.statements,
             "sentence": self.sentence(),
+            **({"uiMessage": self.ui_message} if self.ui_message is not None else {}),
             "problems": self.problems,
             "groups": [self._group(kind, 0) for kind in GROUPS],
             "importedFacts": self._group(IMPORTED, 0),
@@ -424,7 +490,7 @@ class Outcome:
             "kind": kind,
             "total": len(listed),
             "offset": offset,
-            "items": [_public(f) for f in listed[offset:offset + PAGE]],
+            "items": [_public(f, self.names) for f in listed[offset:offset + PAGE]],
         }
 
     def page(self, kind: str, offset: int, current: Optional[Key] = None) -> dict:
@@ -436,7 +502,7 @@ class Outcome:
         """The facts that start or end at one entity, for the detail panel."""
         node = URIRef(iri)
         facts = [
-            _public(f) for kind in (*GROUPS, IMPORTED) for f in self.facts.get(kind, [])
+            _public(f, self.names) for kind in (*GROUPS, IMPORTED) for f in self.facts.get(kind, [])
             if f["t"][0] == node or f["t"][2] == node
         ]
         return {
@@ -455,8 +521,10 @@ class Outcome:
         if t not in self.closure:
             return None
         if t in self.stated:
-            return {"family": "stated", "sentence": f"{fact_sentence(t, self.names)} (stated).", "premises": []}
-        return Explainer(self.stated, self.closure, self.names).explain(t)
+            return {"family": "stated", "sentence": f"{fact_sentence(t, self.names)} (stated).", "premises": [],
+                    "uiMessage": make_message("reasoning.reason.stated", s=name_parts(t[0], self.names),
+                        p=name_parts(t[1], self.names), o=name_parts(t[2], self.names))}
+        return Explainer(self.stated, self.closure, self.names).explain(t, ui_metadata=True)
 
     # --- what the tree and the canvas draw (5.7) ---
 
@@ -482,8 +550,11 @@ def _term(text: str):
     return URIRef(text)
 
 
-def _public(fact: dict) -> dict:
-    return {k: v for k, v in fact.items() if k != "t"}
+def _public(fact: dict, names: Optional[Callable] = None) -> dict:
+    # Thousands of facts are sorted and retained; capture display facts only
+    # when a reader actually asks for these rows, not for every hidden page.
+    return {**{k: v for k, v in fact.items() if k != "t"},
+            **({"uiMessage": fact_message(fact["t"], names)} if names is not None else {})}
 
 
 def _wire(term) -> str:
@@ -505,25 +576,39 @@ def triple_json(t: tuple, names: Callable) -> dict:
 # ---------------------------------------------------------------------------
 
 
+# Resolve fixed vocabulary names once. Dispatching by predicate avoids a chain
+# of RDF-term comparisons for every fact and every repeated premise, while the
+# rendered sentences and the explainer's candidate order stay exactly the same.
+_FACT_FORMS = {
+    RDF.type: "type",
+    RDFS.subClassOf: "kind", RDFS.subPropertyOf: "kind",
+    OWL.equivalentClass: "equivalent", OWL.equivalentProperty: "equivalent",
+    OWL.sameAs: "same", OWL.differentFrom: "different",
+    OWL.disjointWith: "disjoint", OWL.inverseOf: "inverse",
+    RDFS.domain: "domain", RDFS.range: "range",
+}
+
+
 def fact_sentence(t: tuple, names: Callable) -> str:
     s, p, o = t
-    if p == RDF.type:
+    form = _FACT_FORMS.get(p)
+    if form == "type":
         return f"{names(s)} is {a(names(o))}"
-    if p in (RDFS.subClassOf, RDFS.subPropertyOf):
+    if form == "kind":
         return f"{names(s)} is a kind of {names(o)}"
-    if p in (OWL.equivalentClass, OWL.equivalentProperty):
+    if form == "equivalent":
         return f"{names(s)} and {names(o)} mean the same thing"
-    if p == OWL.sameAs:
+    if form == "same":
         return f"{names(s)} and {names(o)} are the same thing"
-    if p == OWL.differentFrom:
+    if form == "different":
         return f"{names(s)} and {names(o)} are different things"
-    if p == OWL.disjointWith:
+    if form == "disjoint":
         return f"no {names(s)} is {a(names(o))}"
-    if p == OWL.inverseOf:
+    if form == "inverse":
         return f"{names(s)} is {names(o)} the other way round"
-    if p == RDFS.domain:
+    if form == "domain":
         return f"whoever {names(s)} something is {a(names(o))}"
-    if p == RDFS.range:
+    if form == "range":
         return f"whatever something {names(s)} is {a(names(o))}"
     return f"{names(s)} {verb(names(p))} {names(o)}"
 
@@ -537,21 +622,44 @@ _CHARACTERISTIC = {
     OWL.AsymmetricProperty: "is never both ways",
 }
 
+_CHARACTERISTIC_CODES = {
+    OWL.TransitiveProperty: "transitive", OWL.SymmetricProperty: "symmetric",
+    OWL.FunctionalProperty: "functional", OWL.InverseFunctionalProperty: "inverse_functional",
+    OWL.IrreflexiveProperty: "irreflexive", OWL.AsymmetricProperty: "asymmetric",
+}
 
-def premise(t: tuple, stated: Index, names: Callable) -> dict:
+
+def name_parts(term, names: Callable) -> list[dict]:
+    """An anonymous node is owned wording; a literal with that text is data."""
+    return ([word_part("words.reasoning.unnamed")] if isinstance(term, BNode)
+            else [literal_part(names(term))])
+
+
+def fact_message(t: tuple, names: Callable, *, characteristic: bool = False) -> dict:
+    s, p, o = t
+    if characteristic and p == RDF.type and o in _CHARACTERISTIC_CODES:
+        return make_message("reasoning.characteristic." + _CHARACTERISTIC_CODES[o], s=name_parts(s, names))
+    form = _FACT_FORMS.get(p, "link")
+    return make_message("reasoning.fact." + form, s=name_parts(s, names), o=name_parts(o, names),
+                        **({"p": name_parts(p, names)} if form == "link" else {}))
+
+
+def premise(t: tuple, stated: Index, names: Callable, *, ui_metadata: bool = True) -> dict:
     """One line of a reason: the fact, its sentence, and stated or inferred."""
     s, p, o = t
     if p == RDF.type and o in _CHARACTERISTIC:
         text = f"{names(s)} {_CHARACTERISTIC[o]}"
     else:
         text = fact_sentence(t, names)
-    return {**triple_json(t, names), "sentence": text, "inferred": t not in stated}
+    return {**triple_json(t, names), "sentence": text, "inferred": t not in stated,
+            **({"uiMessage": fact_message(t, names, characteristic=True)} if ui_metadata else {})}
 
 
 def definition(cls, text: str, kind=OWL.equivalentClass) -> dict:
     """A premise that is a class's definition or rule, written with blank
     nodes: no triple of its own to link, so it is a sentence, always stated."""
-    return {"s": str(cls), "p": str(kind), "o": None, "sentence": text, "inferred": False}
+    return {"s": str(cls), "p": str(kind), "o": None, "sentence": str(text), "inferred": False,
+            **({"uiMessage": text.ui_message} if getattr(text, "ui_message", None) is not None else {})}
 
 
 # ---------------------------------------------------------------------------
@@ -573,9 +681,11 @@ class Explainer:
 
     # Each candidate is (family, premise triples, extra premises, joining
     # words); the first whose premises were all stated wins, else the first.
-    def explain(self, t: tuple) -> dict:
+    def explain(self, t: tuple, *, ui_metadata: bool = False) -> dict:
+        # The core can traverse every conclusion; the public Why boundary
+        # projects display facts for the one reason actually being read.
         best = None
-        for candidate in self._candidates(t):
+        for candidate in self._candidates(t, ui_metadata=ui_metadata):
             triples = candidate[1]
             if all(x in self.stated for x in triples):
                 best = candidate
@@ -583,75 +693,164 @@ class Explainer:
             if best is None:
                 best = candidate
         if best is None:
-            return {"family": None, "sentence": NO_REASON, "premises": []}
+            return {"family": None, "sentence": NO_REASON, "premises": [],
+                    **({"uiMessage": make_message("reasoning.reason.unsupported")} if ui_metadata else {})}
         family, triples, extra, text = best
-        premises = [premise(x, self.stated, self.names) for x in triples] + extra
-        return {"family": family, "sentence": text, "premises": premises}
+        premises = [premise(x, self.stated, self.names, ui_metadata=ui_metadata) for x in triples] + extra
+        return {"family": family, "sentence": str(text), "premises": premises,
+                **({"uiMessage": text.ui_message} if getattr(text, "ui_message", None) is not None else {})}
+
+    def _said(self, text: str, code: str, facts: Callable, enabled: bool) -> str:
+        """The core keeps legacy strings; public reads capture source facts."""
+        return MessageText(text, code, **facts()) if enabled else text
+
+    def _parts(self, **terms) -> dict:
+        return {key: name_parts(term, self.names) for key, term in terms.items()}
+
+    def _expression_parts(self, node) -> list[dict]:
+        members = self.c.items(self.c.first(node, OWL.intersectionOf))
+        if not members:
+            return self._restriction_parts(node)
+        groups = [name_parts(term, self.names) for term in members if isinstance(term, URIRef)]
+        groups += [self._restriction_parts(term) for term in members if not isinstance(term, URIRef)]
+        return [part for index, group in enumerate(groups)
+                for part in ([word_part("words.reasoning.intersection")] if index else []) + group]
+
+    def _restriction_parts(self, node) -> list[dict]:
+        prop = self.c.first(node, OWL.onProperty)
+        if prop is None:
+            return [word_part("words.reasoning.stated_rule")]
+        head = name_parts(prop, self.names) + [word_part("words.reasoning.condition_separator")]
+        value = self.c.first(node, OWL.hasValue)
+        if value is not None:
+            return head + name_parts(value, self.names)
+        filler = self.c.first(node, OWL.someValuesFrom)
+        if filler is not None:
+            return head + [word_part("words.reasoning.minimum_one")] + (
+                [word_part("words.reasoning.any_value")] if filler == OWL.Thing else name_parts(filler, self.names))
+        return head + [word_part("words.reasoning.rule_value")]
 
     def _n(self, term) -> str:
         return self.names(term)
 
-    def _candidates(self, t: tuple):
+    def _candidates(self, t: tuple, *, ui_metadata: bool = False):
         s, p, o = t
         c, n = self.c, self._n
-        if p in (RDFS.subClassOf, RDFS.subPropertyOf):
+        form = _FACT_FORMS.get(p)
+        if form == "kind":
             eq = OWL.equivalentClass if p == RDFS.subClassOf else OWL.equivalentProperty
             for x in ((s, eq, o), (o, eq, s)):
                 if x in c:
-                    yield "same", [x], [], f"{n(s)} and {n(o)} mean the same thing"
+                    yield "same", [x], [], self._said(
+                        (
+                            f"{n(s)} and {n(o)} mean the same thing"
+                        ),
+                        'reasoning.fact.equivalent',
+                        lambda: self._parts(s=s, o=o),
+                        ui_metadata,
+                    )
             for m in c.objects(s, p):
                 if isinstance(m, URIRef) and m not in (s, o) and (m, p, o) in c:
                     yield "kindChain", [(s, p, m), (m, p, o)], [], (
-                        f"{n(s)} is a kind of {n(m)}, and {n(m)} is a kind of {n(o)}"
+                        self._said(
+                            (
+                                f"{n(s)} is a kind of {n(m)}, and {n(m)} is a kind of {n(o)}"
+                            ),
+                            'reasoning.reason.kind_chain',
+                            lambda: self._parts(s=s, m=m, o=o),
+                            ui_metadata,
+                        )
                     )
             for m in c.objects(s, p):
                 if isinstance(m, URIRef) and m not in (s, o):
                     for x in ((m, eq, o), (o, eq, m)):
                         if x in c:
                             yield "same", [(s, p, m), x], [], (
-                                f"{n(s)} is a kind of {n(m)}, and {n(m)} and {n(o)} mean the same thing"
+                                self._said(
+                                    (
+                                        f"{n(s)} is a kind of {n(m)}, and {n(m)} and {n(o)} mean the same thing"
+                                    ),
+                                    'reasoning.reason.kind_equivalent',
+                                    lambda: self._parts(s=s, m=m, o=o),
+                                    ui_metadata,
+                                )
                             )
             if p == RDFS.subClassOf:
                 for d in c.objects(s, OWL.equivalentClass):
                     if isinstance(d, BNode) and o in c.items(c.first(d, OWL.intersectionOf)):
-                        yield "defining", [], [definition(s, self._defines(s, d))], (
-                            f"{self._defines(s, d)}, so every {n(s)} is {a(n(o))}"
+                        yield "defining", [], [definition(s, self._defines(s, d, ui_metadata=ui_metadata))], (
+                            self._said(
+                                (
+                                    f"{self._defines(s, d, ui_metadata=ui_metadata)}, so every {n(s)} is {a(n(o))}"
+                                ),
+                                'reasoning.reason.definition_kind',
+                                lambda: {**self._parts(s=s, o=o), 'expression': self._expression_parts(d)},
+                                ui_metadata,
+                            )
                         )
             return
-        if p == RDF.type:
-            yield from self._membership(s, o)
+        if form == "type":
+            yield from self._membership(s, o, ui_metadata=ui_metadata)
             return
-        if p == OWL.sameAs:
-            yield from self._same_thing(s, o)
+        if form == "same":
+            yield from self._same_thing(s, o, ui_metadata=ui_metadata)
             return
-        if p in (OWL.equivalentClass, OWL.equivalentProperty):
+        if form == "equivalent":
             sub = RDFS.subClassOf if p == OWL.equivalentClass else RDFS.subPropertyOf
             if (s, sub, o) in c and (o, sub, s) in c:
                 yield "same", [(s, sub, o), (o, sub, s)], [], (
-                    f"{n(s)} is a kind of {n(o)} and {n(o)} is a kind of {n(s)}, so they mean the same thing"
+                    self._said(
+                        (
+                            f"{n(s)} is a kind of {n(o)} and {n(o)} is a kind of {n(s)}, so they mean the same thing"
+                        ),
+                        'reasoning.reason.mutual_kind',
+                        lambda: self._parts(s=s, o=o),
+                        ui_metadata,
+                    )
                 )
             for m in c.objects(s, p):
                 if isinstance(m, URIRef) and m not in (s, o) and ((m, p, o) in c or (o, p, m) in c):
                     second = (m, p, o) if (m, p, o) in c else (o, p, m)
                     yield "same", [(s, p, m), second], [], (
-                        f"{n(s)} and {n(m)} mean the same thing, and so do {n(m)} and {n(o)}"
+                        self._said(
+                            (
+                                f"{n(s)} and {n(m)} mean the same thing, and so do {n(m)} and {n(o)}"
+                            ),
+                            'reasoning.reason.equivalent_chain',
+                            lambda: self._parts(s=s, m=m, o=o),
+                            ui_metadata,
+                        )
                     )
             return
-        yield from self._link(s, p, o)
+        yield from self._link(s, p, o, ui_metadata=ui_metadata)
 
-    def _membership(self, s, o):
+    def _membership(self, s, o, *, ui_metadata: bool = False):
         c, n = self.c, self._n
         for k in c.objects(s, RDF.type):
             if isinstance(k, URIRef) and k != o and (k, RDFS.subClassOf, o) in c:
                 yield "memberKind", [(s, RDF.type, k), (k, RDFS.subClassOf, o)], [], (
-                    f"{n(s)} is {a(n(k))}, and every {n(k)} is {a(n(o))}"
+                    self._said(
+                        (
+                            f"{n(s)} is {a(n(k))}, and every {n(k)} is {a(n(o))}"
+                        ),
+                        'reasoning.reason.member_kind',
+                        lambda: self._parts(s=s, k=k, o=o),
+                        ui_metadata,
+                    )
                 )
         for k in c.objects(s, RDF.type):
             if isinstance(k, URIRef) and k != o:
                 for x in ((k, OWL.equivalentClass, o), (o, OWL.equivalentClass, k)):
                     if x in c:
                         yield "same", [(s, RDF.type, k), x], [], (
-                            f"{n(s)} is {a(n(k))}, and {n(k)} and {n(o)} mean the same thing"
+                            self._said(
+                                (
+                                    f"{n(s)} is {a(n(k))}, and {n(k)} and {n(o)} mean the same thing"
+                                ),
+                                'reasoning.reason.member_equivalent',
+                                lambda: self._parts(s=s, k=k, o=o),
+                                ui_metadata,
+                            )
                         )
         # Each domain statement is its own premise (rdfs2): the properties
         # whose domain is this class, found by subject, so only axioms.py
@@ -659,14 +858,28 @@ class Explainer:
         for prop in sorted(c.subjects(RDFS.domain, o), key=str):
             for y in c.objects(s, prop):
                 yield "domainRange", [(s, prop, y), (prop, RDFS.domain, o)], [], (
-                    f"{n(s)} {verb(n(prop))} {n(y)}, and whoever {verb(n(prop))} something is {a(n(o))}"
+                    self._said(
+                        (
+                            f"{n(s)} {verb(n(prop))} {n(y)}, and whoever {verb(n(prop))} something is {a(n(o))}"
+                        ),
+                        'reasoning.reason.domain',
+                        lambda: self._parts(s=s, p=prop, y=y, o=o),
+                        ui_metadata,
+                    )
                 )
                 break
         for prop, x in c.pairs(RDFS.range):
             if x == o:
                 for y in c.subjects(prop, s):
                     yield "domainRange", [(y, prop, s), (prop, RDFS.range, o)], [], (
-                        f"{n(y)} {verb(n(prop))} {n(s)}, and whatever something {verb(n(prop))} is {a(n(o))}"
+                        self._said(
+                            (
+                                f"{n(y)} {verb(n(prop))} {n(s)}, and whatever something {verb(n(prop))} is {a(n(o))}"
+                            ),
+                            'reasoning.reason.range',
+                            lambda: self._parts(s=s, p=prop, y=y, o=o),
+                            ui_metadata,
+                        )
                     )
                     break
         # A defining restriction: o is exactly something the restriction
@@ -677,8 +890,15 @@ class Explainer:
                 if met is not None:
                     triples, _ = met
                     words = " and ".join(fact_sentence(x, self.names) for x in triples)
-                    yield "defining", triples, [definition(o, self._defines(o, d))], (
-                        f"{words}, and {self._defines(o, d)}"
+                    yield "defining", triples, [definition(o, self._defines(o, d, ui_metadata=ui_metadata))], (
+                        self._said(
+                            (
+                                f"{words}, and {self._defines(o, d, ui_metadata=ui_metadata)}"
+                            ),
+                            'reasoning.reason.definition_member',
+                            lambda: {**self._parts(s=s, o=o), 'expression': self._expression_parts(d)},
+                            ui_metadata,
+                        )
                     )
         # Only: something links to s through a property every one of its
         # class's values must be an o.
@@ -697,14 +917,36 @@ class Explainer:
                         f"every {n(owner)}'s {n(prop)} can only be {_plural(n(o))}"
                         if owner is not None else f"its {n(prop)} can only be {_plural(n(o))}"
                     )
+                    rule = self._said(
+                        (
+                            rule
+                        ),
+                        'reasoning.definition.only_owned' if owner is not None else 'reasoning.definition.only',
+                        lambda: self._parts(p=prop, o=o, **{'name': owner} if owner is not None else {}),
+                        ui_metadata,
+                    )
                     triples = [(x, prop, s)] + ([(x, RDF.type, owner)] if owner is not None else [])
                     yield "only", triples, [definition(owner or o, rule, RDFS.subClassOf)], (
-                        f"{n(x)} {verb(n(prop))} {n(s)}, and {rule}"
+                        self._said(
+                            (
+                                f"{n(x)} {verb(n(prop))} {n(s)}, and {rule}"
+                            ),
+                            'reasoning.reason.only_owned' if owner is not None else 'reasoning.reason.only',
+                            lambda: self._parts(x=x, p=prop, s=s, o=o, **{'k': owner} if owner is not None else {}),
+                            ui_metadata,
+                        )
                     )
         for m in c.objects(s, OWL.sameAs):
             if m != s and (m, RDF.type, o) in c:
                 yield "same", [(s, OWL.sameAs, m), (m, RDF.type, o)], [], (
-                    f"{n(s)} and {n(m)} are the same thing, and {n(m)} is {a(n(o))}"
+                    self._said(
+                        (
+                            f"{n(s)} and {n(m)} are the same thing, and {n(m)} is {a(n(o))}"
+                        ),
+                        'reasoning.reason.same_member',
+                        lambda: self._parts(s=s, m=m, o=o),
+                        ui_metadata,
+                    )
                 )
 
     def _meets(self, s, d) -> Optional[tuple]:
@@ -739,9 +981,16 @@ class Explainer:
                     return [(s, prop, y), (y, RDF.type, filler)], None
         return None
 
-    def _defines(self, cls, d) -> str:
+    def _defines(self, cls, d, *, ui_metadata: bool = False) -> str:
         """*a Manager is exactly a Person that manages at least one Employee*."""
-        return f"{a(self._n(cls))} is exactly {self._expression(d)}"
+        return self._said(
+            (
+                f"{a(self._n(cls))} is exactly {self._expression(d)}"
+            ),
+            'reasoning.definition',
+            lambda: {'name': name_parts(cls, self.names), 'expression': self._expression_parts(d)},
+            ui_metadata,
+        )
 
     def _expression(self, d) -> str:
         c, n = self.c, self._n
@@ -766,19 +1015,33 @@ class Explainer:
             return f"{verb(n(prop))} at least one {n(filler)}" if filler != OWL.Thing else f"{verb(n(prop))} something"
         return f"{verb(n(prop))} as a rule says"
 
-    def _same_thing(self, s, o):
+    def _same_thing(self, s, o, *, ui_metadata: bool = False):
         c, n = self.c, self._n
         for prop in c.subjects(RDF.type, OWL.FunctionalProperty):
             for x in c.subjects(prop, s):
                 if (x, prop, o) in c:
                     yield "sameThing", [(x, prop, s), (x, prop, o), (prop, RDF.type, OWL.FunctionalProperty)], [], (
-                        f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and {n(prop)} is at most one, so they are the same"
+                        self._said(
+                            (
+                                f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and {n(prop)} is at most one, so they are the same"
+                            ),
+                            'reasoning.reason.functional',
+                            lambda: self._parts(x=x, p=prop, s=s, o=o),
+                            ui_metadata,
+                        )
                     )
         for prop in c.subjects(RDF.type, OWL.InverseFunctionalProperty):
             for y in c.objects(s, prop):
                 if (o, prop, y) in c:
                     yield "sameThing", [(s, prop, y), (o, prop, y), (prop, RDF.type, OWL.InverseFunctionalProperty)], [], (
-                        f"{n(s)} and {n(o)} both {verb(n(prop))} {n(y)}, and {n(prop)} identifies its start, so they are the same"
+                        self._said(
+                            (
+                                f"{n(s)} and {n(o)} both {verb(n(prop))} {n(y)}, and {n(prop)} identifies its start, so they are the same"
+                            ),
+                            'reasoning.reason.inverse_functional',
+                            lambda: self._parts(s=s, o=o, p=prop, y=y),
+                            ui_metadata,
+                        )
                     )
         for kind in (OWL.maxCardinality, OWL.maxQualifiedCardinality):
             for r, value in c.pairs(kind):
@@ -787,43 +1050,99 @@ class Explainer:
                 prop = c.first(r, OWL.onProperty)
                 for x in c.subjects(RDF.type, r):
                     if prop is not None and (x, prop, s) in c and (x, prop, o) in c:
-                        yield "sameThing", [(x, prop, s), (x, prop, o)], [definition(r, f"{n(x)} {verb(n(prop))} at most one thing", RDFS.subClassOf)], (
-                            f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and has at most one, so they are the same"
+                        yield "sameThing", [(x, prop, s), (x, prop, o)], [definition(r, self._said(
+                            (
+                                f"{n(x)} {verb(n(prop))} at most one thing"
+                            ),
+                            'reasoning.definition.maximum_one',
+                            lambda: self._parts(x=x, p=prop),
+                            ui_metadata,
+                        ), RDFS.subClassOf)], (
+                            self._said(
+                                (
+                                    f"{n(x)} {verb(n(prop))} {n(s)} and {n(o)}, and has at most one, so they are the same"
+                                ),
+                                'reasoning.reason.maximum_one',
+                                lambda: self._parts(x=x, p=prop, s=s, o=o),
+                                ui_metadata,
+                            )
                         )
         for m in c.objects(s, OWL.sameAs):
             if m not in (s, o) and ((m, OWL.sameAs, o) in c):
                 yield "same", [(s, OWL.sameAs, m), (m, OWL.sameAs, o)], [], (
-                    f"{n(s)} and {n(m)} are the same thing, and so are {n(m)} and {n(o)}"
+                    self._said(
+                        (
+                            f"{n(s)} and {n(m)} are the same thing, and so are {n(m)} and {n(o)}"
+                        ),
+                        'reasoning.reason.same_chain',
+                        lambda: self._parts(s=s, m=m, o=o),
+                        ui_metadata,
+                    )
                 )
 
-    def _link(self, s, p, o):
+    def _link(self, s, p, o, *, ui_metadata: bool = False):
         c, n = self.c, self._n
         for q in c.objects(p, OWL.inverseOf) | c.subjects(OWL.inverseOf, p):
             if (o, q, s) in c:
                 rule = (p, OWL.inverseOf, q) if (p, OWL.inverseOf, q) in c else (q, OWL.inverseOf, p)
                 yield "inverse", [(o, q, s), rule], [], (
-                    f"{n(o)} {verb(n(q))} {n(s)}, and {n(p)} is {n(q)} the other way round"
+                    self._said(
+                        (
+                            f"{n(o)} {verb(n(q))} {n(s)}, and {n(p)} is {n(q)} the other way round"
+                        ),
+                        'reasoning.reason.inverse_link',
+                        lambda: self._parts(s=s, p=p, o=o, q=q),
+                        ui_metadata,
+                    )
                 )
         if (p, RDF.type, OWL.SymmetricProperty) in c and (o, p, s) in c:
             yield "symmetric", [(o, p, s), (p, RDF.type, OWL.SymmetricProperty)], [], (
-                f"{n(o)} {verb(n(p))} {n(s)}, and {n(p)} works both ways"
+                self._said(
+                    (
+                        f"{n(o)} {verb(n(p))} {n(s)}, and {n(p)} works both ways"
+                    ),
+                    'reasoning.reason.symmetric_link',
+                    lambda: self._parts(s=s, p=p, o=o),
+                    ui_metadata,
+                )
             )
         if (p, RDF.type, OWL.TransitiveProperty) in c:
             for m in c.objects(s, p):
                 if m not in (s, o) and (m, p, o) in c:
                     yield "transitive", [(s, p, m), (m, p, o), (p, RDF.type, OWL.TransitiveProperty)], [], (
-                        f"{n(s)} {verb(n(p))} {n(m)}, {n(m)} {verb(n(p))} {n(o)}, and {n(p)} chains"
+                        self._said(
+                            (
+                                f"{n(s)} {verb(n(p))} {n(m)}, {n(m)} {verb(n(p))} {n(o)}, and {n(p)} chains"
+                            ),
+                            'reasoning.reason.transitive_link',
+                            lambda: self._parts(s=s, p=p, m=m, o=o),
+                            ui_metadata,
+                        )
                     )
         for q in c.subjects(RDFS.subPropertyOf, p):
             if q != p and (s, q, o) in c:
                 yield "subProperty", [(s, q, o), (q, RDFS.subPropertyOf, p)], [], (
-                    f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} is a kind of {n(p)}"
+                    self._said(
+                        (
+                            f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} is a kind of {n(p)}"
+                        ),
+                        'reasoning.reason.subproperty_link',
+                        lambda: self._parts(s=s, p=p, q=q, o=o),
+                        ui_metadata,
+                    )
                 )
         for q in c.objects(p, OWL.equivalentProperty) | c.subjects(OWL.equivalentProperty, p):
             if q != p and (s, q, o) in c:
                 rule = (p, OWL.equivalentProperty, q) if (p, OWL.equivalentProperty, q) in c else (q, OWL.equivalentProperty, p)
                 yield "same", [(s, q, o), rule], [], (
-                    f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} and {n(p)} mean the same thing"
+                    self._said(
+                        (
+                            f"{n(s)} {verb(n(q))} {n(o)}, and {n(q)} and {n(p)} mean the same thing"
+                        ),
+                        'reasoning.reason.equivalent_property_link',
+                        lambda: self._parts(s=s, p=p, q=q, o=o),
+                        ui_metadata,
+                    )
                 )
         # *Every Gold customer has status gold*: a has-value rule on one of
         # s's classes.
@@ -832,18 +1151,47 @@ class Explainer:
                 for k in c.objects(s, RDF.type):
                     if isinstance(k, URIRef) and (k, RDFS.subClassOf, r) in c:
                         rule = f"every {n(k)} {verb(n(p))} {n(o)}"
+                        rule = self._said(
+                            (
+                                rule
+                            ),
+                            'reasoning.definition.value',
+                            lambda: self._parts(name=k, p=p, o=o),
+                            ui_metadata,
+                        )
                         yield "defining", [(s, RDF.type, k)], [definition(k, rule, RDFS.subClassOf)], (
-                            f"{n(s)} is {a(n(k))}, and {rule}"
+                            self._said(
+                                (
+                                    f"{n(s)} is {a(n(k))}, and {rule}"
+                                ),
+                                'reasoning.reason.has_value',
+                                lambda: self._parts(s=s, k=k, p=p, o=o),
+                                ui_metadata,
+                            )
                         )
         for m in c.objects(s, OWL.sameAs):
             if m != s and (m, p, o) in c:
                 yield "same", [(s, OWL.sameAs, m), (m, p, o)], [], (
-                    f"{n(s)} and {n(m)} are the same thing, and {n(m)} {verb(n(p))} {n(o)}"
+                    self._said(
+                        (
+                            f"{n(s)} and {n(m)} are the same thing, and {n(m)} {verb(n(p))} {n(o)}"
+                        ),
+                        'reasoning.reason.same_subject_link',
+                        lambda: self._parts(s=s, m=m, p=p, o=o),
+                        ui_metadata,
+                    )
                 )
         for m in c.objects(o, OWL.sameAs):
             if m != o and (s, p, m) in c:
                 yield "same", [(o, OWL.sameAs, m), (s, p, m)], [], (
-                    f"{n(o)} and {n(m)} are the same thing, and {n(s)} {verb(n(p))} {n(m)}"
+                    self._said(
+                        (
+                            f"{n(o)} and {n(m)} are the same thing, and {n(s)} {verb(n(p))} {n(m)}"
+                        ),
+                        'reasoning.reason.same_object_link',
+                        lambda: self._parts(s=s, o=o, m=m, p=p),
+                        ui_metadata,
+                    )
                 )
 
 
@@ -870,22 +1218,9 @@ _IRI = re.compile(r"(?:https?|urn|file|tag):[^\s,()'\"]+")
 _PROBE_IN = re.compile(re.escape(PROBE) + r"(\d+)")
 
 
-def analyse(
-    stated_triples: Iterable[tuple],
-    raw: RawResult,
-    *,
-    key: Key,
-    languages: list[str],
-    probes: list[str],
-    imported: Optional[set] = None,
-    statements: int = 0,
-) -> Outcome:
-    """Filter, group, explain nothing yet (Why? is asked per fact), and turn
-    OWL-RL's messages into problems."""
-    stated = Index(stated_triples)
-    closure = stated.copy()
-    for t in raw.added:
-        closure.add(t)
+def _name_reader(stated: Index, languages: Iterable[str]) -> Callable:
+    """Read labels from stated facts only, with a private per-view cache."""
+    languages = tuple(languages)
     label_cache: dict = {}
 
     # Names come from the stated facts only: OWL-RL copies a label across
@@ -902,55 +1237,22 @@ def analyse(
             label_cache[term] = found
         return found
 
-    imported = imported or set()
-    properties = {
-        s for t in _PROPERTY_TYPES for s in stated.subjects(RDF.type, t)
-        if isinstance(s, URIRef) and not built_in(s)
-    }
-    facts: dict = {g: [] for g in (*GROUPS, IMPORTED)}
-    seen_pairs: set = set()
-    for t in raw.added:
-        s, p, o = t
-        group = _SHOWN.get(p)
-        if group is None:
-            if p not in properties:
-                continue
-            group = "links"
-        if not (isinstance(s, URIRef) and isinstance(o, URIRef)) or s == o:
-            continue
-        if str(s).startswith(PROBE) or str(o).startswith(PROBE):
-            continue
-        if built_in(s) or (p in (RDF.type, RDFS.subClassOf, RDFS.subPropertyOf) and built_in(o)):
-            continue
-        if p in _SYMMETRIC:
-            if (o, p, s) in stated:
-                continue  # the stated fact read backwards is not new
-            pair = (p, frozenset((s, o)))
-            if pair in seen_pairs:
-                continue
-            seen_pairs.add(pair)
-            # Concluded both ways, the pair is shown one way, the same one
-            # every run: the IRIs' order, not the set's.
-            if str(o) < str(s) and (o, p, s) in closure:
-                s, o = o, s
-                t = (s, p, o)
-        if str(s) in imported and str(o) in imported:
-            group = IMPORTED
-        facts[group].append({**triple_json(t, names), "sentence": fact_sentence(t, names), "t": t})
-    for listed in facts.values():
-        listed.sort(key=lambda f: (_natural(f["sentence"]), f["s"], f["o"]))
+    return names
 
-    main_errors = set(raw.errors)
+
+def _problem_rows(errors, probe_errors, probes, stated: Index, closure: Index, names: Callable):
+    """Format the original recorded problem events without running inference."""
+    main_errors = set(errors)
     problems: list = []
     reported: set = set()
-    for message in raw.errors:
+    for message in errors:
         problem = _problem(message, stated, closure, names)
         if problem is None or problem["id"] in reported:
             continue
         reported.add(problem["id"])
         problems.append(problem)
     never: set = set()
-    for message in raw.probe_errors:
+    for message in probe_errors:
         found = [int(m) for m in _PROBE_IN.findall(message)]
         if not found:
             # A probe that met a contradiction through another thing (5.5),
@@ -975,10 +1277,73 @@ def analyse(
     problems.sort(key=lambda pr: (pr["kind"] != "neverMembers", pr["sentence"].casefold()))
     for problem in problems:
         problem.pop("id", None)
-    return Outcome(
+    return problems, never
+
+
+def analyse(
+    stated_triples: Iterable[tuple],
+    raw: RawResult,
+    *,
+    key: Key,
+    languages: list[str],
+    probes: list[str],
+    imported: Optional[set] = None,
+    statements: int = 0,
+) -> Outcome:
+    """Filter, group, explain nothing yet (Why? is asked per fact), and turn
+    OWL-RL's messages into problems."""
+    stated = Index(stated_triples)
+    closure = stated.copy()
+    for t in raw.added:
+        closure.add(t)
+    names = _name_reader(stated, languages)
+
+    imported = imported or set()
+    properties = {
+        s for t in _PROPERTY_TYPES for s in stated.subjects(RDF.type, t)
+        if isinstance(s, URIRef) and not built_in(s)
+    }
+    facts: dict = {g: [] for g in (*GROUPS, IMPORTED)}
+    seen_pairs: set = set()
+    for t in raw.added:
+        s, p, o = t
+        group = _SHOWN.get(p)
+        if group is None:
+            if p not in properties:
+                continue
+            group = "links"
+        if not (isinstance(s, URIRef) and isinstance(o, URIRef)) or s == o:
+            continue
+        if str(s).startswith(PROBE) or str(o).startswith(PROBE):
+            continue
+        if built_in(s) or (p in _TYPING_PREDICATES and built_in(o)):
+            continue
+        if p in _SYMMETRIC:
+            if (o, p, s) in stated:
+                continue  # the stated fact read backwards is not new
+            pair = (p, frozenset((s, o)))
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+            # Concluded both ways, the pair is shown one way, the same one
+            # every run: the IRIs' order, not the set's.
+            if str(o) < str(s) and (o, p, s) in closure:
+                s, o = o, s
+                t = (s, p, o)
+        if str(s) in imported and str(o) in imported:
+            group = IMPORTED
+        facts[group].append({**triple_json(t, names), "sentence": fact_sentence(t, names), "t": t})
+    for listed in facts.values():
+        listed.sort(key=lambda f: (_natural(f["sentence"]), f["s"], f["o"]))
+
+    problems, never = _problem_rows(raw.errors, raw.probe_errors, probes, stated, closure, names)
+    outcome = Outcome(
         "done", key, statements=statements, duration_ms=raw.duration_ms, stated=stated, closure=closure,
         names=names, facts=facts, problems=problems, never=never,
     )
+    outcome._display_languages = tuple(languages)
+    outcome._problem_sources = (tuple(raw.errors), tuple(raw.probe_errors), tuple(probes))
+    return outcome
 
 
 def _natural(text: str) -> tuple:
@@ -1003,6 +1368,8 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("disjoint", x, frozenset((c1, c2))),
             "kind": "disjointMember",
+            "uiMessage": make_message("reasoning.problem.disjoint_member", subject=name_parts(x, names),
+                                      first=name_parts(c1, names), second=name_parts(c2, names)),
             "sentence": (
                 f"{names(x)} cannot be both {a(names(c1))} and {a(names(c2))}: "
                 f"no {names(c1)} is {a(names(c2))}."
@@ -1016,6 +1383,7 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("irreflexive", x, p),
             "kind": "irreflexive",
+            "uiMessage": make_message("reasoning.problem.irreflexive", subject=name_parts(x, names), property=name_parts(p, names)),
             "sentence": f"{names(x)} is linked to itself by {names(p)}, which is never to itself.",
             "subject": str(x),
             "causes": [_cause((x, p, x), stated, names), _cause((p, RDF.type, OWL.IrreflexiveProperty), stated, names)],
@@ -1027,6 +1395,8 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("asymmetric", p, frozenset((x, y))),
             "kind": "asymmetric",
+            "uiMessage": make_message("reasoning.problem.asymmetric", first=name_parts(first, names),
+                                      second=name_parts(second, names), property=name_parts(p, names)),
             "sentence": (
                 f"{names(first)} {verb(names(p))} {names(second)} and {names(second)} {verb(names(p))} "
                 f"{names(first)}, but {names(p)} is never both ways."
@@ -1053,6 +1423,7 @@ def _problem(message: str, stated: Index, closure: Index, names: Callable) -> Op
         return {
             "id": ("different", frozenset((x, y))),
             "kind": "differentSame",
+            "uiMessage": make_message("reasoning.problem.different_same", first=name_parts(first, names), second=name_parts(second, names)),
             "sentence": (
                 f"{names(first)} and {names(second)} are stated to be different things, "
                 "but the reasoner concludes they are the same thing."
@@ -1076,6 +1447,7 @@ def _reasoner_words(message: str, names: Callable, replace: Optional[Callable] =
     return {
         "id": ("other", message),
         "kind": "other",
+        "uiMessage": make_message("reasoning.problem.engine"),
         "sentence": f"{_IRI.sub(name, message)} (the reasoner's words)",
         "subject": None,
         "causes": [],
@@ -1103,14 +1475,18 @@ def _never_members(cls, message: str, stated: Index, names: Callable, probes: li
         if all(path is not None for path in paths) and rule in stated:
             causes = [_cause(t, stated, names) for path in paths for t in path] + [_cause(rule, stated, names)]
             kinds = [f"a kind of {names(c)}" for c in (c1, c2) if c != cls]
+            mode = "self" if rule[0] == cls == rule[2] else "parent" if cls in (rule[0], rule[2]) else "both"
             return {
                 "kind": "neverMembers",
+                "uiMessage": make_message("reasoning.problem.never." + mode, name=name_parts(cls, names),
+                    **({"first": name_parts(rule[0], names), "second": name_parts(rule[2], names)} if mode != "self" else {})),
                 "sentence": f"{base}: it is {' and '.join(kinds)}, and no {names(rule[0])} is {a(names(rule[2]))}.",
                 "subject": str(cls),
                 "causes": causes,
                 "reasoner": words,
             }
-    return {"kind": "neverMembers", "sentence": f"{base}.", "subject": str(cls), "causes": [], "reasoner": words}
+    return {"kind": "neverMembers", "sentence": f"{base}.", "subject": str(cls), "causes": [], "reasoner": words,
+            "uiMessage": make_message("reasoning.problem.never.unknown", name=name_parts(cls, names))}
 
 
 def _kind_path(stated: Index, start, goal) -> Optional[list]:

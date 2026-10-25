@@ -14,6 +14,12 @@ SUMMARY
     and each row's last result as a word.
 
 BASIC IDEA
+    Read-only precision guidance preserves original drafts/data and identities;
+    language changes do not repeat reads or submit rounded integer counts.
+
+    Rejected reads preserve their original details and display facts through UI
+    language changes without refetching or replacing retained content.
+
     api.ts is mocked and the real project store is opened on a fixed
     project, so every control goes through the commands the server would
     receive; each test asserts the command and its arguments.
@@ -48,6 +54,10 @@ vi.mock("../api", async (importOriginal) => ({
   searchNodes,
 }));
 
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
+import { ApiError } from "../api";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import { projectStore } from "../state/projectStore";
 import type { ProjectKind, ShapeForm, ShapesListing } from "../types";
 import ShapesView from "./ShapesView";
@@ -104,6 +114,7 @@ async function setup(
   kind: ProjectKind = "ontology",
   documents = [doc("model"), doc("shapes")],
   suggestions: unknown = SUGGESTIONS,
+  localized = false,
 ) {
   openProject.mockResolvedValue({
     project: {
@@ -122,9 +133,8 @@ async function setup(
     onError: vi.fn<(message: string) => void>(),
   };
   await act(async () => {
-    render(
-      <ShapesView projectId={PID} kind={kind} languages={["en", "fr"]} modelOntologyId={`${PID}-model`} {...props} />,
-    );
+    const view = <ShapesView projectId={PID} kind={kind} languages={["en", "fr"]} modelOntologyId={`${PID}-model`} {...props} />;
+    render(localized ? <I18nProvider><UiLanguageSelect />{view}</I18nProvider> : view);
   });
 }
 
@@ -163,7 +173,7 @@ describe("ShapesView: the list and +", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "CreateShape", {
       target: "http://www.w3.org/2004/02/skos/core#Concept",
-    });
+    }, "en");
   });
 
   it("makes shapes.ttl with the first +, tracks it, and opens the new shape alone", async () => {
@@ -183,7 +193,7 @@ describe("ShapesView: the list and +", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Check my model" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "CreateShape", { preset: "modelCheck" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "CreateShape", { preset: "modelCheck" }, "en");
     expect(projectStore.getSnapshot().documents.map((d) => d.doc)).toEqual(["model", "shapes"]);
     expect(screen.getByRole("heading", { level: 3, name: "Check my model" })).toBeTruthy();
     // Focus goes to the new form once it is drawn (found in the Chrome pass:
@@ -260,7 +270,7 @@ describe("ShapesView: the form", () => {
     expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "AddRule", {
       shape: PERSON.id,
       rule: { path: [`${X}birthDate`], pathLabel: "birth date", pathKind: "attribute", minCount: 1, maxCount: 1, datatype: "xsd:date" },
-    });
+    }, "en");
   });
 
   it("keeps Add disabled for an impossible count and says why", async () => {
@@ -299,11 +309,11 @@ describe("ShapesView: the form", () => {
     expect(runCommand).toHaveBeenLastCalledWith(PID, "shapes", "ReplaceRule", {
       shape: PERSON.id, path: [`${X}name`],
       rule: { path: [`${X}name`], pathLabel: "name", pathKind: "attribute", maxCount: 1 },
-    });
+    }, "en");
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove the rule on name" }));
     });
-    expect(runCommand).toHaveBeenLastCalledWith(PID, "shapes", "RemoveRule", { shape: PERSON.id, path: [`${X}name`] });
+    expect(runCommand).toHaveBeenLastCalledWith(PID, "shapes", "RemoveRule", { shape: PERSON.id, path: [`${X}name`] }, "en");
   });
 
   it("adds a suggestion as one merge", async () => {
@@ -315,7 +325,7 @@ describe("ShapesView: the form", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "AddRule", {
       shape: PERSON.id, rule: SUGGESTIONS.suggestions[0].rule, merge: true,
-    });
+    }, "en");
   });
 
   it("changes the severity and shows a refusal without ticking what was refused", async () => {
@@ -324,7 +334,7 @@ describe("ShapesView: the form", () => {
     await act(async () => {
       fireEvent.click(screen.getByLabelText("A warning"));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "SetShapeSeverity", { shape: PERSON.id, severity: "warning" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "SetShapeSeverity", { shape: PERSON.id, severity: "warning" }, "en");
     expect(screen.getByText("Refused for a reason.")).toBeTruthy();
     expect((screen.getByLabelText("A problem") as HTMLInputElement).checked).toBe(true);
   });
@@ -338,7 +348,7 @@ describe("ShapesView: the form", () => {
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     });
-    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "DeleteShape", { shape: PERSON.id });
+    expect(runCommand).toHaveBeenCalledWith(PID, "shapes", "DeleteShape", { shape: PERSON.id }, "en");
   });
 
   it("shows a Turtle shape read-only, saying why, with Edit in Turtle", async () => {
@@ -511,7 +521,7 @@ describe("ShapesView: Stage A follow-ups fixed in Stage B (5.9)", () => {
     const field = screen.getByRole("combobox", { name: "Each value must be of the class" });
     await act(async () => {
       fireEvent.change(field, { target: { value: "Per" } });
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 350));
     });
     fireEvent.keyDown(field, { key: "ArrowDown" });
     fireEvent.keyDown(field, { key: "Enter" });
@@ -770,4 +780,135 @@ describe("ShapesView in two columns (load-and-shapes 5.3, AC-4)", () => {
     expect(results.tabIndex).toBe(0);
     expect(shape.tabIndex).toBe(-1);
   });
+});
+
+
+it("switches SHACL list and form labels without refetching or resetting an open rule", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await setup([PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  expect(screen.getByRole("heading", { level: 2, name: "検証ルールセット" })).toBeTruthy();
+  expect(document.querySelector(".shape-sentence")?.textContent).toBe("すべてのPerson：「name」が1件以上必要です。");
+  fireEvent.click(screen.getByRole("button", { name: "nameのルールを編集" }));
+  const editor = screen.getByRole("group", { name: "ルールを変更" });
+  fireEvent.change(within(editor).getByRole("combobox", { name: "件数" }), { target: { value: "atLeast" } });
+  const count = within(editor).getByRole("spinbutton", { name: "最小件数" });
+  fireEvent.change(count, { target: { value: "3" } });
+  const calls = [getShapes.mock.calls.length, getShapeSuggestions.mock.calls.length];
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("group", { name: "Change the rule" })).toBe(editor);
+  expect((count as HTMLInputElement).value).toBe("3");
+  expect([getShapes.mock.calls.length, getShapeSuggestions.mock.calls.length]).toEqual(calls);
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps the delete confirmation open while its count and actions change language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await setup([PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  fireEvent.click(screen.getByRole("button", { name: "この検証ルールセットを削除" }));
+  const dialog = screen.getByRole("dialog", { name: "Person rulesを削除しますか？" });
+  expect(dialog.textContent).toContain("ルール1件も一緒に削除します。元に戻す操作で復元できます。");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("dialog", { name: "Delete Person rules?" })).toBe(dialog);
+  expect(dialog.textContent).toContain("Its rule goes with it. Undo brings it back.");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(runCommand).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rewords an unseen result badge without rerunning validation", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  await setup([PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  validateProject.mockResolvedValue({
+    stopped: false, durationMs: 1, statements: 4, shapeCount: 1,
+    revisions: { model: 1, shapes: 1 },
+    shapes: [{ id: PERSON.id, name: PERSON.name, state: "fails", target: null, focusCount: 2, failingCount: 1, problemCount: 3, warningCount: 0, problems: [], problemsTotal: 3, error: null }],
+  });
+  await act(async () => { await projectStore.validate(); });
+  const tab = screen.getByRole("tab", { name: /検証結果.*問題3件/ });
+  expect(tab.getAttribute("aria-selected")).toBe("false");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("tab", { name: "Results, 3 problems" })).toBe(tab);
+  expect(validateProject).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each(["list", "suggestions"])("keeps %s error facts and original details when UI language changes", async phase => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const error = new ApiError("Original <b>{cause}", 422, undefined,
+    { code: "model.invalid_value", args: { value: "<img>{value}", datatype: "xsd:integer" } });
+  if (phase === "list") getShapes.mockRejectedValueOnce(error);
+  else getShapeSuggestions.mockRejectedValueOnce(error);
+  await setup(phase === "list" ? [] : [PERSON], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  expect(screen.getByText('「<img>{value}」はxsd:integerの値として使用できません。')).toBeTruthy();
+  const pre = screen.getByText(error.message, { selector: "pre" });
+  const details = pre.closest("details")!;
+  details.open = true;
+  const summary = details.querySelector("summary")!;
+  summary.focus();
+  const listCalls = getShapes.mock.calls.length, suggestionCalls = getShapeSuggestions.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText('“<img>{value}” is not a valid xsd:integer value.')).toBeTruthy();
+  expect(screen.getByText(error.message, { selector: "pre" })).toBe(pre);
+  expect(details.open).toBe(true);
+  expect(document.activeElement).toBe(summary);
+  expect(getShapes).toHaveBeenCalledTimes(listCalls);
+  expect(getShapeSuggestions).toHaveBeenCalledTimes(suggestionCalls);
+  expect(document.querySelector(".shapes-view img, .shapes-view b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each([true, false])("shows read-only reason facts (known: %s), keeps the original and opens the same Turtle target", async known => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const predicate = "sh:or <img>{predicate}";
+  const original = "uses sh:or <b>{predicate}";
+  const readonly: ShapeForm = { ...CONTACT, name: "Unnamed shape", named: false,
+    nameUiMessage: { code: "words.validation.unnamed_shape", args: {} }, unsupported: [original],
+    unsupportedUiMessages: [{ code: known ? "shape.readonly.uses_predicate" : "future.reason", args: { predicate } }],
+  };
+  await setup([readonly], "ontology", [doc("model"), doc("shapes")], SUGGESTIONS, true);
+  expect(screen.getByRole("heading", { name: "名前のない検証ルール" })).toBeTruthy();
+  expect(screen.getByText(known ? `${predicate}を使用しているため、このフォームでは編集できません。` : "このフォームの編集範囲外の部分があります。原文を詳細で確認してください。")).toBeTruthy();
+  const pre = screen.getByText(original, { selector: "pre" });
+  const details = pre.closest("details")!; details.open = true;
+  const summary = details.querySelector("summary")!; summary.focus();
+  const calls = getShapes.mock.calls.length;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(known ? `This shape uses ${predicate}, which this form cannot edit.` : "Part of this shape is outside what this form can edit. Check the original details.")).toBeTruthy();
+  expect(screen.getByText(original, { selector: "pre" })).toBe(pre);
+  expect(details.open).toBe(true); expect(document.activeElement).toBe(summary);
+  expect(getShapes).toHaveBeenCalledTimes(calls);
+  expect(getShapeSuggestions).not.toHaveBeenCalled();
+  expect(runCommand).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Edit in Turtle" }));
+  expect(props.onEditInTurtle).toHaveBeenCalledWith(readonly);
+  expect(document.querySelector(".shape-unsupported b, .shape-unsupported img")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("rereads shape and suggestion names for the dictionary language without editing RDF", async () => {
+  await setup([PERSON]);cleanup();getShapes.mockClear();getShapeSuggestions.mockClear();
+  const japanese={...PERSON,displayName:"人のルール",target:{...PERSON.target!,label:"人"},rules:PERSON.rules.map(rule=>({...rule,pathLabel:"呼称"}))};
+  getShapes.mockImplementation((_pid,language)=>Promise.resolve(listing([language==="ja"?japanese:PERSON])));
+  getShapeSuggestions.mockResolvedValue(SUGGESTIONS);
+  const draw=(language:string)=><DictionaryLanguageContext.Provider value={language}><ShapesView projectId={PID} kind="ontology" languages={["en","ja"]} modelOntologyId={`${PID}-model`} {...props}/></DictionaryLanguageContext.Provider>;
+  let view!:ReturnType<typeof render>;
+  await act(async()=>{view=render(draw("en"));});
+  expect(document.querySelector(".shape-form")?.textContent).toContain("Person");
+  fireEvent.click(screen.getByRole("button", { name: "Edit shape name" }));
+  const nameField = screen.getByRole("textbox", { name: "shape name" });
+  expect((nameField as HTMLInputElement).value).toBe(PERSON.name);
+  fireEvent.change(nameField, { target: { value: "Primary language draft" } });
+  nameField.focus();
+  await act(async()=>{view.rerender(draw("ja"));});
+  expect(screen.getByRole("heading", { name: "人のルール" })).toBeTruthy();
+  expect(document.querySelector(".shapes-row-name")?.textContent).toBe("人のルール");
+  expect(screen.getByRole("textbox", { name: "shape name" })).toBe(nameField);
+  expect((nameField as HTMLInputElement).value).toBe("Primary language draft");
+  expect(document.activeElement).toBe(nameField);
+  expect(document.querySelector(".shape-form")?.textContent).toContain("人");
+  expect(document.querySelector(".shape-rules")?.textContent).toContain("呼称");
+  expect(getShapes).toHaveBeenLastCalledWith(PID,"ja");
+  expect(getShapeSuggestions).toHaveBeenLastCalledWith(PID,`${X}Person`,PERSON.id,"ja");
+  expect(runCommand).not.toHaveBeenCalled();
 });

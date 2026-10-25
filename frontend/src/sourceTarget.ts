@@ -31,6 +31,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { makeUiMessage, renderUiMessage, type UiMessage } from "./i18n/uiMessage";
+import { englishTranslator } from "./i18n/format";
+import type { Translator } from "./i18n/types";
+
 /** What "View in source" is looking for: one entity, in both written forms. */
 export interface SourceTarget {
   iri: string;
@@ -117,10 +121,11 @@ export function findTargetLine(lines: string[], target: SourceTarget): number {
  * at 2 MB, so on a large file "not found" usually means "further down than
  * this pane goes", and telling the user it is absent would be false.
  */
-export function targetMissingMessage(truncated: boolean): string {
-  if (truncated) return "That entity is past the part of the file shown here.";
-  return (
-    "That entity does not appear in the source text shown here — " +
-    "try the other of Original and Formatted Turtle."
-  );
+export function targetMissingNotice(truncated: boolean): UiMessage {
+  return makeUiMessage(truncated ? "source.missingPast" : "source.missing");
+}
+
+/** English string compatibility for embedded callers; App uses the facts. */
+export function targetMissingMessage(truncated: boolean, t: Translator = englishTranslator): string {
+  return renderUiMessage(targetMissingNotice(truncated), t);
 }

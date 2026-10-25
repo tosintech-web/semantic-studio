@@ -54,6 +54,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
 import { moreRulesText } from "../modeling/ruleSentences";
 import { article, existingSentence, linkSentence, shareEntry } from "../modeling/sentences";
 import type { CanvasNode, CanvasView } from "../types";
@@ -86,36 +88,37 @@ export type RelateResult =
   | { refusal: string }
   | { choices: RelateChoice[]; notes: string[] };
 
-const CLASS_CONCEPT =
-  "A class and a concept cannot be linked here. Use the form for other annotations.";
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
 
 function node(view: CanvasView, iri: string): CanvasNode | undefined {
   return view.nodes.find((n) => n.iri === iri);
 }
 
 /** Why a box of the other kind is not linked here, or null (D-089). */
-export function otherKindRefusal(view: CanvasView, box: CanvasNode): string | null {
+export function otherKindRefusal(view: CanvasView, box: CanvasNode, locale: UiLocale = "en"): string | null {
+  const t = tFor(locale);
   if (view.kind === "ontology" && box.kind === "concept") {
-    return `${box.label} is a SKOS concept, read-only in an ontology. Edit it in Turtle, or change the project to a taxonomy.`;
+    return t("canvasRelate.otherConcept", { name: box.label });
   }
   if (view.kind === "taxonomy" && box.kind === "class") {
-    return `${box.label} is a class, read-only in a taxonomy. Edit it in Turtle, or change the project to an ontology.`;
+    return t("canvasRelate.otherClass", { name: box.label });
   }
   return null;
 }
 
-export function relateChoices(view: CanvasView, fromIri: string, toIri: string): RelateResult {
+export function relateChoices(view: CanvasView, fromIri: string, toIri: string, locale: UiLocale = "en"): RelateResult {
+  const t = tFor(locale);
   const from = node(view, fromIri);
   const to = node(view, toIri);
-  if (!from || !to) return { refusal: "Draw the line from one box to another." };
-  if (from.kind !== to.kind) return { refusal: CLASS_CONCEPT };
-  const otherKind = otherKindRefusal(view, from) ?? otherKindRefusal(view, to);
+  if (!from || !to) return { refusal: t("canvasRelate.noEnds") };
+  if (from.kind !== to.kind) return { refusal: t("canvasRelate.mixed") };
+  const otherKind = otherKindRefusal(view, from, locale) ?? otherKindRefusal(view, to, locale);
   if (otherKind) return { refusal: otherKind };
   const self = from.iri === to.iri;
-  if (self && from.kind === "concept") return { refusal: `${from.label} cannot be narrower than itself.` };
+  if (self && from.kind === "concept") return { refusal: t("canvasRelate.self", { name: from.label }) };
   if (from.imported) {
     return {
-      refusal: `${from.label} comes from ${from.imported === "outside" ? "outside this model" : from.imported} and is read-only. Draw the line from a box of this model.`,
+      refusal: t("canvasRelate.imported", { name: from.label, source: from.imported === "outside" ? t("canvasKind.outside") : from.imported }),
     };
   }
   const has = (kind: string) =>
@@ -128,20 +131,20 @@ export function relateChoices(view: CanvasView, fromIri: string, toIri: string):
     const related = view.edges.some(
       (e) => e.kind === "related" && ((e.source === from.iri && e.target === to.iri) || (e.source === to.iri && e.target === from.iri)),
     );
-    if (has("broader")) return { refusal: `${from.label} is already narrower than ${to.label}.` };
+    if (has("broader")) return { refusal: t("canvasRelate.alreadyNarrower", { from: from.label, to: to.label }) };
     // The target already under the source: *narrower than* would make a
     // loop, and SKOS keeps *related* apart from the hierarchy.
-    if (narrowerThan(view, to.iri, from.iri)) return { refusal: `${to.label} is already narrower than ${from.label}.` };
+    if (narrowerThan(view, to.iri, from.iri)) return { refusal: t("canvasRelate.alreadyNarrower", { from: to.label, to: from.label }) };
     const choices: RelateChoice[] = [];
     // Two related concepts cannot be put one under the other (5.9).
-    if (!related) choices.push({ kind: "broader", label: linkSentence("broader", from.label, to.label) });
+    if (!related) choices.push({ kind: "broader", label: linkSentence("broader", from.label, to.label, t) });
     // The source already under the target, through others: related refused.
     if (!related && !narrowerThan(view, from.iri, to.iri)) {
-      choices.push({ kind: "related", label: linkSentence("related", from.label, to.label) });
+      choices.push({ kind: "related", label: linkSentence("related", from.label, to.label, t) });
     }
     if (choices.length === 0) {
       return {
-        refusal: `${from.label} is related to ${to.label}; SKOS does not allow one to be narrower than the other as well.`,
+        refusal: t("canvasRelate.relatedRefusal", { from: from.label, to: to.label }),
       };
     }
     return { choices, notes: [] };
@@ -150,10 +153,10 @@ export function relateChoices(view: CanvasView, fromIri: string, toIri: string):
   const choices: RelateChoice[] = [];
   // A class is never a kind of itself; a relationship to itself is fine.
   if (!self && !has("subClassOf")) {
-    choices.push({ kind: "subClassOf", label: linkSentence("subClassOf", from.label, to.label) });
+    choices.push({ kind: "subClassOf", label: linkSentence("subClassOf", from.label, to.label, t) });
   }
-  choices.push({ kind: "newRelationship", label: "new relationship…" });
-  choices.push({ kind: "rule", label: `Every ${from.label} has at least one… (a rule)` });
+  choices.push({ kind: "newRelationship", label: t("canvasRelate.new") });
+  choices.push({ kind: "rule", label: t("canvasRelate.rule", { name: from.label }) });
   for (const u of view.undrawn) {
     // An end that is an expression is set, not missing: completing it would
     // replace what it says.
@@ -166,7 +169,7 @@ export function relateChoices(view: CanvasView, fromIri: string, toIri: string):
     if (!domainFits || !rangeFits) continue;
     choices.push({
       kind: "existing",
-      label: existingSentence(from.label, u.label, to.label),
+      label: existingSentence(from.label, u.label, to.label, locale),
       name: u.label,
       property: u.iri,
       setDomain: u.domain === null && u.domains === undefined,
@@ -184,7 +187,7 @@ export function relateChoices(view: CanvasView, fromIri: string, toIri: string):
     if (e.kind !== "relationship" || e.target !== to.iri || e.source === from.iri || !e.property) continue;
     if (offered.has(e.property) || startsHere.has(e.property)) continue;
     offered.add(e.property);
-    choices.push({ kind: "share", label: shareEntry(e.label ?? e.property, from.label, to.label), name: e.label ?? e.property, property: e.property });
+    choices.push({ kind: "share", label: shareEntry(e.label ?? e.property, from.label, to.label, locale), name: e.label ?? e.property, property: e.property });
   }
   // Drawn relationships sharing an end with this line are not offered, and
   // the menu says why, so the learner does not look for them in vain. A
@@ -202,7 +205,7 @@ export function relateChoices(view: CanvasView, fromIri: string, toIri: string):
     .map((e) => {
       const a = node(view, e.source)?.label ?? e.source;
       const b = node(view, e.target)?.label ?? e.target;
-      return `${e.label} already links ${a} to ${b}; create a new relationship instead.`;
+      return t("canvasRelate.used", { property: String(e.label), from: a, to: b });
     });
   return { choices, notes };
 }
@@ -226,24 +229,18 @@ function narrowerThan(view: CanvasView, low: string, high: string): boolean {
 }
 
 /** A box read aloud as the tree reads a row. */
-export function boxName(view: CanvasView, iri: string): string {
+export function boxName(view: CanvasView, iri: string, locale: UiLocale = "en"): string {
   const n = node(view, iri);
   if (!n) return iri;
-  // The kind in words, as the box's header says it (edit-page-rework 5.8):
-  // *Person, OWL class*. An imported box's typing is its import's, so it is
-  // a class or a concept, and the import is named below.
-  const parts = [n.label, n.imported ? n.kind : kindWord(n)];
+  const t = tFor(locale);
+  const parts = [n.label, n.imported ? t(`canvasBox.${n.kind}`) : kindWord(n, locale)];
   const up = n.kind === "class" ? "subClassOf" : "broader";
   const parents = view.edges.filter((e) => e.kind === up && e.source === iri).map((e) => node(view, e.target)?.label);
-  if (parents.length) parts.push(`${n.kind === "class" ? "kind of" : "narrower than"} ${parents.join(" and ")}`);
+  if (parents.length) parts.push(t(`canvasBox.parents.${n.kind}`, { parents: parents.join(t("canvasBox.join")) }));
   const children = view.edges.filter((e) => e.kind === up && e.target === iri).length;
-  if (children) {
-    const word = n.kind === "class" ? ["subclass", "subclasses"] : ["narrower concept", "narrower concepts"];
-    parts.push(`${children} ${children === 1 ? word[0] : word[1]}`);
-  }
-  if (n.imported) parts.push(n.imported === "outside" ? "outside this model, read-only" : `from ${n.imported}, read-only`);
-  // What the box says in text is said aloud too (axioms 5.9).
-  for (const d of n.disjoint ?? []) parts.push(`never ${article(d.label)} ${d.label}`);
-  if (n.moreRules) parts.push(moreRulesText(n.moreRules));
-  return parts.join(", ");
+  if (children) parts.push(t(`canvasBox.children.${n.kind}.${children === 1 ? "one" : "many"}`, { count: children }));
+  if (n.imported) parts.push(n.imported === "outside" ? t("canvasBox.outsideReadonly") : t("canvasBox.importedReadonly", { name: n.imported }));
+  for (const d of n.disjoint ?? []) parts.push(t("canvasBox.never", { name: locale === "en" ? `${article(d.label)} ${d.label}` : d.label }));
+  if (n.moreRules) parts.push(moreRulesText(n.moreRules, locale));
+  return parts.join(t("canvasBox.separator"));
 }

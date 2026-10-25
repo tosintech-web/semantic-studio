@@ -16,7 +16,7 @@ BASIC IDEA
 
     It also carries the one control that grows the graph. The canvas draws only
     the highest-degree entities the server's budget allows, so the entity being
-    described is regularly not on it; "Show its connections" asks for that
+    described is regularly not on it; t("detail.expand") asks for that
     entity's neighbourhood and hands it to the graph to merge.
 
     With no `iri` it renders nothing, and what fills the column instead is
@@ -78,6 +78,11 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import { renderServerError } from "../i18n/serverMessage";
+import { formatNumber } from "../i18n/format";
+import { useDictionaryView } from "../dictionary/DictionaryViewContext";
+import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useEffect, useRef, useState } from "react";
 import { getNodeDetails } from "../api";
 import { panelTerms } from "../explain/glossary";
@@ -184,12 +189,15 @@ export default function DetailPanel({
   canvas = null,
   inferred = null,
 }: Props) {
+  const { t, locale } = useI18n();
+  const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [details, setDetails] = useState<NodeDetails | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // The entity the details on screen describe. A new revision of the same
   // entity keeps them until the refetch lands (see the header).
+  const { viewGeneration } = useDictionaryView();
   const shownKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -202,21 +210,23 @@ export default function DetailPanel({
     if (!ontologyId || !iri) return;
     setLoading(true);
     let cancelled = false;
-    getNodeDetails(ontologyId, iri, imports)
+    const controller = new AbortController();
+    getNodeDetails(ontologyId, iri, imports, controller.signal, dictionaryLanguage)
       .then((d) => !cancelled && setDetails(d))
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (cancelled) return;
         // Kept details are only for a refetch that succeeds: after an undo
         // of the entity's creation the refetch is a 404, and a form left on
         // screen would edit an entity that no longer exists (found in review).
         setDetails(null);
-        setError(String(e.message ?? e));
+        setError(e);
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [ontologyId, iri, imports, revision, language]);
+  }, [ontologyId, iri, imports, revision, language, dictionaryLanguage, viewGeneration]);
 
   // Take focus when this selection asked for it, rather than when the details
   // arrive, because the wait is a request: keystrokes made in between would go
@@ -256,23 +266,24 @@ export default function DetailPanel({
           </h2>
           <div className="detail-prefixed">{details?.prefixed}</div>
           {details?.importedFrom && (
-            <p className="detail-imported">Imported from {details.importedFrom} (read-only)</p>
+            <p className="detail-imported">{t("detail.imported", { name: details.importedFrom })}</p>
           )}
           {details?.fromData && (
             // Snapshot data, never mistaken for the model (csv-data-import
             // 5.6): where it came from, its row, and that it is read-only.
             <p className="detail-imported detail-data">
-              Data {dataLabel(details.fromData)}
-              {details.fromData.row !== null ? `, row ${details.fromData.row.toLocaleString("en-US")}` : ""} (read-only)
+              {details.fromData.row !== null
+                ? t("detail.dataRow", { label: dataLabel(details.fromData, locale), row: details.fromData.row })
+                : t("detail.data", { label: dataLabel(details.fromData, locale) })}
             </p>
           )}
         </div>
-        <button className="icon-btn" onClick={onClose} title="Close panel">✕</button>
+        <button className="icon-btn" onClick={onClose} title={t("detail.close")} aria-label={t("detail.close")}>✕</button>
       </div>
 
       <div className="detail-iri">
         {href ? (
-          <a href={href} target="_blank" rel="noreferrer" title="Open IRI in a new tab">
+          <a href={href} target="_blank" rel="noreferrer" title={t("detail.openIri")}>
             {iri}
           </a>
         ) : (
@@ -281,10 +292,10 @@ export default function DetailPanel({
         )}
         <button
           className="icon-btn"
-          title="Copy IRI"
+          title={t("detail.copyIri")}
           // The glyph is not a name; a non-web IRI is only text, and this is
           // how it is taken elsewhere (D-088).
-          aria-label="Copy IRI"
+          aria-label={t("detail.copyIri")}
           onClick={() => navigator.clipboard?.writeText(iri)}
         >
           ⧉
@@ -293,7 +304,7 @@ export default function DetailPanel({
 
       {/* Expanding adds no concept to learn: clicking a node already selects
           it, and this is one more button on a panel the user has opened. Hence
-          "Show its connections" rather than "Expand the subgraph".
+          t("detail.expand") rather than "Expand the subgraph".
 
           It is rendered before the statements rather than after, because the
           panel is arbitrarily long and a control below several hundred rows is
@@ -307,16 +318,16 @@ export default function DetailPanel({
           aria-busy={expanding}
           title={
             expanding
-              ? "Fetching this entity's connections…"
-              : "Draw this entity and everything it connects to on the graph"
+              ? t("detail.fetchingHint")
+              : t("detail.expandHint")
           }
         >
-          {expanding ? "Drawing…" : "Show its connections"}
+          {expanding ? t("detail.drawing") : t("detail.expand")}
         </button>
       )}
 
-      {loading && !details && <p className="detail-note">Loading…</p>}
-      {error && <p className="detail-error">{error}</p>}
+      {loading && !details && <p className="detail-note">{t("common.loading")}</p>}
+      {!!error && <><p className="detail-error" role="alert">{renderServerError(error, t)}</p><details><summary>{t("common.details")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details></>}
       {readOnlyNote && <p className="detail-note detail-readonly">{readOnlyNote}</p>}
 
       {details && (
@@ -350,13 +361,13 @@ export default function DetailPanel({
             // shown by colour: a translation still to do is a normal state of
             // work, and it has to be readable as one (5.4.2).
             <section>
-              <h3>Names</h3>
+              <h3>{t("detail.names")}</h3>
               <dl className="detail-names">
                 {details.names.map((name) => (
                   <div key={name.lang}>
                     <dt>{name.lang}</dt>
                     <dd className={name.value === null ? "detail-name-missing" : undefined}>
-                      {name.value ?? "missing"}
+                      {name.value ?? t("detail.missing")}
                     </dd>
                   </div>
                 ))}
@@ -367,16 +378,16 @@ export default function DetailPanel({
             // The Edit page's sentences, read-only (explore-rules 5.3); with
             // `editing`, the Edit section is their place.
             <section>
-              <h3>Rules</h3>
+              <h3>{t("detail.rules")}</h3>
               <ul className="detail-rules">
                 {details.rules.items.map((item, index) => {
-                  const sentence = itemSentence(details.label, item);
+                  const sentence = itemSentence(details.label, item, locale);
                   return (
                     // The same rule written twice is two items with one key.
                     <li key={`${itemKey(item)}|${index}`} className="rule-item">
                       {item.type === "turtle" ? (
                         <>
-                          <p className="detail-note">Written in Turtle, outside the sentences:</p>
+                          <p className="detail-note">{t("detail.turtleRule")}</p>
                           <pre className="rule-turtle">{item.turtle}</pre>
                         </>
                       ) : (
@@ -390,7 +401,7 @@ export default function DetailPanel({
           )}
           <section>
             <h3>
-              Statements <span className="count">{truncated ? details.outgoingTotal : statements.length}</span>
+              {t("detail.statements")} <span className="count">{formatNumber(locale, truncated ? details.outgoingTotal : statements.length)}</span>
             </h3>
             <table className="detail-table">
               <tbody>
@@ -408,8 +419,9 @@ export default function DetailPanel({
             </table>
             {truncated && (
               <p className="detail-note">
-                Showing {statements.length} of {details.outgoingTotal} statements
-                {hiddenRows > 0 ? `; ${hiddenRows} more are the rules above` : ""}.
+                {hiddenRows > 0
+                  ? t("detail.statementsRulesLimit", { shown: statements.length, total: details.outgoingTotal, rules: hiddenRows })
+                  : t("detail.statementsLimit", { shown: statements.length, total: details.outgoingTotal })}
               </p>
             )}
           </section>
@@ -427,9 +439,9 @@ export default function DetailPanel({
 
           <section>
             <h3>
-              Referenced by <span className="count">{details.incomingTotal}</span>
+              {t("detail.references")} <span className="count">{formatNumber(locale, details.incomingTotal)}</span>
             </h3>
-            {details.incoming.length === 0 && <p className="detail-note">Nothing references this entity.</p>}
+            {details.incoming.length === 0 && <p className="detail-note">{t("detail.noReferences")}</p>}
             <table className="detail-table">
               <tbody>
                 {details.incoming.map((row, i) => (
@@ -446,7 +458,7 @@ export default function DetailPanel({
             </table>
             {details.incomingTotal > details.incoming.length && (
               <p className="detail-note">
-                Showing {details.incoming.length} of {details.incomingTotal} references.
+                {t("detail.referencesLimit", { shown: details.incoming.length, total: details.incomingTotal })}
               </p>
             )}
           </section>

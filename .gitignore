@@ -19,3 +19,23 @@ Thumbs.db
 
 # Local data
 *.log
+
+# Private operation data, credentials and local review artifacts
+# Public fixture examples must contain placeholders only.
+test_data/
+.env
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+token.json
+tokens.json
+sessions/
+tokens/
+shots/
+screenshots/
+.superpowers/

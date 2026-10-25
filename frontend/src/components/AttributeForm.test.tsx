@@ -13,6 +13,8 @@ SUMMARY
     opens the plan that asks the shared parent's name.
 
 BASIC IDEA
+    Completed operation notices retain facts and render in either UI locale.
+    Refusal context stays by its field; original server text remains in details.
     The form is rendered for an entity model built by entityModel from
     details shaped as /node sends them, with the api mocked as the other
     form tests mock it and the project store open.
@@ -25,13 +27,23 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { entityModel } from "../modeling/entity";
 import { projectStore } from "../state/projectStore";
+import { renderProjectAnnouncement } from "../modeling/projectNotices";
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+function noticeIn(locale: UiLocale): string {
+  return renderProjectAnnouncement(projectStore.getSnapshot().announcement, locale,
+    ((code, args) => translate(locale, code, args)) as Translator);
+}
+
 import type { DomainReading, ModelWarning, NodeDetails } from "../types";
 import AttributeForm from "./AttributeForm";
-import { useRunner } from "./EditParts";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
+import { RunnerErrorDetails, useRunner } from "./EditParts";
 
 const { openProject, runCommand, planShare } = vi.hoisted(() => ({
   openProject: vi.fn(),
@@ -95,7 +107,7 @@ function separate(needs?: "parentName"): ModelWarning {
 function Harness({ details, warnings }: { details: NodeDetails; warnings: ModelWarning[] }) {
   const runner = useRunner();
   return (
-    <AttributeForm
+    <><RunnerErrorDetails runner={runner} /><AttributeForm
       ontologyId={`${PID}-model`}
       iri={details.iri}
       name={details.label}
@@ -103,7 +115,7 @@ function Harness({ details, warnings }: { details: NodeDetails; warnings: ModelW
       runner={runner}
       onSelect={() => undefined}
       warnings={warnings}
-    />
+    /></>
   );
 }
 
@@ -164,7 +176,9 @@ describe("Belongs to, for a shared domain (attribute-reuse 5.3)", () => {
   it("Remove is UnshareDomain for that class", async () => {
     await show(UNION);
     await act(async () => screen.getByRole("button", { name: "Remove Contractor from hasName" }).click());
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Contractor" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "UnshareDomain", { property: HR + "hasName", class: HR + "Contractor" }, "en");
+    expect(noticeIn("ja")).toBe("Contractorから「hasName」を外しました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
 
   it("one class keeps Change class, and can be shared through Add a class", async () => {
@@ -183,7 +197,9 @@ describe("two domain lines (attribute-reuse 5.4)", () => {
     expect(within(block).getByText(SEPARATE_TEXT)).toBeTruthy();
     expect(within(block).getByText("All of these classes at once (see the warning):")).toBeTruthy();
     await act(async () => within(block).getByRole("button", { name: "Share it" }).click());
-    expect(runCommand).toHaveBeenCalledWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" });
+    expect(runCommand).toHaveBeenCalledWith(PID, "model", "ShareDomain", { property: HR + "hasName", how: "union" }, "en");
+    expect(noticeIn("ja")).toBe("「hasName」をEmployee、Teamで共有しました。");
+    expect(noticeIn("en")).toBe(projectStore.getSnapshot().announcement.text);
   });
 
   it("with an RDFS class, Share it opens the plan for the parent's name", async () => {
@@ -219,6 +235,26 @@ describe("found in code review", () => {
     runCommand.mockRejectedValue(new Error("hasName has no start to clear."));
     await show({ form: "one", classes: [ref("Employee")] });
     await act(async () => screen.getByRole("button", { name: "Clear the class hasName belongs to" }).click());
+    expect(screen.getAllByText("The operation could not be completed. Check the details.")).toHaveLength(1);
     expect(screen.getAllByText("hasName has no start to clear.")).toHaveLength(1);
   });
+});
+
+
+it("switches UI language with an open type draft and submits the original datatype IRI", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  render(<I18nProvider><UiLanguageSelect /><Harness
+    details={propertyDetails("datatypeProperty", { form: "one", classes: [ref("Employee")] })}
+    warnings={[]}
+  /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "所属クラス" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Employee" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "hasNameの値の型を変更" }));
+  const types = screen.getByRole("combobox", { name: "値の型" });
+  fireEvent.change(types, { target: { value: "xsd:integer" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("combobox", { name: "Type of value" })).toBe(types);
+  expect((types as HTMLSelectElement).value).toBe("xsd:integer");
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Set type" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "SetRange", { property: HR + "hasName", target: "xsd:integer" }, "en");
 });

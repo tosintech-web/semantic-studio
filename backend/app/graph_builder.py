@@ -59,17 +59,22 @@ EXPECTED OUTPUT
       states about it as structure, with every count bounded. The words are
       the frontend's (explain/explainSentences.ts).
     - search_nodes -> ranked node matches for the search box.
+    - Each graph build projects a term label once across rule edges and nodes;
+      the memo is discarded with that read, preserving subsequent label edits.
     - pick_label / prefixed are imported by query_schema.py and sparql_exec.py.
     - labeler / lang_matches choose a project document's names in its display
       language, falling back to the primary one marked "(en)" (D-085); a
-      library ontology keeps pick_label's rule.
+      library ontology keeps pick_label's rule. Its optional per-view index
+      scans naming predicates once for the canvas, sharing the same selection.
 ================================================================================
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
+from functools import cache
 from typing import Callable, Optional, Sequence
+
 
 from rdflib import Graph, Literal, URIRef, BNode
 from rdflib.namespace import DC, DCTERMS, OWL, RDF, RDFS, SKOS, XSD
@@ -199,48 +204,104 @@ def lang_matches(tag: Optional[str], wanted: str) -> bool:
     return tag == wanted or tag.startswith(wanted + "-")
 
 
-def pick_label_in(graph: Graph, node: URIRef, langs: Sequence[str]) -> tuple[str, Optional[str]]:
-    """The label for an ordered language list, and the tag it was found in.
+def _preferred_literal(graph: Graph, node: URIRef, predicates, langs: Sequence[str], *, nonempty=False):
+    """Stable, language-first selection shared by names and descriptions.
 
-    Language order dominates predicate order here, unlike the library's rule:
-    a French rdfs:label is the French name even when the English one is a
-    skos:prefLabel. Then untagged, then any other language, then the local
-    name. The tag comes back so a caller can mark a fallback as one: "" for
-    untagged and None for the local name.
+    Sorting only the few literals on this resource avoids dependence on parse
+    order. An exact tag precedes a regional match within a language preference.
     """
-    for lang in langs:
-        for predicate in LABEL_PREDICATES:
-            for value in graph.objects(node, predicate):
-                if isinstance(value, Literal) and lang_matches(value.language, lang):
-                    return str(value), value.language
-    fallback: Optional[tuple[str, Optional[str]]] = None
-    for predicate in LABEL_PREDICATES:
-        for value in graph.objects(node, predicate):
-            if isinstance(value, Literal):
-                if not value.language:
-                    return str(value), ""
-                if fallback is None:
-                    fallback = (str(value), value.language)
-    if fallback is not None:
+    values = [(i, value) for i, predicate in enumerate(predicates)
+              for value in graph.objects(node, predicate)
+              if isinstance(value, Literal) and (not nonempty or str(value).strip())]
+    return preferred_literal(values, langs)
+
+
+def preferred_literal(values, langs: Optional[Sequence[str]]):
+    """Select from copied (predicate priority, literal) pairs without a graph.
+
+    None explicitly means the legacy Library rule: an earlier predicate wins
+    even if its only value is foreign. An empty preference list still uses
+    stable untagged/other-language ordering, like an explicit view.
+    """
+    if langs is None:
+        priority = None
+        fallback = None
+        for predicate, value in values:
+            if predicate != priority and fallback is not None:
+                return fallback
+            priority = predicate
+            if not value.language or lang_matches(value.language, "en"):
+                return value
+            if fallback is None:
+                fallback = value
         return fallback
+    def rank(pair):
+        predicate, value = pair
+        tag = value.language or ""
+        for i, lang in enumerate(langs):
+            if lang_matches(tag, lang):
+                return (i, tag.lower() != lang.lower(), predicate, tag.lower(), str(value))
+        return (len(langs) + bool(tag), 0, predicate, tag.lower(), str(value))
+    return min(values, key=rank)[1] if values else None
+
+
+def pick_label_in(graph: Graph, node: URIRef, langs: Sequence[str]) -> tuple[str, Optional[str]]:
+    """A language-first representative name, excluding alternative labels."""
+    value = _preferred_literal(graph, node, LABEL_PREDICATES, langs)
+    if value is not None:
+        return str(value), value.language or ""
     return _local_name(str(node)), None
 
 
-def labeler(graph: Graph, langs: Optional[Sequence[str]]) -> Callable[[URIRef], str]:
+def label_metadata(graph: Graph, node: URIRef, langs: Optional[Sequence[str]]) -> dict:
+    """Explicit language provenance, never recovered by parsing a label suffix."""
+    if not langs:
+        return {}
+    _, tag = pick_label_in(graph, node, langs)
+    return {"label_language": tag or None, "label_fallback": not lang_matches(tag, langs[0])}
+
+
+def labeler(
+    graph: Graph, langs: Optional[Sequence[str]], *, indexed: bool = False,
+) -> Callable[[URIRef], str]:
     """The label function for a view: the library's, or a project's (D-085).
 
-    `langs` is (display, primary). Where the display language has no name the
-    primary one is shown marked "(en)" in text, so a fallback is never mistaken
-    for a translation.
+    `langs` is (display,) for Library or (display, primary) for Project.
+    A different-language fallback carries its actual tag; wire metadata also
+    reports it explicitly so callers never parse the suffix.
     """
     if not langs:
+        # A predicate-wide scan can reorder values relative to a resource's
+        # insertion order. Keep the Library's first-value rule on its original
+        # path; only explicit project preferences have a stable ranking.
         return lambda node: pick_label(graph, node)
-    display, primary = langs[0], langs[-1]
+    if indexed:
+        # A canvas names thousands of resources from the same immutable view.
+        # Scan the four naming predicates once instead of looking up all four
+        # for every box and attribute. Project names still use the shared
+        # language-first rank, independent of the predicate scan's order.
+        names: dict[URIRef, list] = {}
+        for priority, predicate in enumerate(LABEL_PREDICATES):
+            for node, value in graph.subject_objects(predicate):
+                if isinstance(value, Literal):
+                    names.setdefault(node, []).append((priority, value))
+
+        def pick(node: URIRef) -> tuple[str, Optional[str]]:
+            value = preferred_literal(names.get(node, ()), langs)
+            if value is None:
+                return _local_name(str(node)), None
+            return str(value), value.language or ""
+
+    else:
+        def pick(node: URIRef) -> tuple[str, Optional[str]]:
+            return pick_label_in(graph, node, langs)
+
+    display = langs[0]
 
     def label(node: URIRef) -> str:
-        text, tag = pick_label_in(graph, node, langs)
-        if display != primary and tag and not lang_matches(tag, display):
-            return f"{text} ({primary if lang_matches(tag, primary) else tag})"
+        text, tag = pick(node)
+        if tag and not lang_matches(tag, display):
+            return f"{text} ({tag})"
         return text
 
     return label
@@ -396,7 +457,9 @@ def build_viz_graph(graph: Graph, langs: Optional[Sequence[str]] = None) -> dict
     node is labelled in the display language and carries `names`, every label
     it has in any language, so search matches all of them whatever is shown.
     """
-    label = labeler(graph, langs)
+    # A term can name several rule ends and then its own node. Cache within
+    # this immutable read only; a later edit/language view must name it afresh.
+    label = cache(labeler(graph, langs))
     # kinds: every kind we have seen for each entity (collapsed later).
     kinds: dict[URIRef, set[str]] = defaultdict(set)
     # edges: a set (dedupes) of (source, edge-kind, target, label) tuples.
@@ -509,6 +572,7 @@ def build_viz_graph(graph: Graph, langs: Optional[Sequence[str]] = None) -> dict
             node["classType"] = "rdfs"
     if langs:
         for node, iri in zip(nodes, kinds):
+            node.update(label_metadata(graph, iri, langs))
             node["names"] = all_names(graph, iri)
     # Build the JSON edge list from the deduped edge tuples.
     edge_list = [
@@ -794,14 +858,15 @@ def nodes_viz(viz: dict, iris: Sequence[str], limit: int) -> dict:
 # --- node details -----------------------------------------------------------
 # Everything below powers the right-hand detail panel and the search box.
 
-def _term_json(graph: Graph, term) -> dict:
+def _term_json(graph: Graph, term, langs=None) -> dict:
     """Serialize one RDF term (URI, literal or blank node) for the detail panel."""
     if isinstance(term, URIRef):
         return {
             "type": "uri",
             "value": str(term),
             "prefixed": prefixed(graph, term),
-            "label": pick_label(graph, term),
+            "label": labeler(graph, langs)(term),
+            **label_metadata(graph, term, langs),
         }
     if isinstance(term, Literal):
         return {
@@ -855,16 +920,16 @@ def node_details(
         out_total += 1
         if len(outgoing) < limit:
             outgoing.append({
-                "predicate": _term_json(graph, p),
-                "object": _term_json(graph, o),
+                "predicate": _term_json(graph, p, langs),
+                "object": _term_json(graph, o, langs),
             })
     # Incoming: subject -> predicate triples where this entity is the object.
     for s, p in graph.subject_predicates(ref):
         in_total += 1
         if len(incoming) < limit and isinstance(s, URIRef):
             incoming.append({
-                "subject": _term_json(graph, s),
-                "predicate": _term_json(graph, p),
+                "subject": _term_json(graph, s, langs),
+                "predicate": _term_json(graph, p, langs),
             })
     # Nothing references or is stated about this IRI -> not a real entity.
     if out_total == 0 and in_total == 0:
@@ -874,6 +939,7 @@ def node_details(
         "iri": iri,
         "prefixed": prefixed(graph, ref),
         "label": label(ref),
+        **label_metadata(graph, ref, langs),
         "outgoing": outgoing,
         "incoming": incoming,
         "outgoingTotal": out_total,
@@ -890,7 +956,7 @@ def node_details(
         # a relationship among the properties that name it as their domain,
         # by the kind of each term. Project documents only: the library panel
         # does not need it and should not pay for the lookups.
-        result["kind"] = term_kind(graph, ref)
+        result["kind"] = node_kind(graph, ref)
         for row in outgoing:
             _with_kind(graph, row["object"])
         for row in incoming:
@@ -935,13 +1001,17 @@ def node_kind(graph: Graph, node: URIRef) -> str:
     mission, would be "other" there and an individual on the graph; the panel
     has to say what the graph shows (explain-panel 5.2). Pass 3's rule, then:
     typed with a class, and not itself a class, scheme or concept, is an
-    individual. test_node_detail.py checks this against build_viz_graph on
+    individual. A general undeclared class also types an individual, so
+    subject-only search resources agree with their detail panel.
+    test_node_detail.py checks this against build_viz_graph on
     every bundled example.
     """
+    from . import axioms  # Delayed: shapes_form imports the label helpers.
     kinds = _kinds_stated(graph, node)
     if not kinds & {KIND_CLASS, KIND_SCHEME, KIND_CONCEPT}:
         for t in graph.objects(node, RDF.type):
-            if isinstance(t, URIRef) and KIND_CLASS in _kinds_stated(graph, t):
+            if isinstance(t, URIRef) and (KIND_CLASS in _kinds_stated(graph, t) or
+                                         (t not in TYPE_TO_KIND and t not in axioms.NON_INSTANCE_TYPES)):
                 kinds.add(KIND_INDIVIDUAL)
                 break
     return _best_kind(kinds)
@@ -965,13 +1035,17 @@ DESCRIPTION_PREDICATES = (SKOS.definition, RDFS.comment, DCTERMS.description)
 def _description(graph: Graph, node: URIRef, langs: Optional[Sequence[str]]) -> Optional[dict]:
     """The first predicate's text, in the display language when it has one.
 
-    Predicate order dominates, as the spec reads: a comment in French is not
+    Explicit display preferences select language before predicate. For legacy
+    callers with no preference, predicate order dominates: a comment in French is not
     passed over for an English dcterms:description. Within a predicate the
     display language wins, then English or untagged for the library (as
     pick_label prefers), then the first by language tag and text, so a
     reload shows the same one. Empty text is no description: it would hide
     the next predicate's (code review).
     """
+    if langs:
+        value = _preferred_literal(graph, node, DESCRIPTION_PREDICATES, langs, nonempty=True)
+        return {"text": str(value), "lang": value.language} if value is not None else None
     wanted = list(langs or ("en",))
     for predicate in DESCRIPTION_PREDICATES:
         values = sorted(

@@ -30,6 +30,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { useId, useRef, useState } from "react";
 import { domainLabel, sharedDomain, type EntityModel } from "../modeling/entity";
 import { oneValueExample, typeWord } from "../modeling/sentences";
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export default function AttributeForm({ ontologyId, iri, name, model, runner, onSelect, warnings = [] }: Props) {
+  const { locale, t } = useI18n();
   const { busy, errors, run, clear } = runner;
   const id = useId();
   const [open, setOpen] = useState<null | "domain" | "type">(null);
@@ -80,7 +82,7 @@ export default function AttributeForm({ ontologyId, iri, name, model, runner, on
 
   return (
     <>
-      <Block title="Belongs to">
+      <Block title={t("attributeForm.belongs")}>
         {sharedDomain(model) ? (
           // A shared domain (attribute-reuse 5.3): every class, and *Change
           // class* only for one, which would replace them all.
@@ -102,22 +104,22 @@ export default function AttributeForm({ ontologyId, iri, name, model, runner, on
             <button
               type="button"
               className="ghost edit-btn"
-              aria-label={`Clear the class ${name} belongs to`}
+              aria-label={t("attributeForm.clearClass", { name })}
               aria-disabled={busy}
               onClick={() => !busy && void run("domainList", "ClearDomain", { property: iri })}
             >
-              Clear
+              {t("attributeForm.clear")}
             </button>
           </p>
         ) : (
-          <p className="detail-note">No class yet.</p>
+          <p className="detail-note">{t("attributeForm.noClass")}</p>
         )}
         {errors.domainList && !sharedDomain(model) && <p className="edit-error">{errors.domainList}</p>}
         {sharedDomain(model) ? null : open === "domain" ? (
           <EntityPicker
             ontologyId={ontologyId}
             kind="class"
-            label={`The class ${name} belongs to`}
+            label={t("attributeForm.classLabel", { name })}
             exclude={domain ? [domain.iri] : []}
             busy={busy}
             error={errors.domain || null}
@@ -127,7 +129,7 @@ export default function AttributeForm({ ontologyId, iri, name, model, runner, on
             }}
           />
         ) : (
-          opener("domain", domain ? "Change class" : "Choose a class", `${domain ? "Change" : "Choose"} the class ${name} belongs to`)
+          opener("domain", t(domain ? "attributeForm.changeClass" : "attributeForm.chooseClass"), t(domain ? "attributeForm.changeClassLabel" : "attributeForm.chooseClassLabel", { name }))
         )}
         {/* One class: it can be shared with another through the plan (5.2). */}
         {!sharedDomain(model) && domain && open !== "domain" && (
@@ -143,9 +145,9 @@ export default function AttributeForm({ ontologyId, iri, name, model, runner, on
         )}
       </Block>
 
-      <Block title="Type of value">
+      <Block title={t("attributeForm.valueType")}>
         <p className={datatype ? undefined : "detail-name-missing"}>
-          {typeWord(datatype)}
+          {typeWord(datatype, t)}
           {datatype && <span className="owl-term"> {datatype}</span>}
         </p>
         {open === "type" ? (
@@ -167,7 +169,7 @@ export default function AttributeForm({ ontologyId, iri, name, model, runner, on
             }}
           >
             <label className="edit-field-label" htmlFor={`${id}-type`}>
-              Type of value
+              {t("attributeForm.valueType")}
             </label>
             <select
               id={`${id}-type`}
@@ -177,26 +179,26 @@ export default function AttributeForm({ ontologyId, iri, name, model, runner, on
             >
               {DATATYPES.map((d) => (
                 <option key={d} value={`xsd:${d}`}>
-                  {typeWord(`xsd:${d}`)} (xsd:{d})
+                  {typeWord(`xsd:${d}`, t)} (xsd:{d})
                 </option>
               ))}
             </select>
             {errors.type && <p className="edit-error">{errors.type}</p>}
             <div className="edit-actions">
               <button type="submit" className="primary" aria-disabled={busy}>
-                Set type
+                {t("attributeForm.setType")}
               </button>
               <button type="button" className="ghost" onClick={close}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </form>
         ) : (
-          opener("type", "Change type", `Change the type of value of ${name}`)
+          opener("type", t("attributeForm.changeType"), t("attributeForm.changeTypeLabel", { name }))
         )}
       </Block>
 
-      <Block title="How many values">
+      <Block title={t("attributeForm.howMany")}>
         <label className="characteristic">
           <input
             type="checkbox"
@@ -209,10 +211,10 @@ export default function AttributeForm({ ontologyId, iri, name, model, runner, on
               void run("functional", "SetCharacteristic", { property: iri, characteristic: "functional", on: e.target.checked })
             }
           />{" "}
-          One value only <span className="owl-term">owl:FunctionalProperty</span>
+          {t("attributeForm.oneValue")} <span className="owl-term">owl:FunctionalProperty</span>
         </label>
         <p id={`${id}-one`} className="characteristic-example">
-          {oneValueExample(domainLabel(model), name)}
+          {oneValueExample(domainLabel(model, locale), name, locale)}
         </p>
         <Warnings warnings={warnings} block="characteristics" runner={runner} />
         {errors.functional && (

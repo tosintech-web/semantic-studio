@@ -26,6 +26,8 @@ EXPECTED OUTPUT
 import { describe, expect, it } from "vitest";
 import { KIND_LABELS, PALETTES, edgeColor, kindColor, kindLabel, nodeColor } from "./types";
 import type { GraphPalette, Theme } from "./types";
+import { translate } from "./i18n/format";
+import type { Translator } from "./i18n/types";
 import type { PaletteKind } from "./theme/kinds";
 
 const THEMES: Theme[] = ["dark", "light"];
@@ -153,4 +155,17 @@ describe("lookups by kind are own-key (X-6, portal-foundations AC-5)", () => {
       expect(kindColor("rdfsClass", theme)).toBe(kindColor("other", theme));
     }
   });
+});
+
+it("localizes kind words with safe inherited-key fallback and leaves both palettes unchanged", () => {
+  const ja = ((key, args) => translate("ja", key, args)) as Translator;
+  const before = JSON.stringify(PALETTES);
+  expect(kindLabel("class", ja)).toBe("クラス");
+  expect(kindLabel("concept", ja)).toBe("SKOS概念");
+  for (const unknown of ["constructor", "toString", "__proto__", "unrecognized"]) {
+    expect(kindLabel(unknown, ja)).toBe("その他");
+    for (const theme of THEMES) expect(kindColor(unknown, theme)).toBe(kindColor("other", theme));
+  }
+  expect(kindLabel("class")).toBe("Class");
+  expect(JSON.stringify(PALETTES)).toBe(before);
 });

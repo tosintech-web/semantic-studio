@@ -10,6 +10,10 @@ SUMMARY
     (row S22), and the command and arguments a field's change becomes.
 
 BASIC IDEA
+    Type hints and refusals accept the current translator, with English
+    compatibility defaults. Validation, custom datatype identity and values
+    sent by fieldValue remain independent of UI language.
+
     The server works out an example's fields (examples.py) and sends them
     with the entity's statements, so this only reads them. A field is an
     attribute, entered as its type of value -- a date as a date, checked as
@@ -36,6 +40,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { englishTranslator } from "../i18n/format";
+import type { Translator } from "../i18n/types";
 import type { AnnotationValue, ExampleField, NodeDetails, ValueType } from "../types";
 import { P } from "./entity";
 import { datatypeName, toValue, valueProblem } from "./values";
@@ -84,34 +90,20 @@ export function fieldType(field: ExampleField): ValueType {
 }
 
 /** The type of value in words, for the field's hint: "a date (YYYY-MM-DD)". */
-export function typeWords(field: ExampleField): string {
-  switch (datatypeName(field.datatype)) {
-    case "string":
-      return "text";
-    case "integer":
-      return "a whole number, such as 42";
-    case "decimal":
-      return "a number, such as 4.5";
-    case "boolean":
-      return "yes or no";
-    case "date":
-      return "a date, YYYY-MM-DD";
-    case "dateTime":
-      return "a date and time, YYYY-MM-DDThh:mm:ss";
-    case "anyURI":
-      return "a web address";
-    default:
-      return otherType(field) ? `a value of type ${otherType(field)}` : "text in a language";
-  }
+export function typeWords(field: ExampleField, t: Translator = englishTranslator): string {
+  const name = datatypeName(field.datatype);
+  if (name) return t(`exampleValue.type.${name}`);
+  const other = otherType(field);
+  return other ? t("exampleValue.type.other", { datatype: other }) : t("exampleValue.type.text");
 }
 
 /** Why this cannot be sent, in the server's words, or null (row S22). */
-export function fieldProblem(field: ExampleField, raw: string, lang?: string): string | null {
-  if (field.kind === "relationship") return raw ? null : `Choose the ${field.rangeLabel ?? "example"} to link.`;
-  if (raw.trim() === "") return `Give ${field.label} a value.`;
+export function fieldProblem(field: ExampleField, raw: string, lang?: string, t: Translator = englishTranslator): string | null {
+  if (field.kind === "relationship") return raw ? null : t("exampleValue.choose", { target: field.rangeLabel ?? t("exampleForm.example") });
+  if (raw.trim() === "") return t("exampleValue.give", { label: field.label });
   // A type the browser does not know is checked by the server.
   if (otherType(field)) return null;
-  return valueProblem(fieldType(field), raw, lang);
+  return valueProblem(fieldType(field), raw, lang, t);
 }
 
 /** The value the command takes for what was entered or chosen. */

@@ -106,11 +106,11 @@ def build_canvas(
     imported_from: Optional[dict] = None,
 ) -> dict:
     """Boxes, lines and the undrawn relationships of one document."""
-    label = labeler(graph, langs)
+    label = labeler(graph, langs, indexed=True)
     display, primary = (langs[0], langs[-1]) if langs else (None, None)
     imported_from = imported_from or {}
     # Imported boxes are named from the merged view, where their labels are.
-    outside_label = labeler(imported, langs) if imported is not None else label
+    outside_label = labeler(imported, langs, indexed=True) if imported is not None else label
 
     # The two typings apart (edit-page-rework 5.8): a box says OWL CLASS or
     # RDFS CLASS. The same two subject scans the union took, no lookup more.
@@ -148,7 +148,7 @@ def build_canvas(
     # of their domain.
     attributes: dict[URIRef, list] = {}
     undrawn: list[dict] = []
-    for prop in sorted(_typed(graph, (OWL.DatatypeProperty,))):
+    for prop in sorted(_typed(graph, (OWL.DatatypeProperty,)), key=str):
         reading, rng, expression = ends(prop)
         entry = {
             "iri": str(prop),
@@ -179,7 +179,7 @@ def build_canvas(
         outside.setdefault(node, kind)
         return True
 
-    for child in sorted(classes):
+    for child in sorted(classes, key=str):
         for parent in graph.objects(child, RDFS.subClassOf):
             if end(parent, "class"):
                 edges.append({"kind": "subClassOf", "source": str(child), "target": str(parent)})
@@ -207,7 +207,7 @@ def build_canvas(
         if end(first, "concept") and end(second, "concept"):
             edges.append({"kind": "related", "source": str(first), "target": str(second)})
 
-    for prop in sorted(_typed(graph, (OWL.ObjectProperty,))):
+    for prop in sorted(_typed(graph, (OWL.ObjectProperty,)), key=str):
         reading, rng, expression = ends(prop)
         domain = reading.classes[0] if reading.form == "one" else None
         missing = (
@@ -264,7 +264,7 @@ def build_canvas(
     groups = axioms.disjoint_groups(graph)
     for _, members in groups:
         with_rules.update(members)
-    for cls in sorted(classes & with_rules):
+    for cls in sorted(classes & with_rules, key=str):
         readable = set()
         for _, node, content in axioms.contents(graph, cls):
             readable.add(node)
@@ -333,7 +333,7 @@ def build_canvas(
             **({"disjoint": disjoint[iri]} if iri in disjoint else {}),
             **({"moreRules": more[iri]} if iri in more else {}),
         }
-        for iri in sorted(classes | concepts)
+        for iri in sorted(classes | concepts, key=str)
     ]
     for iri, kind in sorted(outside.items()):
         nodes.append({

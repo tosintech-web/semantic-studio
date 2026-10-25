@@ -25,6 +25,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
 import { projectStore } from "../state/projectStore";
 
 export interface ModelCounts {
@@ -40,29 +41,27 @@ interface Props {
   taxonomy: boolean;
 }
 
-/** "1 class", "3 classes". */
-function counted(n: number, one: string, many: string): string {
-  return `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
-}
-
 export default function NothingSelected({ counts, taxonomy }: Props) {
+  const { t } = useI18n();
+  const counted = (kind: "class" | "concept" | "relationship" | "attribute" | "example", count: number) =>
+    t(`modelCount.${kind}.${count === 1 ? "one" : "many"}`, { count });
   const lines = counts
     ? taxonomy
-      ? [counted(counts.concepts, "concept", "concepts")]
+      ? [counted("concept", counts.concepts)]
       : [
-          counted(counts.classes, "class", "classes"),
-          counted(counts.relationships, "relationship", "relationships"),
-          counted(counts.attributes, "attribute", "attributes"),
-          counted(counts.examples, "example", "examples"),
+          counted("class", counts.classes),
+          counted("relationship", counts.relationships),
+          counted("attribute", counts.attributes),
+          counted("example", counts.examples),
         ]
     : [];
   return (
     <div className="nothing-selected">
-      <h2 className="side-heading">Nothing selected</h2>
+      <h2 className="side-heading">{t("emptyModel.title")}</h2>
       <p className="detail-note">
-        Select a {taxonomy ? "concept" : "class"} in the outline or on the canvas to see its details and change it.
+        {t(taxonomy ? "emptyModel.helpConcept" : "emptyModel.helpClass")}
       </p>
-      <h3 className="side-subheading">This model</h3>
+      <h3 className="side-subheading">{t("emptyModel.model")}</h3>
       {counts ? (
         <ul className="model-counts">
           {lines.map((line) => (
@@ -70,7 +69,7 @@ export default function NothingSelected({ counts, taxonomy }: Props) {
           ))}
         </ul>
       ) : (
-        <p className="detail-note">Counting…</p>
+        <p className="detail-note">{t("emptyModel.counting")}</p>
       )}
       <button
         type="button"
@@ -81,7 +80,7 @@ export default function NothingSelected({ counts, taxonomy }: Props) {
         onClick={(e) => projectStore.startCreating(taxonomy ? "concept" : "class", { from: e.currentTarget })}
       >
         <span aria-hidden="true">+ </span>
-        {taxonomy ? "New concept" : "New class"}
+        {t(taxonomy ? "emptyModel.newConcept" : "emptyModel.newClass")}
       </button>
     </div>
   );

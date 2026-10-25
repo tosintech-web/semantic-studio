@@ -549,10 +549,11 @@ def test_a_class_box_says_which_typing_it_has():
 
 def test_class_type_adds_no_store_lookup_to_a_canvas_build():
     """Section 10: the triple-pattern count of one build is what it was on
-    main at 4c0bb46, measured with this fixture before classType existed."""
+    main at 4c0bb46, measured with this fixture before classType existed.
+    Fewer lookups (for example a shared language selection) are permitted."""
     graph = _counting()
     canvas_mod.build_canvas(graph, ["en"])
-    assert _Counting.patterns == 55
+    assert 0 < _Counting.patterns <= 55
 
 
 # --- a shared domain (attribute-reuse 5.3, D-116) ---------------------------------------

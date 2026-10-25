@@ -3,13 +3,46 @@
   Semantic Studio
 </h1>
 
-[![CI](https://github.com/imrankhan1984/semantic-studio/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imrankhan1984/semantic-studio/actions/workflows/ci.yml)
+[![CI](https://github.com/tosintech-web/semantic-studio/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tosintech-web/semantic-studio/actions/workflows/ci.yml)
 
 **An ontology workspace for RDF, RDFS, OWL and SKOS.**
 
 A self-contained web application that turns Semantic Web ontologies and
 vocabularies into an interactive, force-directed graph — and lets you query
 them by clicking, without writing SPARQL by hand.
+
+## この改変版について
+
+これは [Imran Khan氏のSemantic Studio](https://github.com/imrankhan1984/semantic-studio) の
+非公式改変版です。日本語の辞書編集・閲覧を使いやすくするP1開発を進めています。
+[日本語の操作手順](docs/p1-user-guide.md)と[配布物のライセンス通知](docs/distribution-notices.md)を参照してください。
+現在の対応範囲と検証結果は [P1実装計画](docs/superpowers/plans/2026-10-24-p1-dictionary-workspace.md)
+を参照してください。改変版の問い合わせは
+[このリポジトリのIssues](https://github.com/tosintech-web/semantic-studio/issues) へお願いします。
+
+ソフトウェア本体は元作者の著作権表示を含む [MIT License](LICENSE) を維持します。
+データ・標準語彙・依存ライブラリはそれぞれの条件に従い、MITへ一括変更しません。
+[第三者通知](THIRD_PARTY_NOTICES.md) と [依存物一覧](licenses/dependency-inventory.json) を確認してください。
+改変部分の追加の権利者表示は確認後に追記し、ドメイン名から推測しません。
+
+実データ・秘密情報をリポジトリへ追加しないでください。`.gitignore`だけでは既追跡ファイルを
+保護できません。公開前には `python scripts/check_publication.py --staged` または
+`--git-ref <対象コミット>` で実際のGit blobを検査します。結果0は定義済みルールの合格であり、
+未検出の秘密や未知の業務データがないという保証ではありません。
+データセットの追加は `publication-policy.json` に出典・条件・SHA-256を登録し、内容をレビューします。
+例外はパス・ルール・理由を限定してレビューしてください。
+
+公開試験用辞書は次のコマンドで一時フォルダへ生成できます（3,035組織＋境界例）。
+元Excel/JSONや非公開の変換物を読みません。
+
+```bash
+cd backend
+.venv/bin/python -c 'from tests.synthetic_dictionary import build_synthetic_organizations; build_synthetic_organizations().serialize("/tmp/semantic-studio-synthetic.ttl", format="turtle")'
+```
+
+このTurtleをアプリのLoadから開きます。Libraryは閲覧用です。編集する場合は既存のProject作成・
+フォーク操作を使います。原本ZIPや文書ZIPは内部バックアップとして扱い、実データを含む出力を
+そのまま公開しないでください。
 
 ## Features
 
@@ -547,6 +580,36 @@ The image stores ontologies in the `/data` volume:
 | `GET/PUT /api/projects/{pid}/documents/{doc}/layout` | Box positions and the shown set (not the model) |
 | `GET/POST /api/queries`             | List / save visual queries           |
 | `DELETE /api/queries/{id}`          | Delete a saved query                 |
+
+UIの言語と辞書の表示言語は別々に選べます。辞書の表示言語を変えても、
+主言語・保存したラベル・検証ルールは変わりません。検証ルールの見出しも
+表示言語に合わせますが、編集中の名前と下書きは保持します。検証済み・推論済みの
+結果は、再実行せずに名称を読み替えます。取り込み完了レポートも、取り込み直さずに
+名称を読み替え、実行時の件数と行番号は保持します。検証結果は検証した時点の内容を
+保持し、モデルの変更後も新しい検証結果として扱いません。名称の読み込みに
+失敗した場合は結果を保持してエラーを表示します。言語メニューで選択中の
+言語をもう一度押すと、名称の読み込みを再試行できます。
+
+一覧APIの GET `/api/ontologies/{id}/entities` は `q`、`kind`、`lang`、`offset`、
+`limit`、`sort` を受け取ります。既定50行、最大100行で、`items` と真の `total`、
+`offset`、`limit`、不透明な `revision` を返します。任意の表示用項目は
+`label_language`、`label_fallback`、`label_truncated`、`reference_only`、`match` です。
+既存 `/search` の配列形式は維持し、検索の一致理由を追加しています。
+
+APIでは、プロジェクトの `/shapes`、`/shapes/suggestions`、`/validate`、
+`/reasoning` と `/reasoning/why`、および `/data/preview` に任意の `lang` クエリを指定できます。
+省略時は従来の言語順序を保ちます。GET `/api/projects/{id}/validate` は
+最後の検証結果を返し、未検証なら `null` を返します。GETによる検証・推論
+結果の読み取りは、検証・推論そのものを実行しません。
+データ一覧の GET `/api/projects/{id}/data?lang=ja` も、開いているモデルから
+クラス名を読み替えます。`lang` を省略した一覧は、閉じたプロジェクトも従来どおり
+保存済みの名称で参照できます。一覧・プレビューの任意の `classNameUiMessage` は
+アプリが付けた種類名の翻訳用で、元の `className` や保存データは保持します。
+
+編集コマンドの POST `/api/projects/{id}/documents/{doc}/commands?lang=ja` も
+任意の `lang` を受け取り、操作結果・拒否理由・削除確認・関係共有の名称に使います。
+RDFを書き込む言語や元の互換メッセージは変更しません。Undo/Redoの名称は
+操作した時点の記録を保持し、説明文の言語はUIの設定に合わせます。
 
 Every `POST`, `PUT` and `DELETE` must carry `X-Semantic-Studio: 1`, and every
 request must name a loopback `Host` (see *Other web pages in your browser*

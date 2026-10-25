@@ -14,7 +14,9 @@ BASIC IDEA
     modeling/dataSentences.ts naming the column and the rows, and the label
     above it says where the data came from, a sample's words included. The
     summary is a status region, so it is announced when the report appears
-    after an import (Section 6); shown again from a row it is not.
+    after an import (Section 6); shown again from a row it is not. Descriptions
+    and next-step actions follow the current UI locale without changing the
+    supplied report, source names or status-region identity.
 
 INPUTS / INPUT SOURCES (props)
     - snapshot: the snapshot and its report.
@@ -26,7 +28,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { dataLabel, reportLines } from "../modeling/dataSentences";
+import { useI18n } from "../i18n/I18nProvider";
+import { dataClassName, dataLabel, reportLines } from "../modeling/dataSentences";
 import type { SnapshotSummary } from "../types";
 
 interface Props {
@@ -37,10 +40,11 @@ interface Props {
 }
 
 export default function ImportReport({ snapshot, announce = false, onValidate, onShowData }: Props) {
-  const [first, ...rest] = reportLines(snapshot.report, snapshot.className ?? "row", snapshot);
+  const { locale, t } = useI18n();
+  const [first, ...rest] = reportLines(snapshot.report, dataClassName(snapshot, t), snapshot, locale);
   return (
     <div className="import-report">
-      <p className="data-label">{dataLabel(snapshot)}</p>
+      <p className="data-label">{dataLabel(snapshot, locale)}</p>
       <p className="import-report-summary" role={announce ? "status" : undefined}>
         {first}
       </p>
@@ -55,12 +59,12 @@ export default function ImportReport({ snapshot, announce = false, onValidate, o
         <p className="import-report-next">
           {onValidate && (
             <button type="button" className="primary" onClick={onValidate}>
-              Validate
+              {t("dataReport.validate")}
             </button>
           )}
           {onShowData && (
             <button type="button" onClick={onShowData}>
-              Show the data
+              {t("dataReport.showData")}
             </button>
           )}
         </p>

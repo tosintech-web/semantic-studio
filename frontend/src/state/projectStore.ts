@@ -4,6 +4,8 @@ FILE: frontend/src/state/projectStore.ts
 ================================================================================
 
 SUMMARY
+    Project sessions fence old edit/save responses; model changes refresh data names.
+    Name-only result and snapshot reads are scoped to their owner, language and request.
     The open project and its documents, as a small external store read through
     useSyncExternalStore (D-084): which project is open, each document's
     revision and dirty flag, the undo and redo labels, the save status, the
@@ -59,6 +61,10 @@ BASIC IDEA
     switching a snapshot off refreshes Explore, Query and the tree exactly
     as an edit does. The listing is fetched when the project opens and after
     every snapshot action, and only kept if that project is still open.
+    Structured notices keep their code/arguments for current-locale rendering;
+    their English text and counter remain compatible with older consumers.
+    Data-change notices also carry the issuing project id, so a late result
+    cannot announce or refetch data for another open project.
 
     Something holding writes for the open project -- the canvas, which saves
     its layout a second after a move -- registers a flush, and close() awaits
@@ -74,6 +80,10 @@ BASIC IDEA
     to the class's form, which opens the reuse plan once, as ruleDraft does
     for a rule.
 
+    Operation notices retain typed message arguments or summary counts and
+    render in the active UI locale. Original creation/reasoning failures stay
+    beside their legacy strings so language changes never replay a request.
+
 INPUTS / INPUT SOURCES
     - api.ts, for every project call.
 
@@ -84,6 +94,8 @@ EXPECTED OUTPUT
 */
 
 import { useSyncExternalStore } from "react";
+import { englishTranslator } from "../i18n/format";
+import { makeUiMessage, renderUiMessage } from "../i18n/uiMessage";
 import {
   ApiError,
   applyDocumentSource,
@@ -100,10 +112,13 @@ import {
   undoChange,
   updateProject,
   validateProject,
+  getValidationResult,
+  getReasoningResult,
 } from "../api";
-import { validationSummary } from "../modeling/shapeSentences";
+import { legacyNoticeText, type ProjectNoticeInput, reasoningNotice, renderProjectAnnouncement, validationNotice, type ProjectAnnouncement, type ProjectNotice, type ProjectNoticeDetail } from "../modeling/projectNotices";
+export type { ProjectNotice } from "../modeling/projectNotices";
 import { failureReason } from "../networkWords";
-import { finishedLine, isStale, staleLine, type ReasoningNow } from "../reasoning/reasonSentences";
+import type { ReasoningNow } from "../reasoning/reasonSentences";
 import type {
   ChangeResult,
   CreatingKind,
@@ -123,6 +138,10 @@ export interface ProjectSnapshot {
   activeDoc: ProjectDocName;
   saving: boolean;
   displayLanguage: string | null;
+  /** A failed name-only read keeps its result and original diagnostic. */
+  resultReadError: Error | null;
+  /** Result presentation changed, while the inference run token stays put. */
+  reasoningNamesToken: number;
   recovery: { draftTime: string } | null;
   /** A save is waiting on the one-time comments question (5.6). */
   commentsWarning: { doc: ProjectDocName; backup: string } | null;
@@ -132,7 +151,7 @@ export interface ProjectSnapshot {
   /** What the polite live region says, e.g. "Created class Invoice. Unsaved
    *  changes." A counter beside it so the same sentence twice is announced
    *  twice. */
-  announcement: { text: string; id: number };
+  announcement: ProjectAnnouncement;
   /** The last validation (shacl-authoring 5.6, D-094): kept for the session
    *  only, never written to disk, and shown in the Shapes view and under the
    *  Turtle editor alike. */
@@ -148,6 +167,8 @@ export interface ProjectSnapshot {
   /** Why the snapshot list could not be read, until a read succeeds: the
    *  Data tab says it with Try again rather than reading for ever. */
   dataError: string | null;
+  /** Original read failure; legacy dataError is not the localized display source. */
+  dataErrorCause: { error: unknown } | null;
   /** The last reasoning run (axioms-and-reasoning 5.2): kept for the session
    *  only, never saved, and stale once the model moves (5.3). */
   reasoning: ReasoningResult | null;
@@ -157,6 +178,8 @@ export interface ProjectSnapshot {
   /** A run that could not be asked for, or a Stop that failed: a 409, a
    *  lost connection. */
   reasoningError: string | null;
+  /** Raw failure and operation phase; localized only while rendering. */
+  reasoningErrorCause: { kind: "start" | "stop"; error: unknown } | null;
   /** Stop was pressed and the run's answer has not arrived: presses meanwhile
    *  are ignored, rather than sent again (PR #55 review). */
   reasoningStopping: boolean;
@@ -182,6 +205,8 @@ export interface ProjectSnapshot {
   creatingBusy: boolean;
   /** The server's refusal, shown under both name fields. */
   creatingError: string | null;
+  /** Keep metadata and original diagnostic together across UI language changes. */
+  creatingErrorCause: { error: unknown } | null;
   /** The last thing a draft made, for the canvas to place it and App to
    *  select it; its token is the draft's. */
   created: { iri: string; kind: CreatingKind; token: number; parent: string | null } | null;
@@ -216,6 +241,8 @@ const EMPTY: ProjectSnapshot = {
   activeDoc: "model",
   saving: false,
   displayLanguage: null,
+  resultReadError: null,
+  reasoningNamesToken: 0,
   recovery: null,
   commentsWarning: null,
   editorDraft: null,
@@ -225,9 +252,11 @@ const EMPTY: ProjectSnapshot = {
   editorTarget: null,
   data: null,
   dataError: null,
+  dataErrorCause: null,
   reasoning: null,
   reasoningSince: null,
   reasoningError: null,
+  reasoningErrorCause: null,
   reasoningStopping: false,
   showInferred: false,
   reasoningData: false,
@@ -237,6 +266,7 @@ const EMPTY: ProjectSnapshot = {
   creating: null,
   creatingBusy: false,
   creatingError: null,
+  creatingErrorCause: null,
   created: null,
 };
 
@@ -244,6 +274,10 @@ let snapshot: ProjectSnapshot = EMPTY;
 // Which validation is the current one. Opening, closing or forgetting a
 // project moves it on, so a check still running for the old project is
 // ignored when it answers (shacl-authoring Stage A follow-up 3).
+let projectSession = 0;
+let dataReadRun = 0;
+let dataReadPending = false;
+let resultReadRun = 0;
 let validationRun = 0;
 // The same for reasoning: a run that outlives its project is ignored.
 let reasoningRun = 0;
@@ -310,6 +344,40 @@ function set(changes: Partial<ProjectSnapshot>): void {
   for (const listener of listeners) listener();
 }
 
+async function refreshResultNames(): Promise<void> {
+  const run = ++resultReadRun;
+  const project = snapshot.project;
+  if (!project) return;
+  const language = snapshot.displayLanguage ?? project.primaryLanguage;
+  const validation = snapshot.validation;
+  const result = snapshot.reasoning;
+  const stale = () => run !== resultReadRun || snapshot.project?.id !== project.id
+    || (snapshot.displayLanguage ?? snapshot.project?.primaryLanguage) !== language;
+  const reads: Promise<void>[] = [];
+  if (validation) reads.push(Promise.resolve().then(() => getValidationResult(project.id, language)).then(found => {
+    if (!found) throw new Error("The recorded validation result is no longer available.");
+    if (!stale() && snapshot.validation === validation) set({ validation: found });
+  }).catch(error => {
+    if (!stale() && snapshot.validation === validation) throw error;
+  }));
+  if (result) reads.push(Promise.resolve().then(() => getReasoningResult(project.id, result.imports, language)).then(found => {
+    if (!found) throw new Error("The recorded reasoning result is no longer available.");
+    if (!stale() && snapshot.reasoning === result) set({ reasoning: found, reasoningNamesToken: snapshot.reasoningNamesToken + 1 });
+  }).catch(error => {
+    if (!stale() && snapshot.reasoning === result) throw error;
+  }));
+  const settled = await Promise.allSettled(reads);
+  if (stale()) return;
+  const failure = settled.find((item): item is PromiseRejectedResult => item.status === "rejected");
+  if (failure) {
+    const cause: unknown = failure.reason;
+    const error = Object.assign(new Error(cause instanceof Error ? cause.message : String(cause)), {
+      uiMessage: { code: "project.result_names_failed", args: {} }, cause,
+    });
+    set({ resultReadError: error });
+  }
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -370,18 +438,50 @@ export function revisionOf(
   return state.documents.find((d) => d.ontologyId === ontologyId)?.revision ?? 0;
 }
 
-function announce(text: string): void {
-  set({ announcement: { text, id: snapshot.announcement.id + 1 } });
+function announce(message: string | ProjectNotice, legacyText?: string): void {
+  // The descriptor is the current-locale display source. English text stays
+  // for legacy consumers while remaining producers migrate; never use it to
+  // infer a descriptor or retain a previously translated UI sentence.
+  const uiMessage = typeof message === "string" ? undefined : message;
+  const text = legacyText ?? (typeof message === "string" ? message : renderUiMessage(message, englishTranslator));
+  const announcement: ProjectSnapshot["announcement"] = { text, id: snapshot.announcement.id + 1 };
+  if (uiMessage) announcement.uiMessage = uiMessage;
+  set({ announcement });
+}
+
+function announceDetail(detail: ProjectNoticeDetail, legacyText?: string): void {
+  const announcement: ProjectAnnouncement = { text: "", id: snapshot.announcement.id + 1, detail };
+  announcement.text = legacyText ?? legacyNoticeText(detail) ?? renderProjectAnnouncement(announcement, "en", englishTranslator);
+  set({ announcement });
+}
+
+function announceInput(message: ProjectNoticeInput): void {
+  if (typeof message !== "string" && "kind" in message) announceDetail(message);
+  else announce(message);
 }
 
 function withDocument(next: ProjectDocumentState): ProjectDocumentState[] {
   return snapshot.documents.map((d) => (d.doc === next.doc ? next : d));
 }
 
-function afterChange(result: ChangeResult, verb: string): void {
+function refreshDataNames(state: ProjectDocumentState): void {
+  if (state.doc !== "model") return;
+  const needed = dataReadPending || Boolean(snapshot.data?.snapshots.length);
+  dataReadRun++;
+  dataReadPending = false;
+  // Empty known lists have no names to update. A pending first read still
+  // needs a replacement, so a revision change cannot strand the Data tab.
+  // Background failures stay visible in that tab, preserving the edit notice.
+  if (needed) void projectStore.loadData(false).catch(() => undefined);
+}
+
+function afterChange(result: ChangeResult, operation: "applied" | "undo" | "redo"): void {
   set({ documents: withDocument(result.state) });
-  const status = STATUS_WORDS[saveStatus(snapshot)];
-  announce(`${verb}${result.label}. ${status}.`);
+  refreshDataNames(result.state);
+  const status = saveStatus(snapshot);
+  const verb = operation === "undo" ? "Undid: " : operation === "redo" ? "Redid: " : "";
+  announceDetail({ kind: "change", label: result.label, uiMessage: result.uiMessage, operation, status },
+    `${verb}${result.label}. ${STATUS_WORDS[status]}.`);
 }
 
 function requireProject(): ProjectSummary {
@@ -394,15 +494,19 @@ export const projectStore = {
 
   /** Say something in the project's polite live region: a warning of the
    *  modeling checks that a change has just brought (relationships 5.9). */
-  say(text: string): void {
-    announce(text);
+  say(text: ProjectNoticeInput): void {
+    announceInput(text);
   },
 
   /** Open a project and make it current. Returns the model's ontology id. */
   async open(pid: string): Promise<string> {
     const opened = await openProject(pid);
+    projectSession++;
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
+    dataReadRun++;
+    dataReadPending = false;
     set({
       ...EMPTY,
       announcement: snapshot.announcement,
@@ -415,7 +519,7 @@ export const projectStore = {
           ? { draftTime: opened.recovery.draftTime }
           : null,
     });
-    announce(`Opened ${opened.project.name}. ${STATUS_WORDS[saveStatus(snapshot)]}.`);
+    announce(makeUiMessage(`projectNotice.opened.${saveStatus(snapshot)}`, { name: opened.project.name }));
     // The snapshot list is not needed to show the project, so it follows.
     void projectStore.loadData().catch(() => undefined);
     return opened.documents.find((d) => d.doc === "model")!.ontologyId;
@@ -423,28 +527,40 @@ export const projectStore = {
 
   /** Fetch the open project's data snapshots. Kept only if the project
    *  asked about is still the open one. */
-  async loadData(): Promise<SnapshotListing | null> {
+  async loadData(announceFailure = true): Promise<SnapshotListing | null> {
     const project = requireProject();
+    const run = ++dataReadRun;
+    dataReadPending = true;
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
+    const revision = snapshot.documents.find(d => d.doc === "model")?.revision;
+    const stale = () => revision !== snapshot.documents.find(d => d.doc === "model")?.revision
+      || run !== dataReadRun || snapshot.project?.id !== project.id
+      || (snapshot.displayLanguage ?? snapshot.project?.primaryLanguage) !== language;
     let listing: SnapshotListing;
     try {
-      listing = await listData(project.id);
+      listing = await listData(project.id, language);
     } catch (e) {
-      if (snapshot.project?.id !== project.id) return null;
+      if (stale()) return null;
       // Said in the live region and kept for the Data tab, which otherwise
       // read "Reading the project's data…" for ever (PR #53 review).
       const text = `The data snapshots could not be read: ${failureReason(e)}`;
-      set({ dataError: text });
-      announce(text);
+      set({ dataError: text, dataErrorCause: { error: e } });
+      if (announceFailure) announce(makeUiMessage("dataSnapshot.readFailed"), text);
       throw e;
+    } finally {
+      if (run === dataReadRun) dataReadPending = false;
     }
-    if (snapshot.project?.id !== project.id) return null;
-    set({ data: listing, dataError: null });
+    if (stale()) return null;
+    set({ data: listing, dataError: null, dataErrorCause: null });
     return listing;
   },
 
   /** A snapshot changed (5.7): say what was done, and refetch the list,
    *  whose generation every view's fetch key carries. */
-  async dataChanged(sentence: string): Promise<void> {
+  async dataChanged(sentence: string | ProjectNotice, expectedProject?: string): Promise<void> {
+    // The action may finish after its tab/project was closed. Its server
+    // result belongs to that project, not the one now using the shared store.
+    if (expectedProject !== undefined && snapshot.project?.id !== expectedProject) return;
     announce(sentence);
     await projectStore.loadData();
   },
@@ -455,8 +571,12 @@ export const projectStore = {
     const project = snapshot.project;
     await flushAll();
     if (project) await closeProject(project.id, discard);
+    projectSession++;
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
+    dataReadRun++;
+    dataReadPending = false;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -464,8 +584,12 @@ export const projectStore = {
   /** Forget the open project without telling the server: for a project that
    *  was deleted or failed to open. */
   reset(): void {
+    projectSession++;
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
+    dataReadRun++;
+    dataReadPending = false;
     creatingFrom = null;
     set({ ...EMPTY, announcement: snapshot.announcement });
   },
@@ -477,7 +601,9 @@ export const projectStore = {
   /** Track a newly added document (shapes.ttl) from a fresh open. */
   async reload(): Promise<void> {
     const project = requireProject();
+    const owner = projectSession;
     const opened = await openProject(project.id);
+    if (owner !== projectSession) return;
     set({ project: opened.project, documents: opened.documents });
   },
 
@@ -485,19 +611,23 @@ export const projectStore = {
     const project = requireProject();
     // The editor's unapplied text is not touched here: the header asks
     // "Apply, discard, or stay?" before an undo, as every other exit does.
+    const owner = projectSession;
     const result = await undoChange(project.id, snapshot.activeDoc);
-    afterChange(result, "Undid: ");
+    if (owner !== projectSession) return;
+    afterChange(result, "undo");
   },
 
   async redo(): Promise<void> {
     const project = requireProject();
+    const owner = projectSession;
     const result = await redoChange(project.id, snapshot.activeDoc);
-    afterChange(result, "Redid: ");
+    if (owner !== projectSession) return;
+    afterChange(result, "redo");
   },
 
   /** Record a change made elsewhere (a command) so the views refetch. */
   applied(result: ChangeResult): void {
-    afterChange(result, "");
+    afterChange(result, "applied");
   },
 
   /** Run one command on the open document (visual-modeling 5.1). The views
@@ -508,23 +638,28 @@ export const projectStore = {
   async command(
     name: string,
     args: Record<string, unknown>,
-    announcement?: (result: ChangeResult) => string,
+    announcement?: (result: ChangeResult) => ProjectNoticeInput,
     doc?: ProjectDocName,
   ): Promise<ChangeResult> {
     const project = requireProject();
     const target = doc ?? snapshot.activeDoc;
-    const result = await runCommand(project.id, target, name, args);
+    const owner = projectSession;
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
+    const result = await runCommand(project.id, target, name, args, language);
+    if (owner !== projectSession) return result;
     if (!snapshot.documents.some((d) => d.doc === target)) {
       // The first shape command made shapes.ttl (shacl-authoring 8): track
       // it from a fresh open, as Add shapes.ttl does.
       const opened = await openProject(project.id);
+      if (owner !== projectSession) return result;
       set({ project: opened.project, documents: opened.documents });
     }
     if (announcement) {
       set({ documents: withDocument(result.state) });
-      announce(announcement(result));
+      refreshDataNames(result.state);
+      announceInput(announcement(result));
     } else {
-      afterChange(result, "");
+      afterChange(result, "applied");
     }
     return result;
   },
@@ -534,17 +669,18 @@ export const projectStore = {
    *  reads the summary (Section 6). */
   async validate(): Promise<ValidationResult | null> {
     const project = requireProject();
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
     // One check at a time: a second press while one runs is not a second
     // request (Stage A follow-up 3).
     if (snapshot.validating) return null;
     const run = ++validationRun;
-    set({ validating: true });
-    announce("Validating…");
+    set({ validating: true, resultReadError: null });
+    announce(makeUiMessage("projectNotice.validating"));
     const stale = () => run !== validationRun || snapshot.project?.id !== project.id;
     try {
       let result: ValidationResult;
       try {
-        result = await validateProject(project.id);
+        result = await validateProject(project.id, language);
       } catch (e) {
         // Nor does its failure reach the next project's error bar.
         if (stale()) return null;
@@ -554,7 +690,9 @@ export const projectStore = {
       // says nothing in the next one and leaves its Validate alone.
       if (stale()) return null;
       set({ validation: result });
-      announce(validationSummary(result));
+      announceDetail(validationNotice(result));
+      if ((snapshot.displayLanguage ?? project.primaryLanguage) !== language) await refreshResultNames();
+      if (stale()) return null;
       return result;
     } finally {
       if (run === validationRun) set({ validating: false });
@@ -572,21 +710,22 @@ export const projectStore = {
     importsNow: () => boolean = () => imports,
   ): Promise<ReasoningResult | null> {
     const project = requireProject();
+    const language = snapshot.displayLanguage ?? project.primaryLanguage;
     if (snapshot.reasoningSince !== null) return null;
     const run = ++reasoningRun;
-    set({ reasoningSince: Date.now(), reasoningError: null });
-    announce("Reasoning started.");
+    set({ reasoningSince: Date.now(), reasoningError: null, reasoningErrorCause: null, resultReadError: null });
+    announce(makeUiMessage("projectNotice.reasoningStarted"));
     const stale = () => run !== reasoningRun || snapshot.project?.id !== project.id;
     try {
       let result: ReasoningResult;
       try {
-        result = await reasonProject(project.id, includeData, imports);
+        result = await reasonProject(project.id, includeData, imports, language);
       } catch (e) {
         if (stale()) return null;
         // Said once: the Reasoning panel's alert reads it, and a live-region
         // announcement as well said it twice (PR #55 review).
         const text = e instanceof ApiError ? e.message : `The run could not be started: ${failureReason(e)}`;
-        set({ reasoningError: text });
+        set({ reasoningError: text, reasoningErrorCause: { kind: "start", error: e } });
         return null;
       }
       if (stale()) return null;
@@ -595,6 +734,7 @@ export const projectStore = {
       set({
         reasoning: result,
         reasoningError: null,
+        reasoningErrorCause: null,
         reasoningToken: snapshot.reasoningToken + 1,
         showInferred: result.status === "done" ? true : snapshot.showInferred,
       });
@@ -605,8 +745,9 @@ export const projectStore = {
         generation: dataGenerationOf(snapshot),
         imports: importsNow(),
       };
-      const line = isStale(result, now) ? staleLine(result) : finishedLine(result);
-      announce(line.endsWith(".") ? line : `${line}.`);
+      announceDetail(reasoningNotice(result, now));
+      if ((snapshot.displayLanguage ?? project.primaryLanguage) !== language) await refreshResultNames();
+      if (stale()) return null;
       return result;
     } finally {
       if (run === reasoningRun) set({ reasoningSince: null, reasoningStopping: false });
@@ -620,7 +761,7 @@ export const projectStore = {
     const project = requireProject();
     if (snapshot.reasoningSince === null || snapshot.reasoningStopping) return;
     const run = reasoningRun;
-    set({ reasoningStopping: true, reasoningError: null });
+    set({ reasoningStopping: true, reasoningError: null, reasoningErrorCause: null });
     try {
       await stopReasoning(project.id);
     } catch (e) {
@@ -628,7 +769,7 @@ export const projectStore = {
       // In the app's words, never the browser's ("Failed to fetch"), and
       // said once, by the panel's alert (PR #55 review).
       const text = `The run could not be stopped: ${failureReason(e)} Press Stop again.`;
-      set({ reasoningStopping: false, reasoningError: text });
+      set({ reasoningStopping: false, reasoningError: text, reasoningErrorCause: { kind: "stop", error: e } });
     }
   },
 
@@ -665,6 +806,7 @@ export const projectStore = {
       creating: { kind, parent: options.parent ?? null, name: "", token, extra: {} },
       creatingBusy: false,
       creatingError: null,
+      creatingErrorCause: null,
     });
     return token;
   },
@@ -688,7 +830,7 @@ export const projectStore = {
   async createDraft(): Promise<string | null> {
     const draft = snapshot.creating;
     if (!draft || snapshot.creatingBusy || !draft.name.trim()) return null;
-    set({ creatingBusy: true, creatingError: null });
+    set({ creatingBusy: true, creatingError: null, creatingErrorCause: null });
     try {
       const [name, args] = draftCommand(draft, draft.extra);
       const result = await projectStore.command(name, args, undefined, "model");
@@ -709,7 +851,7 @@ export const projectStore = {
       return result.created ?? null;
     } catch (e: unknown) {
       if (snapshot.creating?.token === draft.token) {
-        set({ creatingBusy: false, creatingError: e instanceof Error ? e.message : String(e) });
+        set({ creatingBusy: false, creatingError: e instanceof Error ? e.message : String(e), creatingErrorCause: { error: e } });
       }
       return null;
     }
@@ -720,7 +862,7 @@ export const projectStore = {
    *  the outline's heading -- never to the page. */
   cancelCreating(restore = true): void {
     if (!snapshot.creating) return;
-    set({ creating: null, creatingBusy: false, creatingError: null });
+    set({ creating: null, creatingBusy: false, creatingError: null, creatingErrorCause: null });
     if (!restore) {
       creatingFrom = null;
       return;
@@ -764,9 +906,11 @@ export const projectStore = {
     const project = requireProject();
     const text = snapshot.editorDraft;
     if (text === null) return;
+    const owner = projectSession;
     const result = await applyDocumentSource(project.id, snapshot.activeDoc, text);
+    if (owner !== projectSession) return;
     set({ editorDraft: null });
-    afterChange(result, "");
+    afterChange(result, "applied");
   },
 
   /** Save a document, the current one unless named. Resolves "warning" when
@@ -775,10 +919,12 @@ export const projectStore = {
   async save(confirmRewrite = false, doc?: ProjectDocName): Promise<"saved" | "warning"> {
     const project = requireProject();
     doc = doc ?? (confirmRewrite ? snapshot.commentsWarning?.doc : undefined) ?? snapshot.activeDoc;
+    const owner = projectSession;
     set({ saving: true, commentsWarning: null });
-    announce(STATUS_WORDS.saving);
+    announce(makeUiMessage("projectNotice.saving"));
     try {
       const result = await saveDocument(project.id, doc, confirmRewrite);
+      if (owner !== projectSession) return "saved";
       if ("needsCommentsWarning" in result) {
         set({ commentsWarning: { doc, backup: result.backup } });
         return "warning";
@@ -786,12 +932,12 @@ export const projectStore = {
       set({ documents: withDocument(result.state) });
       announce(
         confirmRewrite
-          ? `Saved. The previous file was kept as ${doc}.original.ttl.`
-          : "Saved.",
+          ? makeUiMessage("projectNotice.savedBackup", { backup: `${doc}.original.ttl` })
+          : makeUiMessage("projectNotice.saved"),
       );
       return "saved";
     } finally {
-      set({ saving: false });
+      if (owner === projectSession) set({ saving: false });
     }
   },
 
@@ -800,7 +946,9 @@ export const projectStore = {
   // document the views were not showing when a save stopped part way (found
   // in review).
   async saveAll(): Promise<"saved" | "warning"> {
+    const owner = projectSession;
     for (const d of snapshot.documents.filter((x) => x.dirty)) {
+      if (owner !== projectSession) return "saved";
       if ((await projectStore.save(false, d.doc)) === "warning") return "warning";
     }
     return "saved";
@@ -808,7 +956,7 @@ export const projectStore = {
 
   cancelCommentsWarning(): void {
     set({ commentsWarning: null });
-    announce("Not saved.");
+    announce(makeUiMessage("projectNotice.notSaved"));
   },
 
   async recover(action: "recover" | "discard"): Promise<void> {
@@ -817,8 +965,8 @@ export const projectStore = {
     set({ documents: result.documents, recovery: null, editorDraft: null });
     announce(
       action === "recover"
-        ? "Recovered the unsaved changes. Unsaved changes."
-        : "Discarded the unsaved changes.",
+        ? makeUiMessage("projectNotice.recovered")
+        : makeUiMessage("projectNotice.discarded"),
     );
   },
 
@@ -829,18 +977,27 @@ export const projectStore = {
   },
 
   setDisplayLanguage(lang: string): void {
-    set({ displayLanguage: lang });
-    announce(`Showing names in ${lang}.`);
+    set({ displayLanguage: lang, resultReadError: null });
+    announce(makeUiMessage("projectNotice.language", { language: lang }));
+    void refreshResultNames();
+    if (snapshot.project) void projectStore.loadData().catch(() => undefined);
   },
 
   async setLanguages(languages: string[]): Promise<void> {
     const project = requireProject();
+    const owner = projectSession;
     const updated = await updateProject(project.id, { languages });
+    if (owner !== projectSession) return;
     const display =
       snapshot.displayLanguage && [updated.primaryLanguage, ...updated.languages].includes(snapshot.displayLanguage)
         ? snapshot.displayLanguage
         : updated.primaryLanguage;
-    set({ project: updated, displayLanguage: display });
+    const previous = snapshot.displayLanguage;
+    set({ project: updated, displayLanguage: display, resultReadError: null });
+    if (display !== previous) {
+      void refreshResultNames();
+      void projectStore.loadData().catch(() => undefined);
+    }
   },
 
   /** Register a pending-write flush, awaited before the project closes.
@@ -857,8 +1014,12 @@ export const projectStore = {
 
   /** For tests: back to nothing open. */
   _reset(): void {
+    projectSession++;
     validationRun++;
     reasoningRun++;
+    resultReadRun++;
+    dataReadRun++;
+    dataReadPending = false;
     creatingFrom = null;
     snapshot = EMPTY;
     setApiLanguage(null);

@@ -10,6 +10,9 @@ SUMMARY
     trash, and export as a zip. Also the per-project saved-query store.
 
 BASIC IDEA
+    Owned refusals add validated display facts at their source. Legacy text,
+    exception types and input-processing rules remain unchanged.
+
     A project is a folder, and the manifest is the only thing listing reads, so
     the home screen shows a hundred projects without opening a Turtle file:
     the counts it shows (classes, properties, concepts) are written into the
@@ -79,6 +82,7 @@ EXPECTED OUTPUT
 
 from __future__ import annotations
 
+from .messages import make_message
 import copy
 import io
 import json
@@ -188,29 +192,50 @@ def validate_layout(data) -> dict:
     is read back; one sent by the browser is replaced by write_layout.
     """
     if not isinstance(data, dict):
-        raise ProjectError("A layout is an object with positions, shown and viewport.")
+        raise ProjectError(
+            'A layout is an object with positions, shown and viewport.',
+            ui_message=make_message('projects.layout_object'),
+        )
     positions = data.get("positions", {})
     if not isinstance(positions, dict):
-        raise ProjectError("A layout's positions are an object of IRI to [x, y].")
+        raise ProjectError(
+            "A layout's positions are an object of IRI to [x, y].",
+            ui_message=make_message('projects.positions_object'),
+        )
     shown = data.get("shown")
     count = len(positions) + (len(shown) if isinstance(shown, list) else 0)
     if count > LAYOUT_MAX_ENTRIES:
-        raise ProjectError(f"A layout holds at most {LAYOUT_MAX_ENTRIES:,} entries.")
+        raise ProjectError(
+            f'A layout holds at most {LAYOUT_MAX_ENTRIES:,} entries.',
+            ui_message=make_message('projects.layout_limit', limit=LAYOUT_MAX_ENTRIES),
+        )
     clean: dict = {}
     for iri, point in positions.items():
         if not _key(iri):
-            raise ProjectError(f"A layout key is an IRI of at most {LAYOUT_KEY_MAX:,} characters.")
+            raise ProjectError(
+                f'A layout key is an IRI of at most {LAYOUT_KEY_MAX:,} characters.',
+                ui_message=make_message('projects.layout_key', limit=LAYOUT_KEY_MAX),
+            )
         if not (isinstance(point, list) and len(point) == 2 and all(_finite(v) for v in point)):
-            raise ProjectError("A position is [x, y], two finite numbers.")
+            raise ProjectError(
+                'A position is [x, y], two finite numbers.',
+                ui_message=make_message('projects.position'),
+            )
         clean[iri] = [float(point[0]), float(point[1])]
     if shown is not None:
         if not (isinstance(shown, list) and all(_key(i) for i in shown)):
-            raise ProjectError("A layout's shown set is a list of IRIs, or null.")
+            raise ProjectError(
+                "A layout's shown set is a list of IRIs, or null.",
+                ui_message=make_message('projects.shown'),
+            )
         shown = list(dict.fromkeys(shown))
     viewport = data.get("viewport")
     if viewport is not None:
         if not (isinstance(viewport, dict) and all(_finite(viewport.get(k)) for k in ("x", "y", "zoom"))):
-            raise ProjectError("A layout's viewport is {x, y, zoom}, three finite numbers, or null.")
+            raise ProjectError(
+                "A layout's viewport is {x, y, zoom}, three finite numbers, or null.",
+                ui_message=make_message('projects.viewport'),
+            )
         viewport = {k: float(viewport[k]) for k in ("x", "y", "zoom")}
     generation = data.get("generation", 0)
     if not (isinstance(generation, int) and not isinstance(generation, bool) and generation >= 0):
@@ -226,6 +251,10 @@ def validate_layout(data) -> dict:
 
 class ProjectError(ValueError):
     """A request that cannot be carried out, with the sentence saying why."""
+
+    def __init__(self, message: str, *, ui_message: dict | None = None):
+        super().__init__(message)
+        self.ui_message = ui_message
 
 
 class UnknownProject(LookupError):
@@ -314,7 +343,10 @@ def render_template(
 ) -> str:
     """A template's model, or with part=".shapes" its starter shapes."""
     if template not in TEMPLATES:
-        raise ProjectError(f"There is no template called {template!r}.")
+        raise ProjectError(
+            f'There is no template called {template!r}.',
+            ui_message=make_message('projects.template', name=str(template)),
+        )
     text = (TEMPLATE_DIR / f"{template}{part}.ttl").read_text(encoding="utf-8")
     # The ontology's own IRI is the base without its separator, the usual
     # shape: http://example.org/invoices# names <http://example.org/invoices>.
@@ -488,24 +520,31 @@ class ProjectStore:
         """
         name = (name or "").strip()
         if not name:
-            raise ProjectError("A project needs a name.")
+            raise ProjectError(
+                'A project needs a name.',
+                ui_message=make_message('projects.name_required'),
+            )
         if len(name) > NAME_MAX:
-            raise ProjectError(f"A project name can be at most {NAME_MAX} characters.")
+            raise ProjectError(
+                f'A project name can be at most {NAME_MAX} characters.',
+                ui_message=make_message('projects.name_limit', limit=NAME_MAX),
+            )
         base_iri = (base_iri or default_base_iri(name)).strip()
         if not BASE_IRI.fullmatch(base_iri):
             raise ProjectError(
-                "The base IRI must be an absolute IRI ending in # or /, "
-                "for example http://example.org/invoices#."
+                'The base IRI must be an absolute IRI ending in # or /, for example http://example.org/invoices#.',
+                ui_message=make_message('projects.base_iri'),
             )
         prefix = (prefix or default_prefix(name)).strip()
         if not PREFIX.fullmatch(prefix):
             raise ProjectError(
-                "The prefix must start with a letter and use only letters, digits, "
-                "hyphens and underscores."
+                'The prefix must start with a letter and use only letters, digits, hyphens and underscores.',
+                ui_message=make_message('projects.prefix'),
             )
         if not valid_lang(primary_language):
             raise ProjectError(
-                f"{primary_language!r} is not a well-formed language tag (for example en or en-US)."
+                f'{primary_language!r} is not a well-formed language tag (for example en or en-US).',
+                ui_message=make_message('projects.language', language=str(primary_language)),
             )
 
         if source_text is not None:
@@ -562,13 +601,19 @@ class ProjectStore:
     def add_document(self, pid: str, role: str) -> dict:
         """Create shapes.ttl, empty. SHACL itself arrives with V-6."""
         if role != "shapes":
-            raise ProjectError("Only a shapes document can be added.")
+            raise ProjectError(
+                'Only a shapes document can be added.',
+                ui_message=make_message('projects.document_kind'),
+            )
         folder = self.folder(pid)
         path = folder / DOCUMENTS["shapes"]
         with self._lock:
             manifest = self.manifest(pid)
             if any(d["role"] == "shapes" for d in manifest["documents"]):
-                raise ProjectError("This project already has a shapes document.")
+                raise ProjectError(
+                    'This project already has a shapes document.',
+                    ui_message=make_message('projects.shapes_exists'),
+                )
             path.write_text(
                 f"@prefix {manifest['prefix']}: <{manifest['baseIri']}> .\n"
                 "@prefix sh: <http://www.w3.org/ns/shacl#> .\n",
@@ -584,16 +629,25 @@ class ProjectStore:
     def rename(self, pid: str, name: str) -> dict:
         name = (name or "").strip()
         if not name:
-            raise ProjectError("A project needs a name.")
+            raise ProjectError(
+                'A project needs a name.',
+                ui_message=make_message('projects.name_required'),
+            )
         if len(name) > NAME_MAX:
-            raise ProjectError(f"A project name can be at most {NAME_MAX} characters.")
+            raise ProjectError(
+                f'A project name can be at most {NAME_MAX} characters.',
+                ui_message=make_message('projects.name_limit', limit=NAME_MAX),
+            )
         # The name only: the IRIs were minted from it once and never follow it.
         return self.summary(self.update_manifest(pid, name=name, updatedAt=_now()))
 
     def set_kind(self, pid: str, kind: str) -> dict:
         """Change the tools, not the model: only the manifest is written."""
         if kind not in KINDS:
-            raise ProjectError("A project is an ontology or a taxonomy.")
+            raise ProjectError(
+                'A project is an ontology or a taxonomy.',
+                ui_message=make_message('projects.kind'),
+            )
         return self.summary(self.update_manifest(pid, kind=kind))
 
     def ensure_kind(self, pid: str, graph: Graph) -> None:
@@ -608,7 +662,10 @@ class ProjectStore:
         cleaned: list[str] = []
         for tag in languages:
             if not valid_lang(tag):
-                raise ProjectError(f"{tag!r} is not a well-formed language tag (for example fr or es).")
+                raise ProjectError(
+                    f'{tag!r} is not a well-formed language tag (for example fr or es).',
+                    ui_message=make_message('projects.language', language=str(tag)),
+                )
             if tag.lower() != primary.lower() and tag not in cleaned:
                 cleaned.append(tag)
         return self.summary(self.update_manifest(pid, languages=cleaned))

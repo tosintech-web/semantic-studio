@@ -12,6 +12,13 @@ SUMMARY
     plain reason.
 
 BASIC IDEA
+    Definitions, stated and unsupported reasons use source facts; display metadata
+    translates retained results and accessible labels without
+    changing selection IRIs, open details, focus or the original fetched data.
+
+    Failed reads preserve original details across locale changes, and a pending
+    response cannot migrate to another project's disclosure.
+
     api.ts is mocked; each test hands getWhy the reasons a server would
     give, and walks the disclosure open, then a nested one.
 
@@ -25,6 +32,9 @@ EXPECTED OUTPUT
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DictionaryLanguageContext } from "../dictionary/useDictionaryLanguage";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 import type { WhyReason } from "../types";
 import WhyDisclosure from "./WhyDisclosure";
 
@@ -146,6 +156,146 @@ describe("Why? (5.6)", () => {
     getWhy.mockRejectedValue(new Error("That fact is not in the last result."));
     render(<WhyDisclosure projectId="prj-1" fact={{ s: "a", p: "p", o: "b" }} label="a p b" />);
     await open(screen.getByRole("button", { name: "Why? a p b" }));
-    expect(screen.getByRole("alert").textContent).toBe("That fact is not in the last result.");
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText("That fact is not in the last result.").closest("details")).toBeTruthy();
   });
+});
+
+
+it("keeps the loaded reason open when labels and premise marks change language", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  getWhy.mockResolvedValue(MANAGER);
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="prj-1" fact={{ s: "a", p: "p", o: "b" }} label="Alice is a Manager" /></I18nProvider>);
+  const button = screen.getByRole("button", { name: "根拠：Alice is a Manager" });
+  await open(button);
+  expect(button.getAttribute("aria-expanded")).toBe("true");
+  expect(screen.getByText("根拠となる記述：")).toBeTruthy();
+  expect(document.querySelector(".why-mark")?.textContent).toBe("推論結果");
+  const region = document.getElementById(button.getAttribute("aria-controls")!);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Why? Alice is a Manager" })).toBe(button);
+  expect(document.getElementById(button.getAttribute("aria-controls")!)).toBe(region);
+  expect(document.querySelector(".why-mark")?.textContent).toBe("inferred");
+  expect(getWhy).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+
+it.each([true, false])("retains the original failed reason and renders its metadata at the current UI locale (known=%s)", async (known) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const original = "理由 <img src=x> {name}";
+  const cause = Object.assign(new Error(original), { uiMessage: known
+    ? { code: "reasoning.failed", args: {} } : { code: "future.reason", args: {} } });
+  getWhy.mockRejectedValue(cause);
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  const alert = screen.getByRole("alert");
+  expect(alert.textContent).toBe(known ? "推論中にエラーが発生して停止しました。詳細を確認してください。" : "操作を完了できませんでした。詳細を確認してください。");
+  const details = screen.getByText(original).closest("details")!;
+  expect(details).toBeTruthy(); details.open = true;
+  const summary = within(details).getByText("技術的な詳細"); summary.focus();
+  expect(details.querySelector("img")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("alert")).toBe(alert);
+  expect(alert.textContent).toBe(known ? "The reasoner stopped with an error. Check the original details." : "The operation could not be completed. Check the details.");
+  expect(screen.getByText(original).closest("details")).toBe(details);
+  expect(details.open).toBe(true); expect(document.activeElement).toBe(summary);
+  expect(getWhy).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each([
+  ["resolve", "project"], ["reject", "project"], ["resolve", "fact"], ["reject", "fact"],
+])("does not carry a pending reason into another target (%s, %s)", async (ending, target) => {
+  let resolve!: (reason: WhyReason) => void;
+  let reject!: (error: Error) => void;
+  getWhy.mockReturnValueOnce(new Promise<WhyReason>((ok, no) => { resolve = ok; reject = no; }));
+  const props = { fact: { s: "a", p: "p", o: "b" }, label: "fact" };
+  const view = render(<WhyDisclosure projectId="one" {...props} />);
+  await open(screen.getByRole("button", { name: "Why? fact" }));
+  const next = { ...props, projectId: target === "project" ? "two" : "one", fact: { ...props.fact, o: target === "fact" ? "c" : "b" } };
+  view.rerender(<WhyDisclosure {...next} />);
+  expect(screen.getByRole("button", { name: "Why? fact" }).getAttribute("aria-expanded")).toBe("false");
+  await act(async () => { ending === "resolve" ? resolve(MANAGER) : reject(new Error("old failure")); });
+  expect(screen.queryByText(MANAGER.premises[0].sentence)).toBeNull();
+  expect(screen.queryByText("old failure")).toBeNull();
+  getWhy.mockResolvedValueOnce(PERSON);
+  await open(screen.getByRole("button", { name: "Why? fact" }));
+  expect(getWhy).toHaveBeenLastCalledWith(next.projectId, next.fact);
+  expect(screen.getByText("Alice works for Acme")).toBeTruthy();
+});
+
+
+it("translates a loaded premise and its nested Why label while retaining the fetched reason", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const premise = { ...MANAGER.premises[0], uiMessage: { code: "reasoning.fact.type", args: { s: [{ text: "対象" }], o: [{ text: "分類" }] } } };
+  getWhy.mockResolvedValue({ ...MANAGER, premises: [premise] });
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  const nested = screen.getByRole("button", { name: "根拠：「対象」は「分類」の個体です。" });
+  expect(screen.getByText(premise.sentence).closest("details")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "Why? 対象 is an instance of 分類." })).toBe(nested);
+  expect(screen.getByText("対象 is an instance of 分類.")).toBeTruthy(); expect(getWhy).toHaveBeenCalledTimes(1);
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("renders a source-typed class definition in a retained reason without interpreting names as English", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const original = "Original class definition <img>{expression}";
+  const definition = { s: X + "Manager", p: "http://www.w3.org/2002/07/owl#equivalentClass", o: null, inferred: false,
+    sentence: original, uiMessage: { code: "reasoning.definition", args: { name: [{ text: "管理者 <b>{name}" }], expression: [
+      { text: "人" }, { code: "words.reasoning.intersection", args: {} }, { text: "管理対象" },
+      { code: "words.reasoning.condition_separator", args: {} }, { code: "words.reasoning.minimum_one", args: {} }, { text: "従業員" },
+    ] } } };
+  getWhy.mockResolvedValue({ family: "defining", sentence: "Original combined explanation", premises: [definition] });
+  const select = vi.fn();
+  const { container } = render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" onSelect={select} /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  const line = screen.getByRole("button", { name: "「管理者 <b>{name}」は、条件「人かつ管理対象：1つ以上の従業員」に一致する個体として定義されています。" });
+  const details = screen.getByText(original).closest("details")!; details.open = true;
+  const summary = within(details).getByText("技術的な詳細"); summary.focus();
+  expect(screen.getAllByRole("button", { name: /^根拠：/ })).toHaveLength(1);
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("button", { name: "管理者 <b>{name} is defined as exactly the entities matching 人 and 管理対象: at least one 従業員." })).toBe(line);
+  expect(details.open).toBe(true); expect(document.activeElement).toBe(summary);
+  fireEvent.click(line); expect(select).toHaveBeenCalledWith(definition.s);
+  expect(getWhy).toHaveBeenCalledTimes(1); expect(container.querySelector("img, b")).toBeNull();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it.each(["stated", "unsupported", "future"])("renders a retained %s reason with original details in both UI languages", async (kind) => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const original = "Original reason <img>{s}";
+  const uiMessage = kind === "stated" ? { code: "reasoning.reason.stated", args: { s: [{ text: "対象" }], p: [{ text: "値" }], o: [{ text: "something <b>{o}" }] } }
+    : { code: kind === "unsupported" ? "reasoning.reason.unsupported" : "future.reason", args: {} };
+  getWhy.mockResolvedValue({ family: kind === "stated" ? "stated" : null, sentence: original, premises: [], uiMessage });
+  render(<I18nProvider><UiLanguageSelect /><WhyDisclosure projectId="one" fact={{ s: "a", p: "p", o: "b" }} label="記述" /></I18nProvider>);
+  await open(screen.getByRole("button", { name: "根拠：記述" }));
+  expect(screen.getByText(kind === "stated" ? "「対象」の「値」は「something <b>{o}」と、モデルに明記されています。"
+    : kind === "unsupported" ? "OWL 2 RLによる推論結果です。この事実について、Semantic Studioでは一段階の根拠を説明できません。"
+    : "この記述については、推論の元の詳細を確認してください。")).toBeTruthy();
+  const details = screen.getByText(original).closest("details")!; details.open = true;
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByText(kind === "stated" ? "対象 has something <b>{o} as its 値 value, explicitly stated in the model."
+    : kind === "unsupported" ? "Concluded by OWL 2 RL; Semantic Studio has no one-step explanation for this fact."
+    : "Check the original reasoning details for this statement.")).toBeTruthy();
+  expect(screen.getByText(original).closest("details")).toBe(details); expect(details.open).toBe(true);
+  expect(getWhy).toHaveBeenCalledTimes(1); localStorage.removeItem("semantic-studio.uiLocale.v1");
+});
+
+it("keeps Why open and rereads only its names when the dictionary language changes", async () => {
+  const fact={s:X+"alice",p:T,o:X+"Person"};
+  getWhy.mockImplementation((_pid,_fact,language)=>Promise.resolve({family:"stated",sentence:"Original reason",premises:[],
+    uiMessage:{code:"reasoning.reason.stated",args:{s:[{text:language==="ja"?"対象":"Subject"}],p:[{text:"is a"}],o:[{text:"Person"}]}}}));
+  const draw=(language:string)=><DictionaryLanguageContext.Provider value={language}><WhyDisclosure projectId="one" fact={fact} label="Fact" /></DictionaryLanguageContext.Provider>;
+  const view=render(draw("en"));
+  await open(screen.getByRole("button",{name:"Why? Fact"}));
+  expect(document.querySelector(".why-plain")?.textContent).toContain("Subject");
+  await act(async()=>{view.rerender(draw("ja"));});
+  expect(screen.getByRole("button",{name:"Why? Fact"}).getAttribute("aria-expanded")).toBe("true");
+  expect(document.querySelector(".why-plain")?.textContent).toContain("対象");
+  expect(getWhy).toHaveBeenLastCalledWith("one",fact,"ja");
+  await open(screen.getByRole("button",{name:"Why? Fact"}));await open(screen.getByRole("button",{name:"Why? Fact"}));
+  expect(getWhy).toHaveBeenCalledTimes(2);
 });

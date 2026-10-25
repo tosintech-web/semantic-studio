@@ -83,6 +83,10 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { useI18n } from "../i18n/I18nProvider";
+import type { Translator, UiLocale } from "../i18n/types";
+import { translate } from "../i18n/format";
+import { edgeLabelMessage } from "../i18n/kindLabel";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Graph from "graphology";                       // in-memory graph data structure
@@ -497,9 +501,10 @@ function edgeKey(edge: VizEdge): string {
 
 /** What a link says on focus: a rule's short form (ruleSentences, the Edit
  *  canvas's words), else its label, else its kind. */
-function edgeWords(edge: VizEdge): string {
-  if (edge.kind === "rule" && edge.rule) return shortLabel(edge.rule);
-  return edge.label || edge.kind;
+function edgeWords(edge: VizEdge, locale: UiLocale): string {
+  if (edge.kind === "rule" && edge.rule) return shortLabel(edge.rule, locale);
+  const t = ((code, args) => translate(locale, code, args)) as Translator;
+  return edge.label || edgeLabelMessage(edge.kind, t);
 }
 
 const EMPTY_SET: Set<string> = new Set();
@@ -549,6 +554,10 @@ export default function GraphView({
   frameTick = 0,
   leftRail,
 }: Props) {
+  const { t, locale } = useI18n();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  const edgeLabelsRef = useRef(new Map<string, VizEdge>());
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
@@ -744,6 +753,7 @@ export default function GraphView({
     sigmaRef.current?.kill();
     sigmaRef.current = null;
     graphRef.current = null;
+    edgeLabelsRef.current.clear();
     if (!data) {
       setDrawnCount(0);
       return;
@@ -766,9 +776,10 @@ export default function GraphView({
       // names sit further apart and their labels have room to render.
       const nameSpan =
         (labelLength.get(edge.source) ?? 8) + (labelLength.get(edge.target) ?? 8);
+      if ((edge.kind === "rule" && edge.rule) || !edge.label) edgeLabelsRef.current.set(key, edge);
       graph.addEdgeWithKey(key, edge.source, edge.target, {
         kind: edge.kind,
-        label: edgeWords(edge),
+        label: edgeWords(edge, localeRef.current),
         size: 1,
         type: "arrow",
         weight: 1 / Math.max(1, nameSpan / 18),
@@ -1202,9 +1213,10 @@ export default function GraphView({
       // not produce but which would throw rather than be ignored.
       if (graph.hasEdge(key)) continue;
       if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) continue;
+      if ((edge.kind === "rule" && edge.rule) || !edge.label) edgeLabelsRef.current.set(key, edge);
       graph.addEdgeWithKey(key, edge.source, edge.target, {
         kind: edge.kind,
-        label: edgeWords(edge),
+        label: edgeWords(edge, localeRef.current),
         size: 1,
         type: "arrow",
         weight: 1,
@@ -1257,6 +1269,22 @@ export default function GraphView({
     expandedRef.current?.({ addedNodes, addedEdges });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expansion?.token]);
+
+  // Reword rule and generated kind labels. Rebuilding the scene would discard
+  // manually placed nodes and reset the camera for a display-only change.
+  useEffect(() => {
+    const graph = graphRef.current;
+    if (!graph) return;
+    let changed = false;
+    for (const [key, edge] of edgeLabelsRef.current) {
+      const words = edgeWords(edge, locale);
+      if (graph.hasEdge(key) && graph.getEdgeAttribute(key, "label") !== words) {
+        graph.setEdgeAttribute(key, "label", words);
+        changed = true;
+      }
+    }
+    if (changed) sigmaRef.current?.refresh({ skipIndexation: true });
+  }, [locale]);
 
   // Refresh rendering when filters, selection, theme or query state change.
   useEffect(() => {
@@ -1365,12 +1393,12 @@ export default function GraphView({
               onClick={() => (layoutRunning ? stopLayout() : startLayout(15000))}
               title={
                 layoutRunning
-                  ? "Stop the layout simulation"
-                  : "Re-run the layout to untangle the graph"
+                  ? t("graphUi.stopHint")
+                  : t("graphUi.layoutHint")
               }
             >
               <span aria-hidden="true">{layoutRunning ? "⏸" : "▶"}</span>
-              {layoutRunning ? "Stop layout" : "Re-run layout"}
+              {layoutRunning ? t("graphUi.stop") : t("graphUi.layout")}
             </button>
             <button
               className="small ghost"
@@ -1382,21 +1410,21 @@ export default function GraphView({
                   backgroundColor: paletteRef.current.background,
                 });
               }}
-              title="Save the current graph view as a PNG image"
+              title={t("graphUi.imageHint")}
             >
               <span aria-hidden="true">⬇</span>
-              Save as image
+              {t("graphUi.image")}
             </button>
             {/* Link names are drawn only for the node in focus (D-110), so a
                 newcomer is told where they went. Text, not a tooltip. */}
             {edgeLabelsOn && (
               <span className="graph-toolbar-note">
-                Link names show when you point at or select a node.
+                {t("graphUi.linkHelp")}
               </span>
             )}
           </>
         ) : (
-          <span className="graph-toolbar-hint">No ontology loaded</span>
+          <span className="graph-toolbar-hint">{t("graphUi.none")}</span>
         )}
       </div>
       <div className="graph-body">
@@ -1417,18 +1445,15 @@ export default function GraphView({
             role={data ? "img" : undefined}
             aria-label={
               data
-                ? `Ontology graph, ${drawnCount.toLocaleString()} of ` +
-                  `${data.stats.nodeTotal.toLocaleString()} entities drawn. ` +
-                  (hasImported ? "Entities from imports are drawn smaller. " : "") +
-                  `Use the entity list to browse.`
+                ? t(hasImported ? "graphUi.descriptionImported" : "graphUi.description", { drawn: drawnCount, total: data.stats.nodeTotal })
                 : undefined
             }
           />
           {!data && (
             <div className="graph-empty">
-              <p>No ontology loaded yet.</p>
+              <p>{t("graphUi.noneYet")}</p>
               <p className="hint">
-                Use “Load” to upload a file or fetch one from a URL / GitHub.
+                {t("graphUi.loadHelp")}
               </p>
             </div>
           )}
@@ -1442,7 +1467,7 @@ export default function GraphView({
               punctuation — so the glyphs carry aria-hidden and the labels do the
               naming. The group names itself so the three read as a set. */}
           {data && (
-            <div className="graph-zoom" role="group" aria-label="Zoom controls">
+            <div className="graph-zoom" role="group" aria-label={t("graphUi.zoomGroup")}>
               <button
                 ref={zoomInRef}
                 className="zoom-btn"
@@ -1453,8 +1478,8 @@ export default function GraphView({
                     .animatedZoom({ duration: moveDuration(ZOOM_DURATION_MS) });
                 }}
                 disabled={zoomEdge === "min"}
-                aria-label="Zoom in"
-                title={zoomEdge === "min" ? "The view is fully zoomed in." : "Zoom in"}
+                aria-label={t("graphUi.zoomIn")}
+                title={zoomEdge === "min" ? t("graphUi.zoomMin") : t("graphUi.zoomIn")}
               >
                 <span aria-hidden="true">＋</span>
               </button>
@@ -1468,8 +1493,8 @@ export default function GraphView({
                     .animatedUnzoom({ duration: moveDuration(ZOOM_DURATION_MS) });
                 }}
                 disabled={zoomEdge === "max"}
-                aria-label="Zoom out"
-                title={zoomEdge === "max" ? "The view is fully zoomed out." : "Zoom out"}
+                aria-label={t("graphUi.zoomOut")}
+                title={zoomEdge === "max" ? t("graphUi.zoomMax") : t("graphUi.zoomOut")}
               >
                 <span aria-hidden="true">－</span>
               </button>
@@ -1480,8 +1505,8 @@ export default function GraphView({
                     ?.getCamera()
                     .animatedReset({ duration: moveDuration(FIT_DURATION_MS) })
                 }
-                aria-label="Fit the whole graph"
-                title="Zoom out to fit the whole graph"
+                aria-label={t("graphUi.fit")}
+                title={t("graphUi.fitHint")}
               >
                 <span aria-hidden="true">⤢</span>
               </button>

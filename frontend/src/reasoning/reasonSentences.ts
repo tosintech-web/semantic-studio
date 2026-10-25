@@ -31,92 +31,91 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { englishTranslator, translate } from "../i18n/format";
+import { renderServerMessage } from "../i18n/serverMessage";
+import type { Translator, UiLocale } from "../i18n/types";
 import type { ReasoningGroupKind, ReasoningResult } from "../types";
 
-export const INTRO =
-  "Reasoning (OWL 2 RL) draws conclusions about the classes and things you have. It does not invent new things, and it changes nothing in your file.";
-export const EMPTY = "Press Reason to see what follows from your model.";
-export const NOTHING = "Nothing new follows, and nothing contradicts.";
-export const STALE = "The model changed after this run.";
-export const TAXONOMY = "Reasoning is for ontology projects.";
-export const DATA_SLOWER = "slower: about a second per 1,000 rows";
-export const VALUES_FOOTER = "Values in your data are checked by Validate (SHACL), not here.";
-export const NEVER_MEMBERS = "can never have members";
-export const NOT_SAVED = "Nothing here is saved or needs undoing: these are conclusions, not changes.";
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
+
+// Compatibility exports for callers outside an application locale provider.
+export const INTRO = englishTranslator("reasonWords.intro");
+export const EMPTY = englishTranslator("reasonWords.empty");
+export const NOTHING = englishTranslator("reasonWords.nothing");
+export const STALE = englishTranslator("reasonWords.stale");
+export const TAXONOMY = englishTranslator("reasonWords.taxonomy");
+export const DATA_SLOWER = englishTranslator("reasonWords.dataSlower");
+export const VALUES_FOOTER = englishTranslator("reasonWords.valuesFooter");
+export const NEVER_MEMBERS = englishTranslator("reasonWords.neverMembers");
+export const NOT_SAVED = englishTranslator("reasonWords.notSaved");
 
 export const GROUP_TITLES: Record<Exclude<ReasoningGroupKind, "imported">, string> = {
-  kinds: "New kinds",
-  same: "Same meaning",
-  memberships: "New memberships",
-  links: "New links",
+  kinds: englishTranslator("reasonWords.group.kinds"),
+  same: englishTranslator("reasonWords.group.same"),
+  memberships: englishTranslator("reasonWords.group.memberships"),
+  links: englishTranslator("reasonWords.group.links"),
 };
 
-function count(n: number): string {
-  return n.toLocaleString("en-US");
+export function groupHeading(kind: Exclude<ReasoningGroupKind, "imported">, total: number, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  return t("reasonWords.heading", { name: t(`reasonWords.group.${kind}`), count: total });
 }
 
-function plural(n: number, one: string, many: string): string {
-  return `${count(n)} ${n === 1 ? one : many}`;
+export function importedLine(total: number, locale: UiLocale = "en"): string {
+  return tFor(locale)(total === 1 ? "reasonWords.imported.one" : "reasonWords.imported.many", { count: total });
 }
 
-/** *New kinds (2)*: every heading carries its group's true total. */
-export function groupHeading(kind: Exclude<ReasoningGroupKind, "imported">, total: number): string {
-  return `${GROUP_TITLES[kind]} (${count(total)})`;
+/** Keep the existing rounding: tenths under a second, whole seconds above. */
+export function seconds(ms: number, locale: UiLocale = "en"): string {
+  const value = ms < 950 ? (Math.max(ms, 100) / 1000).toFixed(1) : String(Math.round(ms / 1000));
+  return tFor(locale)("reasonWords.seconds", { value });
+}
+export function runningLine(elapsedSeconds: number, locale: UiLocale = "en"): string {
+  return tFor(locale)("reasonWords.running", { count: Math.floor(elapsedSeconds) });
 }
 
-/** The one line facts about imported terms alone are counted in (5.4). */
-export function importedLine(total: number): string {
-  return `${plural(total, "fact", "facts")} about imported terms`;
-}
-
-/** *4 s*, or a tenth of a second under one. */
-export function seconds(ms: number): string {
-  if (ms < 950) return `${(Math.max(ms, 100) / 1000).toFixed(1)} s`;
-  return `${Math.round(ms / 1000)} s`;
-}
-
-/** The status line while a run goes: the seconds count up; they are not
- *  announced (Section 6). */
-export function runningLine(elapsedSeconds: number): string {
-  return `Reasoning… ${Math.floor(elapsedSeconds)} s`;
-}
+/** Completion words use counts and ending metadata, never witness content. */
+export type ReasoningLineInput = Pick<ReasoningResult, "status" | "durationMs" | "sentence" | "uiMessage"> & {
+  problems: { readonly length: number };
+  groups: readonly { total: number }[];
+  importedFacts: { total: number };
+};
 
 /** Every new fact the run shows, imported ones included. */
-export function factCount(result: ReasoningResult): number {
+export function factCount(result: Pick<ReasoningLineInput, "groups" | "importedFacts">): number {
   return result.groups.reduce((sum, g) => sum + g.total, 0) + result.importedFacts.total;
 }
 
 /** The status line and the announcement once a run ends (5.2). */
-export function finishedLine(result: ReasoningResult): string {
-  if (result.status !== "done") return result.sentence ?? "The run ended.";
+export function finishedLine(result: ReasoningLineInput, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  if (result.status !== "done") {
+    if (result.uiMessage != null) return renderServerMessage(result.uiMessage, result.sentence ?? "", t);
+    // Older servers retain their original English presentation. Other UI
+    // locales explain the ending without interpreting third-party prose;
+    // the caller keeps that prose in an original-details disclosure.
+    return locale === "en" ? result.sentence ?? t("reasonWords.ended") : t("reasonWords.ended");
+  }
   const problems = result.problems.length;
   const facts = factCount(result);
-  if (problems === 0 && facts === 0) return `Reasoned in ${seconds(result.durationMs)}: ${NOTHING.toLowerCase()}`;
-  return `Reasoned in ${seconds(result.durationMs)}: ${plural(problems, "problem", "problems")}, ${plural(
-    facts,
-    "new fact",
-    "new facts",
-  )}`;
+  const time = seconds(result.durationMs, locale);
+  if (problems === 0 && facts === 0) return t("reasonWords.finishedEmpty", { time });
+  return t("reasonWords.finished", { time,
+    problems: t(problems === 1 ? "reasonWords.problems.one" : "reasonWords.problems.many", { count: problems }),
+    facts: t(facts === 1 ? "reasonWords.facts.one" : "reasonWords.facts.many", { count: facts }),
+  });
 }
 
-/** The announcement for a run whose answer arrives after the model moved
- *  (5.3): its seconds, and that it is not current. A run that did not
- *  finish says only how it ended. */
-export function staleLine(result: ReasoningResult): string {
-  if (result.status !== "done") return finishedLine(result);
-  return `Reasoned in ${seconds(result.durationMs)}, but the model changed meanwhile: Reason again.`;
+export function staleLine(result: ReasoningLineInput, locale: UiLocale = "en"): string {
+  if (result.status !== "done") return finishedLine(result, locale);
+  return tFor(locale)("reasonWords.staleFinished", { time: seconds(result.durationMs, locale) });
 }
-
-/** The results panel's heading. */
-export function panelHeading(result: ReasoningResult | null): string {
-  if (!result) return "Results";
-  if (result.status === "done") return `Results: reasoned in ${seconds(result.durationMs)}`;
-  return "Results";
+export function panelHeading(result: ReasoningResult | null, locale: UiLocale = "en"): string {
+  const t = tFor(locale);
+  return result?.status === "done" ? t("reasonWords.resultsDone", { time: seconds(result.durationMs, locale) }) : t("reasonWords.results");
 }
-
-/** How a premise is marked, in text (Section 6, never colour alone). */
-export function premiseMark(inferred: boolean): string {
-  return inferred ? "inferred" : "stated";
+export function premiseMark(inferred: boolean, locale: UiLocale = "en"): string {
+  return tFor(locale)(inferred ? "reasonWords.inferred" : "reasonWords.stated");
 }
 
 /** What the model, the data and the switch are now. */

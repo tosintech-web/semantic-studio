@@ -12,6 +12,9 @@ SUMMARY
     the top.
 
 BASIC IDEA
+    Unsupported mapping metadata stays with the saved snapshot and renders
+    in the current UI locale; its original message stays in native details.
+
     Every action here is a snapshot action, not a model change: none is in
     the undo history or makes the model unsaved (5.7). Each says what it
     did in the project's live region (projectStore.dataChanged), which also
@@ -32,7 +35,8 @@ BASIC IDEA
     the folder to the project's own trash. A mapping edited outside what
     the app runs shows its reason in the row, with the last good data kept.
     A list that could not be read says why, with Try again; the store has
-    already said it in the live region.
+    already said it in the live region. UI text and structured notices follow
+    the current locale; raw mapping/errors remain in technical disclosures.
 
 INPUTS / INPUT SOURCES (props)
     - projectId: the open project. onWizard: open the wizard on a start.
@@ -46,11 +50,15 @@ EXPECTED OUTPUT
 
 import { useEffect, useId, useRef, useState } from "react";
 import { ApiError, inspectData, refreshData, removeData, updateData } from "../api";
-import { dataLabel, reportWord } from "../modeling/dataSentences";
+import { useI18n } from "../i18n/I18nProvider";
+import { englishTranslator } from "../i18n/format";
+import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
+import { makeUiMessage, renderUiMessage } from "../i18n/uiMessage";
+import { dataClassName, dataLabel, reportWord, rowLimitSentence } from "../modeling/dataSentences";
 import { plural } from "../modeling/shapeSentences";
 import { projectStore, useProjectSelector } from "../state/projectStore";
 import type { DataInspection, SnapshotSummary, WorkbookInspection } from "../types";
-import { DATA_FILE_ACCEPT, type WizardStart } from "./DataWizard";
+import { DATA_FILE_ACCEPT, type RefreshReason, type WizardStart } from "./DataWizard";
 import ImportReport from "./ImportReport";
 import RmlEditor from "./RmlEditor";
 
@@ -77,8 +85,10 @@ function goneSheet(e: unknown): WorkbookInspection | null {
 }
 
 export default function SnapshotList({ projectId, onWizard, onValidate, onShowData, focusOnMount = false }: Props) {
+  const { t } = useI18n();
   const data = useProjectSelector((s) => s.data);
   const dataError = useProjectSelector((s) => s.dataError);
+  const dataErrorCause = useProjectSelector((s) => s.dataErrorCause);
   const [retrying, setRetrying] = useState(false);
   const headingId = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -90,50 +100,53 @@ export default function SnapshotList({ projectId, onWizard, onValidate, onShowDa
     if ((focusOnMount || retried.current) && loaded) headingRef.current?.focus();
     if (loaded) retried.current = false;
   }, [focusOnMount, loaded]);
-  if (data === null && dataError !== null) {
-    // Said once in the live region by the store; shown here so the tab
-    // offers a way on instead of reading for ever (PR #53 review).
-    const retry = () => {
-      if (retrying) return;
-      setRetrying(true);
-      retried.current = true;
-      projectStore
-        .loadData()
-        .catch(() => undefined)
-        .finally(() => setRetrying(false));
-    };
-    return (
-      <div className="snapshot-section">
-        <p className="detail-error">{dataError}</p>
-        <p>
-          <button type="button" aria-disabled={retrying} onClick={retry}>
-            {retrying ? "Trying again…" : "Try again"}
-          </button>
-        </p>
-      </div>
-    );
-  }
+  // A failed name refresh retains the last good rows and offers a retry.
+  const retry = () => {
+    if (retrying) return;
+    setRetrying(true);
+    retried.current = true;
+    projectStore.loadData().then(found => {
+      if (!found) {
+        retried.current = false;
+        return;
+      }
+      if (loaded) {
+        retried.current = false;
+        headingRef.current?.focus();
+      }
+    }).catch(() => { retried.current = false; }).finally(() => setRetrying(false));
+  };
+  const failure = dataError === null ? null : <div className="snapshot-list-error">
+    <p className="detail-error">{t("dataSnapshot.readFailed")}</p>
+    {dataErrorCause?.error instanceof ApiError && dataErrorCause.error.uiMessage &&
+      <p className="detail-error">{renderServerError(dataErrorCause.error, t)}</p>}
+    <details><summary>{t("common.details")}</summary><pre>{dataErrorCause ? message(dataErrorCause.error) : dataError}</pre></details>
+    <p><button type="button" aria-disabled={retrying} onClick={retry}>
+      {retrying ? t("dataSnapshot.retrying") : t("dataSnapshot.retry")}
+    </button></p>
+  </div>;
+  if (data === null && failure) return <div className="snapshot-section">{failure}</div>;
   if (data === null) {
     return (
       <p className="detail-note" role="status">
-        Reading the project's data…
+        {t("dataSnapshot.reading")}
       </p>
     );
   }
   return (
     <section className="snapshot-section" aria-labelledby={headingId}>
       <h3 id={headingId} ref={headingRef} tabIndex={-1}>
-        Data
+        {t("dataSnapshot.title")}
       </h3>
+      {failure}
       <p>
         <button type="button" className="primary" onClick={() => onWizard({ kind: "new" })}>
-          Import data from CSV or Excel…
+          {t("dataSnapshot.import")}
         </button>
       </p>
       {data.snapshots.length === 0 ? (
         <p className="detail-note">
-          No data yet. Import a CSV file or an Excel sheet of up to 2,000 rows to see how its rows map to the
-          model.
+          {t("dataSnapshot.empty")}
         </p>
       ) : (
         <ul className="snapshot-list">
@@ -168,14 +181,15 @@ function SnapshotRow({
   onValidate?: () => void;
   onShowData?: () => void;
 }) {
+  const { locale, t } = useI18n();
   const [panel, setPanel] = useState<Panel>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ error: unknown } | null>(null);
   const [pending, setPending] = useState<{ file: File; inspection: DataInspection } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const outside = snapshot.mapping.status === "outside";
-  const made =
-    snapshot.individuals === 1 ? `1 ${snapshot.className ?? "row"}` : `${snapshot.individuals.toLocaleString("en-US")} ${plural(snapshot.className ?? "row")}`;
+  const kind = dataClassName(snapshot, t);
+  const made = t("dataSnapshot.made", { count: snapshot.individuals, kind: locale === "en" && snapshot.individuals !== 1 ? plural(kind) : kind });
 
   const run = async (what: string, work: () => Promise<void>) => {
     setBusy(what);
@@ -183,7 +197,7 @@ function SnapshotRow({
     try {
       await work();
     } catch (e: unknown) {
-      setError(message(e));
+      setError({ error: e });
     } finally {
       setBusy(null);
     }
@@ -193,9 +207,7 @@ function SnapshotRow({
     run("switch", async () => {
       await updateData(projectId, snapshot.id, { enabled });
       await projectStore.dataChanged(
-        enabled
-          ? `Switched on ${snapshot.source}: its data is back in every view.`
-          : `Switched off ${snapshot.source}: its data has left every view and validation.`,
+        makeUiMessage(enabled ? "dataSnapshot.switchedOn" : "dataSnapshot.switchedOff", { source: snapshot.source }), projectId,
       );
     });
 
@@ -219,13 +231,13 @@ function SnapshotRow({
         return;
       }
       setPanel("report");
-      await projectStore.dataChanged(`Refreshed ${snapshot.source} from ${result.snapshot.source}.`);
+      await projectStore.dataChanged(makeUiMessage("dataSnapshot.refreshed", { source: snapshot.source, replacement: result.snapshot.source }), projectId);
     });
 
   // Refresh through the wizard's step 1, saying why: the sheet and header
   // row are chosen there, never taken (PR #54 review).
-  const throughStep1 = (file: File, atFile: string, inspection: DataInspection | null, workbook: WorkbookInspection | null) =>
-    onWizard({ kind: "refresh", snapshot, file, options: {}, inspection, workbook, missing: [], choices: null, atFile });
+  const throughStep1 = (file: File, atFileMessage: RefreshReason, inspection: DataInspection | null, workbook: WorkbookInspection | null) =>
+    onWizard({ kind: "refresh", snapshot, file, options: {}, inspection, workbook, missing: [], choices: null, atFile: renderUiMessage(atFileMessage, englishTranslator), atFileMessage });
 
   const chooseRefresh = (file: File) =>
     run("refresh", async () => {
@@ -236,7 +248,7 @@ function SnapshotRow({
       } catch (e: unknown) {
         const gone = snapshot.workbook ? goneSheet(e) : null;
         if (gone === null || !snapshot.workbook) throw e;
-        const sentence = `This workbook has no sheet named ${snapshot.workbook.sheet}. Choose the sheet to refresh from.`;
+        const sentence = makeUiMessage("dataSnapshot.missingSheet", { sheet: snapshot.workbook.sheet });
         throughStep1(file, sentence, null, gone);
         return;
       }
@@ -245,9 +257,7 @@ function SnapshotRow({
       if ((inspection.format === "xlsx") !== Boolean(snapshot.workbook)) {
         throughStep1(
           file,
-          inspection.format === "xlsx"
-            ? "This snapshot was read from a CSV file. Choose the sheet of this workbook to refresh from."
-            : "This snapshot was read from a workbook. Check how this CSV file is read.",
+          makeUiMessage(inspection.format === "xlsx" ? "dataSnapshot.fromCsv" : "dataSnapshot.fromWorkbook"),
           inspection,
           inspection.workbook ?? null,
         );
@@ -261,8 +271,7 @@ function SnapshotRow({
     run("remove", async () => {
       const result = await removeData(projectId, snapshot.id);
       await projectStore.dataChanged(
-        `Removed ${snapshot.source}: ${result.statements.toLocaleString("en-US")} statements left the views. ` +
-          "Its folder is in the project's trash.",
+        makeUiMessage("dataSnapshot.removed", { source: snapshot.source, count: result.statements }), projectId,
       );
     });
 
@@ -272,11 +281,9 @@ function SnapshotRow({
         <span className="snapshot-name">
           {snapshot.source}
         </span>
-        <span className="data-label">{dataLabel(snapshot)}</span>
+        <span className="data-label">{dataLabel(snapshot, locale)}</span>
         <span className="snapshot-facts">
-          {made}
-          {snapshot.workbook ? ` · sheet ${snapshot.workbook.sheet}` : ""} · {reportWord(snapshot.report)}
-          {busy === "refresh" ? " · Refreshing…" : ""}
+          {t("dataSnapshot.facts", { made, sheet: snapshot.workbook ? t("dataSnapshot.sheet", { sheet: snapshot.workbook.sheet }) : "", report: reportWord(snapshot.report, locale), busy: busy === "refresh" ? t("dataSnapshot.refreshing") : "" })}
         </span>
         <label className="snapshot-switch">
           <input
@@ -285,17 +292,18 @@ function SnapshotRow({
             aria-disabled={busy !== null}
             onChange={(e) => busy === null && void toggle(e.target.checked)}
           />{" "}
-          {snapshot.enabled ? "On: in every view" : "Off: in no view"}
+          {snapshot.enabled ? t("dataSnapshot.on") : t("dataSnapshot.off")}
         </label>
       </div>
       {outside && (
-        <p className="detail-error">
-          Mapping outside the engine: {snapshot.mapping.message}
-        </p>
+        <><p className="detail-error">{validWireMessage(snapshot.mapping.uiMessage)
+          ? renderServerMessage(snapshot.mapping.uiMessage, snapshot.mapping.message ?? "", t)
+          : t("dataSnapshot.mappingOutside")}</p>
+          {snapshot.mapping.message && <details><summary>{t("common.details")}</summary><pre>{snapshot.mapping.message}</pre></details>}</>
       )}
       <div className="snapshot-actions">
         <button type="button" aria-expanded={panel === "report"} onClick={() => setPanel(panel === "report" ? null : "report")}>
-          Report
+          {t("dataSnapshot.report")}
         </button>
         <input
           ref={fileInput}
@@ -311,33 +319,33 @@ function SnapshotRow({
         <button
           type="button"
           aria-disabled={busy !== null || outside}
-          title={outside ? "Change the mapping, or edit it within what the app runs, before refreshing" : undefined}
+          title={outside ? t("dataSnapshot.refreshBlocked") : undefined}
           onClick={() => busy === null && !outside && fileInput.current?.click()}
         >
-          Refresh…
+          {t("dataSnapshot.refresh")}
         </button>
         <button type="button" onClick={() => onWizard({ kind: "remap", snapshot })}>
-          Change the mapping
+          {t("dataSnapshot.remap")}
         </button>
         <button type="button" aria-expanded={panel === "rml"} onClick={() => setPanel(panel === "rml" ? null : "rml")}>
-          Edit as RML
+          {t("dataSnapshot.rml")}
         </button>
         <button type="button" aria-expanded={panel === "remove"} onClick={() => setPanel(panel === "remove" ? null : "remove")}>
-          Remove…
+          {t("dataSnapshot.removeMore")}
         </button>
       </div>
       {pending && (
-        <div className="wizard-limit" role="group" aria-label="More rows than the tool takes">
-          <p>{pending.inspection.limitSentence}</p>
+        <div className="wizard-limit" role="group" aria-label={t("dataSnapshot.limit")}>
+          <p>{rowLimitSentence(pending.inspection, locale)}</p>
           <p>
             <button type="button" className="primary" onClick={() => void refresh(pending.file, true)}>
-              Use the first {pending.inspection.limit.toLocaleString("en-US")} rows
+              {t("dataSnapshot.useFirst", { count: pending.inspection.limit })}
             </button>{" "}
             <button type="button" onClick={() => fileInput.current?.click()}>
-              Choose another file
+              {t("dataSnapshot.chooseFile")}
             </button>{" "}
             <button type="button" onClick={() => setPending(null)}>
-              Cancel
+              {t("common.cancel")}
             </button>
           </p>
         </div>
@@ -351,31 +359,27 @@ function SnapshotRow({
           onApplied={(applied) => {
             setPanel(applied.mapping.status === "ok" ? "report" : null);
             void projectStore.dataChanged(
-              applied.mapping.status === "ok"
-                ? `Applied the mapping of ${snapshot.source}: the data was produced again.`
-                : `Kept the mapping of ${snapshot.source} as written; the last good data stays. ${applied.mapping.message ?? ""}`,
+              makeUiMessage(applied.mapping.status === "ok" ? "dataSnapshot.mappingApplied" : "dataSnapshot.mappingKept", { source: snapshot.source }), projectId,
             );
           }}
         />
       )}
       {panel === "remove" && (
-        <div className="snapshot-remove" role="group" aria-label={`Remove ${snapshot.source}?`}>
+        <div className="snapshot-remove" role="group" aria-label={t("dataSnapshot.removeQuestion", { source: snapshot.source })}>
           <p>
-            Remove {snapshot.source}? Its {snapshot.statements.toLocaleString("en-US")} statements leave every view and
-            validation, and its folder goes to the project's trash. The model is not changed.
+            {t("dataSnapshot.removeBody", { source: snapshot.source, count: snapshot.statements })}
           </p>
           <button type="button" className="danger" aria-disabled={busy !== null} onClick={() => busy === null && void remove()}>
-            Remove
+            {t("dataSnapshot.remove")}
           </button>{" "}
           <button type="button" onClick={() => setPanel(null)}>
-            Keep
+            {t("dataSnapshot.keep")}
           </button>
         </div>
       )}
       {error && (
-        <p className="detail-error" role="alert">
-          {error}
-        </p>
+        <><p className="detail-error" role="alert">{renderServerError(error.error, t)}</p>
+          <details><summary>{t("common.details")}</summary><pre>{message(error.error)}</pre></details></>
       )}
     </li>
   );

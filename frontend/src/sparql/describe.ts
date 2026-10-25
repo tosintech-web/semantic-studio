@@ -4,10 +4,14 @@ FILE: frontend/src/sparql/describe.ts
 ================================================================================
 
 SUMMARY
-    Renders the visual query-builder state as a plain-English sentence shown
+    Renders the visual query-builder state as a localized explanation shown
     above the SPARQL preview.
 
 BASIC IDEA
+    Whole catalog templates describe the original query facts. English
+    lowercasing/pluralization runs only for en; other UI locales retain raw
+    names. Describing a query never mutates its state or generated SPARQL.
+
     The generated SPARQL is meaningless to someone new to the Semantic Web, so
     the query is also stated in words: "Start from every planet, then follow
     orbits from each planet to its stars. Return at most 100 rows." Pure and
@@ -24,28 +28,14 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import type { FilterOp, QueryState, QueryStep, SelectedProp } from "./types";
+import { translate } from "../i18n/format";
+import type { Translator, UiLocale } from "../i18n/types";
+import type { QueryState, QueryStep, SelectedProp } from "./types";
 
-// Maps each filter operator to its natural-language phrasing.
-const OP_WORDS: Record<FilterOp, string> = {
-  "=": "is",
-  "!=": "is not",
-  ">": "is greater than",
-  ">=": "is at least",
-  "<": "is less than",
-  "<=": "is at most",
-  contains: "contains",
-  startsWith: "starts with",
-  lang: "is written in",
-};
-
-// Maps each path modifier to a natural-language suffix ("" for exact hops).
-const MODIFIER_WORDS: Record<string, string> = {
-  "": "",
-  "*": " any number of times (including none)",
-  "+": " one or more times",
-  "?": " at most once",
-};
+const tFor = (locale: UiLocale): Translator => ((code, args) => translate(locale, code, args)) as Translator;
+// English spelling rules are never applied to original names in another UI locale.
+const nameFor = (name: string, locale: UiLocale) => locale === "en" ? lower(name) : name;
+const pluralFor = (name: string, locale: UiLocale) => locale === "en" ? plural(name) : name;
 
 /** Lowercase a plain capitalised word so it reads naturally mid-sentence. */
 function lower(label: string): string {
@@ -63,91 +53,52 @@ export function plural(label: string): string {
 }
 
 /** "diameter is at least 5000" for a filtered property, or null if no filter. */
-function describeFilter(prop: SelectedProp): string | null {
+function describeFilter(prop: SelectedProp, locale: UiLocale): string | null {
   const filter = prop.filter;
   if (!filter || filter.value.trim() === "") return null;
-  return `${lower(prop.label)} ${OP_WORDS[filter.op]} “${filter.value.trim()}”`;
+  return tFor(locale)(`queryDescription.filter.${filter.op}`, { label: nameFor(prop.label, locale), value: filter.value.trim() });
 }
 
-/** Describe one hop, e.g. "follow orbits from each planet to its stars". */
-function describeHop(step: QueryStep, steps: QueryStep[], predicateLabel: (iri: string) => string): string {
+/** Describe the same original hop facts using the active UI language. */
+function describeHop(step: QueryStep, steps: QueryStep[], predicateLabel: (iri: string) => string, locale: UiLocale): string {
   const link = step.link;
   if (!link) return "";
-  // Which earlier step this hop starts from.
+  const t = tFor(locale);
   const anchor = steps[link.anchor];
-  const anchorName = anchor ? lower(anchor.label) : "it";
-  // Alternated predicates are joined with "or"; inverse ones marked (reversed).
-  const names = link.predicates
-    .map((p) => `${predicateLabel(p.iri)}${p.inverse ? " (reversed)" : ""}`)
-    .join(" or ");
-  const modifier = MODIFIER_WORDS[link.modifier] ?? "";
-  const target = plural(step.label);
-  const lead = link.optional ? "optionally follow" : "follow";
-  return `${lead} ${names}${modifier} from each ${anchorName} to its ${target}`;
+  const anchorName = anchor ? nameFor(anchor.label, locale) : t("queryDescription.it");
+  const names = link.predicates.map(p => p.inverse ? t("queryDescription.inverse", { name: predicateLabel(p.iri) }) : predicateLabel(p.iri)).join(t("queryDescription.or"));
+  return t(link.optional ? "queryDescription.hopOptional" : "queryDescription.hop", {
+    names, modifier: t(`queryDescription.modifier.${link.modifier}`), anchor: anchorName, target: pluralFor(step.label, locale),
+  });
 }
 
 export function describeQuery(
   state: QueryState,
-  predicateLabel: (iri: string) => string = (iri) => iri,
+  predicateLabel: (iri: string) => string = iri => iri,
+  locale: UiLocale = "en",
 ): string {
   if (state.steps.length === 0) return "";
-
+  const t = tFor(locale);
   const root = state.steps[0];
   const sentences: string[] = [];
-
-  // Opening clause: pinned root names the individual, else "every <class>".
-  const rootPhrase = root.pin
-    ? `Start from ${root.pin.label} (a ${lower(root.label)})`
-    : `Start from every ${lower(root.label)}`;
-
-  // Describe every non-root step's hop, in order.
-  const hops = state.steps
-    .slice(1)
-    .map((step) => describeHop(step, state.steps, predicateLabel))
-    .filter(Boolean);
-
-  // First sentence: the traversal.
-  sentences.push(hops.length ? `${rootPhrase}, then ${hops.join(", then ")}.` : `${rootPhrase}.`);
-
-  // Collect what is returned (shown) versus what merely constrains (conditions).
+  const start = root.pin ? t("queryDescription.start.pin", { pin: root.pin.label, cls: nameFor(root.label, locale) }) : t("queryDescription.start.all", { cls: nameFor(root.label, locale) });
+  const hops = state.steps.slice(1).map(step => describeHop(step, state.steps, predicateLabel, locale)).filter(Boolean);
+  sentences.push(hops.length ? t("queryDescription.traversal", { start, hops: hops.join(t("queryDescription.hopsJoin")) }) : t("queryDescription.rootOnly", { start }));
   const shown: string[] = [];
   const conditions: string[] = [];
   for (const step of state.steps) {
     for (const prop of step.props) {
-      const condition = describeFilter(prop);
-      if (condition) conditions.push(`the ${lower(step.label)}’s ${condition}`);
-      else shown.push(`${lower(step.label)}’s ${lower(prop.label)}`);
+      const condition = describeFilter(prop, locale);
+      if (condition) conditions.push(t("queryDescription.condition", { cls: nameFor(step.label, locale), condition }));
+      else shown.push(t("queryDescription.property", { cls: nameFor(step.label, locale), label: nameFor(prop.label, locale) }));
     }
-    if (step.pin && step !== root) {
-      conditions.push(`the ${lower(step.label)} is ${step.pin.label}`);
-    }
+    if (step.pin && step !== root) conditions.push(t("queryDescription.pinCondition", { cls: nameFor(step.label, locale), pin: step.pin.label }));
   }
-
-  // Second sentence: counting summary, or the list of returned properties.
   if (state.aggregate === "count") {
     const last = state.steps[state.steps.length - 1];
-    sentences.push(
-      state.steps.length > 1
-        ? `Report how many ${plural(last.label)} each ${lower(root.label)} has, largest first.`
-        : `Report how many ${plural(root.label)} there are.`,
-    );
-  } else if (shown.length > 0) {
-    sentences.push(`Also show ${shown.join(", ")}.`);
-  }
-
-  // Filters and pinned non-root steps become "only where ..." conditions.
-  if (conditions.length > 0) {
-    sentences.push(`Only where ${conditions.join(" and ")}.`);
-  }
-
-  // Row-limit note is irrelevant when counting.
-  if (state.aggregate !== "count") {
-    sentences.push(
-      `Return at most ${state.limit.toLocaleString()} ${
-        state.distinct ? "distinct rows" : "rows"
-      }.`,
-    );
-  }
-
-  return sentences.join(" ");
+    sentences.push(state.steps.length > 1 ? t("queryDescription.countGrouped", { target: pluralFor(last.label, locale), root: nameFor(root.label, locale) }) : t("queryDescription.count", { target: pluralFor(root.label, locale) }));
+  } else if (shown.length) sentences.push(t("queryDescription.shown", { properties: shown.join(t("queryDescription.listJoin")) }));
+  if (conditions.length) sentences.push(t("queryDescription.only", { conditions: conditions.join(t("queryDescription.conditionsJoin")) }));
+  if (state.aggregate !== "count") sentences.push(t(state.distinct ? "queryDescription.limitDistinct" : "queryDescription.limit", { count: state.limit }));
+  return sentences.join(t("queryDescription.sentencesJoin"));
 }

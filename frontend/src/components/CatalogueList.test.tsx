@@ -40,7 +40,9 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { I18nProvider } from "../i18n/I18nProvider";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CatalogueList from "./CatalogueList";
 import LoadDialog from "./LoadDialog";
@@ -240,3 +242,10 @@ describe("CatalogueList", () => {
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+it("translates curated guidance while preserving each provider name and download URL", () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1"); const pick = vi.fn();
+  render(<I18nProvider><CatalogueList fetchingId={null} busy={false} onPick={pick} /></I18nProvider>);
+  expect(screen.getByText("約3 MB・約17,000ステートメント")).toBeTruthy();
+  fireEvent.click(screen.getAllByRole("button")[0]);
+  expect(pick).toHaveBeenCalledWith(expect.objectContaining({ name: CATALOGUE[0].name, url: CATALOGUE[0].url }));
+});

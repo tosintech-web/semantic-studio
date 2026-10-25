@@ -6,7 +6,8 @@ FILE: frontend/src/components/LinkPanel.test.tsx
 SUMMARY
     The link panel (relationships 5.2, AC-3, R14): a subclass or broader
     line read as its sentence, Remove this link as one command, the busy
-    state, a refusal said in place, and both ends selectable.
+    state, a refusal said in place with raw details, and both ends selectable.
+    Delayed refusals and open technical details survive UI language changes.
 
 BASIC IDEA
     Rendered alone over an open project store, with api.ts mocked, as the
@@ -26,6 +27,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../state/projectStore";
 import LinkPanel from "./LinkPanel";
+import { I18nProvider } from "../i18n/I18nProvider";
+import UiLanguageSelect from "./UiLanguageSelect";
 
 const { openProject, runCommand } = vi.hoisted(() => ({ openProject: vi.fn(), runCommand: vi.fn() }));
 vi.mock("../api", async (importOriginal) => {
@@ -100,7 +103,7 @@ describe("LinkPanel", () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove this link" }));
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" }]);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -115,7 +118,8 @@ describe("LinkPanel", () => {
     const busy = screen.getByRole("button", { name: "Removing…" });
     expect(busy.getAttribute("aria-disabled")).toBe("true");
     await act(async () => fail(new Error("Employee is not a subclass of Person.")));
-    expect(screen.getByRole("alert").textContent).toBe("Employee is not a subclass of Person.");
+    expect(screen.getByRole("alert").textContent).toBe("The operation could not be completed. Check the details.");
+    expect(screen.getByText("Employee is not a subclass of Person.").tagName).toBe("PRE");
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -157,7 +161,7 @@ describe("LinkPanel", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove this link" }));
     });
-    expect(runCommand.mock.calls[0].slice(2)).toEqual(["RemoveRelated", { concept: EX + "Apple", related: EX + "Orchard" }]);
+    expect(runCommand.mock.calls[0].slice(2, 4)).toEqual(["RemoveRelated", { concept: EX + "Apple", related: EX + "Orchard" }]);
   });
 
   it("item 5: a refusal for one line is gone when another line is shown", async () => {
@@ -177,5 +181,62 @@ describe("LinkPanel", () => {
       );
     });
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("Technical details")).toBeNull();
+    expect(screen.queryByText("Employee is not a subclass of Person.")).toBeNull();
   });
+});
+
+
+it("switches link guidance without changing references or removal arguments", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  runCommand.mockResolvedValue({ revision: 3, label: "Removed", state: STATE });
+  const onSelect = vi.fn();
+  const onClose = vi.fn();
+  const link = { ...SUBCLASS, sourceLabel: "<b>Employee</b>" };
+  render(<I18nProvider><UiLanguageSelect /><LinkPanel link={link} onSelect={onSelect} onClose={onClose} /></I18nProvider>);
+  expect(screen.getByRole("heading", { name: "<b>Employee</b>はPersonの一種です" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "パネルを閉じる" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "<b>Employee</b>" }));
+  expect(onSelect).toHaveBeenCalledWith(EX + "Employee");
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("heading", { name: "<b>Employee</b> is a kind of Person" })).toBeTruthy();
+  expect(document.querySelector("b")).toBeNull();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Remove this link" })));
+  expect(runCommand).toHaveBeenCalledWith(PID, "model", "RemoveSubClassOf", { child: EX + "Employee", parent: EX + "Person" }, "en");
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it.each([true, false])("retains a delayed runner refusal and its original details across locale changes (known=%s)", async known => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  let reject!: (error: unknown) => void;
+  runCommand.mockReturnValue(new Promise((_resolve, fail) => { reject = fail; }));
+  const raw = "Original refusal <b>{literal}";
+  const error = Object.assign(new Error(raw), known ? {
+    uiMessage: { code: "editing.value.invalid_integer", args: { value: "値 <img>{value}" } },
+  } : {});
+  const close = vi.fn();
+  render(<I18nProvider><UiLanguageSelect /><LinkPanel link={SUBCLASS} onSelect={vi.fn()} onClose={close} /></I18nProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "この関係を外す" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  await act(async () => reject(error));
+  expect(screen.getByRole("alert").textContent).toBe(known
+    ? '"値 <img>{value}" is not a valid integer (expected a whole number such as 42).'
+    : "The operation could not be completed. Check the details.");
+  const details = screen.getByText("Technical details");
+  details.focus();
+  fireEvent.click(details);
+  expect(details.parentElement?.hasAttribute("open")).toBe(true);
+  expect(screen.getByText(raw).tagName).toBe("PRE");
+  fireEvent.change(screen.getByRole("combobox", { name: "UI language" }), { target: { value: "ja" } });
+  expect(screen.getByRole("alert").textContent).toBe(known
+    ? "「値 <img>{value}」は有効な整数ではありません（例：42）。"
+    : "操作を完了できませんでした。詳細を確認してください。");
+  expect(screen.getByText("技術的な詳細")).toBe(details);
+  expect(document.activeElement).toBe(details);
+  expect(details.parentElement?.hasAttribute("open")).toBe(true);
+  expect(screen.getByText(raw).tagName).toBe("PRE");
+  expect(document.querySelector("img, b")).toBeNull();
+  expect(runCommand).toHaveBeenCalledTimes(1);
+  expect(close).not.toHaveBeenCalled();
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

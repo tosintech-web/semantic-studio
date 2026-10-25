@@ -26,6 +26,7 @@ EXPECTED OUTPUT
 import { describe, expect, it } from "vitest";
 import type { Explain, ExplainRef } from "../types";
 import {
+  countWords,
   descriptionSentence,
   explainSentences,
   factSentences,
@@ -331,5 +332,27 @@ describe("names and the description", () => {
       "It has 1 individual of its own, Apollo 11.",
       'Its authors describe it: "A mission that carries people into space."',
     ]);
+  });
+});
+
+describe("Japanese explanation templates", () => {
+  it("keeps linked names and IRIs when the parent comes before the selected entity", () => {
+    const parent = { iri: "https://example.org/parent", label: "<b>Animal{child}\u0001</b>" };
+    const facts = factSentences("犬", { kind: "class", description: null, parents: [parent] }, "ja");
+    expect(sentenceText(facts[0])).toBe("<b>Animal{child}\u0001</b>より具体的な種類が犬です。");
+    expect(facts[0].find(part => typeof part !== "string")).toBe(parent);
+  });
+  it("uses Japanese count, union and missing-end guidance without English articles", () => {
+    const domain = [{ iri: "urn:Employee", label: "Employee" }, { iri: "urn:Contractor", label: "請負人" }];
+    const property = factSentences("勤務先", { kind: "objectProperty", description: null, domains: domain, domainForm: "union", ranges: [] }, "ja");
+    expect(sentenceText(property[0])).toBe("勤務先はEmployeeまたは請負人のいずれかと対象を結ぶ関連です。");
+    expect(countWords({ count: 10000, capped: true }, "ja")).toBe("10,000超");
+    const facts = factSentences("分類", { kind: "collection", description: null, members: { count: 2, capped: false, names: domain } }, "ja");
+    expect(sentenceText(facts[0])).toBe("メンバー数は2です（Employee、請負人）。");
+    expect(sentenceText(kindSentence("X", "constructor", "ja"))).toContain("種類は記載されていません");
+  });
+  it("preserves authored description and marks its language independently of UI language", () => {
+    const description = { kind: "class", description: { text: "<b>{parent}</b>。", lang: "en" } };
+    expect(sentenceText(descriptionSentence(description, "ja", "ja")!)).toBe("著者による説明（en）：「<b>{parent}</b>。」");
   });
 });
