@@ -1385,3 +1385,28 @@ it("translates a retained delete-preview refusal and preserves the original deta
   expect(previewDelete).toHaveBeenCalledTimes(1);
   expect(runCommand).not.toHaveBeenCalled();
 });
+
+it("clears a failed delete preview while retrying and after a successful language reread", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  let resolve!: (value: unknown) => void;
+  previewDelete.mockRejectedValueOnce(new Error("Old preview <b>{error}"))
+    .mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+  const draw = (language: string) => <DictionaryLanguageContext.Provider value={language}><I18nProvider>
+    <EditSection ontologyId={OID} details={invoice()} primaryLanguage="en" languages={[]} onSelect={onSelect} onDeleted={onDeleted} />
+  </I18nProvider></DictionaryLanguageContext.Provider>;
+  const view = render(draw("en"));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Invoiceを削除…" })); });
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByRole("alert")).toBeTruthy();
+  await act(async () => { view.rerender(draw("ja")); });
+  expect(within(dialog).queryByRole("alert")).toBeNull();
+  expect(within(dialog).getByRole("status")).toBeTruthy();
+  await act(async () => { resolve({ dryRun: true, revision: 2, impact: { iri: EX + "Invoice", label: "Invoice", kind: "class", statements: 1,
+    strategy: "reparent", children: [], reparentedTo: [], properties: [], individuals: [], importMentions: 0 } }); });
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(within(dialog).queryByRole("alert")).toBeNull();
+  expect(within(dialog).queryByText("Old preview <b>{error}")).toBeNull();
+  expect(within(dialog).getByRole("button", { name: "削除" })).toBeTruthy();
+  expect(previewDelete).toHaveBeenCalledTimes(2);
+  expect(runCommand).not.toHaveBeenCalled();
+});

@@ -101,10 +101,17 @@ export default function DeleteDialog({ iri, label, runner, onDone }: Props) {
       return;
     }
     let cancelled = false;
+    // A dictionary-language change retries the read without replacing the
+    // modal or strategy. Its new attempt owns the visible failure state.
+    setLoadError(null);
     const reading = dictionaryLanguage === undefined ? previewDelete(state.project.id, state.activeDoc, iri, "reparent")
       : previewDelete(state.project.id, state.activeDoc, iri, "reparent", dictionaryLanguage);
     reading
-      .then((r) => !cancelled && setImpact(r.impact))
+      .then((r) => {
+        if (cancelled) return;
+        setLoadError(null);
+        setImpact(r.impact);
+      })
       .catch(
         (e: unknown) =>
           !cancelled &&

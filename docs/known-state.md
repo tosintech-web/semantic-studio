@@ -3101,3 +3101,9 @@ Both SHACL and OWL conflicting-count refusals use integer_arg on each bound.
 The existing Turtle may contain a huge OWL cardinality even when new commands
 cap their own input. Number-or-string message contracts retain those exact
 counts across JSON and JavaScript, preserving refusal status and RDF state.
+
+A schema request's in-flight marker is not a completed cache entry. Cancelling
+it on a Query-tab exit clears that marker so returning retries; completed
+schema reads keep the existing cache behavior. A delete-preview language
+reread similarly clears the previous failure when starting and on success,
+without replacing the modal or its chosen strategy.

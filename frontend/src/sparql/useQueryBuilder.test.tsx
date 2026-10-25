@@ -95,3 +95,27 @@ it("ignores a delayed query-node failure from the previous ontology", async () =
   await act(async () => { reject(new Error("old source")); await pending; });
   expect(result.current.hint).toBeNull();
 });
+
+it("retries a cancelled schema read on Query return, preserving completed cache entries", async () => {
+  const schema = (label: string): QuerySchema => ({ ...EMPTY_SCHEMA, classes: [{ iri: "urn:A", label, prefixed: "urn:A", instances: 1, kind: "class" }] });
+  vi.mocked(api.getQuerySchema).mockResolvedValueOnce(schema("English"));
+  let old!: (value: QuerySchema) => void;
+  let latest!: (value: QuerySchema) => void;
+  vi.mocked(api.getQuerySchema).mockImplementationOnce(() => new Promise(r => { old = r; }))
+    .mockImplementationOnce(() => new Promise(r => { latest = r; }));
+  const { result, rerender } = renderHook(({ active, language }) => useQueryBuilder("a", active, false, 0, language), { initialProps: { active: true, language: "en" } });
+  await waitFor(() => expect(result.current.schema?.classes[0].label).toBe("English"));
+  rerender({ active: true, language: "ja" });
+  expect(api.getQuerySchema).toHaveBeenCalledTimes(2);
+  rerender({ active: false, language: "ja" });
+  await act(async () => { old(schema("古い応答")); });
+  rerender({ active: true, language: "ja" });
+  expect(api.getQuerySchema).toHaveBeenCalledTimes(3);
+  await act(async () => { latest(schema("日本語")); });
+  expect(result.current.schema?.classes[0].label).toBe("日本語");
+  expect(result.current.loadingSchema).toBe(false);
+  rerender({ active: false, language: "ja" });
+  rerender({ active: true, language: "ja" });
+  expect(api.getQuerySchema).toHaveBeenCalledTimes(3);
+  expect(result.current.schema?.classes[0].label).toBe("日本語");
+});

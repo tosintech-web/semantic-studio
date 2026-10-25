@@ -259,16 +259,25 @@ export function useQueryBuilder(
     setLoadingSchema(true);
     setSchemaError(null);
     let cancelled = false;
+    let pending = true;
     getQuerySchema(ontologyId, imports, displayLanguage)
-      .then((result) => !cancelled && setSchema(result))
+      .then((result) => {
+        if (cancelled) return;
+        pending = false;
+        setSchema(result);
+      })
       .catch((e: unknown) => {
         if (cancelled) return;
+        pending = false;
         requestedFor.current = null;
         setSchemaError(e);
       })
       .finally(() => !cancelled && setLoadingSchema(false));
     return () => {
       cancelled = true;
+      // A pending read is not a cached schema. Returning to Query must retry
+      // it, while a completed schema keeps its existing no-refetch behavior.
+      if (pending && requestedFor.current === key) requestedFor.current = null;
     };
   }, [active, ontologyId, imports, revision, displayLanguage, viewGeneration]);
 
