@@ -18,7 +18,8 @@ BASIC IDEA
     original status and detail payloads intact.
 
     Command refusals retain their original status and detail payload, adding
-    validated display metadata for the current UI language, including 404/409.
+    validated display metadata for the current UI language, including 404/409,
+    current layout byte caps and captured parse timeouts.
 
     Thin, like the other routers: shape the request, call projects.py or
     editing.py, and map their exceptions to status codes in one place. An id
@@ -59,7 +60,7 @@ from contextlib import contextmanager
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from ..messages import make_message
+from ..messages import MessageText, integer_arg, make_message
 from ..messages import UiHTTPException
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
@@ -184,7 +185,7 @@ def _errors():
             ui_message=make_message('reasoning.already_running'),
         ) from exc
     except ParseTimeout as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc
     except ParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -348,6 +349,10 @@ async def put_source(pid: str, doc: str, request: Request) -> dict:
 LAYOUT_TOO_LARGE = f"A layout is at most {LAYOUT_MAX_BYTES // (1024 * 1024)} MB."
 
 
+def layout_too_large() -> MessageText:
+    return MessageText(LAYOUT_TOO_LARGE, "request.layout_limit", limit=integer_arg(LAYOUT_MAX_BYTES))
+
+
 @router.get("/{pid}/documents/{doc}/canvas")
 def get_canvas(
     pid: str,
@@ -373,7 +378,7 @@ def get_layout(pid: str, doc: str) -> dict:
 async def put_layout(pid: str, doc: str, request: Request) -> dict:
     """Replace the canvas layout. Not a model change: no revision, no dirty
     flag, no undo step (D-087). Validated in projects.validate_layout."""
-    payload = await ontologies.read_json_capped(request, LAYOUT_MAX_BYTES, LAYOUT_TOO_LARGE)
+    payload = await ontologies.read_json_capped(request, LAYOUT_MAX_BYTES, layout_too_large())
     with _errors():
         return editing_service.put_layout(pid, doc, payload)
 

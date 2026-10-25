@@ -3212,3 +3212,12 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `parse.unreadable` | format | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
 | `parse.not_rdf` | — | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
 | `parse.not_rdf_table` | — | `backend/app/parse_errors.py` | 読み込みの原因説明と原文詳細 | 12 | 選択済み解析器の行番号・形式・接頭辞を生成元で保持 |
+
+| `request.file_limit` | limit, variable | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/ontologies.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+| `request.layout_limit` | limit | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/projects.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+| `request.nodes_limit` | limit | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/ontologies.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+| `data.mapping_limit` | limit | `backend/app/routers/data.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+| `data.file_limit` | limit | `backend/app/routers/data.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+| `imports.total_file_limit` | limit | `backend/app/routers/ontologies.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+| `parse.file_timeout` | seconds | `backend/app/store.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |
+| `parse.text_timeout` | seconds | `backend/app/editing.py` | 容量・解析時間の上限と原文詳細 | 12 | 実際の制限値を生成元で保持し拒否条件を維持 |

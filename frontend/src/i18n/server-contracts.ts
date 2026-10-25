@@ -258,7 +258,19 @@ export const SERVER_CONTRACTS = {
     "name": "string"
   },
   "data.change_required": {},
+  "data.file_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
   "data.file_required": {},
+  "data.mapping_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
   "data.new_file_required": {},
   "data.read_timeout": {
     "seconds": "number"
@@ -724,6 +736,12 @@ export const SERVER_CONTRACTS = {
     "url": "string"
   },
   "fetch.web_only": {},
+  "imports.total_file_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
   "load.already_running": {},
   "load.cancelled": {},
   "load.empty_file": {},
@@ -878,6 +896,9 @@ export const SERVER_CONTRACTS = {
   },
   "ontology.not_found": {},
   "ontology.source_missing": {},
+  "parse.file_timeout": {
+    "seconds": "number"
+  },
   "parse.invalid_json": {},
   "parse.invalid_json_line": {
     "line": "number"
@@ -900,6 +921,9 @@ export const SERVER_CONTRACTS = {
   },
   "parse.syntax_without_line": {
     "format": "string"
+  },
+  "parse.text_timeout": {
+    "seconds": "number"
   },
   "parse.unclosed_text": {
     "line": "number"
@@ -1236,7 +1260,26 @@ export const SERVER_CONTRACTS = {
   "request.field_object": {
     "field": "string"
   },
+  "request.file_limit": {
+    "limit": [
+      "number",
+      "string"
+    ],
+    "variable": "string"
+  },
   "request.invalid": {},
+  "request.layout_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
+  "request.nodes_limit": {
+    "limit": [
+      "number",
+      "string"
+    ]
+  },
   "request.source_body": {},
   "rml.class_limit": {
     "limit": "number"
@@ -1876,7 +1919,9 @@ export interface ServerMessageArgs {
   "command.swapped_ends": { "name": string };
   "command.unmarked_characteristic": { "characteristic": string; "name": string };
   "data.change_required": undefined;
+  "data.file_limit": { "limit": number | string };
   "data.file_required": undefined;
+  "data.mapping_limit": { "limit": number | string };
   "data.new_file_required": undefined;
   "data.read_timeout": { "seconds": number };
   "data.source_required": undefined;
@@ -2055,6 +2100,7 @@ export interface ServerMessageArgs {
   "fetch.github_enterprise": undefined;
   "fetch.http_failed": { "status": number; "url": string };
   "fetch.web_only": undefined;
+  "imports.total_file_limit": { "limit": number | string };
   "load.already_running": undefined;
   "load.cancelled": undefined;
   "load.empty_file": undefined;
@@ -2105,6 +2151,7 @@ export interface ServerMessageArgs {
   "ontology.no_statements": { "iri": string };
   "ontology.not_found": undefined;
   "ontology.source_missing": undefined;
+  "parse.file_timeout": { "seconds": number };
   "parse.invalid_json": undefined;
   "parse.invalid_json_line": { "line": number };
   "parse.malformed_xml": undefined;
@@ -2114,6 +2161,7 @@ export interface ServerMessageArgs {
   "parse.not_rdf_table": undefined;
   "parse.syntax": { "format": string; "line": number | null };
   "parse.syntax_without_line": { "format": string };
+  "parse.text_timeout": { "seconds": number };
   "parse.unclosed_text": { "line": number };
   "parse.undeclared_prefix": { "line": number; "prefix": string };
   "parse.unfinished_file": undefined;
@@ -2216,7 +2264,10 @@ export interface ServerMessageArgs {
   "request.body_object": undefined;
   "request.field_json": { "field": string };
   "request.field_object": { "field": string };
+  "request.file_limit": { "limit": number | string; "variable": string };
   "request.invalid": undefined;
+  "request.layout_limit": { "limit": number | string };
+  "request.nodes_limit": { "limit": number | string };
   "request.source_body": undefined;
   "rml.class_limit": { "limit": number };
   "rml.columns_missing": { "columns": string };

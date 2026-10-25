@@ -7,7 +7,8 @@ SUMMARY
     Proves the server does only the work it was asked for: an oversized upload
     or download is refused while it is being read rather than after, and a parse
     that runs too long releases the request instead of hanging it. Covers SEC-9
-    to SEC-11 and PERF-1 to PERF-3, which is backlog item S-3.
+    to SEC-11 and PERF-1 to PERF-3, which is backlog item S-3. Fetch refusals
+    also expose the actual byte cap as additive UI metadata.
 
 BASIC IDEA
     The distinction the whole item turns on is *when* the limit applies. A check
@@ -227,6 +228,10 @@ def test_download_aborts_mid_stream_when_the_body_is_too_large(monkeypatch, mock
     mock_transport(handler)
     r = client.post("/api/ontologies/fetch", json={"url": "https://public.example/big.nt"})
     assert r.status_code == 413
+    assert r.json()["uiMessage"] == {
+        "code": "request.file_limit",
+        "args": {"limit": 256 * 1024, "variable": "SEMANTIC_STUDIO_MAX_FETCH_BYTES"},
+    }
     assert served["chunks"] < total_chunks, "the whole body was streamed anyway"
     assert served["chunks"] <= 8, f"pulled {served['chunks']} chunks for a 4-chunk cap"
 
@@ -252,6 +257,10 @@ def test_declared_oversize_download_is_refused_before_streaming(monkeypatch, moc
     mock_transport(handler)
     r = client.post("/api/ontologies/fetch", json={"url": "https://public.example/big.nt"})
     assert r.status_code == 413
+    assert r.json()["uiMessage"] == {
+        "code": "request.file_limit",
+        "args": {"limit": 256 * 1024, "variable": "SEMANTIC_STUDIO_MAX_FETCH_BYTES"},
+    }
     assert pulled["chunks"] == 0, "the body was streamed despite a declared oversize"
 
 

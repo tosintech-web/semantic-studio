@@ -15,6 +15,14 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "request.file_limit": "The file exceeds the {limit} byte limit. You can change the limit with the {variable} environment variable.",
+  "request.layout_limit": "A layout may contain at most {limit} bytes.",
+  "request.nodes_limit": "This request exceeds the {limit} byte limit for IRIs.",
+  "data.mapping_limit": "A mapping may contain at most {limit} bytes.",
+  "data.file_limit": "This file exceeds the {limit} byte import limit. Imports are intended for learning how data maps to a model.",
+  "imports.total_file_limit": "These files together exceed the {limit} byte imports limit.",
+  "parse.file_timeout": "Parsing this file exceeded {seconds} seconds and was stopped. You can change the limit with SEMANTIC_STUDIO_PARSE_TIMEOUT.",
+  "parse.text_timeout": "Parsing this text exceeded {seconds} seconds and was stopped.",
   "parse.unfinished_file": "The file ends in the middle of a statement.",
   "parse.missing_stop": "Line {line}: the statement before this line is not finished. It probably needs a full stop (.) at its end.",
   "parse.undeclared_prefix": "Line {line}: the prefix {prefix} is used but never declared. Add @prefix {prefix} <…> . near the top of the file.",

@@ -15,6 +15,14 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "request.file_limit": "ファイルの容量が上限の{limit}バイトを超えています。環境変数「{variable}」で上限を変更できます。",
+  "request.layout_limit": "レイアウトの容量は{limit}バイトまでです。",
+  "request.nodes_limit": "このリクエストのIRIの容量が上限の{limit}バイトを超えています。",
+  "data.mapping_limit": "マッピングの容量は{limit}バイトまでです。",
+  "data.file_limit": "このファイルの容量が取り込み上限の{limit}バイトを超えています。データの取り込みは、データとモデルの対応を学ぶための機能です。",
+  "imports.total_file_limit": "これらのファイルの合計容量が、インポートの上限の{limit}バイトを超えています。",
+  "parse.file_timeout": "ファイルの解析が{seconds}秒を超えたため停止しました。環境変数SEMANTIC_STUDIO_PARSE_TIMEOUTで上限を変更できます。",
+  "parse.text_timeout": "テキストの解析が{seconds}秒を超えたため停止しました。",
   "parse.unfinished_file": "ファイルが文の途中で終わっています。",
   "parse.missing_stop": "{line}行目：直前の文が完結していません。文末にピリオド（.）が必要か確認してください。",
   "parse.undeclared_prefix": "{line}行目：接頭辞「{prefix}」が宣言されていません。ファイルの先頭付近に @prefix {prefix} <…> . を追加してください。",

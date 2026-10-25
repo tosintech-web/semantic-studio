@@ -66,8 +66,9 @@ EXPECTED OUTPUT
       third, `data_cache`, holds a project model's views with its data
       snapshots joined (csv-data-import 5.6).
     - Raises ParseError for unparseable input, carrying every attempt's
-      message, and ParseTimeout when a bounded parse runs out of time; the
-      router maps them to HTTP 422 (explained by parse_errors.py) and 504.
+      message, and ParseTimeout with source metadata when a bounded parse runs
+      out of time; the router maps them to HTTP 422 (explained by
+      parse_errors.py) and 504.
       LoadCancelled, before anything is written, for a load whose mark was
       set (D-115); the router answers 409.
       The broker's decisions (ApprovalRequired, Offline, HostBlocked) pass
@@ -180,6 +181,10 @@ class ParseError(Exception):
 
 class ParseTimeout(Exception):
     """Raised when a parse outlasts its wall-clock budget (maps to HTTP 504)."""
+
+    def __init__(self, *args, ui_message: dict | None = None):
+        super().__init__(*args)
+        self.ui_message = ui_message
 
 
 def default_data_dir() -> Path:
@@ -304,10 +309,13 @@ def parse_rdf(
         except FuturesTimeout as exc:
             # Do not block shutting the pool down on the abandoned worker.
             pool.shutdown(wait=False, cancel_futures=True)
+            from .messages import make_message
+
             raise ParseTimeout(
                 f"This file took longer than {timeout:g} seconds to parse and "
                 "was stopped. You can raise the limit with "
-                "SEMANTIC_STUDIO_PARSE_TIMEOUT."
+                "SEMANTIC_STUDIO_PARSE_TIMEOUT.",
+                ui_message=make_message("parse.file_timeout", seconds=timeout),
             ) from exc
 
 

@@ -6,7 +6,8 @@ SUMMARY
 BASIC IDEA
     A single JSON contract defines primitive arguments and flat noun parts. Legacy
     English remains intact; clients choose their own UI locale at render time.
-    String carriers preserve legacy check signatures; boundaries forward metadata.
+    String carriers preserve legacy check signatures; HTTP boundaries forward
+    their metadata beside unchanged detail, including structured refusals.
 INPUTS / INPUT SOURCES
     Stable code and facts available at the point a message is created.
 EXPECTED OUTPUT
@@ -88,8 +89,25 @@ class MessageText(str):
         return value
 
 
+def integer_arg(value: int) -> int | str:
+    """Preserve exact configured counts across JSON's JavaScript boundary."""
+    return value if -(2**53 - 1) <= value <= 2**53 - 1 else str(value)
+
+
+def detail_body(detail, ui_message: dict | None = None) -> dict:
+    """Forward only typed source metadata, never infer it from legacy text."""
+    if ui_message is None:
+        message = detail.get("message") if isinstance(detail, dict) else detail
+        if isinstance(message, MessageText):
+            ui_message = message.ui_message
+    body = {"detail": detail}
+    if ui_message is not None:
+        body["uiMessage"] = ui_message
+    return body
+
+
 class UiHTTPException(HTTPException):
     """HTTP refusal whose old detail and status retain their existing types."""
-    def __init__(self, *, status_code: int, detail, ui_message: dict, headers=None):
+    def __init__(self, *, status_code: int, detail, ui_message: dict | None, headers=None):
         super().__init__(status_code=status_code, detail=detail, headers=headers)
         self.ui_message = ui_message

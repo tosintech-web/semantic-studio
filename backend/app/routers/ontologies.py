@@ -55,6 +55,7 @@ INPUTS / INPUT SOURCES
     - Uploaded files (multipart) and JSON fetch/sparql request bodies.
     - Remote RDF files fetched over HTTP for the /fetch endpoint.
     - The shared `store` and `saved_queries` singletons.
+    - Source metadata captures current byte/time limits beside legacy refusals.
     - Environment: SEMANTIC_STUDIO_MAX_UPLOAD_BYTES, SEMANTIC_STUDIO_MAX_FETCH_BYTES,
       SEMANTIC_STUDIO_PARSE_TIMEOUT and SEMANTIC_STUDIO_GRAPH_NODE_BUDGET
       override the default caps.
@@ -105,7 +106,7 @@ from starlette.concurrency import run_in_threadpool
 
 # Delegate the real work to the domain modules.
 from .. import parse_errors, provenance
-from ..messages import UiHTTPException, make_message
+from ..messages import MessageText, UiHTTPException, integer_arg, make_message
 from ..entity_views import (EntityPageTooLarge, EntityViewChanged, encode_entity_response,
                             entity_page, entity_search, get_entity_view)
 from ..docs_export import DocsExportError, build_zip
@@ -416,11 +417,23 @@ def list_ontologies() -> list[dict]:
     return [library_examples.with_questions(o.summary()) for o in store.list()]
 
 
-def too_large_detail(limit: int, variable: str) -> str:
-    """The message for a refused oversized body: the limit, and how to raise it."""
-    return (
+def too_large_detail(limit: int, variable: str) -> MessageText:
+    """Legacy file refusal with the actual configured byte limit attached."""
+    return MessageText(
         f"This file is larger than the {limit // (1024 * 1024)} MB limit. "
-        f"You can raise the limit with the {variable} environment variable."
+        f"You can raise the limit with the {variable} environment variable.",
+        "request.file_limit", limit=integer_arg(limit), variable=variable,
+    )
+
+
+def nodes_too_large() -> MessageText:
+    return MessageText(NODES_TOO_LARGE, "request.nodes_limit", limit=integer_arg(NODES_MAX_BYTES))
+
+
+def import_files_too_large() -> MessageText:
+    return MessageText(
+        IMPORT_FILES_TOO_LARGE, "imports.total_file_limit",
+        limit=integer_arg(imports_mod.MAX_TOTAL_BYTES),
     )
 
 
@@ -553,7 +566,7 @@ async def upload_ontology(
                 mark=mark,
             )
         except ParseTimeout as exc:
-            raise HTTPException(status_code=504, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc
         except ParseError as exc:
             raise HTTPException(
                 status_code=422, detail=_load_failure(exc, data, file.filename)
@@ -673,7 +686,7 @@ async def fetch_ontology(request: FetchRequest) -> dict:
                 mark=mark,
             )
         except ParseTimeout as exc:
-            raise HTTPException(status_code=504, detail=str(exc)) from exc
+            raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc
         except ParseError as exc:
             # The name wins; a server's content type explains a nameless address.
             suggested = parse_errors.format_from_content_type(response.headers.get("content-type"))
@@ -783,7 +796,7 @@ async def get_nodes(
     body whole before validation sees it, so the cap is applied while
     reading (code review). Validation still answers 422 as before.
     """
-    payload = await read_json_capped(request, NODES_MAX_BYTES, NODES_TOO_LARGE)
+    payload = await read_json_capped(request, NODES_MAX_BYTES, nodes_too_large())
     try:
         asked = NodesRequest.model_validate(payload)
     except ValidationError as exc:
@@ -1055,7 +1068,7 @@ def get_documentation(oid: str, include_individuals: str = Query("false")) -> Re
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ParseTimeout as exc:
         # Generation parses the ontology if it was not loaded yet.
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
+        raise UiHTTPException(status_code=504, detail=str(exc), ui_message=exc.ui_message) from exc
     except ParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     # Record the export as a typed provenance activity, after it succeeds, so a
@@ -1256,7 +1269,7 @@ async def import_files(
     enforced while reading, and the request as a whole the closure's 150 MB.
     """
     ontology = _get_or_404(oid)
-    too_big = IMPORT_FILES_TOO_LARGE
+    too_big = import_files_too_large()
     # A declared oversize never reaches here: main.py's middleware refuses it
     # before FastAPI parses the body (D-015). What is left is the real size.
     received: list[tuple[str, bytes]] = []

@@ -4,6 +4,7 @@ FILE: backend/app/routers/data.py
 ================================================================================
 
 SUMMARY
+    Refused bodies carry current byte caps beside unchanged legacy detail.
     The HTTP surface for data snapshots in a project (csv-data-import Section
     8): inspect a file, preview a mapping, import, list, refresh, switch,
     change or edit the mapping, and remove, under /api/projects/{pid}/data.
@@ -60,7 +61,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from starlette.concurrency import run_in_threadpool
 
-from ..messages import make_message
+from ..messages import MessageText, integer_arg, make_message
 from ..messages import UiHTTPException
 from .. import tabular
 from ..editing import NotOpen, editing_service
@@ -78,6 +79,17 @@ FILE_TOO_LARGE = (
     f"This file is over {tabular.MAX_BYTES // (1024 * 1024)} MB. Semantic Studio imports files of at most "
     f"{tabular.MAX_BYTES // (1024 * 1024)} MB: {tabular.WHY}."
 )
+
+
+def mapping_too_large() -> MessageText:
+    return MessageText(PATCH_TOO_LARGE, "data.mapping_limit", limit=integer_arg(PATCH_MAX_BYTES))
+
+
+def file_too_large() -> dict:
+    return {
+        "message": MessageText(FILE_TOO_LARGE, "data.file_limit", limit=integer_arg(tabular.MAX_BYTES)),
+        "kind": "too-large",
+    }
 
 
 @contextmanager
@@ -153,7 +165,7 @@ async def _file_bytes(file: Optional[UploadFile]) -> Optional[bytes]:
             break
         total += len(chunk)
         if total > tabular.MAX_BYTES:
-            raise HTTPException(status_code=413, detail={"message": FILE_TOO_LARGE, "kind": "too-large"})
+            raise HTTPException(status_code=413, detail=file_too_large())
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -343,7 +355,7 @@ async def patch_data(pid: str, sid: str, request: Request) -> dict:
     async for chunk in request.stream():
         total += len(chunk)
         if total > PATCH_MAX_BYTES:
-            raise HTTPException(status_code=413, detail=PATCH_TOO_LARGE)
+            raise HTTPException(status_code=413, detail=mapping_too_large())
         chunks.append(chunk)
     try:
         body = json.loads(b"".join(chunks) or b"{}")

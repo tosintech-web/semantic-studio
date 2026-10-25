@@ -1560,6 +1560,14 @@
     "parse.unreadable_line": {"format": "string", "line": "number"},
     "parse.unreadable": {"format": "string"},
     "parse.not_rdf": {},
-    "parse.not_rdf_table": {}
+    "parse.not_rdf_table": {},
+    "request.file_limit": {"limit": ["number", "string"], "variable": "string"},
+    "request.layout_limit": {"limit": ["number", "string"]},
+    "request.nodes_limit": {"limit": ["number", "string"]},
+    "data.mapping_limit": {"limit": ["number", "string"]},
+    "data.file_limit": {"limit": ["number", "string"]},
+    "imports.total_file_limit": {"limit": ["number", "string"]},
+    "parse.file_timeout": {"seconds": "number"},
+    "parse.text_timeout": {"seconds": "number"}
   }
 }

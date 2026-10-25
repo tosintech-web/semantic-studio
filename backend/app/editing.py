@@ -15,7 +15,8 @@ SUMMARY
 
 BASIC IDEA
     Domain-specific reasoning refusals also expose additive display metadata;
-    their ValueError identity and legacy arguments remain intact.
+    their ValueError identity and legacy arguments remain intact. Bounded Turtle
+    parsing captures its timeout seconds beside the original refusal.
 
     A document, once its project is opened, is an Ontology registered in the
     store under prj-<hex>-<doc>, so every read endpoint serves it unchanged.
@@ -531,7 +532,7 @@ _RELATIVE = "http://relative.invalid/"
 
 
 def parse_turtle(text: str, timeout: Optional[float], base: Optional[str] = None) -> Graph:
-    """Turtle only, under the upload path's wall-clock limit.
+    """Turtle only, under the upload limit, retaining timeout source facts.
 
     Not store.parse_rdf: that tries every format in turn, and an editor error
     has to be Turtle's error, with the line and column where it happened.
@@ -564,7 +565,8 @@ def parse_turtle(text: str, timeout: Optional[float], base: Optional[str] = None
         except FuturesTimeout as exc:
             pool.shutdown(wait=False, cancel_futures=True)
             raise ParseTimeout(
-                f"This text took longer than {timeout:g} seconds to parse and was stopped."
+                f"This text took longer than {timeout:g} seconds to parse and was stopped.",
+                ui_message=make_message("parse.text_timeout", seconds=timeout),
             ) from exc
 
 

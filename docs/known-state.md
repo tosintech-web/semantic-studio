@@ -2672,3 +2672,32 @@ Tests exercise all explanation contracts, real upload and controlled fetch
 responses, the client boundary on both upload and fetch, and the mounted dialog
 through a language switch. This covers failed-load explanation generation; size
 limits, timeout producers and network decision descriptions remain separate work.
+
+
+### Source-owned capacity and parse-time limits (P1)
+
+The early Content-Length guards and the streaming readers retain their existing
+predicates, limits, multipart allowance, refusal statuses and legacy details.
+Each now captures its current byte limit at the refusal boundary, including
+configuration changed after import. The descriptors use actual bytes rather
+than parsing an English MB sentence. Integer counts beyond JavaScript's exact
+range travel as decimal text; this adds no cap to the original configuration.
+The normal JSON and multipart paths retain their existing envelope shapes.
+
+`detail_body` forwards only source-created `MessageText` metadata, including a
+structured detail's message, or an explicitly supplied exception descriptor.
+It does not match sentences or assign codes to unknown external errors. The
+central HTTP handler retains its existing fallback and response headers.
+`ParseTimeout` retains its exception identity and original arguments, with
+optional metadata from the file/Turtle parser's actual timeout branch. Unknown
+manually-created timeouts retain their original HTTP detail without a code.
+
+Tests compare both refusal boundaries for uploads, Turtle, layout, node IRIs,
+data mappings/files and the imports total, using small current caps and an
+unchanged synthetic project. Existing fetch tests assert metadata while counting
+that oversized declared downloads pull zero chunks and streamed downloads stop
+early. Deterministic executor replies test timeout facts through both APIs;
+existing real-worker and allocation tests continue to verify the limits. An AST
+comparison confirms the same branch predicates and loop inputs in twelve guard
+and parser functions. The SPARQL timeout path is separate and is not covered by
+this migration.

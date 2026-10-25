@@ -40,7 +40,8 @@ EXPECTED OUTPUT
     - HTTP/JSON responses for API calls; static HTML/JS/CSS when the frontend
       build directory exists.
     - HTTP 413 for an upload whose declared size exceeds the cap, returned
-      before the body is read.
+      before the body is read. Source metadata captures the current byte cap
+      beside the unchanged legacy refusal.
     - HTTP 400 or 403 for a request that did not come from the application's
       own page (local_guard.py), before any other middleware or route runs.
     - HTTP 409, 403 or 503 when the network broker needs the user's approval,
@@ -74,6 +75,7 @@ from fastapi.staticfiles import StaticFiles
 
 # Import the two routers that hold every API endpoint. Splitting them by topic
 # (ontologies vs saved queries) keeps this file small.
+from .messages import detail_body
 from .local_guard import LocalOnlyMiddleware
 from .network_broker import ApprovalRequired, GrantScopeMiddleware, HostBlocked, Offline
 from . import library_examples, tabular
@@ -154,29 +156,29 @@ async def refuse_oversized_bodies(request: Request, call_next):
             # A JSON body has no multipart framing, so the exact cap applies;
             # the CHUNK_BYTES allowance below is for the upload envelopes.
             if _declared(request) > projects.LAYOUT_MAX_BYTES:
-                return JSONResponse(status_code=413, content={"detail": projects.LAYOUT_TOO_LARGE})
+                return JSONResponse(status_code=413, content=detail_body(projects.layout_too_large()))
     elif request.method == "PATCH":
         if _DATA_PATCH_PATH.match(path) and _declared(request) > data.PATCH_MAX_BYTES:
-            return JSONResponse(status_code=413, content={"detail": data.PATCH_TOO_LARGE})
+            return JSONResponse(status_code=413, content=detail_body(data.mapping_too_large()))
     elif _NODES_PATH.match(path) and _declared(request) > ontologies.NODES_MAX_BYTES:
         # A JSON body, so the exact cap, as the layout's (query-page-rework 5.2).
-        return JSONResponse(status_code=413, content={"detail": ontologies.NODES_TOO_LARGE})
+        return JSONResponse(status_code=413, content=detail_body(ontologies.nodes_too_large()))
     elif _DATA_FILE_PATH.match(path):
         limit = tabular.MAX_BYTES
-        detail = {"message": data.FILE_TOO_LARGE, "kind": "too-large"}
+        detail = data.file_too_large()
     elif path == "/api/ontologies/upload":
         limit = ontologies.MAX_UPLOAD_BYTES
         detail = ontologies.too_large_detail(limit, "SEMANTIC_STUDIO_MAX_UPLOAD_BYTES")
     elif _IMPORT_FILES_PATH.match(path):
         limit = ontologies.imports_mod.MAX_TOTAL_BYTES
-        detail = ontologies.IMPORT_FILES_TOO_LARGE
+        detail = ontologies.import_files_too_large()
     if limit is not None:
         declared = request.headers.get("content-length")
         # Content-Length covers the whole multipart envelope, not just the
         # files, so allow for the framing; the endpoint enforces the exact
         # limit while reading.
         if declared and declared.isdigit() and int(declared) > limit + ontologies.CHUNK_BYTES:
-            return JSONResponse(status_code=413, content={"detail": detail})
+            return JSONResponse(status_code=413, content=detail_body(detail))
     return await call_next(request)
 
 
@@ -223,10 +225,9 @@ app.include_router(examples.router)
 
 @app.exception_handler(StarletteHTTPException)
 async def _http_message(_request: Request, exc: StarletteHTTPException) -> JSONResponse:
-    wire = getattr(exc, "ui_message", None)
-    if wire is None:
+    body = detail_body(exc.detail, getattr(exc, "ui_message", None))
+    if "uiMessage" not in body:
         return await http_exception_handler(_request, exc)
-    body = {"detail": exc.detail, "uiMessage": wire}
     return JSONResponse(status_code=exc.status_code, content=body, headers=exc.headers)
 
 
