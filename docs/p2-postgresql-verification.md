@@ -1,7 +1,8 @@
 # P2 PostgreSQL置換の実装・検証記録
 
 2026-10-27。対象はmain派生の`feat/p2-team-workspace`、置換実装の起点は`d112965`です。
-実装・手元の全試験集合・独立レビュー修正と再レビューを完了しました。GitHub最新headのCIは公開後に確認します。
+実装・手元の全試験集合・独立レビュー修正と再レビュー・指定branchへのpush・日本語PR更新を実施しました。
+最新CIの状態は[PR #3のchecks](https://github.com/tosintech-web/semantic-studio/pull/3/checks)を正本とし、実際に全gateを確認するまで完了としません。
 [実装計画](superpowers/plans/2026-10-27-p2-postgresql.md)のTask 9が完了するまで、公開工程の完了とは扱いません。
 
 ## 実装された契約
@@ -69,7 +70,7 @@ docker compose -f docker-compose.postgresql-test.yml run --rm pg-tests python -m
 | 最終全DB群（内部network、Python 3.14） | 259 passed、2823 deselected、3 warnings、208.73秒 |
 | 補助script最終検証 | 52 tests、47 passed、5 explicit Compose opt-in skipped、13.880秒。実Compose受入は上記8件で別途検証 |
 | frontend全体/型/build | 135 files・2551 tests passed、111.41秒。TypeScript/Vite build成功 |
-| GitHub最新headの必須CI | 初回`bba8e07`はworkflow定義エラーでjob作成前に失敗。下記修正後の最新headで再確認。Windows native team DB統合成功とは報告しない |
+| GitHub最新headの必須CI | [PR #3のchecks](https://github.com/tosintech-web/semantic-studio/pull/3/checks)で最新headを確認する。下記の過去runの失敗や成功は代用しない。Windows native team DB統合成功とは報告しない |
 
 境界試験は、正しい合成credentialを同networkで確認した上でhost/別network拒否を検証する。
 hostからはPostgreSQL StartupMessageがSCRAM開始前にHBA拒否されることを確認する。

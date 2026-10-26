@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装・手元の全試験集合・独立レビュー修正と再レビュー済み。Task 9のGitHub最新head CI確認が残る。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。実装・手元の全試験集合・独立レビュー修正と再レビュー・指定branchへのpush・日本語PR更新を実施済み。最終完了はTask 9末尾の最新head CI gateによって判定する。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 本追補は計画のレビュー・修正だけを対象とする。既存の実装コミットと未コミット変更は保持し、実装の続行・commit・pushはこの計画作成作業では行わない。
 
@@ -277,7 +277,9 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
   以前の必須gateだった`PGTEST tests -q`は4時間予算で失敗した。その結果と同条件の旧版の4件超過を保持した上で、設計12節の全case・全予算とhost port非公開を両立するため、実行partitionを上記へ変更する。過去の必須gateを遡って成功や単なる補助測定とは扱わない。同じ4試験をnativeで成功させただけでは完了せず、上記の全集合を実行する。CIの実DB・Windows local・通常機能・参考budgetsの境界は維持する。
 - [x] **Step 3: 独立した全差分の通常コード/静的securityレビュー。** 既存P2認可・SQL・秘密・外向き通信・lease・復元を含め、指摘を検証し、再現RED→修正GREEN。指摘が残らなくなるまで修正/再レビューを繰り返す。hosted scanと呼ぶのは実際に実行した場合だけ。
 - [x] **Step 4: 文書と状態を更新。** PostgreSQLの実際の起動/保守手順、secret permission、Windows coverage、唯一writer、DB再起動、拒否される旧DB入力、restore markerを記録。全既存性能予算の実測・差異を記録し、未検証の本番Google/配備を分ける。
-- [ ] **Step 5: commit/公開。** `feat/p2-team-workspace`のP2追加各commitとmetadataを非公開値リストで検査し、同branchだけpush、main宛て日本語PR #3を更新する。共有main・local backup refへ触れず、別の公開履歴を作らない。PR最新headの必須PG3.12/3.14・Windows local・frontend・Docker・publicationと参考budgetsを確認して完了。mainへmergeしない。
+- [x] **Step 5: commit/公開。** `feat/p2-team-workspace`のP2追加各commitとmetadataを非公開値リストで検査し、同branchだけpush、main宛て日本語PR #3を更新する。共有main・local backup refへ触れず、別の公開履歴を作らない。mainへmergeしない。
+
+**最終完了gate：** 全stepの実施だけではTask 9を完了にしない。[PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)の最新headで必須PG3.12/3.14・Linux local・Windows local・Compose/browser・frontend・Docker・publicationの成功と、参考budgetsの結果を確認して完了とする。CI状態はPRのchecksを正本とし、旧SQLite版や別headの成功を代用しない。完了を記録する文書commitによって新headになった場合も、その新headの確認を省略しない。
 
 ## 設計・受け入れ対応表
 
