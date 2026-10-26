@@ -276,6 +276,7 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
   性能超過があれば、同じimage・Python版・入力・実行条件で置換前commitと比較し、command/中央値/基準値/失敗数を記録する。旧版も超過することは回帰の調査材料であり、合格の代用にしない。閾値・標本数・データ件数・耐久性を維持し、原因と必要な修正を確認して失敗した全体gateを再実行する。CIの参考budgetsとlocalの必須全予算は別に判定し、未解決ならTask 9を未完了に保つ。
   以前の必須gateだった`PGTEST tests -q`は4時間予算で失敗した。その結果と同条件の旧版の4件超過を保持した上で、設計12節の全case・全予算とhost port非公開を両立するため、実行partitionを上記へ変更する。過去の必須gateを遡って成功や単なる補助測定とは扱わない。同じ4試験をnativeで成功させただけでは完了せず、上記の全集合を実行する。CIの実DB・Windows local・通常機能・参考budgetsの境界は維持する。
 - [x] **Step 3: 独立した全差分の通常コード/静的securityレビュー。** 既存P2認可・SQL・秘密・外向き通信・lease・復元を含め、指摘を検証し、再現RED→修正GREEN。指摘が残らなくなるまで修正/再レビューを繰り返す。hosted scanと呼ぶのは実際に実行した場合だけ。
+  履歴のMoreはページ取得が成功したときだけ次のoffsetを進め、失敗時は同じページを明示再試行する。読込中の連打は受け付けない。既存のnative buttonへTabで到達しEnter/Spaceで操作でき、focusはglobal `:focus-visible`で示す。読込中もfocusを失わないよう`aria-disabled`とhandlerの排他を併用し、履歴sectionの`aria-busy`で読込状態を支援技術へ伝える。owner変更時はページ状態を分離し、古い応答を表示しない。
 - [x] **Step 4: 文書と状態を更新。** PostgreSQLの実際の起動/保守手順、secret permission、Windows coverage、唯一writer、DB再起動、拒否される旧DB入力、restore markerを記録。全既存性能予算の実測・差異を記録し、未検証の本番Google/配備を分ける。
 - [x] **Step 5: commit/公開。** `feat/p2-team-workspace`のP2追加各commitとmetadataを非公開値リストで検査し、同branchだけpush、main宛て日本語PR #3を更新する。共有main・local backup refへ触れず、別の公開履歴を作らない。mainへmergeしない。
 

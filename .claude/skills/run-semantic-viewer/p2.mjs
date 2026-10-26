@@ -251,10 +251,76 @@ with psycopg.connect(host='db',port=5432,dbname=c.dbname,user=c.user,password=c.
     await browser.goto(base);
     removeUnloadListener();
     assert.equal(warnedBeforeUnload,true,'retained unsent input warns before leaving');
+    // Real audit pages, with only a transport failure/delay injected. The
+    // accepted offset must not move until its page has actually arrived.
+    for(let n=0;n<100;n++)assert.equal((await inApi(browser,'POST',path,
+      {command:'SetLabel',args:{iri:'https://example.org/p2#Dog',value:`History page ${n}`,lang:'ja'}})).status,200);
+    assert.equal((await inApi(browser,'POST',path,
+      {command:'SetLabel',args:{iri:'https://example.org/p2#Dog',value:'合成の犬',lang:'ja'}})).status,200);
+    const historyKey='graph:'+pid+'-model', completeHistory=[];
+    for(let offset=0;;offset+=50){
+      const result=await inApi(browser,'GET',`/api/team/history?key=${encodeURIComponent(historyKey)}&offset=${offset}`);
+      assert.equal(result.status,200);completeHistory.push(...result.body.history);
+      if(result.body.history.length<50)break;
+    }
+    assert.ok(completeHistory.length>100,'three real audit pages');
+    let failPage=true,heldPage=null;const pageOffsets=[],interceptionErrors=[];
+    const control=(method,params)=>void browser.send(method,params).catch(error=>interceptionErrors.push(error.message));
+    const removeHistoryPause=browser.on('Fetch.requestPaused',event=>{
+      const url=new URL(event.request.url),offset=Number(url.searchParams.get('offset')||0);
+      if(url.searchParams.get('key')!==historyKey){control('Fetch.continueRequest',{requestId:event.requestId});return;}
+      pageOffsets.push(offset);
+      if(offset===50&&failPage){failPage=false;control('Fetch.failRequest',{requestId:event.requestId,errorReason:'Failed'});}
+      else if(offset===50)heldPage=event.requestId;
+      else control('Fetch.continueRequest',{requestId:event.requestId});
+    });
+    await browser.send('Fetch.enable',{patterns:[{urlPattern:base+'/api/team/history*',requestStage:'Request'}]});
+    try{
+      await browser.send('Page.bringToFront');
+      await browser.waitFor('document.querySelector(".project-card .onto-verbs button.primary")');
+      await browser.click('.project-card .onto-verbs button.primary');
+      await browser.waitFor('document.querySelector(".side-tabs")');await browser.clickNav('Edit');
+      await browser.click('.team-account > button');await browser.clickText('.team-account button','Change history');
+      const region='.team-account section[aria-label="Change history"]',moreSelector=region+' > button';
+      await browser.waitFor(`document.querySelectorAll(${JSON.stringify(region+' li')}).length===50&&document.querySelector(${JSON.stringify(region)})?.getAttribute('aria-busy')==='false'`);
+      for(let n=0;n<80&&!await browser.eval(`document.activeElement===document.querySelector(${JSON.stringify(moreSelector)})`);n++){
+        await browser.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+        await browser.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+      }
+      assert.equal(await browser.eval(`document.activeElement===document.querySelector(${JSON.stringify(moreSelector)})&&document.activeElement.matches(':focus-visible')&&parseFloat(getComputedStyle(document.activeElement).outlineWidth)>0`),true,'native Tab reaches visibly focused More');
+      const enter=async()=>{
+        await browser.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
+        await browser.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+      };
+      await enter();
+      await browser.waitFor(`document.querySelector(${JSON.stringify(region+' [role=alert]')})&&document.querySelector(${JSON.stringify(region)})?.getAttribute('aria-busy')==='false'`);
+      await enter();for(let n=0;n<100&&!heldPage;n++)await sleep(20);
+      assert.ok(heldPage,'failed page retried at offset50');
+      const busyTree=(await browser.send('Accessibility.getFullAXTree')).nodes;
+      assert.ok(busyTree.some(node=>node.role?.value==='button'&&node.name?.value==='More changes'&&node.properties?.some(p=>p.name==='disabled'&&p.value?.value===true)),'AX exposes busy More as disabled');
+      await enter();await browser.click(moreSelector);
+      await browser.send('Fetch.continueRequest',{requestId:heldPage});heldPage=null;
+      await browser.waitFor(`document.querySelectorAll(${JSON.stringify(region+' li')}).length===100&&document.querySelector(${JSON.stringify(region)})?.getAttribute('aria-busy')==='false'`);
+      assert.equal(await browser.eval(`document.activeElement===document.querySelector(${JSON.stringify(moreSelector)})`),true,'busy activations preserve More focus');
+      await enter();
+      await browser.waitFor(`document.querySelectorAll(${JSON.stringify(region+' li')}).length===${completeHistory.length}`);
+      assert.deepEqual(await browser.eval(`Array.from(document.querySelectorAll(${JSON.stringify(region+' pre')})).map(node=>node.textContent)`),historyText(completeHistory));
+      assert.deepEqual(pageOffsets,[0,50,50,100]);assert.deepEqual(interceptionErrors,[]);
+      log('p2-history-pages','real failed-page retry, busy mouse/Enter, native Tab/focus and AX preserve every audit row');
+    }finally{await browser.send('Fetch.disable').catch(()=>{});removeHistoryPause();}
     // Terminate the owned fixture process completely before opening its locked
     // directory again. An abrupt stop also checks committed-data durability.
     await stopFixture(server,true);server=start();await waitHealth();
-    await browser.goto(base);await browser.waitFor('document.querySelector(".team-account")');
+    // The history check opened the model containing committed draft edits.
+    // Accept its normal leave warning only for this intentional test reload.
+    const removeHistoryReload=browser.on('Page.javascriptDialogOpening',event=>{
+      if(event.type==='beforeunload'){
+        log('p2-history-reload','accepted the committed draft leave warning for intentional restart verification');
+        void browser.send('Page.handleJavaScriptDialog',{accept:true});
+      }
+    });
+    try{await browser.goto(base);}finally{removeHistoryReload();}
+    await browser.waitFor('document.querySelector(".team-account")');
     const retained=(await inApi(browser,'GET',`/api/projects/${pid}/documents/model/source`)).body;
     assert.ok(JSON.stringify(retained).includes('合成の犬'));
     log('p2-restart','persisted sessions, RDF and audit survived process restart');

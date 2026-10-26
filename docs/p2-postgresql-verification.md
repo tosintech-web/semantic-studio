@@ -69,7 +69,7 @@ docker compose -f docker-compose.postgresql-test.yml run --rm pg-tests python -m
 | 最終全DB群（内部network、Python 3.12） | 259 passed、2823 deselected、3 warnings、198.81秒 |
 | 最終全DB群（内部network、Python 3.14） | 259 passed、2823 deselected、3 warnings、208.73秒 |
 | 補助script最終検証 | 52 tests、47 passed、5 explicit Compose opt-in skipped、13.880秒。実Compose受入は上記8件で別途検証 |
-| frontend全体/型/build | 135 files・2551 tests passed、111.41秒。TypeScript/Vite build成功 |
+| frontend全体/型/build（履歴ページ修正後） | 135 files・2553 tests passed、112.78秒。TypeScript/Vite build成功 |
 | GitHub最新headの必須CI | [PR #3のchecks](https://github.com/tosintech-web/semantic-studio/pull/3/checks)で最新headを確認する。下記の過去runの失敗や成功は代用しない。Windows native team DB統合成功とは報告しない |
 
 境界試験は、正しい合成credentialを同networkで確認した上でhost/別network拒否を検証する。
@@ -111,7 +111,7 @@ native/Compose 3.12/Compose 3.14からそれぞれ全件を再収集し、3082 c
 機械inventoryと完全一致した。正式な和集合はnative2821（成功2820 + 任意依存skip1）＋DB259で、
 外部networkの2件を明示除外する。全時間予算を含み、試験の削除・一括skipはしていない。
 
-最終製品imageは`sha256:ebdd57dd31a601a3b8305063c514ce8d8e922e10df28ee19d4117c236857734d`。
+最終製品imageは`sha256:86a45a9434ed0a9a7a1b7ae60c33a3454853738981976c58c62d4d3400731dea`。
 networkなしの一時containerでapp全107 fileのSHA-256 manifestを取り、SQLite不使用を検証した
 レビュー済みsourceとbyte単位の一致を確認した。buildには実依存・原文通知検証も含む。
 
@@ -129,6 +129,21 @@ handlerをasyncへ変更した。DB観測・解放は独立executorから行い�
 新しいcontextの独立レビュー第2回（`c3c00a0..5dff3ce`）では、追加のCritical/Important/Minor指摘なし。
 通常コードと静的securityの確認であり、hosted scanや動的攻撃試験の成功という意味ではない。
 全試験・性能受入・最新headのCIは別の必須gateとして完了まで維持する。
+
+最終全差分レビュー（`c3c00a0..c1652fd`）で、履歴のMoreが失敗・連打された場合に50件を
+表示せず次ページへ進む指摘を受けた。監査DBの欠損ではないが、利用者に不完全な履歴を示すため修正した。
+失敗ページの再試行と読込中の再操作を再現する2試験は、修正前に次ページの`audit-50`が見つからず失敗。
+受理したページだけoffsetを進め、同期的なin-flight guardとowner別のcomponent寿命を設けた。
+読込中のMoreは`aria-disabled`でfocusを保持し、sectionの`aria-busy`で状態を伝える。
+関連4試験とfrontend全2553件が成功し、修正後の独立再レビューにも追加指摘なし。
+
+実HTTPS受入には100回の合成SetLabelと元labelへの復帰を加え、実DBの監査履歴を3ページ用意した。
+offset=50の通信を一度失敗させ、再試行を遅延中にEnter/マウスで再操作し、要求offsetが
+`0,50,50,100`、全表示内容が実APIの全履歴と一致することを確認した。native Tab/Enter、
+focus-visible、focus保持とAXのdisabled状態も成功した。
+追加試験が開いたdraft画面の再読込で初回はPage.navigateがtimeoutしたため、意図した移動時だけ
+beforeunloadを承認するようハーネスを補正。実際のダイアログ発生を確認し、再起動まで全stepが成功した。
+新imageの実物でもbackend全107 file一致とPython42/native13の版・原文通知照合が成功した。
 
 初回[CI run 40409187989](https://github.com/tosintech-web/semantic-studio/actions/runs/40409187989)は
 job作成前に失敗した。`jobs.<id>.env`で利用できない`runner.temp`をPostgreSQLとbudgetsの
