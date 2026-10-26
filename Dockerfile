@@ -21,8 +21,10 @@ COPY licenses /build/licenses
 RUN node build/distributionNotices.check.mjs && npm run build
 
 # ---- Stage 2: Python runtime serving API + static frontend -----------------
-FROM python:3.12-slim
+# Native notices are reviewed against this base's actual library versions.
+FROM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5=17.11-0+deb13u1 && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt ./
 COPY backend/constraints-distribution.txt ./
@@ -32,7 +34,7 @@ COPY LICENSE THIRD_PARTY_NOTICES.md ./
 COPY licenses ./licenses
 COPY docs/distribution-notices.md ./README-LICENSES.md
 COPY scripts/distribution_notices.py ./distribution_notices.py
-RUN python distribution_notices.py --inventory licenses/dependency-inventory.json --output notices/python
+RUN python distribution_notices.py --inventory licenses/dependency-inventory.json --output notices/python --native-inventory licenses/dependency-inventory.json
 
 COPY backend/app ./app
 COPY examples ./examples

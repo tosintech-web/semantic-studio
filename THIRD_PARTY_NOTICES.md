@@ -59,3 +59,23 @@ Pythonは実際にインストールされたアプリ依存の版・原文を�
 Docker用の解決版を `backend/constraints-distribution.txt` で固定します。
 実物のファイル位置と検査範囲は [配布物別の通知](docs/distribution-notices.md)を参照してください。
 html5rdf 1.2.1とet_xmlfile 2.0.0の著者一覧も、実際の配布物から原文のまま収集しています。
+
+## P2のGoogle認証ライブラリ
+
+Google公式検証にはgoogle-auth 2.62.0（Apache-2.0）を使用します。
+固定した依存はcryptography 50.0.2（Apache-2.0 OR BSD-3-Clause）、cffi 2.1.1（MIT-0）、
+pyasn1 0.6.4とpyasn1-modules 0.4.2（BSD-2-Clause）、pycparser 3.12（BSD-3-Clause）です。
+各PyPI wheelの実物からライセンス原文を収集し、上記台帳で元パスとSHA-256を対応付けました。
+これらのライセンスをアプリ本体のMITへ置き換えません。配布時の実物照合はP1と同じ検査を使います。
+
+## P2 PostgreSQL driverとnativeライブラリ
+
+psycopg 3.3.6のpure Python wheelをURL/SHA-256で固定し、LGPL-3.0-onlyの原文を台帳に保存しています。
+`psycopg-binary`を配布せず、Linux Compose imageではDebianのlibpq5を利用します。
+実際にリンクするlibpqと推移native依存13 packageの版・Debian copyright全文・hashを台帳へ記録し、
+imageビルド時に実package版と原文を再照合して`notices/native/`へ出力します。
+これらをアプリ本体のMITへ変更しません。元Debian packageの`/usr/share/doc/`も保持します。
+Windows local版はDBもlibpqも起動せず、driverを読み込みません。
+
+psycopgの対応ソースは[公式3.3.6タグ](https://github.com/psycopg/psycopg/tree/3.3.6)です。
+LGPL原文は台帳記載のwheel原本、参照される[GPL-3.0全文](licenses/GPL-3.0.txt)は公式SPDX License Listのv3.27.0原文を改変せず同梱します。

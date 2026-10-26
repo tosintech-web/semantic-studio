@@ -987,6 +987,10 @@ export interface OpenedProject {
 
 // A command, an apply, an undo or a redo.
 export interface ChangeResult {
+  // Shared undo may remove a document first created by the command. The full
+  // listing is authoritative; legacy local responses retain only state.
+  documents?: ProjectDocumentState[];
+  removedDocuments?: ProjectDocName[];
   revision: number;
   label: string;
   uiMessage?: WireMessage | null;

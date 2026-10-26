@@ -93,6 +93,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { isTeamMode } from "../team/client";
 import { useSyncExternalStore } from "react";
 import { englishTranslator } from "../i18n/format";
 import { makeUiMessage, renderUiMessage } from "../i18n/uiMessage";
@@ -330,10 +331,15 @@ function draftCommand(draft: Creating, extra: CreatingExtra): [string, Record<st
   }
 }
 
-/** Wait for every registered flush; one failing does not stop the others,
- *  nor the close: its own status line has already said so. */
+/** Wait for every owner; a team refusal retains its draft and stops Close. */
 async function flushAll(): Promise<void> {
-  await Promise.all([...flushes].map((flush) => flush().catch(() => undefined)));
+  const results=await Promise.allSettled([...flushes].map(flush=>flush()));
+  // Team layout refusals retain unsent input; Close must not clear its owner.
+  // Local flushes preserve their historical best-effort close behavior.
+  if(isTeamMode()){
+    const failed=results.find((result):result is PromiseRejectedResult=>result.status==="rejected");
+    if(failed)throw failed.reason;
+  }
 }
 
 function set(changes: Partial<ProjectSnapshot>): void {
@@ -476,9 +482,12 @@ function refreshDataNames(state: ProjectDocumentState): void {
 }
 
 function afterChange(result: ChangeResult, operation: "applied" | "undo" | "redo"): void {
-  set({ documents: withDocument(result.state) });
+  const documents = result.documents ?? withDocument(result.state);
+  const activeDoc = documents.some(document => document.doc === snapshot.activeDoc)
+    ? snapshot.activeDoc : documents.find(document => document.doc === "model")?.doc ?? documents[0]?.doc ?? "model";
+  set({ documents, activeDoc });
   refreshDataNames(result.state);
-  const status = saveStatus(snapshot);
+  const status = isTeamMode() ? "saved" : saveStatus(snapshot);
   const verb = operation === "undo" ? "Undid: " : operation === "redo" ? "Redid: " : "";
   announceDetail({ kind: "change", label: result.label, uiMessage: result.uiMessage, operation, status },
     `${verb}${result.label}. ${STATUS_WORDS[status]}.`);
@@ -519,7 +528,7 @@ export const projectStore = {
           ? { draftTime: opened.recovery.draftTime }
           : null,
     });
-    announce(makeUiMessage(`projectNotice.opened.${saveStatus(snapshot)}`, { name: opened.project.name }));
+    announce(makeUiMessage(`projectNotice.opened.${isTeamMode()?"saved":saveStatus(snapshot)}`, { name: opened.project.name }));
     // The snapshot list is not needed to show the project, so it follows.
     void projectStore.loadData().catch(() => undefined);
     return opened.documents.find((d) => d.doc === "model")!.ontologyId;
@@ -569,8 +578,11 @@ export const projectStore = {
    *  409 when there are unsaved changes and `discard` is false. */
   async close(discard = false): Promise<void> {
     const project = snapshot.project;
+    const owner=projectSession;
     await flushAll();
+    if(owner!==projectSession)return;
     if (project) await closeProject(project.id, discard);
+    if(owner!==projectSession)return;
     projectSession++;
     validationRun++;
     reasoningRun++;
@@ -605,6 +617,17 @@ export const projectStore = {
     const opened = await openProject(project.id);
     if (owner !== projectSession) return;
     set({ project: opened.project, documents: opened.documents });
+  },
+
+  /** Background team refresh may read freely but publishes only while the
+   *  same mounted owner still has no unsent form input. */
+  async reloadForTeam(isClean: () => boolean): Promise<boolean> {
+    const project = requireProject();
+    const owner = projectSession;
+    const opened = await openProject(project.id);
+    if (owner !== projectSession || !isClean()) return false;
+    set({ project: opened.project, documents: opened.documents });
+    return true;
   },
 
   async undo(): Promise<void> {

@@ -65,6 +65,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { renderServerError, renderServerMessage, validWireMessage } from "../i18n/serverMessage";
 import { useDictionaryDisplayLanguage } from "../dictionary/useDictionaryLanguage";
 import { useI18n } from "../i18n/I18nProvider";
@@ -103,6 +104,7 @@ export default function ShapesView({
   onError,
 }: Props) {
   const { t, locale } = useI18n();
+  const team = useTeam();
   const readingLanguage = useDictionaryDisplayLanguage();
   const documents = useProjectSelector((s) => s.documents);
   const validation = useProjectSelector((s) => s.validation);
@@ -203,6 +205,7 @@ export default function ShapesView({
 
   const create = useCallback(
     async (args: Record<string, unknown>) => {
+      if (!team.canEdit || team.suspended) return;
       const result = await runner.run("create", "CreateShape", args);
       setChoosing(null);
       if (result?.created) {
@@ -212,7 +215,7 @@ export default function ShapesView({
         setFocusFor(result.created);
       } else restorePlus();
     },
-    [runner, restorePlus, chooseTab],
+    [runner, restorePlus, chooseTab, team.canEdit, team.suspended],
   );
 
   const stale = isStale(validation, documents);
@@ -231,6 +234,7 @@ export default function ShapesView({
             ref={plusRef}
             type="button"
             className="shapes-add"
+            disabled={!team.canEdit}
             aria-label={t("shapesView.add")}
             aria-expanded={choosing === "menu"}
             aria-controls={menuId}
@@ -330,7 +334,7 @@ export default function ShapesView({
       >
         {/* Shape stays mounted while Results shows: Validate switches tabs,
             and a rule open in the form would otherwise lose its edits. */}
-        <div className="shapes-form-column" hidden={tab !== "shape"}>
+        <fieldset className="shapes-form-column shape-permissions" disabled={!team.canEdit} hidden={tab !== "shape"}>
             {selected ? (
               <ShapeForm
                 key={selected.id}
@@ -350,7 +354,7 @@ export default function ShapesView({
                 {t(shapes.length ? "shapesView.choose" : "shapesView.intro")}
               </p>
             )}
-          </div>
+          </fieldset>
         {tab === "results" && (
           <div className="shapes-results">
             {/* Seen, not announced: the store's live region says Validating…

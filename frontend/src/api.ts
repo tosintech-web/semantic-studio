@@ -8,6 +8,9 @@ SUMMARY
     Explicit label-language reads reuse recorded validation and reasoning results.
     Declined approvals retain host facts beside their original failure text.
     Documentation downloads share the API error boundary and preserve UI facts.
+    Team requests carry CSRF, one logical request identity and the exact read
+    versions; refusal events suspend the mounted workspace or request review.
+    Background reads never advance the editing baseline.
     The single place the frontend talks to the backend. One thin wrapper per
     REST endpoint, each returning a typed Promise.
 
@@ -59,6 +62,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import { teamRequest, observeTeamResponse, isSharedTeamWrite, encodeTeamVersions, teamAuthEpoch } from "./team/client";
+import type { AuthStatus, ResourceVersions, TeamUser, HistoryEntry, Role } from "./team/types";
 import type { WireMessage } from "./i18n/server-contracts";
 import { validWireMessage } from "./i18n/serverMessage";
 import type { EntityPage, EntityParams } from "./entities/types";
@@ -201,6 +206,8 @@ type Transport = (url: string, init: RequestInit) => Promise<Response>;
  * replaces fetch for the one call that needs upload progress.
  */
 async function send(url: string, init?: RequestInit, transport?: Transport): Promise<Response> {
+  init = teamRequest(init);
+  const epoch=teamAuthEpoch();
   let grants: string[] = [];
   for (let round = 0; ; round++) {
     const attempt =
@@ -209,7 +216,7 @@ async function send(url: string, init?: RequestInit, transport?: Transport): Pro
         : {
             ...init,
             headers: {
-              ...((init?.headers as Record<string, string>) ?? {}),
+              ...(init?.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : (init?.headers as Record<string,string>) ?? {}),
               "X-Semantic-Studio-Grant": grants.join(","),
             },
           };
@@ -218,6 +225,7 @@ async function send(url: string, init?: RequestInit, transport?: Transport): Pro
       : transport
         ? transport(url, attempt)
         : fetch(url, attempt));
+    await observeTeamResponse(response, isSharedTeamWrite(url, init),epoch);
     if (response.status !== 409 || !approvalHandler || round >= MAX_APPROVAL_ROUNDS) {
       return response;
     }
@@ -332,7 +340,7 @@ function xhrTransport(onSent?: LoadOptions["onSent"]): Transport {
       if (signal?.aborted) return reject(aborted());
       const xhr = new XMLHttpRequest();
       xhr.open(init.method ?? "GET", url);
-      for (const [name, value] of Object.entries((init.headers as Record<string, string>) ?? {})) {
+      for (const [name, value] of (init.headers instanceof Headers ? init.headers.entries() : Object.entries((init.headers as Record<string,string>) ?? {}))) {
         xhr.setRequestHeader(name, value);
       }
       const onAbort = () => xhr.abort();
@@ -966,10 +974,10 @@ export function getLayout(pid: string, doc: ProjectDocName): Promise<CanvasLayou
 }
 
 // Box positions and the shown set. Not a change to the model (D-087).
-export function putLayout(pid: string, doc: ProjectDocName, layout: CanvasLayout): Promise<CanvasLayout> {
+export function putLayout(pid: string, doc: ProjectDocName, layout: CanvasLayout, expectedVersions?: ResourceVersions): Promise<CanvasLayout> {
   return send(documentUrl(pid, doc, "/layout"), {
     method: "PUT",
-    headers: JSON_WRITE,
+    headers: expectedVersions ? {...JSON_WRITE,"X-Semantic-Studio-Versions":encodeTeamVersions(expectedVersions)} : JSON_WRITE,
     body: JSON.stringify(layout),
   }).then((r) => handle<CanvasLayout>(r));
 }
@@ -1233,3 +1241,12 @@ export function removeData(
     headers: { ...CLIENT_HEADER },
   }).then((r) => handle<{ removed: string; statements: number; location: string; generation: number }>(r));
 }
+
+// Team status reads do not advance the editing baseline during background polling.
+export const authStatus = () => send("/api/auth/status").then(handle<AuthStatus>);
+export const loginTeam = () => send("/api/auth/login", {method:"POST", headers:{...CLIENT_HEADER}}).then(handle<{url:string}>);
+export const logoutTeam = () => send("/api/auth/logout", {method:"POST", headers:{...CLIENT_HEADER}}).then(handle<{authenticated:boolean}>);
+export const teamVersions = () => send("/api/team/versions").then(handle<{resourceVersions:ResourceVersions}>);
+export const teamHistory = (key:string, offset=0, limit=50) => send(`/api/team/history?key=${encodeURIComponent(key)}&offset=${offset}&limit=${limit}`).then(handle<{history:HistoryEntry[];total?:number}>);
+export const teamUsers = () => send("/api/team/users").then(handle<{users:TeamUser[]}>);
+export const updateTeamUser = (user:TeamUser, role:Role, disabled:boolean) => send("/api/team/users", {method:"PATCH",headers:{...CLIENT_HEADER,"Content-Type":"application/json","X-Semantic-Studio-Versions":encodeTeamVersions({["user:"+user.sub]:user.version})},body:JSON.stringify({sub:user.sub,role,disabled,expectedVersion:user.version})}).then(handle<{user:TeamUser}>);

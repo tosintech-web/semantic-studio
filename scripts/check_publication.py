@@ -6,9 +6,14 @@ SUMMARY
 BASIC IDEA
     Git modes read immutable objects, never replacement working files. Limits
     apply before reads, including ZIP expansion. An incomplete scan fails closed.
+    Python credential sites are inspected structurally; runtime configuration
+    references are not embedded values. Unknown Python constructions fail closed.
+    Optional operator-private values come from a bounded external file, never
+    the public policy. They cover names and content, including archive members.
     A clean result means only that the selected bytes satisfy this rule set.
 INPUTS / INPUT SOURCES
-    A Git commit/index or NUL-separated relative paths and a versioned policy.
+    A Git commit/index or NUL-separated relative paths and a versioned policy;
+    optionally a private file of deployment-specific values to exclude.
 EXPECTED OUTPUT
     Escaped paths and rule names only. Exit 0 clean, 1 findings, 2 incomplete.
 ================================================================================
@@ -16,6 +21,7 @@ EXPECTED OUTPUT
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import io
 import json
@@ -30,9 +36,13 @@ import zipfile
 FILE_LIMIT = 20 * 1024 * 1024
 TOTAL_LIMIT = 100 * 1024 * 1024
 MEMBER_LIMIT = 1000
+PRIVATE_VALUES_LIMIT = 64 * 1024
 DATA_EXTENSIONS = {'.ttl', '.rdf', '.nt', '.nq', '.trig', '.n3', '.jsonld', '.csv', '.tsv', '.xlsx'}
 RULES = {'private-path', 'credentials', 'source-record', 'internal-source', 'example-secret'}
 PLACEHOLDERS = {'', 'replace-me', 'change-me', 'your-client-secret', 'example', 'dummy', 'unset'}
+CREDENTIAL_KEYS = {'client_secret', 'session_secret', 'session_key', 'private_key', 'access_token', 'refresh_token',
+                   'google_client_secret', 'semantic_studio_google_client_secret',
+                   'db_password', 'postgres_password', 'semantic_studio_db_password'}
 SECRETS = re.compile(
     r'-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----'
     r'|\bGOCSPX-[A-Za-z0-9_-]{12,}'
@@ -40,10 +50,12 @@ SECRETS = re.compile(
     r'|\bgh[pousr]_[A-Za-z0-9]{30,}'
     r'|\bgithub_pat_[A-Za-z0-9_]{30,}'
     r'|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}'
+    r'''|\bpostgres(?:ql)?://[^\s'"/@:]+:[^\s'"/@]+@'''
+    r'''|\bpostgres(?:ql)?://[^\s'"]*[?&]password=[^\s'"&]+'''
 )
 # Match actual literal assignments, not a documentation mention of a field.
 ASSIGNMENT = re.compile(
-    r'''(?im)^\s*(?:["']?)(client_secret|session_secret|session_key|private_key|access_token|refresh_token)'''
+    r'''(?im)^\s*(?:["']?)(''' + '|'.join(sorted(CREDENTIAL_KEYS)) + r''')'''
     r'''(?:["']?)\s*[:=]\s*["']?([^\s"',;}]+)'''
 )
 INTERNAL_RDF = re.compile(r'(?i)(?::|[/#])(?:rawJSON|sourceJSON|originalJSON|internalComment)>?\s+(?:"|\'|\[)')
@@ -157,7 +169,28 @@ def private_path(path: str) -> bool:
             or p.suffix.lower() in {'.pem', '.key', '.p12', '.pfx', '.log'}
             or name.startswith('tag_information_')
             or name.startswith('crawler_data.organizations')
+            or name.endswith('.private-values')
+            or re.search(r'\.(?:sqlite3?|db)(?:$|[-.])', name) is not None
             or name in {'credentials', 'credentials.json', 'token.json', 'tokens.json', 'id_rsa', 'id_ed25519'})
+
+
+def private_values(path: Path | None) -> tuple[str, ...]:
+    """Read bounded literal needles; invalid inputs expose neither path nor data."""
+    if path is None:
+        return ()
+    with path.open('rb') as stream:
+        data = stream.read(PRIVATE_VALUES_LIMIT + 1)
+    if len(data) > PRIVATE_VALUES_LIMIT:
+        raise Incomplete('private-values-limit')
+    try:
+        text = data.decode('utf-8-sig')
+    except UnicodeError:
+        raise Incomplete('invalid-private-values') from None
+    values = tuple(dict.fromkeys(line.strip().casefold() for line in text.splitlines() if line.strip()))
+    if (not values or len(values) > 128 or any(len(value) > 4096 for value in values)
+            or any(ord(char) < 32 or ord(char) == 127 for char in text if char not in '\r\n')):
+        raise Incomplete('invalid-private-values')
+    return values
 
 
 def source_record(value) -> bool:
@@ -176,7 +209,7 @@ def source_record(value) -> bool:
 def json_credentials(value) -> bool:
     if isinstance(value, dict):
         for key, item in value.items():
-            if str(key).lower() in {'client_secret', 'session_secret', 'session_key', 'private_key', 'access_token', 'refresh_token'}:
+            if str(key).lower() in CREDENTIAL_KEYS:
                 if isinstance(item, str) and item.lower() not in PLACEHOLDERS and not item.startswith(('${', '<')):
                     return True
             if json_credentials(item):
@@ -186,19 +219,151 @@ def json_credentials(value) -> bool:
     return False
 
 
+def python_key(node: ast.AST) -> str | None:
+    """Resolve only literal keys; never evaluate source or match name fragments."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left, right = python_key(node.left), python_key(node.right)
+        if left is not None and right is not None:
+            return left + right
+    return None
+
+
+def python_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = python_name(node.value)
+        return base + '.' + node.attr if base else None
+    return None
+
+
+def credential_literal(node: ast.AST) -> bool:
+    """Inspect credential values without executing code or returning their text.
+
+    Environment lookup keys identify runtime values. Defaults remain values and
+    must be inspected. Other calls are not assumed safe just because their
+    result is dynamic: unsupported construction makes the scan incomplete.
+    """
+    if isinstance(node, ast.Constant):
+        value = node.value
+        if value is None:
+            return False
+        if isinstance(value, bytes):
+            try:
+                value = value.decode('utf-8')
+            except UnicodeError:
+                return True
+        if isinstance(value, str):
+            return value.lower() not in PLACEHOLDERS and not value.startswith(('${', '<'))
+        raise Incomplete('python-credential-construction')
+    if isinstance(node, ast.Name):
+        return False
+    if isinstance(node, ast.Attribute):
+        return credential_literal(node.value)
+    if isinstance(node, ast.Subscript):
+        # The index of config['SECRET_NAME'] is a lookup key, not its value.
+        return credential_literal(node.value)
+    if isinstance(node, ast.Call):
+        if python_name(node.func) in {'field', 'dataclasses.field'}:
+            # Dataclass flags describe the field; only its default is a value.
+            # A factory can execute arbitrary source, so do not assume it safe.
+            permitted = {'default', 'repr', 'init', 'compare', 'hash', 'metadata', 'kw_only', 'doc'}
+            if node.args or any(item.arg not in permitted for item in node.keywords):
+                raise Incomplete('python-credential-construction')
+            return any(credential_literal(item.value) for item in node.keywords if item.arg == 'default')
+        if python_name(node.func) in {'os.getenv', 'os.environ.get'}:
+            # Expansion can move a literal fallback into the apparent key slot;
+            # without executing the source its argument roles are unknown.
+            if any(isinstance(value, ast.Starred) for value in node.args) or any(item.arg is None for item in node.keywords):
+                raise Incomplete('python-credential-construction')
+            values = list(node.args[1:]) + [item.value for item in node.keywords if item.arg != 'key']
+            return any(credential_literal(value) for value in values)
+        if any(credential_literal(value) for value in [*node.args, *(item.value for item in node.keywords)]):
+            return True
+        raise Incomplete('python-credential-construction')
+    if isinstance(node, ast.Dict):
+        return any(credential_literal(value) for value in node.values)
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return any(credential_literal(value) for value in node.elts)
+    if isinstance(node, ast.JoinedStr):
+        return any(credential_literal(value) for value in node.values)
+    if isinstance(node, ast.FormattedValue):
+        # A format specification can manufacture literal padding from an empty
+        # value. Treat its effects as unknown rather than simulating Python.
+        if node.format_spec is not None:
+            raise Incomplete('python-credential-construction')
+        return credential_literal(node.value)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return credential_literal(node.left) or credential_literal(node.right)
+    if isinstance(node, ast.IfExp):
+        return credential_literal(node.body) or credential_literal(node.orelse)
+    if isinstance(node, ast.BoolOp):
+        return any(credential_literal(value) for value in node.values)
+    raise Incomplete('python-credential-construction')
+
+
+def python_credentials(text: str) -> bool:
+    def secret(key: str | None) -> bool:
+        return key is not None and key.lower() in CREDENTIAL_KEYS
+
+    def target(node: ast.AST) -> bool:
+        if isinstance(node, ast.Name):
+            return secret(node.id)
+        if isinstance(node, ast.Attribute):
+            return secret(node.attr)
+        if isinstance(node, ast.Subscript):
+            return secret(python_key(node.slice))
+        if isinstance(node, (ast.Tuple, ast.List)):
+            return any(target(value) for value in node.elts)
+        return False
+
+    try:
+        tree = ast.parse(text)
+        found = False
+        for node in ast.walk(tree):
+            values = []
+            if isinstance(node, ast.Dict):
+                values = [value for key, value in zip(node.keys, node.values) if key is not None and secret(python_key(key))]
+            elif isinstance(node, ast.keyword) and secret(node.arg):
+                values = [node.value]
+            elif isinstance(node, ast.arguments):
+                positional = [*node.posonlyargs, *node.args]
+                defaults = zip(positional[-len(node.defaults):], node.defaults) if node.defaults else []
+                values = [value for arg, value in [*defaults, *zip(node.kwonlyargs, node.kw_defaults)]
+                          if secret(arg.arg) and value is not None]
+            elif isinstance(node, ast.Assign) and any(target(value) for value in node.targets):
+                values = [node.value]
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)) and target(node.target) and node.value is not None:
+                values = [node.value]
+            for value in values:
+                found = credential_literal(value) or found
+        return found
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        # Neither parser diagnostics nor source fragments belong in scan logs.
+        raise Incomplete('python-source-unreadable') from None
+
+
 class Scanner:
-    def __init__(self, samples: dict, exceptions: dict):
+    def __init__(self, samples: dict, exceptions: dict, excluded_values: tuple[str, ...] = ()):
         self.samples = samples
         self.exceptions = exceptions
         self.total = 0
         self.findings = False
         self.incomplete = False
+        self.excluded_values = excluded_values
+
+    def contains_private_value(self, text: str) -> bool:
+        folded = text.casefold()
+        return any(value in folded for value in self.excluded_values)
 
     def report(self, path: str, rule: str, *, incomplete=False):
         if not incomplete and rule in self.exceptions.get(path, set()):
             return
         # JSON escaping prevents filenames from injecting terminal lines.
-        print(json.dumps(path, ensure_ascii=True), rule)
+        safe_path = '<redacted-path>' if self.contains_private_value(path) else path
+        print(json.dumps(safe_path, ensure_ascii=True), rule)
         if incomplete:
             self.incomplete = True
         else:
@@ -206,9 +371,15 @@ class Scanner:
 
     def scan(self, path: str, data: bytes, *, depth=0, display: str | None = None):
         label = display or path
+        if self.contains_private_value(label):
+            self.report(label, 'deployment-value')
         self.total += len(data)
         if len(data) > FILE_LIMIT or self.total > TOTAL_LIMIT:
             raise Incomplete('read-limit')
+        # Approved binary samples still cannot carry deployment identifiers in
+        # plain UTF-8 metadata. ZIP entries are checked again after expansion.
+        if self.excluded_values and self.contains_private_value(data.decode('utf-8', errors='ignore')):
+            self.report(label, 'deployment-value')
         if private_path(path):
             self.report(label, 'private-path')
         approved = self.samples.get(path) if depth == 0 else None
@@ -229,10 +400,14 @@ class Scanner:
             return
         if SECRETS.search(text):
             self.report(label, 'credentials')
-        for assignment in ASSIGNMENT.finditer(text):
-            value = assignment.group(2).lower()
-            if value not in PLACEHOLDERS and not value.startswith(('${', '<', 'process.env.', 'os.environ')):
-                self.report(label, 'example-secret' if PurePosixPath(path).name == '.env.example' else 'credentials')
+        if PurePosixPath(path).suffix.lower() == '.py':
+            if python_credentials(text):
+                self.report(label, 'credentials')
+        else:
+            for assignment in ASSIGNMENT.finditer(text):
+                value = assignment.group(2).lower()
+                if value not in PLACEHOLDERS and not value.startswith(('${', '<', 'process.env.', 'os.environ')):
+                    self.report(label, 'example-secret' if PurePosixPath(path).name == '.env.example' else 'credentials')
         # Escaped source JSON embedded in a Turtle literal is still private.
         unescaped = text.replace('\\\"', '\"')
         if (re.search(r'\"_id\"\s*:', unescaped) and re.search(r'\"\$oid\"\s*:', unescaped)
@@ -294,10 +469,12 @@ def main(argv=None) -> int:
     modes.add_argument('--staged', action='store_true')
     modes.add_argument('--root', type=Path)
     parser.add_argument('--files-from', type=Path)
+    parser.add_argument('--private-values-file', type=Path)
     args = parser.parse_args(argv)
     if bool(args.root) != bool(args.files_from):
         parser.error('--root requires --files-from; Git modes forbid it')
     try:
+        excluded_values = private_values(args.private_values_file)
         if args.root:
             root = args.root.resolve(strict=True)
             raw = args.files_from.read_bytes()
@@ -310,7 +487,7 @@ def main(argv=None) -> int:
             paths = list(entries)
             reader = lambda p: git_blob(entries[p])
         samples, exceptions = policy_from(reader('publication-policy.json'))
-        scanner = Scanner(samples, exceptions)
+        scanner = Scanner(samples, exceptions, excluded_values)
         for path in paths:
             try:
                 scanner.scan(path, reader(path))

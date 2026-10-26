@@ -40,6 +40,7 @@ EXPECTED OUTPUT
 
 import { spawn } from 'node:child_process';
 import { runP1 } from './p1.mjs';
+import { runP2 } from './p2.mjs';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -215,10 +216,10 @@ class Browser {
     });
   }
 
-  send(method, params = {}, useSession = true) {
+  send(method, params = {}, useSession = true, sessionId = this.sessionId) {
     const id = this.nextId++;
     const payload = { id, method, params };
-    if (useSession && this.sessionId) payload.sessionId = this.sessionId;
+    if (useSession && sessionId) payload.sessionId = sessionId;
     this.ws.send(JSON.stringify(payload));
     return new Promise((res, reject) => {
       const timer = setTimeout(() => {
@@ -611,7 +612,7 @@ async function cmdSmoke() {
 // ---------------------------------------------------------------------------
 
 const [cmd, ...rest] = process.argv.slice(2);
-const commands = { serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke, p1: () => runP1({ ROOT, DATA_DIR, BASE, Browser, api, uploadOntology, startServer, stopServer, waitForHealth, pythonExe, log, sleep }) };
+const commands = { serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke, p1: () => runP1({ ROOT, DATA_DIR, BASE, Browser, api, uploadOntology, startServer, stopServer, waitForHealth, pythonExe, log, sleep }), p2: () => runP2({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }) };
 if (!commands[cmd]) {
   console.error(`usage: node driver.mjs <smoke|p1|serve|api|ui>
 

@@ -32,6 +32,7 @@ EXPECTED OUTPUT
 from __future__ import annotations
 
 import re
+import ast
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent.parent / "app"
@@ -49,13 +50,75 @@ FORBIDDEN = [
 ]
 
 
-def violations(source: str) -> list[str]:
+def violations(source: str, *, db_resolver=False) -> list[str]:
+    if db_resolver:
+        source = without_fixed_db_resolver(source)
     found = []
     for pattern in FORBIDDEN:
         for match in pattern.finditer(source):
             line = source.count("\n", 0, match.start()) + 1
             found.append(f"line {line}: {match.group(0).strip()}")
     return found
+
+
+def without_fixed_db_resolver(source):
+    """Allow only fixed db DNS, never the storage module's other imports/calls."""
+    tree = ast.parse(source)
+    functions = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == '_resolve_db_addresses']
+    if len(functions) != 1:
+        return source
+    node = functions[0]
+    imports = [n for n in ast.walk(node) if isinstance(n, (ast.Import, ast.ImportFrom))]
+    calls = [n for n in ast.walk(node) if isinstance(n, ast.Call)]
+    attributes = [n.attr for n in ast.walk(node) if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name) and n.value.id == 'socket']
+    expected = ast.parse("socket.getaddrinfo('db', 5432, family=socket.AF_INET, type=socket.SOCK_STREAM)", mode='eval').body
+    if (len(imports) != 1 or ast.dump(imports[0]) != ast.dump(ast.parse('import socket').body[0])
+            or len(calls) != 1 or ast.dump(calls[0]) != ast.dump(expected)
+            or sorted(attributes) != ['AF_INET', 'SOCK_STREAM', 'getaddrinfo']):
+        return source
+    lines = source.splitlines(keepends=True)
+    lines[node.lineno-1:node.end_lineno] = ['\n'] * (node.end_lineno-node.lineno+1)
+    return ''.join(lines)
+
+
+def test_db_dns_exception_does_not_exempt_other_network_calls():
+    fixed = "def _resolve_db_addresses():\n    import socket\n    return socket.getaddrinfo('db', 5432, family=socket.AF_INET, type=socket.SOCK_STREAM)\n"
+    assert violations(fixed, db_resolver=True) == []
+    for planted in (fixed + 'import requests\n', fixed.replace("'db'", 'untrusted_host'),
+                    fixed.replace('5432', '80'), fixed.replace('AF_INET', 'AF_INET6'),
+                    fixed + 'socket.socket()\n'):
+        assert violations(planted, db_resolver=True)
+
+
+def postgres_imports(source):
+    patterns = [r'^\s*(?:from|import)\s+psycopg\b',
+                r'(?:__import__|import_module)\(\s*[\'\"]psycopg\b']
+    return [match.group(0) for pattern in patterns for match in re.finditer(pattern, source, re.M)]
+
+
+def test_the_scan_sees_postgres_import_forms():
+    for source in ('import psycopg as pg', 'from psycopg.rows import dict_row',
+                   "__import__('psycopg')", 'importlib.import_module("psycopg")'):
+        assert postgres_imports(source)
+
+
+def test_only_pg_storage_imports_the_database_driver():
+    connector = APP_DIR / 'team/pg_storage.py'
+    assert connector.is_file() and postgres_imports(connector.read_text(encoding='utf-8'))
+    offenders = [str(path.relative_to(APP_DIR)) for path in APP_DIR.rglob('*.py')
+                 if path != connector and postgres_imports(path.read_text(encoding='utf-8'))]
+    assert offenders == []
+
+
+def test_workspace_and_history_do_not_open_sql_connections():
+    for name in ('workspace.py', 'history.py'):
+        path = APP_DIR / 'team' / name
+        source = path.read_text(encoding='utf-8')
+        assert source.strip() and not postgres_imports(source)
+        tree = ast.parse(source)
+        calls = [node.func.attr for node in ast.walk(tree) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Attribute) and node.func.attr in {'connection', 'cursor', 'execute', 'executemany'}]
+        assert calls == [], name
 
 
 def test_the_scan_sees_every_forbidden_form():
@@ -88,7 +151,7 @@ def test_only_the_broker_and_the_guard_reach_the_network():
     for path in files:
         if path.name in ALLOWED and path.parent == APP_DIR:
             continue
-        for hit in violations(path.read_text(encoding="utf-8")):
+        for hit in violations(path.read_text(encoding="utf-8"), db_resolver=path == APP_DIR / 'team/pg_storage.py'):
             offenders.append(f"{path.relative_to(APP_DIR.parent)} {hit}")
     assert offenders == [], "\n".join(offenders)
 

@@ -25,6 +25,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useI18n } from "../i18n/I18nProvider";
 import { projectStore } from "../state/projectStore";
 
@@ -43,6 +44,7 @@ interface Props {
 
 export default function NothingSelected({ counts, taxonomy }: Props) {
   const { t } = useI18n();
+  const team = useTeam();
   const counted = (kind: "class" | "concept" | "relationship" | "attribute" | "example", count: number) =>
     t(`modelCount.${kind}.${count === 1 ? "one" : "many"}`, { count });
   const lines = counts
@@ -74,6 +76,7 @@ export default function NothingSelected({ counts, taxonomy }: Props) {
       <button
         type="button"
         className="primary"
+        disabled={!team.canEdit}
         // Its name for focus coming back: the form replaces this button
         // while the draft is open (projectStore's creationStart).
         data-create-from="side-panel-new"

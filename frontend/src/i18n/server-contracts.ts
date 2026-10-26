@@ -1841,6 +1841,19 @@ export const SERVER_CONTRACTS = {
   "tabular.xml_declaration": {
     "name": "string"
   },
+  "team.auth_expired": {},
+  "team.auth_failed": {},
+  "team.auth_required": {},
+  "team.config_unavailable": {},
+  "team.csrf": {},
+  "team.disabled": {},
+  "team.forbidden": {},
+  "team.invalid_request": {},
+  "team.last_admin": {},
+  "team.request_mismatch": {},
+  "team.revision_conflict": {},
+  "team.undo_forbidden": {},
+  "team.version_required": {},
   "validation.min_count": {
     "count": "number",
     "name": "string"
@@ -2760,6 +2773,19 @@ export interface ServerMessageArgs {
   "tabular.unsafe_parser": undefined;
   "tabular.workbook_unreadable": undefined;
   "tabular.xml_declaration": { "name": string };
+  "team.auth_expired": undefined;
+  "team.auth_failed": undefined;
+  "team.auth_required": undefined;
+  "team.config_unavailable": undefined;
+  "team.csrf": undefined;
+  "team.disabled": undefined;
+  "team.forbidden": undefined;
+  "team.invalid_request": undefined;
+  "team.last_admin": undefined;
+  "team.request_mismatch": undefined;
+  "team.revision_conflict": undefined;
+  "team.undo_forbidden": undefined;
+  "team.version_required": undefined;
   "validation.min_count": { "count": number; "name": string };
   "validation.shapes_refused": undefined;
   "validation.term": { "term": string };

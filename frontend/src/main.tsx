@@ -5,7 +5,8 @@ FILE: frontend/src/main.tsx
 
 SUMMARY
     The frontend entry point. Mounts the root React component (<App/>) into the
-    #root element in index.html and loads the global stylesheet.
+    #root element in index.html and loads the global stylesheet. TeamProvider
+    gates the initial workspace and retains mounted editors during reauthentication.
 
 BASIC IDEA
     Every React app needs a single bootstrap that attaches the component tree
@@ -31,6 +32,7 @@ EXPECTED OUTPUT
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import {TeamProvider} from "./team/TeamProvider";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { I18nProvider } from "./i18n/I18nProvider";
 // Global styles (CSS variables, themes, and every component's classes).
@@ -43,7 +45,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <I18nProvider>
       <ErrorBoundary>
-        <App />
+        <TeamProvider><App /></TeamProvider>
       </ErrorBoundary>
     </I18nProvider>
   </React.StrictMode>,

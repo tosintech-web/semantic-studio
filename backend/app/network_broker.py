@@ -6,15 +6,17 @@ FILE: backend/app/network_broker.py
 SUMMARY
     Approval reasons, sends and redirect facts remain separate from legacy text.
     Policy and connection refusals retain optional source-owned display facts.
+    A separate fixed-endpoint Google system capability honors offline, blocks and
+    pinning without an interactive approval or redirect.
     The one door from Semantic Studio to the internet. Every outbound request
-    names what it is for (a capability), and goes out only if the user has
-    allowed that capability for that host, the application is not offline, and
+    names what it is for (a capability), and goes out only under a user grant
+    or the fixed Google system preset, while the application is online and
     every address involved is public. Each attempt is written to an activity
     log. No other backend module may open a network connection; a source-scan
     test enforces that (test_no_direct_network.py). Decisions D-066 and D-067.
 
 BASIC IDEA
-    A request passes five gates, in an order chosen so that a refusal costs no
+    An ordinary request passes five gates, in an order chosen so that a refusal costs no
     traffic of any kind, DNS included:
 
       1. Offline refuses everything, before anything else is looked at.
@@ -610,6 +612,57 @@ class NetworkBroker:
 
     # --- the request ------------------------------------------------------
 
+    def authentication_request(
+        self, url: str, *, method: str = "GET", headers=None, body=None,
+        timeout: float = 20,
+    ) -> BrokerResponse:
+        """Deployment-preset Google capability; no caller-supplied destinations.
+
+        Unlike ontology capabilities this cannot ask an unauthenticated browser
+        for approval. Offline and explicit administrator blocks still win. Raw
+        invalid URLs and response errors are never included in activity records.
+        Resolution spends the same budget as the connection and response. The
+        synchronous resolver cannot be interrupted, but exhausting the budget
+        during resolution prevents any subsequent connection.
+        """
+        capability = "authentication:google"
+        endpoints = {
+            "https://oauth2.googleapis.com/token": "POST",
+            "https://www.googleapis.com/oauth2/v1/certs": "GET",
+        }
+        if not isinstance(url, str) or url not in endpoints or endpoints[url] != method:
+            raise ValueError("Invalid authentication endpoint")
+        supplied = {key.lower(): value for key, value in (headers or {}).items()}
+        allowed = {"content-type": "application/x-www-form-urlencoded"} if method == "POST" else {}
+        if any(key not in allowed or value != allowed[key] for key, value in supplied.items()):
+            raise ValueError("Invalid authentication headers")
+        if method == "GET" and body is not None:
+            raise ValueError("Invalid authentication body")
+        if body is not None and (not isinstance(body, bytes) or len(body) > 16384):
+            raise ValueError("Invalid authentication body")
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout <= 20:
+            raise ValueError("Invalid authentication timeout")
+        if self.policy.offline:
+            self._log(capability, url, "offline")
+            raise Offline()
+        host = self._judge_without_lookup(url, False)
+        if self.policy.decide(capability, host, frozenset()) == "block":
+            self._log(capability, url, "blocked")
+            raise HostBlocked(host)
+        deadline = time.monotonic() + timeout
+        try:
+            address = self._resolve_and_judge(host, False)
+        except net_guard.BlockedAddress:
+            self._log(capability, url, "refused")
+            raise
+        response = self._send_pinned(
+            capability, url, address, method, supplied, body, 256 * 1024,
+            _remaining(timeout, deadline, url), deadline,
+        )
+        if response.status in _REDIRECT_CODES:
+            raise FetchFailed(url, "authentication redirect refused")
+        return response
+
     def request(
         self,
         capability: str,
@@ -808,4 +861,6 @@ def _remaining(timeout: float, deadline: Optional[float], url: str) -> float:
 
 # The process-wide broker. Configured with the store's data directory by
 # store.py, which is the one module that knows where that is.
-broker = NetworkBroker()
+from .team.context import ServiceProxy
+
+broker = ServiceProxy("broker", NetworkBroker())

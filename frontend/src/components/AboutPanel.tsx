@@ -6,7 +6,7 @@ FILE: frontend/src/components/AboutPanel.tsx
 SUMMARY
     The About dialog: what this application is, who made it, where its source
     lives, under what licence, and the promise that ontologies loaded into it
-    never leave the machine and that it connects only when allowed. Four blocks of static text separated by hairlines,
+    remain on the local machine or the shared team server, according to mode. Four blocks of static text separated by hairlines,
     over a dimmed backdrop.
 
 BASIC IDEA
@@ -46,6 +46,7 @@ EXPECTED OUTPUT
 
 import { useI18n } from "../i18n/I18nProvider";
 import { useEffect, useRef } from "react";
+import { useTeam } from "../team/TeamProvider";
 import { linkTarget } from "../links";
 
 /**
@@ -92,6 +93,7 @@ interface Props {
 
 export default function AboutPanel({ onClose }: Props) {
   const { t } = useI18n();
+  const team=useTeam();
   const distributedNoticesUrl = import.meta.env.PROD ? new URL("/THIRD_PARTY_NOTICES.md", window.location.href).href : null;
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -118,6 +120,7 @@ export default function AboutPanel({ onClose }: Props) {
   // than a pair of wrapping edges.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (panelRef.current?.closest("[inert]")) return;
       if (e.key === "Escape") {
         onClose();
         return;
@@ -217,8 +220,8 @@ export default function AboutPanel({ onClose }: Props) {
         <hr className="about-rule" />
 
         <div className="about-block about-privacy">
-          <p>{t("about.privacy")}</p>
-          <p>{t("about.privacyDetail")}</p>
+          <p>{t(team.mode==="team"?"about.teamPrivacy":"about.privacy")}</p>
+          <p>{t(team.mode==="team"?"about.teamPrivacyDetail":"about.privacyDetail")}</p>
         </div>
       </div>
     </>

@@ -156,6 +156,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "./team/TeamProvider";
 import { makeUiMessage, renderUiMessage, type UiMessage } from "./i18n/uiMessage";
 import { renderServerError } from "./i18n/serverMessage";
 import { I18nContext, type I18nValue, useI18n } from "./i18n/I18nProvider";
@@ -428,6 +429,8 @@ function expansionAnnouncement(added: number, drawn: number, stats: VizNeighborh
 }
 
 export default function App() {
+  const team = useTeam();
+  const [teamRevision, setTeamRevision] = useState(0);
   // --- top-level state ---
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [ontologies, setOntologies] = useState<OntologySummary[]>([]);   // dropdown list
@@ -615,8 +618,8 @@ export default function App() {
   // blocks from the languages array, and a new array per render would
   // redo that on every keystroke anywhere in App.
   const openDocName = projectDocuments.find((d) => d.ontologyId === activeId)?.doc ?? null;
-  const dictionaryView = useMemo(() => ({ revision: editingProjectDoc ? revision : 0, viewGeneration: `${importsVersion}:${editingProjectDoc ? dataGeneration : 0}` }), [revision, importsVersion, editingProjectDoc, dataGeneration]);
-  const viewRevision = openDocName === "model" ? revision + dataGeneration : revision;
+  const dictionaryView = useMemo(() => ({ revision: (editingProjectDoc ? revision : 0) + teamRevision, viewGeneration: `${importsVersion}:${editingProjectDoc ? dataGeneration : 0}:${teamRevision}` }), [revision, importsVersion, editingProjectDoc, dataGeneration, teamRevision]);
+  const viewRevision = (openDocName === "model" ? revision + dataGeneration : revision) + teamRevision;
   // Every graph replacement invalidates incremental reads too. Keep an opaque
   // token (rather than comparing values after await) so leaving and reopening
   // the same view cannot revive an old request. Update during render: an old
@@ -707,7 +710,7 @@ export default function App() {
       return !on;
     });
   }, []);
-  const showCanvas = editingModel !== null && canvasOn;
+  const showCanvas = editingModel !== null && canvasOn && team.canEdit;
   // The side panel (edit-page-rework 5.4): Details or Reasoning, and the
   // Reasoning tab's badge when a run ends while Details is showing.
   const [sideTab, setSideTab] = useState<SideTab>("details");
@@ -882,6 +885,12 @@ export default function App() {
       .catch((e) => setProjectsError(e))
       .finally(() => setProjectsLoading(false));
   }, []);
+  useEffect(() => {
+    const refresh = () => { refreshList(); void refreshProjects(); setTeamRevision(value => value + 1); };
+    window.addEventListener("semantic-studio-team-refresh", refresh);
+    return () => window.removeEventListener("semantic-studio-team-refresh", refresh);
+  }, [refreshList, refreshProjects]);
+
 
   useEffect(() => {
     refreshList();
@@ -892,14 +901,15 @@ export default function App() {
   // browser's own question is still worth asking before the tab goes.
   const anyDirty = projectDocuments.some((d) => d.dirty);
   useEffect(() => {
-    if (!anyDirty) return;
+    if (team.mode !== "team" && !anyDirty) return;
     const onUnload = (e: BeforeUnloadEvent) => {
+      if(team.mode === "team" && !team.hasUnsentInput?.())return;
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", onUnload);
     return () => window.removeEventListener("beforeunload", onUnload);
-  }, [anyDirty]);
+  }, [anyDirty,team]);
 
   // Reset the per-ontology view state the moment the ontology changes, during
   // render rather than in an effect. In an effect the fetch below would fire
@@ -1074,12 +1084,28 @@ export default function App() {
     else then();
   }, []);
 
+  const navigationRun=useRef(0);
+  const guardTeamNavigation = useCallback((then: () => void) => {
+    const run=++navigationRun.current;
+    const owner=projectStore.getSnapshot().project?.id??null;
+    if (team.mode !== "team" || !team.hasUnsentInput?.(true)) { then(); return; }
+    if (!window.confirm(t("team.leave.confirm"))) return;
+    void projectStore.flushAll().then(() => {
+      if(run!==navigationRun.current||(projectStore.getSnapshot().project?.id??null)!==owner)return;
+      // Flush refusals keep the original view and drafts mounted. Only after
+      // pending layouts settle may this explicit navigation discard its form.
+      if(builder.queryIsDirty?.())builder.discardQueryDraft?.();
+      if (projectStore.getSnapshot().creating) projectStore.cancelCreating(false);
+      then();
+    }).catch(error => {if(run===navigationRun.current&&(projectStore.getSnapshot().project?.id??null)===owner)setError(error);});
+  }, [team, t,builder]);
+
   const goHome = useCallback(() => {
-    guardEditor(() => {
+    guardEditor(() => guardTeamNavigation(() => {
       setPendingMode(null);
       setMode("home");
-    });
-  }, [guardEditor]);
+    }));
+  }, [guardEditor, guardTeamNavigation]);
 
   // Called by the Load dialog and the chooser's catalogue once an ontology is
   // loaded: add it and select it. Someone who deliberately loaded a file
@@ -1488,10 +1514,11 @@ export default function App() {
         setPendingMode(null);
         setMode(next);
       };
-      if (next === "view") go();
-      else guardEditor(go);
+      if(next===mode)go();
+      else if (next === "view") guardTeamNavigation(go);
+      else guardEditor(()=>guardTeamNavigation(go));
     },
-    [activeId, guardEditor],
+    [activeId, mode, guardEditor,guardTeamNavigation],
   );
 
   useEffect(() => {
@@ -1631,26 +1658,27 @@ export default function App() {
   // unsaved changes. `then` runs once the project is closed.
   const exitProject = useCallback(
     (then: () => void) => {
-      guardEditor(() => {
+      guardEditor(() => guardTeamNavigation(() => {
         const state = projectStore.getSnapshot();
         if (!state.project) {
           then();
           return;
         }
-        if (state.documents.some((d) => d.dirty)) {
+        if (team.mode === "local" && state.documents.some((d) => d.dirty)) {
           setLeaveProject(() => then);
           return;
         }
         projectStore
           .close()
           .then(() => {
+            if(projectStore.getSnapshot().project)return;
             then();
             void refreshProjects();
           })
-          .catch(failed);
-      });
+          .catch(cause=>{if(projectStore.getSnapshot().project?.id===state.project?.id)failed(cause);});
+      }));
     },
-    [guardEditor, refreshProjects],
+    [guardEditor, guardTeamNavigation, refreshProjects,team.mode],
   );
 
   const openProjectById = useCallback(
@@ -1683,9 +1711,9 @@ export default function App() {
   const enterLibrary = useCallback(
     (id: string, next: AppMode) => {
       if (projectStore.getSnapshot().project) exitProject(() => enterMode(id, next));
-      else enterMode(id, next);
+      else guardTeamNavigation(()=>enterMode(id, next));
     },
-    [enterMode, exitProject],
+    [enterMode, exitProject,guardTeamNavigation],
   );
 
   const onCreateProject = async (request: NewProjectRequest) => {
@@ -1763,13 +1791,13 @@ export default function App() {
   };
 
   const onSwitchDocument = (doc: ProjectDocName) => {
-    guardEditor(() => {
+    guardEditor(() => guardTeamNavigation(() => {
       const target = projectStore.getSnapshot().documents.find((d) => d.doc === doc);
       if (!target) return;
       shapesInView.current = false;
       projectStore.switchDocument(doc);
       setActiveId(target.ontologyId);
-    });
+    }));
   };
 
   const onCloseProject = () =>
@@ -1852,7 +1880,7 @@ export default function App() {
         imports={includeImports}
         revision={viewRevision}
         language={displayLanguage}
-        editing={editingModel}
+        editing={team.canEdit ? editingModel : null}
         readOnlyNote={readOnlyNote}
         onDeleted={onEntityDeleted}
         canvas={canvasLent}
@@ -1890,6 +1918,7 @@ export default function App() {
                 an empty library, so disabling it would be a dead end. */}
             <button
               className="nav-item"
+              disabled={!team.canEdit}
               onClick={() => openDialog("suggested")}
               title={t("app.loadHint")}
             >
@@ -1991,6 +2020,7 @@ export default function App() {
               ontology. */}
           <button
             className="nav-item about-item"
+            disabled={!team.canAdmin}
             onClick={() => setNetworkOpen(true)}
             aria-haspopup="dialog"
             title={t("app.networkHint")}
@@ -2030,7 +2060,7 @@ export default function App() {
               <select
                 id="ontology-select"
                 value={activeId ?? ""}
-                onChange={(e) => setActiveId(e.target.value || null)}
+                onChange={(e) => {const next=e.target.value||null;guardTeamNavigation(()=>setActiveId(next));}}
                 title={t("app.activeOntology")}
               >
                 {ontologies.map((o) => (
@@ -2200,7 +2230,7 @@ export default function App() {
           <div className="entity-browser">
             <DictionaryContext name={active?.name ?? ""} editing={editingProjectDoc}
               documentName={editingProjectDoc && openDocName ? `${openDocName}.ttl` : null}
-              saveState={projectSaving ? "saving" : projectDoc?.dirty ? "dirty" : "saved"} />
+              saveState={projectSaving ? "saving" : team.mode === "team" ? "saved" : projectDoc?.dirty ? "dirty" : "saved"} />
             <EntityList key={activeId} ontologyId={activeId} language={displayLanguage} imports={includeImports}
               revision={dictionaryView.revision} viewGeneration={dictionaryView.viewGeneration}
               initialQuery={entityQuery} selectedIri={selected}
@@ -2218,7 +2248,7 @@ export default function App() {
             <ReferenceOnlyPanel key={selected} iri={selected} onClose={() => setSelected(null)} /> :
             <DetailPanel ontologyId={activeId} iri={selected} imports={includeImports} revision={viewRevision}
               focusHeading={focusPanel} language={displayLanguage} onNavigate={(iri) => { setSelected(iri); setReferenceOnlySelection(null); }}
-              onClose={() => setSelected(null)} editing={editingModel} readOnlyNote={readOnlyNote}
+              onClose={() => setSelected(null)} editing={team.canEdit ? editingModel : null} readOnlyNote={readOnlyNote}
               onDeleted={onEntityDeleted} />)}
         </main>
       ) : mode === "shapes" && openProjectSummary ? (
@@ -2264,11 +2294,11 @@ export default function App() {
             imports={includeImports}
             revision={viewRevision}
             language={displayLanguage}
-            editing={editingModel}
+            editing={team.canEdit ? editingModel : null}
             onDeleted={onEntityDeleted}
             canvas={canvasLent}
             dataSources={projectData?.snapshots}
-            onImportData={editingModel ? openDataImport : undefined}
+            onImportData={editingModel && team.canEdit ? openDataImport : undefined}
             inferred={inferredMarks}
             inferredToken={reasoningToken}
             canvasShown={showCanvas}
@@ -2284,7 +2314,9 @@ export default function App() {
                 }
               >
                 <ModelCanvas
+                  key={`${openProjectSummary.id}:model`}
                   projectId={openProjectSummary.id}
+                  refreshGeneration={teamRevision}
                   doc="model"
                   revision={revision}
                   language={displayLanguage}
@@ -2419,7 +2451,7 @@ export default function App() {
               door (5.3); a library ontology keeps the read-only source view
               with its Original and Formatted toggle. */}
           {mode === "view" &&
-            (editingProjectDoc && openProjectSummary && projectDoc ? (
+            (editingProjectDoc && team.canEdit && openProjectSummary && projectDoc ? (
               <TurtleEditor
                 projectId={openProjectSummary.id}
                 doc={projectDoc.doc}
@@ -2478,7 +2510,7 @@ export default function App() {
                 imports={includeImports}
                 revision={viewRevision}
                 language={displayLanguage}
-                editing={editingModel}
+                editing={team.canEdit ? editingModel : null}
                 readOnlyNote={readOnlyNote}
                 onDeleted={onEntityDeleted}
               />

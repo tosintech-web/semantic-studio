@@ -8,7 +8,8 @@ SUMMARY
     FastAPI application object, wires in the HTTP routers that expose the REST
     API, enables cross-origin requests from the dev frontend, exposes a health
     check, and — in a production/Docker build — serves the compiled frontend
-    as static files from the same server.
+    as static files from the same server. Explicit team mode adds a locked
+    PostgreSQL/auth runtime and default-deny authorization before all data routes.
 
 BASIC IDEA
     A single FastAPI "app" object is the thing an ASGI server (uvicorn) runs.
@@ -31,7 +32,9 @@ INPUTS / INPUT SOURCES
     - The upload cap, read from the ontologies router at request time.
     - The six router modules (ontologies, queries, network, projects, data,
       examples) which define the actual endpoints.
-    - The bundled examples, seeded into the library when the server starts
+    - SEMANTIC_STUDIO_MODE and explicit team deployment settings, validated
+      before service imports; missing team configuration stops startup.
+    - The bundled examples, seeded into the local library when the server starts
       (library_examples.py, home-and-examples 5.1).
 
 EXPECTED OUTPUT
@@ -56,6 +59,8 @@ EXPECTED OUTPUT
 from __future__ import annotations
 
 # `os` is used to read the optional STATIC_DIR environment variable.
+import hashlib
+import json
 import logging
 import os
 import re
@@ -63,19 +68,24 @@ from contextlib import asynccontextmanager
 # `Path` gives us cross-platform filesystem path handling for locating the
 # built frontend directory.
 from pathlib import Path
-from typing import Optional
 
 # FastAPI is the web framework; CORSMiddleware allows the browser dev server
 # on a different port to call this API; StaticFiles serves the built frontend.
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 # Import the two routers that hold every API endpoint. Splitting them by topic
 # (ontologies vs saved queries) keeps this file small.
+from .team.config import TeamConfig
+
+# Validate before importing services that may create a local data directory.
+_config = TeamConfig.from_env(os.environ)
+
 from .messages import detail_body
 from .local_guard import LocalOnlyMiddleware
 from .network_broker import ApprovalRequired, GrantScopeMiddleware, HostBlocked, Offline
@@ -95,6 +105,21 @@ async def lifespan(_app: FastAPI):
     examples are a convenience, and a data folder that cannot take
     examples.json should not cost the person their own library. What did not
     come in can be added back from the Load dialog."""
+    team = getattr(_app.state, "team", None)
+    if team is not None:
+        from .team.pg_storage import StorageError
+        from .team.repository import UnsupportedSchema
+        try:
+            await run_in_threadpool(team.start)
+        except (StorageError, UnsupportedSchema, OSError, ValueError):
+            # Uvicorn logs startup exceptions. Suppress the lower SQL/catalog
+            # stack as well as its driver cause, keeping only a finite reason.
+            raise RuntimeError('team_startup_failed') from None
+        try:
+            yield
+        finally:
+            await run_in_threadpool(team.close)
+        return
     try:
         library_examples.seed(store)
     except Exception:  # noqa: BLE001 -- any failure here must not stop the server
@@ -104,7 +129,13 @@ async def lifespan(_app: FastAPI):
 
 # Create the application. The title/version surface in the auto-generated
 # OpenAPI docs at /docs.
-app = FastAPI(title="Semantic Studio", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Semantic Studio", version="0.2.0", lifespan=lifespan,
+              docs_url=None if _config.mode == "team" else "/docs",
+              redoc_url=None if _config.mode == "team" else "/redoc",
+              openapi_url=None if _config.mode == "team" else "/openapi.json")
+if _config.mode == "team":
+    from .team.runtime import TeamRuntime
+    app.state.team = TeamRuntime(_config)
 
 # During local development the frontend runs on Vite's port 5173 while this API
 # runs on 8000, so the browser makes cross-origin requests. This middleware
@@ -112,7 +143,7 @@ app = FastAPI(title="Semantic Studio", version="0.2.0", lifespan=lifespan)
 # is served from this same origin, so CORS is not needed there but is harmless.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[] if _config.mode == "team" else ["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],  # permit GET/POST/DELETE/etc. from the dev frontend
     allow_headers=["*"],  # permit any request header (e.g. Content-Type)
 )
@@ -144,42 +175,9 @@ async def refuse_oversized_bodies(request: Request, call_next):
     four routes that take one; an edited mapping a sixth, at 1 MB. The IRIs
     a query's results send to /nodes are a seventh, at 4 MB.
     """
-    if request.method not in ("POST", "PUT", "PATCH"):
-        return await call_next(request)
-    path = request.url.path
-    limit: Optional[int] = None
-    detail = ""
-    if request.method == "PUT":
-        if _SOURCE_PATH.match(path):
-            limit = ontologies.MAX_UPLOAD_BYTES
-            detail = ontologies.too_large_detail(limit, "SEMANTIC_STUDIO_MAX_UPLOAD_BYTES")
-        elif _LAYOUT_PATH.match(path):
-            # A JSON body has no multipart framing, so the exact cap applies;
-            # the CHUNK_BYTES allowance below is for the upload envelopes.
-            if _declared(request) > projects.LAYOUT_MAX_BYTES:
-                return JSONResponse(status_code=413, content=detail_body(projects.layout_too_large()))
-    elif request.method == "PATCH":
-        if _DATA_PATCH_PATH.match(path) and _declared(request) > data.PATCH_MAX_BYTES:
-            return JSONResponse(status_code=413, content=detail_body(data.mapping_too_large()))
-    elif _NODES_PATH.match(path) and _declared(request) > ontologies.NODES_MAX_BYTES:
-        # A JSON body, so the exact cap, as the layout's (query-page-rework 5.2).
-        return JSONResponse(status_code=413, content=detail_body(ontologies.nodes_too_large()))
-    elif _DATA_FILE_PATH.match(path):
-        limit = tabular.MAX_BYTES
-        detail = data.file_too_large()
-    elif path == "/api/ontologies/upload":
-        limit = ontologies.MAX_UPLOAD_BYTES
-        detail = ontologies.too_large_detail(limit, "SEMANTIC_STUDIO_MAX_UPLOAD_BYTES")
-    elif _IMPORT_FILES_PATH.match(path):
-        limit = ontologies.imports_mod.MAX_TOTAL_BYTES
-        detail = ontologies.import_files_too_large()
-    if limit is not None:
-        declared = request.headers.get("content-length")
-        # Content-Length covers the whole multipart envelope, not just the
-        # files, so allow for the framing; the endpoint enforces the exact
-        # limit while reading.
-        if declared and declared.isdigit() and int(declared) > limit + ontologies.CHUNK_BYTES:
-            return JSONResponse(status_code=413, content=detail_body(detail))
+    limit = request_body_limit(request.method, request.url.path)
+    if limit is not None and _declared(request) > limit[0]:
+        return JSONResponse(status_code=413, content=limit[1])
     return await call_next(request)
 
 
@@ -194,6 +192,35 @@ _DATA_PATCH_PATH = re.compile(r"^/api/projects/[^/]+/data/[^/]+$")
 _NODES_PATH = re.compile(r"^/api/ontologies/[^/]+/nodes$")
 
 
+def request_body_limit(method: str, path: str) -> tuple[int, dict] | None:
+    """One cap/metadata table for local headers and team buffered reads.
+
+    Multipart requests include the historical framing allowance. JSON limits
+    stay exact; the source-body cap retains its existing upload allowance.
+    """
+    limit, detail = None, None
+    if method == "PUT":
+        if _SOURCE_PATH.match(path):
+            limit = ontologies.MAX_UPLOAD_BYTES + ontologies.CHUNK_BYTES
+            detail = ontologies.too_large_detail(ontologies.MAX_UPLOAD_BYTES, "SEMANTIC_STUDIO_MAX_UPLOAD_BYTES")
+        elif _LAYOUT_PATH.match(path):
+            limit, detail = projects.LAYOUT_MAX_BYTES, projects.layout_too_large()
+    elif method == "PATCH" and _DATA_PATCH_PATH.match(path):
+        limit, detail = data.PATCH_MAX_BYTES, data.mapping_too_large()
+    elif method == "POST":
+        if _NODES_PATH.match(path):
+            limit, detail = ontologies.NODES_MAX_BYTES, ontologies.nodes_too_large()
+        elif _DATA_FILE_PATH.match(path):
+            limit, detail = tabular.MAX_BYTES + ontologies.CHUNK_BYTES, data.file_too_large()
+        elif path == "/api/ontologies/upload":
+            limit = ontologies.MAX_UPLOAD_BYTES + ontologies.CHUNK_BYTES
+            detail = ontologies.too_large_detail(ontologies.MAX_UPLOAD_BYTES, "SEMANTIC_STUDIO_MAX_UPLOAD_BYTES")
+        elif _IMPORT_FILES_PATH.match(path):
+            limit = ontologies.imports_mod.MAX_TOTAL_BYTES + ontologies.CHUNK_BYTES
+            detail = ontologies.import_files_too_large()
+    return (limit, detail_body(detail)) if limit is not None else None
+
+
 def _declared(request: Request) -> int:
     declared = request.headers.get("content-length")
     return int(declared) if declared and declared.isdigit() else 0
@@ -204,11 +231,11 @@ def _declared(request: Request) -> int:
 # the guard refuses never reaches it.
 app.add_middleware(GrantScopeMiddleware)
 
-# Added last so it runs first: Starlette makes the most recently added
-# middleware the outermost. A request from a foreign page (DNS rebinding, or a
+# Outermost local guard (team authorization additionally wraps it below):
+# Starlette makes the most recently added middleware the outermost. A request from a foreign page (DNS rebinding, or a
 # cross-site form post) is refused here before CORS, the upload cap or any route
 # sees it. See local_guard.py and decision D-065.
-app.add_middleware(LocalOnlyMiddleware)
+app.add_middleware(LocalOnlyMiddleware, team_config=_config if _config.mode == "team" else None)
 
 
 # Attach every endpoint. `ontologies` handles loading, viewing, the graph, the
@@ -219,6 +246,20 @@ app.include_router(network.router)
 app.include_router(projects.router)
 app.include_router(data.router)
 app.include_router(examples.router)
+
+if _config.mode == "team":
+    from .routers.auth import create_auth_router
+
+    class _RuntimeService:
+        """Resolve started services without opening the database during import."""
+        def __init__(self, name):
+            self.name = name
+
+        def __getattr__(self, attribute):
+            return getattr(getattr(app.state.team, self.name), attribute)
+
+    app.include_router(create_auth_router(_config, _RuntimeService("auth_store"),
+                                          _RuntimeService("identity")))
 
 
 # Message metadata is additive: old detail strings/objects remain byte-for-byte
@@ -255,8 +296,19 @@ async def _offline(_request: Request, exc: Offline) -> JSONResponse:
 # A trivial liveness probe. Deployment tooling (and our own scripts) hit this
 # to confirm the server is up before doing anything else.
 @app.get("/api/health")
-def health() -> dict:
+async def health() -> dict:
     return {"status": "ok"}
+
+
+if _config.mode == "local":
+    @app.get("/api/auth/status")
+    def local_auth_status() -> JSONResponse:
+        # The frontend discovers its mode before rendering the library. Local
+        # discovery needs neither identity services nor a session database.
+        return JSONResponse(
+            {"mode": "local", "authenticated": False, "user": None, "csrf": None},
+            headers={"Cache-Control": "no-store"},
+        )
 
 
 # --- serve the built frontend in production ---------------------------------
@@ -271,3 +323,68 @@ if static_dir.is_dir():
     # html=True makes StaticFiles serve index.html for the root path, which is
     # what a single-page app needs.
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+
+
+def _distribution_static_paths(directory: Path) -> set[str]:
+    """Expose only generated legal artifacts and hash-verified notice originals.
+
+    The actual bundled component inventory defines notice paths. An arbitrary
+    text/JSON file beside the frontend never becomes a public data endpoint.
+    """
+    root = directory.resolve()
+    manifest = directory / "runtime-components.json"
+    if not manifest.exists():
+        return set()
+    if manifest.is_symlink() or root not in manifest.resolve().parents:
+        raise ValueError("Invalid frontend distribution inventory")
+    inventory = json.loads(manifest.read_text(encoding="utf-8"))
+    components = inventory.get("components")
+    if not isinstance(components, list):
+        raise ValueError("Invalid frontend distribution inventory")
+    paths = {"/runtime-components.json"}
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
+        item = directory / name
+        if not item.is_file() or item.is_symlink() or root not in item.resolve().parents:
+            raise ValueError("Missing frontend distribution notice")
+        paths.add("/" + name)
+    for component in components:
+        notices = component.get("notices")
+        if not isinstance(notices, list):
+            raise ValueError("Invalid frontend distribution notices")
+        for notice in notices:
+            digest = notice.get("sha256")
+            name = notice.get("text")
+            if (not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest)
+                    or name != f"licenses/texts/{digest}.txt"):
+                raise ValueError("Invalid frontend notice path")
+            item = directory / name
+            if (not item.is_file() or item.is_symlink() or root not in item.resolve().parents
+                    or hashlib.sha256(item.read_bytes()).hexdigest() != digest):
+                raise ValueError("Invalid frontend notice original")
+            paths.add("/" + name)
+    return paths
+
+
+if _config.mode == "team":
+    from .team.middleware import TeamMiddleware
+
+    # Publish only actual build artifacts, never arbitrary paths under a static
+    # prefix. A data directory inside the web root must fail before serving it.
+    public_static_paths = set()
+    if static_dir.is_dir():
+        root = static_dir.resolve()
+        data_root = _config.data_dir.resolve()
+        if data_root == root or root in data_root.parents or data_root in root.parents:
+            raise ValueError("Team data and static directories must be separate")
+        public_static_paths.update({"/", "/index.html"})
+        for item in static_dir.rglob("*"):
+            relative = item.relative_to(static_dir)
+            if (item.is_file() and not item.is_symlink() and root in item.resolve().parents
+                    and item.suffix in {".html", ".js", ".css", ".svg", ".png", ".ico", ".woff", ".woff2"}
+                    and not any(part.startswith(".") for part in relative.parts)):
+                public_static_paths.add("/" + relative.as_posix())
+        public_static_paths.update(_distribution_static_paths(static_dir))
+    # Outermost, so neither CORS nor upload/body parsing precedes authentication.
+    app.add_middleware(TeamMiddleware, runtime=app.state.team,
+                       public_static_paths=frozenset(public_static_paths),
+                       body_limit=request_body_limit)

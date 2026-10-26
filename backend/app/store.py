@@ -321,6 +321,17 @@ def parse_rdf(
             ) from exc
 
 
+def restore_team_graph(holder, payload: dict) -> None:
+    """Hydrate a fresh ontology/snapshot holder before publishing any views.
+
+    Team candidates restore typed terms in the owning store layer instead of
+    reparsing their originals. This is construction, never an edit to a live
+    document; the transaction boundary publishes the candidate only afterward.
+    """
+    from .team.rdf_codec import decode_graph
+    holder.graph = decode_graph(payload)
+
+
 @dataclass
 class Ontology:
     """One loaded ontology: its identity, metadata, and lazily built views.
@@ -761,11 +772,14 @@ class OntologyStore:
 
 # Module-level singletons shared across the app. Creating the store scans the
 # data directory once at import time; the saved-query store lives beside it.
-store = OntologyStore()
-saved_queries = SavedQueryStore(store.data_dir)
+from .team.context import ServiceProxy
+
+store = ServiceProxy("store", factory=OntologyStore)
+saved_queries = ServiceProxy("saved_queries", factory=lambda: SavedQueryStore(store.data_dir))
 # The broker keeps its policy and activity log beside the library, and this is
 # the one module that knows where that is.
-network_broker.broker.configure(store.data_dir)
+if os.environ.get("SEMANTIC_STUDIO_MODE", "local") != "team":
+    network_broker.broker.configure(store.data_dir)
 
 
 # Above this many statements the formatted source view is a bounded

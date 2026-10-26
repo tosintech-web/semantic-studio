@@ -61,6 +61,7 @@ export function useDialogTrap(
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (panelRef.current?.closest("[inert]")) return;
       if (e.key === "Escape") {
         e.preventDefault();
         onEscape();
@@ -76,7 +77,7 @@ export function useDialogTrap(
 /** Tab and Shift+Tab kept inside `panel`, wrapping at either end. Shared with
  *  the Load dialog, whose focus and Escape differ but whose Tab does not. */
 export function wrapTab(panel: HTMLElement, e: KeyboardEvent): void {
-  if (e.key !== "Tab") return;
+  if (e.key !== "Tab" || panel.closest("[inert]")) return;
   // Only what Tab really stops on: the Load dialog's file input is `hidden`,
   // and as the last item it let focus out and caught Shift+Tab (Chrome).
   // checkVisibility catches CSS hiding where the browser has it; jsdom has not.

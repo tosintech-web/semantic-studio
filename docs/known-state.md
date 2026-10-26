@@ -3120,3 +3120,97 @@ MainThread calls. The timeout test now gates its worker with an event and joins
 that exact worker in finally. It also asserts the worker is still alive when
 the API reports stopped. The application's behavior and the200-call assertion
 stay unchanged; no delay, threshold relaxation or thread filtering masks work.
+
+## P2 foundation checkpoint — 2026-10-25
+
+The P2 work branch adds isolated team configuration, a typed RDF graph codec,
+SQLite resource revisions/audit/replay and server-owned authentication building
+blocks. These do not activate a shared runtime in the existing local application.
+`docs/p2-verification.md` tracks the integration boundary and remaining work.
+Team message contracts use the same Japanese/English catalogs as P1. Resource
+tombstones retain their version, and graph persistence must preserve blank-node
+identifiers, literal lexical forms, language tags and unknown RDF predicates.
+
+## P2 configurable identity — 2026-10-26
+
+Workspace membership uses a required server-configured domain allowlist with no
+deployment-specific default. Public fixtures/docs use reserved example domains;
+actual settings and session databases stay outside Git and Docker. Publication
+checks accept a private external value list without logging its values, even
+when they appear in paths, archives or approved binary metadata. Removing a value
+from the current tree does not erase existing Git or PR history. The integration
+status and privacy boundaries are documented separately in `docs/p2-verification.md`
+and `docs/team-configuration-privacy.md`.
+
+## Team commits publish only accepted candidates
+
+P2 adds an explicit team mode. Existing local services retain their behavior,
+while request-bound proxies resolve to detached team candidates. Immutable file
+blobs and typed RDF resources preserve original bytes, namespaces and blank-node
+identities. The PostgreSQL common-gate transaction checks all expected versions and commits the
+resource changes, audit and actor-scoped request replay together. Failed candidate
+work cannot publish a shared edit. Full-operation inverse records enforce both
+latest-version and actor constraints; restoring a graph belongs to the existing
+store owner rather than an exception to the direct-mutation architecture test.
+Imports, snapshots and derived read caches keep their own generations and leases;
+a long read cannot lose its candidate directory while a later commit retires it.
+
+## Team input survives the browser
+
+A real Chrome InputEvent exposed a gap that jsdom change events missed: a parent
+input-capture handler that renders synchronously, or in a microtask, can reset a
+controlled field before the target's React onChange reads its native value. Dirty
+bookkeeping captures refs immediately and publishes its UI in a later task.
+Retained forms stay mounted across401 and409; suspended hosts are inert and hidden,
+and their document-level modal handlers do not trap recovery controls. Conflict
+review reads the current saved source between two matching version snapshots,
+then accepts only the explicitly reviewed baseline without resending the write.
+Background auth/versions polling does not count as user activity for idle expiry.
+
+## Team queued authentication
+
+The shared PostgreSQL write gate can wait behind a writer. Team authentication therefore
+runs in the threadpool, so public health and other async requests remain live.
+Production callers supply a clock function sampled after the transaction acquires
+its lock: a queued request's earlier timestamp must not falsely precede the last
+seen time written by another request. Numeric test clocks still enforce actual
+backward-clock rejection and precise idle/absolute expiry boundaries.
+
+## Team input owns its basis
+
+Canvas debounce, pending movements and in-flight saves register ownership before
+polling can replace their basis. Failed or unmounted owners retain their intent;
+only explicit recovery overlays their positions/viewport on the latest layout,
+preserving other members' positions. Query drafts track semantic content and save
+prompts rather than translated labels. Late acknowledgements and old-session
+failures cannot rebind a new document/query/session or roll its basis backward.
+Version HTTP headers use ASCII JSON so arbitrary Unicode resource names survive
+browser transport. Team export/duplicate projects current typed graph authority
+while preserving original saved bytes; export serializes a clone to avoid mutating
+namespaces as a side effect of a read.
+
+## PostgreSQL team boundary — 2026-10-27
+
+The current team runtime replaces the historical SQLite foundation. PostgreSQL
+is a dedicated Compose service on one IPv4 internal bridge, with no host DB port.
+HBA rejects its gateway, other DBs/roles and network superuser access. Every
+connector validates service DNS against the shared CIDR and pins hostaddr for
+that runtime. App, maintenance and backup receive only their own secret file.
+
+The session lease and write gate use distinct fixed keys. The lease connection
+is the only writer, so losing ownership cannot be hidden by a pool reconnect.
+The server exits on fatal storage loss and Compose restarts a fresh process.
+Clock and current session/role checks occur after the gate, including replayed
+Undo. Auth outages return 503 without erasing the cookie or retained input.
+
+Backup streams one consistent generation plus current/history-only immutable
+blobs. Restore targets another empty DB/blob volume, validates discarded login
+rows too, and removes sessions/attempts before publishing. A durable incomplete
+marker fences failed or uncertain imports. Legacy SQLite files are refused,
+never opened, converted or removed. Local mode keeps its file persistence.
+
+Actual network denials, real UID access, distinct-secret failures, changed-IP DB
+recreation, live-source/two-project recovery and runtime SQLite audit are tested.
+The database partition runs in Linux 3.12/3.14; Windows remains local/pure/file
+compatibility. Dated historical checkpoints are not replacement verification;
+use the PostgreSQL verification record.

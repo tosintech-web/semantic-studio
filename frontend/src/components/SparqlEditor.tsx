@@ -51,6 +51,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useI18n } from "../i18n/I18nProvider";
 import { renderUiMessage } from "../i18n/uiMessage";
 import type { OperationFailure } from "../i18n/operationFailure";
@@ -103,6 +104,7 @@ export default function SparqlEditor({
   onBack,
   onClose,
 }: Props) {
+  const team = useTeam();
   const { t } = useI18n();
   const [text, setText] = useState(() => (textQuery ? initialText : generated));
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -225,7 +227,7 @@ export default function SparqlEditor({
         >
           {running ? t("sparql.editor.running") : t("sparql.editor.run")}
         </button>
-        <button className="ghost" disabled={!value.trim()} onClick={onSave} title={saveTitle}>
+        <button className="ghost" disabled={!value.trim() || !team.canEdit} onClick={onSave} title={saveTitle}>
           ⌸ {saveLabel}
         </button>
         <button className="ghost" disabled={!value} onClick={() => onDownload(value)}>

@@ -39,3 +39,14 @@ tokens/
 shots/
 screenshots/
 .superpowers/
+*.sqlite*
+*.db
+*.db-*
+*.db.*
+*.private-values
+
+# Private PostgreSQL credentials and operator recovery generations
+secrets/
+team-data/
+team-backups/
+team-local-source/

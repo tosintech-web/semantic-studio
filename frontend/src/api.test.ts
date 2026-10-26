@@ -123,6 +123,13 @@ afterEach(() => {
 // One call per exported function. The arguments are placeholders: fetch is a
 // spy, so nothing reaches a server.
 const CALLS: Record<string, () => Promise<unknown>> = {
+  authStatus: () => api.authStatus(),
+  loginTeam: () => api.loginTeam(),
+  logoutTeam: () => api.logoutTeam(),
+  teamVersions: () => api.teamVersions(),
+  teamHistory: () => api.teamHistory("workspace"),
+  teamUsers: () => api.teamUsers(),
+  updateTeamUser: () => api.updateTeamUser({sub:"a",email:"a@example.test",role:"viewer",disabled:false,version:1},"editor",false),
   listOntologies: () => api.listOntologies(),
   uploadOntology: () => api.uploadOntology(new File(["x"], "x.ttl")),
   fetchOntology: () => api.fetchOntology("https://example.org/x.ttl"),
@@ -254,7 +261,8 @@ describe("api client header (S-6)", () => {
       ...Array(6).fill("DELETE"),
       "PATCH",
       "PATCH",
-      ...Array(31).fill("POST"),
+      "PATCH",
+      ...Array(33).fill("POST"),
       "PUT",
       "PUT",
       "PUT",

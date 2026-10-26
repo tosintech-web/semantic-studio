@@ -48,6 +48,8 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {setQueryDraft} from "../team/queryDrafts";
+import type {SetStateAction} from "react";
 import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
 import { useI18n } from "../i18n/I18nProvider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -199,6 +201,12 @@ export interface TextQuery {
   resume: { id: string; name: string } | null;
 }
 
+// Labels are read projections; only authored structure belongs to the dirty
+// baseline. UI/display-language changes must not invent an unsaved definition.
+function definitionSignature(state:QueryState):string{
+ return JSON.stringify(state,(key,value)=>key==="label"?undefined:value);
+}
+
 /** The hook itself: owns the builder state and exposes state + actions. */
 export function useQueryBuilder(
   ontologyId: string | null,
@@ -213,10 +221,10 @@ export function useQueryBuilder(
   const [schema, setSchema] = useState<QuerySchema | null>(null);      // class-level schema
   const [schemaError, setSchemaError] = useState<unknown | null>(null); // schema fetch error
   const [loadingSchema, setLoadingSchema] = useState(false);
-  const [state, setState] = useState<QueryState>(emptyQueryState);     // the query being built
+  const [state, setRawState] = useState<QueryState>(emptyQueryState);     // the query being built
   const { t } = useI18n();
   const [hint, setHint] = useState<UiMessage | null>(null);               // transient user guidance
-  const [openQuery, setOpenQuery] = useState<{ id: string; name: string } | null>(null); // saved query being edited
+  const [openQuery, setRawOpenQuery] = useState<{ id: string; name: string } | null>(null); // saved query being edited
   const [textQuery, setTextQuery] = useState<TextQuery | null>(null);  // set while the query is text
   const textRef = useRef("");                        // the live text; a ref so typing renders nothing here
   const textQueryRef = useRef(textQuery);            // read by addNode without re-binding it
@@ -235,9 +243,26 @@ export function useQueryBuilder(
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  const draftOwner=useMemo(()=>({ontologyId,queryId:null as string|null,
+    visualBaseline:definitionSignature(emptyQueryState()),textBaseline:"",mode:"visual" as "visual"|"text",savedMode:"visual" as "visual"|"text",savePrompt:false,selection:{}}),[ontologyId]);
+  const draftOwnerRef=useRef(draftOwner);draftOwnerRef.current=draftOwner;
+  const publishDraft=useCallback(()=>{
+    const owner=draftOwnerRef.current;
+    setQueryDraft(owner,owner.savePrompt||owner.mode!==owner.savedMode||(owner.mode==="text"?
+      textRef.current!==owner.textBaseline:definitionSignature(stateRef.current)!==owner.visualBaseline));
+  },[]);
+  const setState=useCallback((action:SetStateAction<QueryState>)=>{
+    const next=typeof action==="function"?action(stateRef.current):action;
+    stateRef.current=next;setRawState(next);publishDraft();
+  },[publishDraft]);
+  const setOpenQuery=useCallback((action:SetStateAction<{id:string;name:string}|null>)=>{
+    const next=typeof action==="function"?action(openQueryRef.current):action;
+    openQueryRef.current=next;draftOwnerRef.current.queryId=next?.id??null;setRawOpenQuery(next);
+  },[]);
+  useEffect(()=>()=>setQueryDraft(draftOwner,false),[draftOwner]);
   // Everything is per-ontology; switching ontologies starts a fresh query.
   useEffect(() => {
-    setState(emptyQueryState());
+    stateRef.current=emptyQueryState();setRawState(stateRef.current);publishDraft();
     setSchema(null);
     setSchemaError(null);
     setHint(null);
@@ -568,7 +593,9 @@ export function useQueryBuilder(
   /** Empty the path back to a blank query. */
   const clear = useCallback(() => {
     nodeIntent.current += 1;
-    setState((prev) => ({ ...prev, steps: [] }));
+    const next={...stateRef.current,steps:[]};
+    draftOwnerRef.current.selection={};draftOwnerRef.current.visualBaseline=definitionSignature(next);
+    setState(next);
     setHint(null);
     setOpenQuery(null);
   }, []);
@@ -576,7 +603,9 @@ export function useQueryBuilder(
   /** Load a saved query's state and remember which saved query it is. */
   const loadState = useCallback((next: QueryState, opened: { id: string; name: string }) => {
     nodeIntent.current += 1;
-    setState({ ...emptyQueryState(), ...next });
+    const normalized={...emptyQueryState(),...next};
+    const owner=draftOwnerRef.current;owner.selection={};owner.mode="visual";owner.savedMode="visual";owner.savePrompt=false;owner.visualBaseline=definitionSignature(normalized);
+    setState(normalized);
     setOpenQuery(opened);
     setHint(null);
     setTextQuery(null);
@@ -589,6 +618,7 @@ export function useQueryBuilder(
   const forkToText = useCallback((text: string, baseline: string) => {
     nodeIntent.current += 1;
     textRef.current = text;
+    draftOwnerRef.current.mode="text";draftOwnerRef.current.textBaseline=baseline;publishDraft();
     setTextQuery({
       forkedFrom: stateRef.current,
       name: null,
@@ -618,6 +648,7 @@ export function useQueryBuilder(
     ) => {
       nodeIntent.current += 1;
       textRef.current = text;
+      const owner=draftOwnerRef.current;owner.selection={};owner.mode="text";owner.savedMode="text";owner.textBaseline=text;owner.savePrompt=false;publishDraft();
       sessionRef.current += 1;
       // From one text query to another, the query to resume is still the one
       // behind the first: that is whose state the builder is holding.
@@ -641,8 +672,8 @@ export function useQueryBuilder(
 
   /** The editor reports each keystroke here; nothing renders. */
   const setText = useCallback((text: string) => {
-    textRef.current = text;
-  }, []);
+    textRef.current = text;publishDraft();
+  }, [publishDraft]);
 
   /**
    * After a save, the saved text is what leaving without loss means. The text
@@ -650,6 +681,7 @@ export function useQueryBuilder(
    * flight never reached the server and must still count as unsaved.
    */
   const markTextSaved = useCallback((saved: string) => {
+    draftOwnerRef.current.savedMode="text";draftOwnerRef.current.textBaseline=saved;publishDraft();
     setTextQuery((prev) => (prev ? { ...prev, baseline: saved } : prev));
   }, []);
 
@@ -663,6 +695,7 @@ export function useQueryBuilder(
     nodeIntent.current += 1;
     const current = textQueryRef.current;
     if (!current) return;
+    draftOwnerRef.current.mode="visual";
     if (!current.forkedFrom) setOpenQuery(current.resume);
     // Identity, not equality: a fork from this session holds the builder's own
     // state object, and handing back a copy would re-run everything keyed on it.
@@ -670,7 +703,7 @@ export function useQueryBuilder(
       setState({ ...emptyQueryState(), ...current.forkedFrom });
     }
     textRef.current = "";
-    setTextQuery(null);
+    setTextQuery(null);publishDraft();
   }, []);
 
   /** Whether leaving now would lose typed text. */
@@ -717,9 +750,22 @@ export function useQueryBuilder(
     return changed ? { ...state, steps } : state;
   }, [schema, state, pinNames, pinScope]);
 
+  const markVisualSaved=useCallback((sent:QueryState)=>{
+    draftOwnerRef.current.savedMode="visual";draftOwnerRef.current.visualBaseline=definitionSignature(sent);publishDraft();
+  },[publishDraft]);
+  const setSavePromptDraft=useCallback((shown:boolean)=>{draftOwnerRef.current.savePrompt=shown;publishDraft();},[publishDraft]);
+  const queryIsDirty=useCallback(()=>{
+    const owner=draftOwnerRef.current;
+    return owner.savePrompt||owner.mode!==owner.savedMode||(owner.mode==="text"?textRef.current!==owner.textBaseline:definitionSignature(stateRef.current)!==owner.visualBaseline);
+  },[]);
+  const discardQueryDraft=useCallback(()=>{
+    const owner=draftOwnerRef.current;owner.selection={};owner.mode="visual";owner.savedMode="visual";owner.savePrompt=false;owner.visualBaseline=definitionSignature(emptyQueryState());
+    stateRef.current=emptyQueryState();setRawState(stateRef.current);textRef.current="";setTextQuery(null);setOpenQuery(null);publishDraft();
+  },[publishDraft,setOpenQuery]);
   // Everything the graph and the panel need, in one object.
   return {
     schema,
+    markVisualSaved,setSavePromptDraft,queryIsDirty,discardQueryDraft,currentQuerySession:()=>draftOwnerRef.current.selection,
     schemaError,
     loadingSchema,
     state: displayState,

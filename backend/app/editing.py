@@ -4640,5 +4640,7 @@ def _delta_json(change: Change, cap: int = 500) -> dict:
 
 # The two singletons the router uses, beside the store they depend on. Tests
 # point them at their own data directory with configure().
-project_store = ProjectStore(_default_store.data_dir)
-editing_service = EditingService(project_store, _default_store)
+from .team.context import ServiceProxy
+
+project_store = ServiceProxy("project_store", factory=lambda: ProjectStore(_default_store.data_dir))
+editing_service = ServiceProxy("editing_service", factory=lambda: EditingService(project_store, _default_store))

@@ -14,11 +14,18 @@ them by clicking, without writing SPARQL by hand.
 ## この改変版について
 
 これは [Imran Khan氏のSemantic Studio](https://github.com/imrankhan1984/semantic-studio) の
-非公式改変版です。日本語の辞書編集・閲覧を使いやすくするP1開発を進めています。
+非公式改変版です。日本語の辞書編集・閲覧（P1）と、明示設定で利用するチーム版（P2）を追加しています。
 [日本語の操作手順](docs/p1-user-guide.md)と[配布物のライセンス通知](docs/distribution-notices.md)を参照してください。
 現在の対応範囲と検証結果は [P1実装計画](docs/superpowers/plans/2026-10-24-p1-dictionary-workspace.md)
 を参照してください。改変版の問い合わせは
 [このリポジトリのIssues](https://github.com/tosintech-web/semantic-studio/issues) へお願いします。
+
+チーム版はGoogle Workspace認証、閲覧者・編集者・管理者の権限、専用PostgreSQLへの即時保存、
+変更履歴と版の競合検査を使います。[チーム版の操作](docs/p2-user-guide.md)、
+[設定・移行・バックアップ](docs/p2-team-operations.md)、[P2検証記録](docs/p2-verification.md)を参照してください。
+DBはDocker Composeの専用internal network内だけで利用し、5432をホストへ公開しません。
+[PostgreSQL置換の検証](docs/p2-postgresql-verification.md)も参照してください。
+既定のローカル版は継続します。本番Google認証・配備環境での確認は別途必要です。
 
 ソフトウェア本体は元作者の著作権表示を含む [MIT License](LICENSE) を維持します。
 データ・標準語彙・依存ライブラリはそれぞれの条件に従い、MITへ一括変更しません。
@@ -29,6 +36,8 @@ them by clicking, without writing SPARQL by hand.
 保護できません。公開前には `python scripts/check_publication.py --staged` または
 `--git-ref <対象コミット>` で実際のGit blobを検査します。結果0は定義済みルールの合格であり、
 未検出の秘密や未知の業務データがないという保証ではありません。
+Google認証の許可ドメインはサーバーの運用設定とし、実値をソースや公開例へ含めません。
+[認証設定と公開範囲](docs/team-configuration-privacy.md) に設定テンプレートと非公開値の検査手順を記載しています。
 データセットの追加は `publication-policy.json` に出典・条件・SHA-256を登録し、内容をレビューします。
 例外はパス・ルール・理由を限定してレビューしてください。
 
@@ -206,17 +215,22 @@ itself at <http://localhost:8000>.
 
 ```bash
 cd backend
-.venv/Scripts/python -m pytest tests
+.venv/Scripts/python -m pytest tests -m "not team_db and not network"
 
-cd frontend
+cd ../frontend
 npm run test
 ```
 
-Both run everything locally, performance budgets included. CI runs both suites
-on every pull request — the backend on Linux (Python 3.12) and Windows (Python
-3.14), the frontend with its type check and production build, and the Docker
-image — with the timing budgets in a separate, informational job, because a
-shared runner is a loaded machine.
+The native backend command runs every local/pure case and performance budget;
+on Linux/macOS use `.venv/bin/python`. Run the entire database partition on
+Compose Python 3.12 and 3.14 using the
+[isolated test setup](docs/p2-postgresql-test-inventory.md#全集合の実行).
+Both partitions together cover every non-network backend case. Never publish
+a database port for host tests. The frontend command includes all its budgets.
+CI requires Linux local/PostgreSQL/Compose-browser coverage, Windows native local
+compatibility, the frontend type check/build, Docker and publication checks.
+Timing budgets run in a separate informational job because a shared runner is
+a loaded machine.
 
 ## Try it
 

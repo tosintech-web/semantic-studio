@@ -42,6 +42,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useI18n } from "../i18n/I18nProvider";
 import type { Translator, UiLocale } from "../i18n/types";
 import { countKindMessage } from "../i18n/kindLabel";
@@ -88,6 +89,7 @@ export default function ProjectCard({
   onExport,
   onDelete,
 }: Props) {
+  const team = useTeam();
   const { t, locale } = useI18n();
   const headingId = useId();
   const menuId = useId();
@@ -196,6 +198,7 @@ export default function ProjectCard({
               {menuOpen && (
                 <>
                   <button
+                    disabled={!team.canEdit}
                     onClick={() => {
                       setMenuOpen(false);
                       setRenaming(true);
@@ -204,13 +207,13 @@ export default function ProjectCard({
                   {/* A project from before kinds gets its kind when it is
                       first opened; until then there is nothing to change. */}
                   {project.kind && (
-                    <button onClick={act(onChangeKind)}>
+                    <button disabled={!team.canEdit} onClick={act(onChangeKind)}>
                       {project.kind === "ontology" ? t("home.toTaxonomy") : t("home.toOntology")}
                     </button>
                   )}
-                  <button onClick={act(onDuplicate)}>{t("home.duplicate")}</button>
+                  <button disabled={!team.canEdit} onClick={act(onDuplicate)}>{t("home.duplicate")}</button>
                   <button onClick={act(onExport)}>{t("home.export")}</button>
-                  <button className="danger" onClick={act(onDelete)}>{t("home.delete")}</button>
+                  <button className="danger" disabled={!team.canAdmin} onClick={act(onDelete)}>{t("home.delete")}</button>
                 </>
               )}
             </div>

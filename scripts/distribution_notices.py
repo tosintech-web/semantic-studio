@@ -2,7 +2,7 @@
 ================================================================================
 FILE: scripts/distribution_notices.py
 SUMMARY
-    Verify and ship original notices for actual installed Python distributions.
+    Verify and ship original notices for installed Python and libpq dependencies.
 BASIC IDEA
     Match installed application versions to the reviewed source inventory, verify
     every recorded original against installed bytes and refuse additional license
@@ -21,6 +21,8 @@ from importlib import metadata
 import json
 from pathlib import Path, PurePosixPath
 import re
+import subprocess
+import sysconfig
 
 BASE_TOOLS = {"pip", "setuptools", "wheel"}
 COLLECTED = {"text-collected", "project-text-collected", "upstream-text-collected"}
@@ -71,13 +73,77 @@ def collect_python_notices(inventory, output, distributions=None):
     return result
 
 
+def discover_native_packages():
+    """Follow the actual dynamically loaded libpq closure, including base libs.
+
+    Run only in the Debian distribution image. No library path comes from an
+    ontology or archive, and no shell evaluates ldd/dpkg output as commands.
+    """
+    architecture = sysconfig.get_config_var('MULTIARCH')
+    if not architecture or not re.fullmatch(r'[a-zA-Z0-9_-]+', architecture):
+        raise ValueError('Unknown native distribution architecture')
+    libpq = Path('/usr/lib') / architecture / 'libpq.so.5'
+    linked = subprocess.check_output(['ldd', str(libpq)], text=True)
+    paths = {str(libpq.resolve())}
+    paths.update(str(Path(p).resolve()) for p in re.findall(r'(/[^\s()]+)', linked))
+    if 'not found' in linked or len(paths) < 2:
+        raise ValueError('Incomplete libpq native closure')
+    packages = {}
+    for path in sorted(paths):
+        owned = subprocess.check_output(['dpkg-query', '-S', path], text=True).strip()
+        owner = owned.split(': ', 1)[0]
+        if '\n' in owned or not re.fullmatch(r'[a-z0-9+.-]+(?::[a-z0-9]+)?', owner):
+            raise ValueError('Ambiguous native library ownership')
+        version = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', owner], text=True)
+        packages[owner.split(':')[0]] = version
+    if 'libpq5' not in packages:
+        raise ValueError('Missing libpq package provenance')
+    return packages
+
+
+def collect_native_notices(inventory, output, *, packages=None, root=Path('/')):
+    packages = discover_native_packages() if packages is None else packages
+    if not packages or 'libpq5' not in packages:
+        raise ValueError('Incomplete native dependency closure')
+    known = {(c['name'], c['version']): c for c in inventory['components'] if c['ecosystem'] == 'debian'}
+    components, originals = [], {}
+    for name, version in sorted(packages.items()):
+        component = known.get((name, version))
+        if component is None or component.get('status') not in COLLECTED or not component.get('notices'):
+            raise ValueError(f'Unreviewed native distribution {name}@{version}')
+        notices = []
+        for notice in component['notices']:
+            path = PurePosixPath(notice['original_path'])
+            if '..' in path.parts or not str(path).startswith('/usr/share/doc/'):
+                raise ValueError('Invalid native notice path')
+            data = (Path(root) / str(path).lstrip('/')).read_bytes()
+            digest = hashlib.sha256(data).hexdigest()
+            if digest != notice['sha256']:
+                raise ValueError(f'Changed native notice for {name}@{version}')
+            relative = f'texts/{digest}.txt'
+            originals[relative] = data
+            notices.append({**notice, 'text': relative})
+        components.append({**component, 'notices': notices})
+    output = Path(output)
+    (output / 'texts').mkdir(parents=True, exist_ok=True)
+    for path, data in originals.items():
+        (output / path).write_bytes(data)
+    result = {'basis': 'Actual Debian libpq dynamic dependency closure and original package copyrights; versions and hashes verified.', 'components': components}
+    (output / 'native-components.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Verify installed application notices and write a distribution artifact.")
     parser.add_argument("--inventory", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument('--native-inventory', type=Path)
     args = parser.parse_args()
     result = collect_python_notices(json.loads(args.inventory.read_text(encoding="utf-8")), args.output)
     print(f"Verified {len(result['components'])} installed Python application distributions and their original notices.")
+    if args.native_inventory:
+        native = collect_native_notices(json.loads(args.native_inventory.read_text(encoding='utf-8')), args.output.parent / 'native')
+        print(f"Verified {len(native['components'])} native library packages and their original copyrights.")
 
 
 if __name__ == "__main__":

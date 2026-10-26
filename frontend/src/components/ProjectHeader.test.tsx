@@ -688,3 +688,14 @@ it("reports a name-read error once and retries by reselecting the current dictio
   expect(handlers.onError).toHaveBeenCalledTimes(1);
   expect(validateProject).toHaveBeenCalledTimes(1);
 });
+
+it('team multi-document undo replaces the complete document listing and selects a remaining document', async () => {
+  const shapes = {...doc(),doc:'shapes' as const,ontologyId:'prj-0123456789ab-shapes'};
+  openProject.mockResolvedValue({project:PROJECT,documents:[doc(),shapes],recovery:{available:false,draftTime:null}});
+  await projectStore.open(PROJECT.id);
+  projectStore.switchDocument('shapes');
+  undoChange.mockResolvedValue({revision:4,label:'Undo',state:doc({revision:4}),documents:[doc({revision:4})],removedDocuments:['shapes']});
+  await projectStore.undo();
+  expect(projectStore.getSnapshot().documents.map(d=>d.doc)).toEqual(['model']);
+  expect(projectStore.getSnapshot().activeDoc).toBe('model');
+});

@@ -49,18 +49,29 @@ app writes into the real per-user ontology library.
 ## Testing
 
 ```bash
-cd backend  && python -m pytest tests    # full suite, including performance budgets
+cd backend  && python -m pytest tests -m "not team_db and not network"  # all local/pure tests and budgets
 cd frontend && npm run test              # full suite, including performance budgets
 ```
 
-Both suites must pass before any change is considered done, and locally both
-run everything, budgets included. Dated P1 results live in `docs/p1-verification.md`,
+Run the entire `team_db and not network` partition in the dedicated internal
+Compose runner on both Python 3.12 and 3.14; see
+`docs/p2-postgresql-test-inventory.md` and `docs/p2-team-operations.md` for its
+isolated secrets/project setup. Never publish the DB port for host tests.
+The native and Compose partitions together must cover every non-network
+backend case; no performance test is omitted. Bare `pytest tests` includes
+the DB cases and belongs inside the configured Compose runner.
+
+Both suites and the full DB partition must pass before any change is considered
+done, including the native default-factor performance budgets. Dated P1 results live in `docs/p1-verification.md`,
 so test counts are not maintained as a second, easily stale copy here.
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to
-`main`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
-`backend-windows` (Python 3.14), `frontend` (`npm run test:ci`, `tsc -b`,
-`vite build`) and `docker` (`docker build .`). `budgets` only reports. A build
+`main`. The existing blocking names `backend-linux` and `backend-windows` aggregate the
+Linux local/PG/Compose-browser jobs and Windows native local compatibility,
+respectively. Real PostgreSQL tests run in internal-only Linux containers on
+Python 3.12 and 3.14. Windows does not run native team DB integration. `frontend`
+(`npm run test:ci`, `tsc -b`, `vite build`), `docker` and `publication` also gate.
+`budgets` only reports, including the P1 browser median. A build
 is not done until CI is green on its pull request.
 
 **Timing budgets are separated, not deleted.** Backend timing tests carry
@@ -195,6 +206,9 @@ backend/app/
   hierarchy.py       subClassOf / broader / subPropertyOf forests for the tree view
   docs_export.py     The documentation-site zip (with docs_assets/)
   provenance.py      Activity records for exports
+  team/              Explicit team configuration, Google sessions and roles,
+                     PostgreSQL resources/audit/replay, detached candidate editing,
+                     immutable blobs, versioned Undo and maintenance
   routers/           HTTP layer only; the real work lives in the modules above
 
 frontend/src/
@@ -251,6 +265,9 @@ in a module.
 
 ## Load-bearing rules
 
+- Team handlers use request-bound detached services; the database commits resources, audit and replay before any successful response. Local fallback services never initialize in team mode. [Team commits publish only accepted candidates]
+- Team polling never renews idle sessions. Retained forms suspend their document key handlers, and input-capture bookkeeping publishes in a later task, after the target reads native input. [Team input survives the browser]
+
 - Third-party originals are raw bytes keyed by inventory hashes; text-mode normalization breaks their provenance. [Third-party notices preserve original bytes]
 
 - Import message carriers need explicit sibling metadata before JSON persistence; local-only retries keep that metadata with the saved failure. [Import refusal facts persist]
@@ -261,6 +278,7 @@ before undoing a rule, and add a line here and an entry there when a build
 leaves one behind.
 
 **Security and network**
+- Team authentication waits for PostgreSQL off the event loop and samples live time after acquiring the common write gate. [Team queued authentication]
 - Approval purposes come from source facts; an unknown redirect descriptor keeps the complete original reason visible. [Approval purposes carry source facts]
 - Only `network_broker.py` connects out; policy is asked before any name resolves. [outbound connection]
 - The broker connects to the judged address (`_pinned_url`), the name in `Host` and SNI. [outbound connection]
@@ -269,8 +287,8 @@ leaves one behind.
 - Never read rdflib's `service_string`; blocks come from `find_service_blocks` and `match_blocks`. [SERVICE]
 - The SERVICE handler never raises `NotImplementedError`; that sends local rows as `VALUES`. [SERVICE]
 - The scanner reads `expandUnicodeEscapes(query)`; `parseQuery` gets the raw query. [SERVICE]
-- `local_guard` is added last in `main.py`; every mutating `api.ts` call spreads `CLIENT_HEADER`. [own page]
-- Backend `TestClient`s use `base_url="http://localhost"` and the client header. [own page]
+- Local mode adds `local_guard` last in `main.py`; team mode uses its outermost authenticated boundary. Every mutating `api.ts` call spreads `CLIENT_HEADER`. [own page]
+- Local-mode backend `TestClient`s use `base_url="http://localhost"` and the client header; team tests use their configured exact HTTPS public origin. [own page]
 - `install_rdflib_guard` patches both `_urlopen`s, and UNIT-4 asserts it. [S-4]
 - The upload cap is enforced twice: middleware and `_read_capped`. [enforced twice]
 - Network tests assert a recording server saw zero requests, not only a 4xx. [S-1, S-2]
@@ -454,7 +472,7 @@ leaves one behind.
 - The button set is `:where()` rules, and the plain `button` rule sets no font or padding: element specificity outranks the set. [Portal foundations]
 - Removal starts only in a Home card's menu; its ⋮ is `aria-disabled` while counting, and Home refocuses when the card goes. [Portal foundations]
 - Home's start focus is `focus({ preventScroll: true })`. [Portal foundations]
-- Mount makes two requests, the ontology list and the project list; the home screen makes none to `/graph`. [card grid, authoring foundations]
+- After the mode/auth probe, mount loads the ontology list and the project list; the home screen makes no request to `/graph`. [card grid, authoring foundations]
 - Home shows no catalogue and downloads nothing: the examples are library entries (D-111); `CatalogueList` is the Load dialog's alone. [Home and examples]
 - The catalogue order is deliberate, and FOAF is not in it because it is a bundled example; read the comment above `CATALOGUE`. [leads with FOAF, Home and examples]
 - An example is told by `source === "example"` and its `example` record, never its name, and always follows the person's work (`home/libraryOrder.ts`). [Home and examples]
@@ -481,6 +499,7 @@ leaves one behind.
 - Unsupported reason metadata follows the deduplicated legacy strings, and metadata-only names never allocate namespace prefixes. [Shape-form integer precision]
 
 **Edit page**
+- Team pending canvas/query input owns its exact session and CAS basis; accepting reviewed versions never resends an edit. [Team input owns its basis]
 - Canvas state belongs to a project/document provider; late saves must not change the next target's failure or generation. UI language does not change that owner. [Canvas failures belong]
 - Unnamed-shape metadata uses the captured fallback carrier; authored identical English names stay literal. [Editing keeps unnamed shapes distinct]
 - An outline section clips its content; open sections have a 120 px minimum and are capped at their rows. [Edit page]
@@ -502,6 +521,9 @@ leaves one behind.
 - Completed import reports project only names from current lists, retaining operation counts and row facts. Old edit/save responses cannot modify a reopened project session. [Retained import reports]
 - Command display-name carriers keep their legacy string value; only message arguments and read-only previews project the selected name. Never use the display language for RDF writes. [command display names]
 - A shape's `displayName` is a read-only title; its original `name` remains the editable value. [command display names]
+
+**Team deployment privacy (P2)**
+- Deployment-specific Workspace domains have no code default and stay in server configuration; use reserved example domains in tests/docs and external private inputs for publication checks. [P2 configurable identity]
 
 ## Skills
 
@@ -528,3 +550,10 @@ Small and single-purpose. Say what changed and why, and include before and after
 numbers for anything touching performance. If a change alters an endpoint, a
 cap, a data shape, or a dependency, say so explicitly in the description so the
 architecture document can be updated.
+
+**PostgreSQL team storage (P2)**
+- Only `team/pg_storage.py` connects to psycopg. One lease-holding autocommit writer handles every explicit write transaction and common gate; no pool/reconnect/fallback. Read-only snapshots stay short.
+- The app cannot create/repair schema. Maintenance owns the versioned DDL/catalog reference; backup has SELECT only. `db:5432`, internal IPv4, HBA gateway denial and file-backed role secrets are enforced in product/tests/CI.
+- Never add SQLite readers, exporters, adapters or executable test fixtures. Old stores are refused without being opened. Local file migration and PostgreSQL generations are the only supported imports.
+- After restore/import failure, retain the incomplete marker and refuse startup; never invent COMMIT success or automatically reset/overwrite the target.
+- Use the dedicated Compose runner for `team_db`; native Windows covers local/pure/file compatibility. The machine inventory preserves every prior case ID. See `docs/p2-postgresql-verification.md` and the current operations guide.

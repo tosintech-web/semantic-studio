@@ -58,6 +58,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useI18n } from "../i18n/I18nProvider";
 import { historyLabel, renderProjectAnnouncement } from "../modeling/projectNotices";
 import { useEffect, useId, useRef, useState } from "react";
@@ -111,6 +112,7 @@ export default function ProjectHeader({
   canvas = null,
 }: Props) {
   const { t, locale } = useI18n();
+  const team = useTeam();
   const state = useProjectStore();
   const project = state.project!;
   const readErrorTarget = useRef(onError);
@@ -136,13 +138,13 @@ export default function ProjectHeader({
     action().catch((e: unknown) => onError(e));
   };
 
-  const canUndo = current?.canUndo ?? false;
-  const canRedo = current?.canRedo ?? false;
+  const canUndo = !team.suspended && team.canEdit && (current?.canUndo ?? false);
+  const canRedo = !team.suspended && team.canEdit && (current?.canRedo ?? false);
   const undoLabel = historyLabel(current?.undoLabel, current?.undoUiMessage, t);
   const redoLabel = historyLabel(current?.redoLabel, current?.redoUiMessage, t);
   const undo = () => canUndo && guard(() => run(() => projectStore.undo()));
   const redo = () => canRedo && guard(() => run(() => projectStore.redo()));
-  const save = () => !state.saving && guard(() => run(() => projectStore.save()));
+  const save = () => !team.suspended && team.canEdit && !state.saving && guard(() => run(() => projectStore.save()));
 
   // The shortcuts, rebound when what they would do changes.
   const keys = useRef({ undo, redo, save });
@@ -220,7 +222,7 @@ export default function ProjectHeader({
     }
     // Every other item leaves the menu for a control that is still there.
     langButton.current?.focus();
-    if (action === "shapes") {
+    if (action === "shapes" && team.canEdit) {
       run(async () => {
         await addShapesDocument(project.id);
         await projectStore.reload();
@@ -234,6 +236,7 @@ export default function ProjectHeader({
   const display = state.displayLanguage ?? project.primaryLanguage;
 
   const addLanguage = () => {
+    if (!team.canEdit) return;
     const tag = newLang.trim();
     if (!validLanguageTag(tag)) {
       setLangError(true);
@@ -263,13 +266,13 @@ export default function ProjectHeader({
         {state.documents.map((d) => (
           <option key={d.doc} value={d.doc}>
             {DOC_FILES[d.doc]}
-            {d.dirty ? t("projectHeader.unsavedTag") : ""}
+            {d.dirty && team.mode !== "team" ? t("projectHeader.unsavedTag") : ""}
           </option>
         ))}
       </select>
       <span className={`project-status project-status-${status}`}>
         <span className="project-status-dot" aria-hidden="true" />
-        {t(status === "unsaved" ? "dictionary.dirty" : status === "saving" ? "dictionary.saving" : "dictionary.saved")}
+        {t(status === "saving" ? "dictionary.saving" : team.mode === "team" ? "team.stored" : status === "unsaved" ? "dictionary.dirty" : "dictionary.saved")}
       </span>
 
       <button
@@ -296,7 +299,7 @@ export default function ProjectHeader({
       </button>
       <button
         className={status === "unsaved" ? "primary" : "ghost"}
-        aria-disabled={state.saving}
+        aria-disabled={state.saving || !team.canEdit}
         title={t("projectHeader.saveHelp")}
         onClick={save}
       >{t("projectHeader.save")}</button>
@@ -351,7 +354,7 @@ export default function ProjectHeader({
           </li>
           {!hasShapes && (
             <li role="none">
-              <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("shapes")}>{t("projectHeader.shapes")}</button>
+              <button type="button" role="menuitem" tabIndex={-1} disabled={!team.canEdit} onClick={() => chooseMenu("shapes")}>{t("projectHeader.shapes")}</button>
             </li>
           )}
           <li role="none">
@@ -419,6 +422,7 @@ export default function ProjectHeader({
                       {lang}{" "}
                       <button
                         className="ghost"
+                        disabled={!team.canEdit}
                         aria-label={t("projectHeader.removeLanguage", { language: lang })}
                         onClick={() =>
                           run(() =>
@@ -443,7 +447,7 @@ export default function ProjectHeader({
                   aria-invalid={langError ? true : undefined}
                   aria-describedby={langError ? "project-new-language-error" : undefined}
                 />
-                <button className="ghost" onClick={addLanguage}>{t("projectHeader.add")}</button>
+                <button className="ghost" disabled={!team.canEdit} onClick={addLanguage}>{t("projectHeader.add")}</button>
                 {langError && (
                   <p id="project-new-language-error" className="form-error">
                     {t("projectHeader.invalidLanguage")}

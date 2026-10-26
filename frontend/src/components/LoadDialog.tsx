@@ -77,6 +77,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { makeUiMessage, renderUiMessage, type UiMessage } from "../i18n/uiMessage";
 import { renderServerMessage } from "../i18n/serverMessage";
 import type { WireMessage } from "../i18n/server-contracts";
@@ -181,6 +182,7 @@ export default function LoadDialog({
   onExamplesRestored,
   onLibraryChanged,
 }: Props) {
+  const team = useTeam();
   const { t: ui } = useI18n();
   const [tab, setTab] = useState<LoadTab>(initialTab === "data" && !project ? "suggested" : initialTab);
   const [wizard, setWizard] = useState<WizardStart | null>(startImport && project ? { kind: "new" } : null);
@@ -468,6 +470,7 @@ export default function LoadDialog({
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (panelRef.current?.closest("[inert]")) return;
       const panel = panelRef.current;
       if (!panel || e.defaultPrevented) return;
       const target = e.target as Node | null;
@@ -575,7 +578,7 @@ export default function LoadDialog({
                 {/* aria-disabled, never disabled, while it works: a disabled
                     button drops focus, and a failure would leave it on the
                     page (load-and-shapes 5.6). */}
-                <button type="button" aria-disabled={busy} onClick={() => !busy && void addExamplesBack()}>{ui("load.dialog.restore")}</button>
+                <button type="button" aria-disabled={busy || !team.canAdmin} onClick={() => team.canAdmin && !busy && void addExamplesBack()}>{ui("load.dialog.restore")}</button>
               </div>
             )}
             {/* Rendered whether or not it has anything to say: a live region

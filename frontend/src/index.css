@@ -6663,3 +6663,13 @@ kbd {
    become part of the text announced by the live region. */
 .notice-container { position: relative; flex: none; }
 .notice-close { position: absolute; top: 4px; right: 8px; }
+
+/* Team notices use the same native focus rule as the application. */
+.team-app-host { display: contents; }
+.team-panel, .team-account { padding: .6rem 1rem; background: var(--bg-panel, #fff); color: var(--text, #202020); }
+.team-panel h2 { font-size: var(--fs-lg); }
+.team-account section { max-height: 40vh; overflow: auto; }
+
+.team-app-host[inert] { visibility: hidden; }
+
+.shape-permissions { border: 0; margin: 0; padding: 0; min-width: 0; }

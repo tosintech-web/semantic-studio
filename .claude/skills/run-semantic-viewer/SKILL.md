@@ -201,3 +201,19 @@ then project editing, Undo/Redo, Save and reload through the real interface.
 isolated checkout does not have its own `backend/.venv`. Keep screenshots and
 scratch libraries out of Git. `smoke` explicitly selects English for its original
 checks; `p1` separately verifies the Japanese default.
+
+## P2 team acceptance
+
+P2 requires Docker with Compose. Build the frontend and product image with
+`npm --prefix frontend run build` and `docker build -t semantic-studio:team .`,
+then run `node .claude/skills/run-semantic-viewer/driver.mjs p2`.
+The host driver owns a disposable PostgreSQL project; DB access stays inside its
+internal network. Only the HTTPS application is published to loopback.
+The test-only HTTPS server generates its certificate and synthetic Google signing
+key in scratch storage. Production callback, official signature verification,
+cookies, authorization and storage are exercised with two isolated browser
+contexts. It checks replay, stale updates, foreign Undo, Japanese unsent input
+across 401/409/real PostgreSQL 503, same-owner reauthentication and abrupt app
+recreation. A runtime audit hook rejects any SQLite connection during acceptance.
+`TEAM_PORT` defaults to 8011. Generated keys, data and screenshots stay outside Git.
+This does not confirm a production Google client or deploy an application.

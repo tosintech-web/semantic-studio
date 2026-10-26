@@ -75,6 +75,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import { renderServerError } from "../i18n/serverMessage";
@@ -190,6 +191,7 @@ export default function HomeScreen({
   projects,
   onStartProject,
 }: Props) {
+  const team = useTeam();
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   // DOC-1. The ontology whose documentation is being generated, the one waiting
@@ -353,6 +355,7 @@ export default function HomeScreen({
   useEffect(() => {
     if (!docsConfirm) return;
     const onKey = (e: KeyboardEvent) => {
+      if (docsPanelRef.current?.closest("[inert]")) return;
       if (e.key === "Escape") {
         cancelDocs();
         return;
@@ -452,7 +455,7 @@ export default function HomeScreen({
                   ref={newProjectRef}
                   className="primary large"
                   onClick={projects.onNew}
-                  disabled={projectBusyId !== null}
+                  disabled={projectBusyId !== null || !team.canEdit}
                 >{t("home.newProject")}</button>
               )}
               {/* Search and the view toggle are absent while the library is
@@ -561,8 +564,8 @@ export default function HomeScreen({
         <section className="start-section" aria-labelledby="home-or-heading">
           <h2 id="home-or-heading">{t("home.or")}</h2>
           <div className="start-routes">
-            <button ref={openFileRef} disabled={busy} onClick={() => onOpenDialog("file")}>{t("home.file")}</button>
-            <button disabled={busy} onClick={() => onOpenDialog("url")}>{t("home.url")}</button>
+            <button ref={openFileRef} disabled={busy || !team.canEdit} onClick={() => onOpenDialog("file")}>{t("home.file")}</button>
+            <button disabled={busy || !team.canEdit} onClick={() => onOpenDialog("url")}>{t("home.url")}</button>
           </div>
         </section>
       </div>

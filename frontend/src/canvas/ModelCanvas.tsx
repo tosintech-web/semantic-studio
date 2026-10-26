@@ -164,6 +164,7 @@ export interface ModelCanvasProps {
   projectId: string;
   doc: ProjectDocName;
   revision: number;
+  refreshGeneration?: number;
   language: string | null;
   primaryLanguage: string;
   selected: string | null;
@@ -285,7 +286,7 @@ function Canvas(props: ModelCanvasProps) {
   const dictionaryLanguage = useDictionaryDisplayLanguage();
   const { projectId, doc, revision, language, primaryLanguage, selected, onSelect, onSelectLink, onDeleted, onCanvasSet } =
     props;
-  const data = useCanvasData(projectId, doc, revision, language, props.inferred ?? null);
+  const data = useCanvasData(projectId, doc, revision, language, props.inferred ?? null,props.refreshGeneration??0);
   // A reasoning result's lines and marks leave at once when it goes stale or
   // Show inferred is turned off, not when the refetch lands (5.3, R5).
   const marks = Boolean(props.inferred);
@@ -301,7 +302,14 @@ function Canvas(props: ModelCanvasProps) {
     [data.view, marks],
   );
   const { positions } = data;
+
   const flow = useReactFlow();
+  const appliedReadGeneration=useRef(data.readGeneration);
+  useEffect(()=>{
+    if(appliedReadGeneration.current===data.readGeneration)return;
+    appliedReadGeneration.current=data.readGeneration;
+    if(data.savedViewport)void flow.setViewport(data.savedViewport,{duration:0});
+  },[data.readGeneration,data.savedViewport,flow]);
   const runner = useRunner();
   const { busy, errors, run, clear, alive } = runner;
   const wrapper = useRef<HTMLDivElement>(null);
@@ -1141,6 +1149,9 @@ function Canvas(props: ModelCanvasProps) {
             setSelectedEdge(null);
             setRelate(null);
           }}
+          onNodeDragStart={()=>data.beginMove()}
+          onNodeDragStop={(_,node)=>data.move(node.id,[node.position.x,node.position.y])}
+          onMoveStart={event=>{if(event)data.beginMove();}}
           onMoveEnd={(_, viewport: Viewport) => data.setViewport(viewport)}
           defaultViewport={data.savedViewport ?? undefined}
           fitView={!data.savedViewport}
