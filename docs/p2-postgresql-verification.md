@@ -68,7 +68,7 @@ docker compose -f docker-compose.postgresql-test.yml run --rm pg-tests python -m
 | 最終全DB群（内部network、Python 3.14） | 259 passed、2823 deselected、3 warnings、208.73秒 |
 | 補助script最終検証 | 52 tests、47 passed、5 explicit Compose opt-in skipped、13.880秒。実Compose受入は上記8件で別途検証 |
 | frontend全体/型/build | 135 files・2551 tests passed、111.41秒。TypeScript/Vite build成功 |
-| GitHub最新headの必須CI | push後に確認。Windows native team DB統合成功とは報告しない |
+| GitHub最新headの必須CI | 初回`bba8e07`はworkflow定義エラーでjob作成前に失敗。下記修正後の最新headで再確認。Windows native team DB統合成功とは報告しない |
 
 境界試験は、正しい合成credentialを同networkで確認した上でhost/別network拒否を検証する。
 hostからはPostgreSQL StartupMessageがSCRAM開始前にHBA拒否されることを確認する。
@@ -127,6 +127,12 @@ handlerをasyncへ変更した。DB観測・解放は独立executorから行い�
 新しいcontextの独立レビュー第2回（`c3c00a0..5dff3ce`）では、追加のCritical/Important/Minor指摘なし。
 通常コードと静的securityの確認であり、hosted scanや動的攻撃試験の成功という意味ではない。
 全試験・性能受入・最新headのCIは別の必須gateとして完了まで維持する。
+
+初回[CI run 40409187989](https://github.com/tosintech-web/semantic-studio/actions/runs/40409187989)は
+job作成前に失敗した。`jobs.<id>.env`で利用できない`runner.temp`をPostgreSQLとbudgetsの
+2箇所で参照していた。公式releaseのSHA-256を照合したactionlint 1.7.12で同じ2エラーを再現し、
+実行step内の`RUNNER_TEMP`から`GITHUB_ENV`へsecret directoryを設定する形へ修正した。
+修正後actionlintと、空白を含むpathでの両Bash stepの実行検査が成功した。製品の依存は追加していない。
 
 実Googleクライアント作成・本番ログイン、実データ移行、デプロイ、main mergeは実施しない。
 local/P1/P2の合成受入成功を、本番配備済みという意味では使わない。
