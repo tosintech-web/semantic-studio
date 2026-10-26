@@ -186,6 +186,16 @@ P2追加の既存4コミットの全blob・metadataは、非公開値リスト�
 この修正後の独立再レビューに残るコード・文書指摘はない。
 廃止した公開ブランチ専用のCI起動条件も除去し、通常のmain/PR用に戻した。
 修正後のfrontend全体は135ファイル・2,551件成功、113.79秒。既存性能予算も含み、閾値は変更していない。
-backendコードは直前の2,954成功時から変更していないが、全体を再実行して確認する。
-全体試験とmain宛てPRの必須CIを最終の完了判定とする。
+backend全体の再実行も2,954成功・1skip・network 2除外・71 warnings、402.32秒で成功。
+[main宛てPR #3](https://github.com/tosintech-web/semantic-studio/pull/3)を作成し、[実装修正のPR CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40341015141)の全6ジョブ成功を確認した。
 本番Google設定・実データ移行・配備は設計書で明示した対象外の運用作業として維持する。
+
+### 今回の最終状態
+
+- 作業・公開・レビュー対象はmain派生の `feat/p2-team-workspace` と[PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)へ統一。
+- `clean-history` はGitHubとローカルから削除済み。レビュー済みの成果は実装ブランチに保持。
+- P2追加コミットの全blobとmetadataを、外部の非公開値リストおよび通常の秘密・実データ検査で確認。この検査で、実装内の実運用値・秘密の埋め込みや新たな機密情報の混入は検出されなかった。
+- 計画の独立再照合で見つかった履歴1件を修正し、再レビューに残る具体的なコード・文書指摘なし。
+- frontend全2,551件、backend全2,954件、型検査/build、scripts39件、契約生成、実HTTPS・2利用者のChrome受け入れが成功。
+- 実装修正のPR CIは必須5ジョブと参考budgetsも成功。完了文書だけの最終コミットもPRのchecksを確認する。
+- mainへのマージ・本番Google設定・実データ移行・配備は行っていない。設計に明記した運用境界を維持する。

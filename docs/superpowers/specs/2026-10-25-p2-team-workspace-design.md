@@ -1,7 +1,7 @@
 # P2 チーム利用：詳細設計案
 
 作成日：2026-10-25（日本時間）
-状態：実装・レビュー修正済み（2026-10-26）。main宛てPRとそのCIを最終確認する。
+状態：Built（2026-10-26）。main宛て[PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)の実装修正CIは全6ジョブ成功。
 2026-10-25、ユーザーが推奨案による詳細計画・実装を承認。本番Google login・配備は未確認。
 ホスティング・公開URL・本番OAuth設定は配備前に確定する。
 起点：main `c3c00a0fce91fb7b2a99a05d7b980c3aa4e57013`（P1 / PR #2）。
@@ -230,3 +230,8 @@ Google OAuthクライアント未設定でも合成の検証fixtureでCIを実�
 証跡・実装判断・変更一覧・公開先は [P2検証記録](../../p2-verification.md) と
 [P2レビュー](../../p2-review.md) を参照。ユーザーの指示により独立した公開用ブランチは削除し、
 main派生の `feat/p2-team-workspace` からmain宛ての日本語PRを作成する。
+
+2026-10-26のmain向け再照合では、Shapesの履歴参照先を修正し、独立再レビューの指摘なしを確認。
+frontend全2,551件、backend全2,954件（別途1skip・network 2除外）と実Chromeが成功。
+[main宛て実装修正CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40341015141)はLinux・Windows・frontend・Docker・publication・budgetsの全件成功。
+完了文書のみの後続コミットの最終CI結果はPRで管理する。

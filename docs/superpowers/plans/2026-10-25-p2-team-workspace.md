@@ -176,7 +176,7 @@ migrationは新領域のみ、元は読取専用。restoreは新領域のみ、s
 - [x] 単一process排他・バックアップ復元・Docker秘密非混入を確認する。
 - [x] 全差分の独立レビューとセキュリティレビューを行い、指摘を根拠付きで修正・再検証する。
 - [x] 本番Google login未確認なら「P2本番利用可能」としない。未確認を検証書とPRに明記する。
-- [ ] P2追加履歴の機密情報検査後、main派生の実装ブランチをpushし、日本語PRを作成。PRの必須Linux/Windows/frontend/docker・publicationと参考budgetsの結果を確認する。
+- [x] P2追加履歴を検査し、main派生ブランチから[日本語PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)を作成。[実装修正のPR CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40341015141)でLinux/Windows/frontend/docker・publication・参考budgetsの全6ジョブ成功を確認。
 
 ## 自己レビュー・実行方針
 
@@ -206,3 +206,12 @@ P2追加履歴を検査し、日本語PRで確認する。共有main・バック
 最新の証跡・変更一覧・判断は `docs/p2-verification.md` と `docs/p2-review.md` に集約する。
 
 最新の完了判断はmain宛てPRの必須CI成功後に行う。実装CI・初回失敗と修正・未確認の運用境界は検証記録を正本とする。
+
+## main宛てPRの実装・受け入れ完了（2026-10-26）
+
+独立再照合で見つかったShapes履歴のmodel固定を修正し、旧実装で2失敗→修正後の関連23成功を確認。
+現在文書・project・Home・遅延応答を統合テストし、実Chromeでも文書別の保存済み監査差分との一致を確認。
+最新のfrontend全体は135ファイル・2,551成功、backend全体は2,954成功・1skip・network 2除外。
+元の性能予算・閾値は維持した。実装修正のmain宛てPR CIは全6ジョブ成功。
+Task 9までの実装・レビュー修正・受け入れを完了し、本番設定・配備は設計の対象外として区別する。
+完了記録だけの後続コミットもPRのCIで確認し、その最終結果はPR本文とGitHub checksへ記録する。
