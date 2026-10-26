@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1の接続基盤を検証済み、製品runtime切替は未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜2の接続基盤を検証済み、製品runtime切替は未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 
 ## Global Constraints
@@ -112,15 +112,15 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 - `APP_LEASE_KEY=(1397969989,1)`、`WRITE_GATE_KEY=(1397969989,2)`。同一専用DBで共有し、test用に値を変えて排他を回避しない。
 - `export_snapshot() -> ContextManager[SnapshotExport]`はbackup roleの単一read-only transactionを保持する。Task 6へ固定tableのrow streamとsnapshot内で確定したblob参照を渡す。transactionを閉じてから別snapshotで参照を取り直さない。
 
-- [ ] **Step 1: 接続/排他の再現試験を書く。**
+- [x] **Step 1: 接続/排他の再現試験を書く。**
   - `test_dns_outside_subnet_never_connects`: `assert connect_calls == []`（gateway/public/IPv6/期限後DNS応答を含む）。
   - `test_writer_retains_same_backend_and_lease`: `assert pid_after_commit == pid_before`; 第二storageのlease取得は失敗。
   - `test_writer_is_not_reopened_after_connection_loss`: `assert new_writer_connections == 0`; 全更新が503相当の有限障害。
   - `test_waiting_writer_uses_read_committed_after_gate`: 別接続のgate解除後に確定版を読む。`SHOW lock_timeout`は5秒、statementは30秒。
-- [ ] **Step 2: RED。** `PGTEST tests/test_pg_storage.py -q` → module/API不足で失敗。
-- [ ] **Step 3: 実装。** driverはlazy import。DNSを期限付きで検証し`hostaddr`で固定、資格情報はfile読取のみ。writerはautocommit＋mutex、各writeで明示transactionとadvisory gate。readは短いREPEATABLE READ READ ONLY。broken writerはfatalにして閉じ、pool/自動再接続を作らない。HTTP guardはmodule全体を免除せずresolverだけを狭く検査する。
-- [ ] **Step 4: GREEN。** `PGTEST tests/test_pg_storage.py tests/test_no_direct_network.py -q` → 全成功。lease切断はtest helperがappと同じroleの別接続から自身のroleのPIDだけを停止する。superuser TCPやrunner内Docker socket、production用管理APIは追加しない。
-- [ ] **Step 5: commit。** storageと接続guard、その試験をcommit。
+- [x] **Step 2: RED。** `PGTEST tests/test_pg_storage.py -q` → module/API不足で失敗。
+- [x] **Step 3: 実装。** driverはlazy import。DNSを期限付きで検証し`hostaddr`で固定、資格情報はfile読取のみ。writerはautocommit＋mutex、各writeで明示transactionとadvisory gate。readは短いREPEATABLE READ READ ONLY。broken writerはfatalにして閉じ、pool/自動再接続を作らない。HTTP guardはmodule全体を免除せずresolverだけを狭く検査する。
+- [x] **Step 4: GREEN。** `PGTEST tests/test_pg_storage.py tests/test_no_direct_network.py -q` → 全成功。lease切断はtest helperがappと同じroleの別接続から自身のroleのPIDだけを停止する。superuser TCPやrunner内Docker socket、production用管理APIは追加しない。
+- [x] **Step 5: commit。** storageと接続guard、その試験をcommit。
 
 ## Task 3: schema・repository・canonical保存・原子的replay
 
@@ -299,3 +299,5 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
 ### 実装の進捗
 
 Task 1：専用internal Compose上の設定/bootstrap 24件、配布通知の7試験、実配布imageのPython 42依存/native 13 package照合に成功。DBのport非公開・内部IPv4だけの参加・secret非出力も確認。driverはhash固定のpure psycopg 3.3.6とDebian libpq5 17.11を使用し、binary wheelを配布しない。依存導入に必要なDockerfileと通知generatorの変更はTask 1へ前倒しした。製品runtimeと旧team試験はまだSQLite版で、Task 2以降は未完了。
+
+Task 2：固定DNS能力・hostaddr pin・単一write接続・DB lease/write gate・REPEATABLE READ read・有限障害変換を実装。設定/bootstrap/storage/network guardの46試験が成功。別read接続失敗時にmutex外でwriterを閉じる自己レビュー指摘をREDで再現し、実writerの所有権をmutex内で検査する修正後GREEN。未知の診断値も有限codeへ変換。製品runtime切替とrepository/auth/保守移植は未完了。

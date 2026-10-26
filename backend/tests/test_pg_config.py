@@ -92,3 +92,10 @@ def test_hba_generation_does_not_need_application_secret(pg_env, tmp_path):
     pg_env.pop('SEMANTIC_STUDIO_DB_PASSWORD_FILE')
     write_db_config(pg_env, tmp_path / 'config')
     assert (tmp_path / 'config/pg_hba.conf').exists()
+
+
+def test_storage_error_does_not_reflect_unknown_diagnostics():
+    from app.team.pg_storage import StorageError
+    error = StorageError('private-inline-value', sqlstate='private-inline-value')
+    assert error.kind == 'db_error' and error.sqlstate is None
+    assert error.details == {'kind': 'db_error'}
