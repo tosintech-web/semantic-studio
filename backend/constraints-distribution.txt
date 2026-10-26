@@ -23,6 +23,7 @@ opentelemetry-api==1.45.1
 owlrl==7.6.2
 packaging==26.3
 prettytable==3.18.0
+psycopg==3.3.6
 pyasn1-modules==0.4.2
 pyasn1==0.6.4
 pycparser==3.12

@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装計画／実装未着手。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1の接続基盤を検証済み、製品runtime切替は未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 
 ## Global Constraints
@@ -91,14 +91,14 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 - `init-roles.sh/sql`はUnix peerで固定roleを作り、PUBLICのCONNECT/CREATEを閉じる。passwordはfile→process内変数→安全なSQL literalへ渡し、argv/ログに出さない。
 - `pg-tests`はapp/maintenance/backupの合成secretを持つtest image。production appへ保守credentialを流用しない。
 
-- [ ] **Step 1: 設定・HBA・bootstrap試験を書く。** 次の名前とassertionを固定する。
+- [x] **Step 1: 設定・HBA・bootstrap試験を書く。** 次の名前とassertionを固定する。
   - `test_pg_config_rejects_external_endpoint_and_inline_secret`: `assert host == 'db'`; 外部host/別port/資格入りDSN/不正role/欠落fileを有限codeで拒否。
   - `test_hba_gateway_rule_precedes_subnet`: `assert gateway_reject_index < subnet_allow_index < final_reject_index`。
   - `test_pg_bootstrap_roles_and_secrets`: role属性とDB/PUBLIC権限、superuserのTCP拒否、log/argvへ合成secretが出ないことを確認。table権限の実動作はschema作成後のTask 3で検証し、table不存在を権限拒否の証拠にしない。
-- [ ] **Step 2: REDを確認。** `cd backend && .venv/bin/python -m pytest tests/test_pg_config.py -q` → 新module不足で失敗。
-- [ ] **Step 3: 上の設定/bootstrapと検証Composeを実装。** subnetはRFC1918内のIPv4、16 address以上、gatewayは所属する非予約address。DB volumeは`/var/lib/postgresql`、portsなし・internalだけ。公式18安定patch/digestとpsycopg patch/hash・実wheel通知を固定。schema tableはまだ作らない。
-- [ ] **Step 4: GREENを確認。** `docker compose -f docker-compose.postgresql-test.yml config --quiet`、専用stackのbuild/up、`PGTEST tests/test_pg_config.py tests/test_pg_bootstrap.py -q` → 全成功。inspectでport bindingなし・専用network参加を確認。
-- [ ] **Step 5: commit。** このTaskの設定・bootstrap・検証基盤・依存/通知だけをcommit。旧team runtimeがPG対応済みとは報告しない。
+- [x] **Step 2: REDを確認。** `cd backend && .venv/bin/python -m pytest tests/test_pg_config.py -q` → 新module不足で失敗。
+- [x] **Step 3: 上の設定/bootstrapと検証Composeを実装。** subnetはRFC1918内のIPv4、16 address以上、gatewayは所属する非予約address。DB volumeは`/var/lib/postgresql`、portsなし・internalだけ。公式18安定patch/digestとpsycopg patch/hash・実wheel通知を固定。schema tableはまだ作らない。
+- [x] **Step 4: GREENを確認。** `docker compose -f docker-compose.postgresql-test.yml config --quiet`、専用stackのbuild/up、`PGTEST tests/test_pg_config.py tests/test_pg_bootstrap.py -q` → 全成功。inspectでport bindingなし・専用network参加を確認。
+- [x] **Step 5: commit。** このTaskの設定・bootstrap・検証基盤・依存/通知だけをcommit。旧team runtimeがPG対応済みとは報告しない。
 
 ## Task 2: PostgreSQL接続・唯一のwriter・lease喪失
 
@@ -295,3 +295,7 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
 - 追加自己確認：lease切断の故障注入をappと同じroleのPID停止に限定し、superuser TCPやrunner内Dockerへの依存を除いた。
 - 独立レビュー第2回：上記修正を再読して確認し、残る必須指摘なし。同一transaction認可、固定lease、実table権限、marker拒否、SQLite利用除去、network境界を再確認した。
 - 文書検査：9 Task・45未完了step、相対リンク、公開内容の検査を実施。製品コードの変更、PG起動、依存追加、実データ移行は行っていない。本節は計画レビューの記録であり、将来の実装・試験の成功を示すものではない。
+
+### 実装の進捗
+
+Task 1：専用internal Compose上の設定/bootstrap 24件、配布通知の7試験、実配布imageのPython 42依存/native 13 package照合に成功。DBのport非公開・内部IPv4だけの参加・secret非出力も確認。driverはhash固定のpure psycopg 3.3.6とDebian libpq5 17.11を使用し、binary wheelを配布しない。依存導入に必要なDockerfileと通知generatorの変更はTask 1へ前倒しした。製品runtimeと旧team試験はまだSQLite版で、Task 2以降は未完了。

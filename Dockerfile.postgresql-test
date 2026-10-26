@@ -1,0 +1,21 @@
+# ==============================================================================
+# FILE: Dockerfile.postgresql-test
+# SUMMARY
+#     Full backend source/test runner inside the dedicated PostgreSQL network.
+# BASIC IDEA
+#     Install dependencies during build; runtime needs no external network.
+# INPUTS / INPUT SOURCES
+#     Reviewed requirements/constraints and the publication-safe build context.
+# EXPECTED OUTPUT
+#     Python 3.12/3.14 runner, with no Docker socket or production credentials.
+# ==============================================================================
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim
+WORKDIR /workspace
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5=17.11-0+deb13u1 && rm -rf /var/lib/apt/lists/*
+COPY backend/requirements*.txt backend/constraints-distribution.txt /tmp/dependencies/
+RUN pip install --no-cache-dir -r /tmp/dependencies/requirements-dev.txt -c /tmp/dependencies/constraints-distribution.txt
+COPY . .
+ENV PYTHONPATH=/workspace/backend
+WORKDIR /workspace/backend
+CMD ["python", "-m", "pytest", "tests", "-q"]

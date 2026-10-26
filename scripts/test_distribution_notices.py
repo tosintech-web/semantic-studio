@@ -17,7 +17,7 @@ import json
 from pathlib import Path, PurePosixPath
 import tempfile
 import unittest
-from distribution_notices import collect_python_notices
+from distribution_notices import collect_python_notices, collect_native_notices
 
 
 class DistributionNoticesTest(unittest.TestCase):
@@ -66,4 +66,40 @@ class DistributionNoticesTest(unittest.TestCase):
         self.file.unlink()
         with self.assertRaises((ValueError, FileNotFoundError)):
             collect_python_notices(self.inventory, self.output, [self.dist])
+        self.assertFalse(self.output.exists())
+
+
+class NativeNoticesTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.original = b'Original native library copyright\n'
+        self.path = self.root / 'usr/share/doc/libpq5/copyright'
+        self.path.parent.mkdir(parents=True)
+        self.path.write_bytes(self.original)
+        self.output = self.root / 'output'
+        self.inventory = {'components': [dict(ecosystem='debian', name='libpq5', version='17.11',
+            source='https://packages.debian.org/trixie/libpq5', status='text-collected',
+            notices=[dict(original_path='/usr/share/doc/libpq5/copyright',
+                          sha256=hashlib.sha256(self.original).hexdigest())])]}
+
+    def test_native_original_bytes_follow_actual_dependency_closure(self):
+        collect_native_notices(self.inventory, self.output, packages={'libpq5': '17.11'}, root=self.root)
+        artifact = json.loads((self.output / 'native-components.json').read_text())
+        self.assertEqual(artifact['components'][0]['version'], '17.11')
+        self.assertEqual((self.output / artifact['components'][0]['notices'][0]['text']).read_bytes(), self.original)
+
+    def test_unreviewed_transitive_library_stops_distribution(self):
+        with self.assertRaises(ValueError):
+            collect_native_notices(self.inventory, self.output,
+                                   packages={'libpq5': '17.11', 'unreviewed': '2'}, root=self.root)
+        self.assertFalse(self.output.exists())
+
+    def test_changed_native_version_or_copyright_stops_distribution(self):
+        with self.assertRaises(ValueError):
+            collect_native_notices(self.inventory, self.output, packages={'libpq5': '18'}, root=self.root)
+        self.path.write_bytes(b'changed copyright')
+        with self.assertRaises(ValueError):
+            collect_native_notices(self.inventory, self.output, packages={'libpq5': '17.11'}, root=self.root)
         self.assertFalse(self.output.exists())
