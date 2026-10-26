@@ -534,7 +534,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/InferredBlock.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningDetails.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` <br>`frontend/src/components/DeleteDialog.tsx`| UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/InferredBlock.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningDetails.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` <br>`frontend/src/components/DeleteDialog.tsx`, `frontend/src/team/TeamHistory.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -659,7 +659,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `kind.individual` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `kind.ontology` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `kind.other` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.retry` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.retry` | — | `frontend/src/components/EntityList.tsx`, `frontend/src/team/TeamProvider.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.filter` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.kind` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.sort` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1047,7 +1047,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `glossary.xsd.time` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.gYear` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.anyURI` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
-| `common.loading` | — | `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `common.loading` | — | `frontend/src/team/ConflictPanel.tsx`, `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/ExploreStart.tsx`, `frontend/src/team/TeamProvider.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.start` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.pickHelp` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.data` | label | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
@@ -3304,7 +3304,7 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `network.approval.declined` | hosts | `frontend/src/api.ts` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
 | `words.host_separator` | — | `frontend/src/api.ts` | 接続許可の理由・送信内容・拒否 | 11 | 許可前の事実と原文を保持 |
 
-| `canvasUI.layoutFailed` | — | `frontend/src/canvas/useCanvasData.ts` | キャンバスの配置保存失敗 | 11 | 原因・配置を保持し現在のUI言語で表示 |
+| `canvasUI.layoutFailed` | — | `frontend/src/team/TeamProvider.tsx`, `frontend/src/canvas/useCanvasData.ts` | キャンバスの配置保存失敗 | 11 | 原因・配置を保持し現在のUI言語で表示 |
 | `canvasUI.shownFailed` | — | `frontend/src/canvas/useCanvasData.ts` | 表示項目変更失敗 | 11 | 以前の表示集合と原文を保持 |
 
 | `words.editing.the_shape` | — | `backend/app/editing.py` | 名前のない検証ルールの履歴・拒否 | 12 | 登録名は元の文字列を保持し所有する既定名だけ翻訳 |
@@ -3323,37 +3323,87 @@ Server message IDs are independent of domain exception codes. HTTP adapters own 
 
 | Code | Arguments | Actual ownership and planned consumers |
 | --- | --- | --- |
-| `team.auth_required` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.auth_expired` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.auth_failed` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.config_unavailable` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.forbidden` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.csrf` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.version_required` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.revision_conflict` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.request_mismatch` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.undo_forbidden` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.last_admin` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.disabled` | — | `backend/app/message_contracts.json`, `frontend/src/i18n/server-contracts.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; HTTP adapter mapping integration planned in Tasks 4–6 |
-| `team.stored` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.history` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.history.empty` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.history.entry` | actor, operation | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.history.beforeMigration` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.role.viewer` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.role.editor` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.role.admin` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.login` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.logout` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.account` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.account.name` | name | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.role` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.login.progress` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.login.failure` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.conflict.title` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.conflict.reload` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.conflict.keepInput` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.members` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.members.setRole` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.members.disable` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
-| `team.members.enable` | — | `frontend/src/i18n/types.ts`, `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, test fixture `frontend/src/i18n/teamMessages.test.ts`; UI ownership planned in Task 7 (no current component call site) |
+| `team.auth_required` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/LoginPanel.tsx` |
+| `team.auth_expired` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/LoginPanel.tsx` |
+| `team.auth_failed` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.config_unavailable` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.forbidden` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamProvider.tsx` |
+| `team.csrf` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.version_required` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.revision_conflict` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/ConflictPanel.tsx` |
+| `team.request_mismatch` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.undo_forbidden` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.last_admin` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.disabled` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.stored` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/components/DictionaryContext.tsx`, `frontend/src/components/ProjectHeader.tsx` |
+| `team.history` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.empty` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.entry` | actor, operation | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.beforeMigration` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.role.viewer` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx`, `frontend/src/team/TeamProvider.tsx` |
+| `team.role.editor` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx`, `frontend/src/team/TeamProvider.tsx` |
+| `team.role.admin` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx`, `frontend/src/team/TeamProvider.tsx` |
+| `team.login` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/LoginPanel.tsx` |
+| `team.logout` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` |
+| `team.account` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` |
+| `team.account.name` | name | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` |
+| `team.role` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+| `team.login.progress` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/LoginPanel.tsx` |
+| `team.login.failure` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/LoginPanel.tsx` |
+| `team.conflict.title` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/ConflictPanel.tsx`, `frontend/src/team/TeamProvider.tsx` |
+| `team.conflict.reload` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/ConflictPanel.tsx` |
+| `team.conflict.keepInput` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/ConflictPanel.tsx` |
+| `team.members` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` |
+| `team.members.setRole` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` |
+| `team.members.disable` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` |
+| `team.members.enable` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` |
+
+## P2 Task 7 team controls
+
+Keyboard: native buttons and selects in document order. Focus uses the global `:focus-visible` rule. Screen readers receive visible names, disclosure state and polite refusal/status text. Session expiry makes the retained application inert while recovery remains reachable.
+
+| source path | 用途 | Task | 状態 |
+| --- | --- | --- | --- |
+| `frontend/src/team/types.ts` | Team identity, input retention and history | P2-7 | 実装・単体検査 |
+| `frontend/src/team/client.ts` | Team identity, input retention and history | P2-7 | 実装・単体検査 |
+| `frontend/src/team/TeamProvider.tsx` | Team identity, input retention and history | P2-7 | 実装・単体検査 |
+| `frontend/src/team/LoginPanel.tsx` | Team identity, input retention and history | P2-7 | 実装・単体検査 |
+| `frontend/src/team/AccountMenu.tsx` | Team identity, input retention and history | P2-7 | 実装・単体検査 |
+| `frontend/src/team/TeamHistory.tsx` | Team identity, input retention and history | P2-7 | 実装・単体検査 |
+| `frontend/src/team/ConflictPanel.tsx` | Team identity, input retention and history | P2-7 | 実装・単体検査 |
+
+| code | args | source | status |
+| --- | --- | --- | --- |
+| `team.refresh` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/LoginPanel.tsx`, `frontend/src/team/TeamProvider.tsx` | P2-7 |
+| `team.refresh.failed` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamProvider.tsx` | P2-7 |
+| `team.poll.changed` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamProvider.tsx` | P2-7 |
+| `team.input.retained` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/ConflictPanel.tsx` | P2-7 |
+| `team.users.error` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/AccountMenu.tsx` | P2-7 |
+| `team.history.error` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` | P2-7 |
+| `team.history.more` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` | P2-7 |
+| `team.workspace` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/LoginPanel.tsx`, `frontend/src/team/TeamProvider.tsx` | P2-7 |
+| `team.history.resource` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` | P2-7 |
+| `team.history.version` | version | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` | P2-7 |
+
+| `team.history.create` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.change` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.remove` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.undo` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.redo` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+| `team.history.unknown` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamHistory.tsx` |
+
+| `team.conflict.review` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/ConflictPanel.tsx` |
+| `team.conflict.accept` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/ConflictPanel.tsx` |
+| `team.conflict.reviewChanged` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamProvider.tsx` |
+| `team.invalid_request` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts` |
+
+| `team.logout.confirm` | — | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamProvider.tsx` |
+
+| `team.access.changed` | role | `frontend/src/i18n/en.ts`, `frontend/src/i18n/ja.ts`, `frontend/src/i18n/types.ts`, `frontend/src/team/TeamProvider.tsx` |
+
+| `team.layout.retry` | document, project | `frontend/src/team/TeamProvider.tsx` |
+
+| `team.leave.confirm` | — | `frontend/src/App.tsx` |
+
+| `about.teamPrivacy` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ | 7 | カタログ登録済み |
+| `about.teamPrivacyDetail` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ | 7 | カタログ登録済み |

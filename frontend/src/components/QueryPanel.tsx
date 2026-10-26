@@ -75,6 +75,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useI18n } from "../i18n/I18nProvider";
 import { makeUiMessage } from "../i18n/uiMessage";
 import { originalError, type OperationFailure } from "../i18n/operationFailure";
@@ -266,6 +267,7 @@ export default function QueryPanel({
     textIsDirty,
   } = builder;
 
+  const team = useTeam();
   const { locale, t } = useI18n();
   const dictionaryLanguage = useDictionaryDisplayLanguage();
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
@@ -277,7 +279,8 @@ export default function QueryPanel({
   const [copyState, setCopyState] = useState<"copied" | "failed" | null>(null);
   const [saved, setSaved] = useState<SavedQuery[]>([]);
   const [saveName, setSaveName] = useState("");
-  const [savePrompt, setSavePrompt] = useState(false);
+  const [savePrompt, setSavePromptState] = useState(false);
+  const setSavePrompt=(shown:boolean)=>{builder.setSavePromptDraft?.(shown);setSavePromptState(shown);};
   const [isPreview, setIsPreview] = useState(false);
   // The editor opened on the builder's own query. A text query opens it too,
   // and keeps it open across a visit to another mode, because the hook holds
@@ -485,10 +488,11 @@ export default function QueryPanel({
   }, [inText, autoPreviewable, ontologyId, schema, state, includeImports, show, dictionaryLanguage]);
 
   const doSave = async (name: string) => {
-    if (!ontologyId || !name.trim()) return;
+    if (!team.canEdit || team.suspended || !ontologyId || !name.trim()) return;
     // Read now, not from the render: the text is in a ref precisely so that
     // typing does not render this panel.
     const text = textQuery ? textRef.current : null;
+    const owner=builder.currentQuerySession?.();
     try {
       const entry = await saveQuery(
         text === null
@@ -502,13 +506,14 @@ export default function QueryPanel({
               mode: "text",
             },
       );
+      if(owner!==builder.currentQuerySession?.())return;
       setOpenQuery({ id: entry.id, name: entry.name });
-      if (text !== null) markTextSaved(text);
+      if (text !== null) markTextSaved(text);else builder.markVisualSaved?.(state);
       setSavePrompt(false);
       setSaveName("");
       refreshSaved();
     } catch (e: unknown) {
-      setError({ cause: e });
+      if(owner===builder.currentQuerySession?.())setError({ cause: e });
     }
   };
 
@@ -523,6 +528,7 @@ export default function QueryPanel({
   }, [saveName, savePrompt, saved]);
 
   const save = () => {
+    if (!team.canEdit || team.suspended) return;
     if (openQuery) void doSave(openQuery.name);
     else {
       if (textQuery?.name) setSaveName(textQuery.name);
@@ -836,7 +842,7 @@ export default function QueryPanel({
             </button>
             <button
               className="ghost"
-              disabled={!sparql}
+              disabled={!sparql || !team.canEdit}
               onClick={save}
               title={openQuery ? t("queryPanel.updateHint", { name: openQuery.name }) : t("queryPanel.saveHint")}
             >
@@ -861,7 +867,7 @@ export default function QueryPanel({
                 if (e.key === "Escape") setSavePrompt(false);
               }}
             />
-            <button className="primary" onClick={() => void doSave(saveName)}>
+            <button className="primary" disabled={!team.canEdit} onClick={() => void doSave(saveName)}>
               {t("editParts.save")}
             </button>
             <button className="ghost" onClick={() => setSavePrompt(false)}>
@@ -974,6 +980,7 @@ export default function QueryPanel({
               <span className="dim">{new Date(entry.updatedAt).toLocaleDateString(locale)}</span>
               <button
                 className="icon-btn"
+                disabled={!team.canAdmin}
                 title={t("queryPanel.deleteHint")} aria-label={t("queryPanel.deleteHint")}
                 onClick={() => {
                   if (!window.confirm(t("queryPanel.deleteConfirm", { name: entry.name }))) return;

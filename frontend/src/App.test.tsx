@@ -67,6 +67,8 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { renderEn as render } from "./testutils/i18n";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import {TeamContext} from "./team/TeamProvider";
+import {configureTeam} from "./team/client";
 import { ApiError } from "./api";
 import { projectStore } from "./state/projectStore";
 // The stylesheet as text, for the one assertion jsdom cannot make: that the
@@ -4201,4 +4203,71 @@ it.each([[false, true], [true, true], [false, false], [true, false]])("scopes an
   listImports.mockImplementation((id: string) => Promise.resolve(id === "o1" ? old : empty));
   await act(async () => { if (failed) reject(new Error("old failure")); else complete(old); });
   expect(screen.getByTestId("query-scope").textContent).toBe(`false|${switched ? 0 : 9}`);
+});
+
+
+it('team viewers can navigate to model reasoning and shape validation while authoring stays disabled', async () => {
+  listProjects.mockResolvedValue([PROJECT]);
+  openProject.mockResolvedValue({project:PROJECT,documents:[docState(),{...docState(),doc:'shapes',ontologyId:`${PROJECT.id}-shapes`}],recovery:{available:false,draftTime:null}});
+  getShapes.mockResolvedValue({revision:0,modelRevision:0,kind:'ontology',shapes:[]});
+  reasonProject.mockResolvedValue({status:'done',key:'viewer-read',includeData:false,imports:false,basis:{revision:0,generation:0,imports:false},durationMs:1,statements:12,sentence:null,problems:[],groups:[],importedFacts:{kind:'imported',total:0,offset:0,items:[]},stale:false});
+  validateProject.mockResolvedValue({stopped:false,statements:12,shapeCount:0,durationMs:1,revisions:{model:0,shapes:0},shapes:[]});
+  await act(async()=>render(<TeamContext.Provider value={{mode:'team',canEdit:false,canAdmin:false,suspended:false}}><App/></TeamContext.Provider>));
+  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Open Invoices'})));
+  const edit=tab('Edit') as HTMLButtonElement;
+  expect(edit.disabled).toBe(false);
+  await act(async()=>fireEvent.click(edit));
+  expect(screen.queryByTestId('canvas')).toBeNull();
+  const newClass=screen.queryByRole('button',{name:'New class'}) as HTMLButtonElement|null;
+  expect(!newClass||newClass.disabled).toBe(true);
+  await act(async()=>fireEvent.click(screen.getByRole('tab',{name:'Reasoning'})));
+  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Reason'})));
+  expect(reasonProject).toHaveBeenCalledWith(PROJECT.id,false,false,'en');
+  const shapes=tab('Shapes') as HTMLButtonElement;
+  expect(shapes.disabled).toBe(false);
+  await act(async()=>fireEvent.click(shapes));
+  expect((screen.getByRole('button',{name:'Add a shape'}) as HTMLButtonElement).disabled).toBe(true);
+  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Validate'})));
+  expect(validateProject).toHaveBeenCalledWith(PROJECT.id,'en');
+  expect(runCommand).not.toHaveBeenCalled();
+  await act(async()=>fireEvent.click(tab('View')));
+  expect(document.querySelector('.turtle-editor')).toBeNull();
+});
+
+
+it('team viewers close already-persisted dirty-format projects without a Save prompt',async()=>{
+ configureTeam({mode:'team',authenticated:true,user:{sub:'a',email:'a@example.test',role:'viewer',disabled:false,version:1},csrf:'x'});
+ try{
+  listProjects.mockResolvedValue([PROJECT]);openProject.mockResolvedValue(opened({dirty:true}));closeProject.mockResolvedValue({closed:PROJECT.id});
+  await act(async()=>render(<TeamContext.Provider value={{mode:'team',canEdit:false,canAdmin:false,suspended:false,hasUnsentInput:()=>false}}><App/></TeamContext.Provider>));
+  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Open Invoices'})));
+  expect(projectStore.getSnapshot().announcement.uiMessage?.code).toBe('projectNotice.opened.saved');
+  const unload=new Event('beforeunload',{cancelable:true});window.dispatchEvent(unload);expect(unload.defaultPrevented).toBe(false);
+  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'More project actions'})));
+  await act(async()=>fireEvent.click(screen.getByRole('menuitem',{name:'Close project'})));
+  expect(screen.queryByRole('dialog',{name:'Save your changes?'})).toBeNull();
+  expect(closeProject).toHaveBeenCalledWith(PROJECT.id,false);
+ }finally{configureTeam({mode:'local',authenticated:false,user:null,csrf:null});}
+});
+it('cancelled team close keeps actual unsent creation input mounted',async()=>{
+ localStorage.setItem('semantic-studio-canvas','off');listProjects.mockResolvedValue([PROJECT]);openProject.mockResolvedValue(opened());
+ const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);
+ try{
+  await act(async()=>render(<TeamContext.Provider value={{mode:'team',canEdit:true,canAdmin:false,suspended:false,hasUnsentInput:()=>projectStore.getSnapshot().creating!==null}}><App/></TeamContext.Provider>));
+  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Open Invoices'})));
+  await act(async()=>fireEvent.click(screen.getAllByRole('button',{name:'New class'})[0]));
+  const name=screen.getByRole('textbox',{name:'Name (en)'}) as HTMLInputElement;fireEvent.change(name,{target:{value:'Unsaved class 犬'}});
+  const unload=new Event('beforeunload',{cancelable:true});window.dispatchEvent(unload);expect(unload.defaultPrevented).toBe(true);
+  await act(async()=>fireEvent.click(tab('View')));expect(name.isConnected).toBe(true);
+  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'More project actions'})));
+  await act(async()=>fireEvent.click(screen.getByRole('menuitem',{name:'Close project'})));
+  expect(confirm).toHaveBeenCalled();expect(closeProject).not.toHaveBeenCalled();expect(name.isConnected).toBe(true);expect(name.value).toBe('Unsaved class 犬');
+ }finally{confirm.mockRestore();localStorage.removeItem('semantic-studio-canvas');}
+});
+
+
+it('layout-only team refresh changes the canvas read generation without changing RDF revision',async()=>{
+ await renderProject();await screen.findByTestId('canvas');const revision=canvasProps.last!.revision;
+ await act(async()=>window.dispatchEvent(new Event('semantic-studio-team-refresh')));
+ expect(canvasProps.last!.refreshGeneration).toBe(1);expect(canvasProps.last!.revision).toBe(revision);
 });

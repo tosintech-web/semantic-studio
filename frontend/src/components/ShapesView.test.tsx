@@ -32,6 +32,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {TeamContext} from "../team/TeamProvider";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -115,6 +116,7 @@ async function setup(
   documents = [doc("model"), doc("shapes")],
   suggestions: unknown = SUGGESTIONS,
   localized = false,
+  viewer = false,
 ) {
   openProject.mockResolvedValue({
     project: {
@@ -134,7 +136,7 @@ async function setup(
   };
   await act(async () => {
     const view = <ShapesView projectId={PID} kind={kind} languages={["en", "fr"]} modelOntologyId={`${PID}-model`} {...props} />;
-    render(localized ? <I18nProvider><UiLanguageSelect />{view}</I18nProvider> : view);
+    render(viewer ? <TeamContext.Provider value={{mode:"team",canEdit:false,canAdmin:false,suspended:false}}>{view}</TeamContext.Provider> : localized ? <I18nProvider><UiLanguageSelect />{view}</I18nProvider> : view);
   });
 }
 
@@ -910,5 +912,17 @@ it("rereads shape and suggestion names for the dictionary language without editi
   expect(document.querySelector(".shape-rules")?.textContent).toContain("呼称");
   expect(getShapes).toHaveBeenLastCalledWith(PID,"ja");
   expect(getShapeSuggestions).toHaveBeenLastCalledWith(PID,`${X}Person`,PERSON.id,"ja");
+  expect(runCommand).not.toHaveBeenCalled();
+});
+
+
+it('team viewers can inspect existing shape rules while every form mutation stays disabled',async()=>{
+  await setup([PERSON],'ontology',undefined,undefined,false,true);
+  expect(screen.getAllByText('Person rules').length).toBeGreaterThan(0);
+  const fieldset=document.querySelector('.shape-permissions') as HTMLFieldSetElement;
+  expect(fieldset.disabled).toBe(true);
+  for(const control of fieldset.querySelectorAll('button,input,select,textarea'))expect(control.matches(':disabled')).toBe(true);
+  expect((screen.getByRole('button',{name:'Validate'}) as HTMLButtonElement).matches(':disabled')).toBe(false);
+  expect((screen.getByRole('button',{name:'Add a shape'}) as HTMLButtonElement).disabled).toBe(true);
   expect(runCommand).not.toHaveBeenCalled();
 });

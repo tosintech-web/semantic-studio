@@ -43,7 +43,9 @@ BASIC IDEA
 INPUTS / INPUT SOURCES
     - The Host, Origin and X-Semantic-Studio headers of every HTTP request.
     - SEMANTIC_STUDIO_ALLOWED_HOSTS: optional comma-separated extra host names,
-      for someone who puts the application behind their own reverse proxy.
+      for someone who puts the local application behind their own reverse proxy.
+    - Team configuration, when supplied: one exact public Host and Origin;
+      no loopback/development or forwarded-header allowances.
 
 EXPECTED OUTPUT
     - The request passes through unchanged when it comes from the application.
@@ -132,8 +134,9 @@ def origin_allowed(origin: str, host_header: str, scheme: str = "http") -> bool:
 class LocalOnlyMiddleware:
     """ASGI middleware applying the Host, header and Origin rules above."""
 
-    def __init__(self, app) -> None:
+    def __init__(self, app, team_config=None) -> None:
         self.app = app
+        self.team_config = team_config
 
     async def __call__(self, scope, receive, send) -> None:
         if scope["type"] != "http":
@@ -145,6 +148,20 @@ class LocalOnlyMiddleware:
             for key, value in scope.get("headers", [])
         }
         host = headers.get("host", "")
+        if self.team_config is not None:
+            # Team mode has one fixed public origin. Never infer it from proxy
+            # headers, the incoming scheme, or local development allowances.
+            expected = urlsplit(self.team_config.public_origin).netloc.lower()
+            if host != expected:
+                await _refuse(send, 400, BAD_HOST_DETAIL, ui_message=make_message("request.foreign_host"))
+                return
+            if scope["method"].upper() not in SAFE_METHODS:
+                if (headers.get(CLIENT_HEADER) != CLIENT_HEADER_VALUE
+                        or headers.get("origin") != self.team_config.public_origin):
+                    await _refuse(send, 403, FORBIDDEN_DETAIL, ui_message=make_message("request.foreign_page"))
+                    return
+            await self.app(scope, receive, send)
+            return
 
         # Host first, and for every method: a rebinding page can *read*, so a
         # GET is as dangerous as a DELETE here.

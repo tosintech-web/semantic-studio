@@ -121,6 +121,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
   const { busy, errors, run } = runner;
   const key = `example:${field.property}`;
   const [raw, setRaw] = useState(() => fieldStart(field));
+  const [draft, setDraft] = useState(false);
   const [lang, setLang] = useState(primaryLanguage);
   // What the learner has typed is judged once they have typed something; an
   // empty field is not yet wrong, only not ready.
@@ -160,6 +161,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
     const result = await run(key, command, { iri, property: field.property, value: fieldValue(field, raw, lang) });
     if (result) {
       setRaw(fieldStart(field));
+      setDraft(false);
       // The last choice linked takes the select and its button with it.
       if (relationship) settle();
     }
@@ -206,7 +208,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
           ))}
         </ul>
       )}
-      <div ref={inputArea} className="example-field-input">
+      <div ref={inputArea} className="example-field-input" data-team-draft-complete={!draft}>
         {relationship ? (
           options.length === 0 && !raw ? (
             <p className="detail-note">
@@ -219,7 +221,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
               <label htmlFor={`${id}-choice`} className="edit-field-label">
                 {action === "change" ? t("exampleForm.changeLabel", { label: field.label }) : t("exampleForm.linkTo")}
               </label>
-              <select id={`${id}-choice`} value={raw} aria-disabled={busy} onChange={(e) => !busy && setRaw(e.target.value)}>
+              <select id={`${id}-choice`} value={raw} aria-disabled={busy} onChange={(e) => { if (!busy) { setRaw(e.target.value); setDraft(true); } }}>
                 <option value="">{t("exampleForm.choose", { target: field.rangeLabel ? locale === "en" ? a(field.rangeLabel) : field.rangeLabel : t("exampleForm.anyExample") })}</option>
                 {options.map((o) => (
                   <option key={o.iri} value={o.iri}>
@@ -247,6 +249,7 @@ function FieldEditor({ iri, name, field, primaryLanguage, languages, runner, onS
             onChange={(value, nextLang) => {
               setRaw(value);
               setLang(nextLang);
+              setDraft(true);
             }}
           />
         )}

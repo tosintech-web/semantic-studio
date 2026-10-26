@@ -14,11 +14,16 @@ them by clicking, without writing SPARQL by hand.
 ## この改変版について
 
 これは [Imran Khan氏のSemantic Studio](https://github.com/imrankhan1984/semantic-studio) の
-非公式改変版です。日本語の辞書編集・閲覧を使いやすくするP1開発を進めています。
+非公式改変版です。日本語の辞書編集・閲覧（P1）と、明示設定で利用するチーム版（P2）を追加しています。
 [日本語の操作手順](docs/p1-user-guide.md)と[配布物のライセンス通知](docs/distribution-notices.md)を参照してください。
 現在の対応範囲と検証結果は [P1実装計画](docs/superpowers/plans/2026-10-24-p1-dictionary-workspace.md)
 を参照してください。改変版の問い合わせは
 [このリポジトリのIssues](https://github.com/tosintech-web/semantic-studio/issues) へお願いします。
+
+チーム版はGoogle Workspace認証、閲覧者・編集者・管理者の権限、SQLiteへの即時保存、
+変更履歴と版の競合検査を使います。[チーム版の操作](docs/p2-user-guide.md)、
+[設定・移行・バックアップ](docs/p2-team-operations.md)、[P2検証記録](docs/p2-verification.md)を参照してください。
+既定のローカル版は継続します。本番Google認証・配備環境での確認は別途必要です。
 
 ソフトウェア本体は元作者の著作権表示を含む [MIT License](LICENSE) を維持します。
 データ・標準語彙・依存ライブラリはそれぞれの条件に従い、MITへ一括変更しません。

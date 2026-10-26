@@ -1366,4 +1366,6 @@ def mark_imported_hierarchy(tree: dict, imported: dict[str, str]) -> dict:
 
 # The one service, over the one store. Routers import this; tests that build
 # their own store call configure().
-imports_service = ImportsService(store)
+from .team.context import ServiceProxy
+
+imports_service = ServiceProxy("imports_service", factory=lambda: ImportsService(store))

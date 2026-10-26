@@ -7,7 +7,8 @@ SUMMARY
 BASIC IDEA
     Parse only the supplied environment mapping and fail closed when a team
     deployment lacks an exact HTTPS origin, identity settings or data directory.
-    Parsing neither activates the mode nor opens or migrates a data directory.
+    Valid origins use browser-canonical host/port spelling. Parsing neither
+    activates the mode nor opens or migrates a data directory.
 INPUTS / INPUT SOURCES
     - SEMANTIC_STUDIO_* values passed to TeamConfig.from_env.
 EXPECTED OUTPUT
@@ -72,7 +73,20 @@ def _origin(value: str) -> str:
             raise ValueError
     except ValueError:
         raise ValueError("Invalid SEMANTIC_STUDIO_PUBLIC_ORIGIN: exact HTTPS origin required") from None
-    return value
+    # Browsers serialize Origin using WHATWG URL rules. Operator spellings
+    # such as uppercase DNS names, explicit :443 and expanded IPv6 must compare
+    # against that canonical form, rather than reject the application's page.
+    if ":" in hostname:
+        address = IPv6Address(hostname)
+        # Python 3.14 renders mapped IPv4 tails as dotted decimal; browsers
+        # retain hexadecimal groups in an IPv6 URL host on every platform.
+        mapped = address.ipv4_mapped
+        literal = (f"::ffff:{int(mapped) >> 16:x}:{int(mapped) & 0xffff:x}"
+                   if mapped is not None else address.compressed)
+        host = f"[{literal}]"
+    else:
+        host = hostname.lower()
+    return "https://" + host + (f":{port}" if port not in (None, 443) else "")
 
 
 @dataclass(frozen=True)

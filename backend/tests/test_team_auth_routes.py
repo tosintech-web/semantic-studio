@@ -229,12 +229,15 @@ def test_other_sessions_csrf_does_not_revoke_current_session(setup):
     assert store.authenticate(token, now=now[0]).principal.sub == "member"
 
 
-def test_absolute_expiry_is_safe_despite_periodic_status_refresh(setup):
-    client, _, _, now = setup
+def test_absolute_expiry_is_safe_despite_periodic_user_activity(setup):
+    client, store, _, now = setup
     state, _ = start(client)
     finish(client, state)
+    token = client.cookies.get(SESSION)
     for timestamp in [1000, 2000, 3000, 3699]:
         now[0] = timestamp
+        # Real user requests refresh idle time; background status polls do not.
+        store.authenticate(token, now=timestamp)
         assert client.get("/api/auth/status").json()["authenticated"] is True
     now[0] = 3700
     response = client.get("/api/auth/status")

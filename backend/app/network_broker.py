@@ -861,4 +861,6 @@ def _remaining(timeout: float, deadline: Optional[float], url: str) -> float:
 
 # The process-wide broker. Configured with the store's data directory by
 # store.py, which is the one module that knows where that is.
-broker = NetworkBroker()
+from .team.context import ServiceProxy
+
+broker = ServiceProxy("broker", NetworkBroker())

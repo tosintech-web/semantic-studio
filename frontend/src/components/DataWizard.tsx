@@ -474,7 +474,7 @@ export default function DataWizard({
       : t("dataWizard.step", { step, title: t(STEP_TITLES[step]) });
 
   return (
-    <section className="data-wizard" aria-labelledby={headingId}>
+    <section className="data-wizard" aria-labelledby={headingId} data-team-draft-complete={step === "report"}>
       <h3 id={headingId} ref={headingRef} tabIndex={-1}>
         {title}
       </h3>

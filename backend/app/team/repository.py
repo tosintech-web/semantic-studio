@@ -221,8 +221,33 @@ class TeamRepository:
             result[key] = row[0] if row is not None else None
         return result
 
+    def snapshot(self) -> tuple[dict, dict]:
+        """Read payloads and tombstone versions in one SQLite snapshot."""
+        with self.connection() as db:
+            rows = db.execute("SELECT key,version,payload FROM resources").fetchall()
+        return ({row["key"]: json.loads(row["payload"]) for row in rows if row["payload"] is not None},
+                {row["key"]: row["version"] for row in rows})
+
+    def read_request(self, actor: str, request_id: str, identity: dict) -> dict | None:
+        digest = hashlib.sha256(_json(identity, "identity").encode("utf-8")).hexdigest()
+        with self.connection() as db:
+            replay = db.execute("SELECT body_hash,result FROM requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone()
+        if replay is None:
+            return None
+        if replay["body_hash"] != digest:
+            raise RequestMismatch(actor, request_id)
+        return json.loads(replay["result"])
+
+    @staticmethod
+    def _access_request_exists(db, actor, request_id):
+        # Auth is an optional schema extension, but request identities are a
+        # single actor-scoped namespace across every shared update family.
+        exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='team_access_requests'").fetchone()
+        return bool(exists and db.execute("SELECT 1 FROM team_access_requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone())
+
     def commit(self, actor: str, request_id: str, expected: dict[str, int | None],
-               changes: dict[str, dict | None], operation: str) -> dict:
+               changes: dict[str, dict | None], operation: str, *, identity: dict | None = None,
+               response: dict | None = None) -> dict:
         for field, value in (("actor", actor), ("request_id", request_id), ("operation", operation)):
             _text(value, field)
         if type(expected) is not dict or type(changes) is not dict:
@@ -244,9 +269,12 @@ class TeamRepository:
         expected = snapshot["expected"]
         payloads = {key: None if payload is None else _json(payload, "changes")
                     for key, payload in snapshot["changes"].items()}
-        digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        digest = hashlib.sha256((body if identity is None else _json(identity, "identity")).encode("utf-8")).hexdigest()
+        response = None if response is None else json.loads(_json(response, "response"))
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
+            if self._access_request_exists(db, actor, request_id):
+                raise RequestMismatch(actor, request_id)
             replay = db.execute("SELECT body_hash, result FROM requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone()
             if replay is not None:
                 if replay["body_hash"] != digest:
@@ -268,6 +296,8 @@ class TeamRepository:
                 db.execute("INSERT INTO audit(key,actor,timestamp,operation,request_id,before_version,after_version,before_payload,after_payload) VALUES(?,?,?,?,?,?,?,?,?)", (key, actor, timestamp, operation, request_id, actual[key], version, before, payload))
                 versions[key] = version
             result = {"request_id": request_id, "versions": versions}
+            if response is not None:
+                result["response"] = response
             db.execute("INSERT INTO requests(actor,request_id,body_hash,result) VALUES(?,?,?,?)", (actor, request_id, digest, _json(result, "result")))
             db.commit()
             return result

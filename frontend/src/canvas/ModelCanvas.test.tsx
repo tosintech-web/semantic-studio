@@ -68,6 +68,7 @@ const flow = vi.hoisted(() => ({
   measureMs: null as number | null,
   api: {
     setCenter: vi.fn(),
+    setViewport:vi.fn(),
     getZoom: () => 1,
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),

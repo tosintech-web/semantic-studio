@@ -29,7 +29,8 @@ BASIC IDEA
     drops on a 280-class model in Chrome). So a save records exactly what it
     sent, and a position leaves the unsaved set only when that save has
     succeeded and the box has not moved again since. A failed save keeps
-    everything pending and says so; the next move or flush tries again.
+    everything pending and says so. Local mode retries on the next move or flush;
+    team mode requires an explicit retry.
 
     That alone still depended on the order responses arrive in: a refetch
     could read the file just before the save wrote it, the save's answer
@@ -70,7 +71,11 @@ EXPECTED OUTPUT
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OperationFailure } from "../i18n/operationFailure";
 import { makeUiMessage } from "../i18n/uiMessage";
-import { getCanvas, putLayout } from "../api";
+import {expectedTeamVersions,isTeamMode} from "../team/client";
+import {setLayoutDraft,type LayoutDraftOwner} from "../team/layoutDrafts";
+import type {ResourceVersions} from "../team/types";
+import {projectStore} from "../state/projectStore";
+import { getCanvas, getLayout, putLayout } from "../api";
 import type { CanvasLayout, CanvasView, ProjectDocName } from "../types";
 import { layered, placeMissing, type Box, type Link, type Positions } from "./layered";
 
@@ -95,6 +100,7 @@ export function useCanvasData(
   revision: number,
   language: string | null,
   inferred: { imports: boolean; token?: number } | null = null,
+  refreshGeneration = 0,
 ) {
   // The result's token too: a new run on the same basis brings new lines.
   const inferredKey = inferred ? `on|${inferred.imports}|${inferred.token ?? 0}` : "off";
@@ -103,6 +109,7 @@ export function useCanvasData(
   const [saveError, setSaveError] = useState<CanvasFailure | null>(null);
   const failureSerial = useRef(0);
   const [attempt, setAttempt] = useState(0);
+  const [readGeneration,setReadGeneration]=useState(refreshGeneration);
   const [positions, setPositions] = useState<Positions>({});
   const [shown, setShownState] = useState<string[] | null>(null);
   // The browser's copy of the layout file, and what it knows better than the
@@ -116,25 +123,54 @@ export function useCanvasData(
   const inFlight = useRef<Promise<void> | null>(null);
   // The generation of this browser's last successful write of the layout.
   const savedGeneration = useRef(0);
+  const moving = useRef(false);
+  const shownWriting = useRef(false);
+  const readingLayout = useRef(false);
+  const basis = useRef<ResourceVersions|null>(null);
+  const lastFailure = useRef<unknown>(null);
+  const blockedAuto = useRef(false);
+  const flushRef = useRef<()=>Promise<void>>(async()=>{});
+  const draftOwner = useRef<LayoutDraftOwner>({projectId,doc,
+    name:projectStore.getSnapshot().project?.id===projectId?projectStore.getSnapshot().project!.name:projectId,
+    retry:()=>flushRef.current(),review:versions=>{
+      basis.current={...versions};blockedAuto.current=true;
+      if(timer.current!==null)window.clearTimeout(timer.current);timer.current=null;
+      publishDraft();
+    }});
+  const publishDraft = useCallback(()=>{
+    const pending=moving.current||readingLayout.current||shownWriting.current||timer.current!==null||unsaved.current.size>0||viewportUnsaved.current||inFlight.current!==null;
+    if(pending&&basis.current===null&&isTeamMode())basis.current=expectedTeamVersions();
+    if(!pending)basis.current=null;
+    setLayoutDraft(draftOwner.current,pending,lastFailure.current!==null||blockedAuto.current,inFlight.current!==null||shownWriting.current||readingLayout.current);
+  },[]);
   const settle = (generation: number | undefined) => {
     if (typeof generation === "number") savedGeneration.current = Math.max(savedGeneration.current, generation);
   };
 
-  const save = useCallback((): Promise<void> => {
+  const save = useCallback((explicit=false): Promise<void> => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = null;
     const run = async () => {
       // One at a time: the file is replaced whole, so the later write must
       // be the one that lands last.
       if (inFlight.current) await inFlight.current.catch(() => undefined);
+      if (blockedAuto.current && !explicit) return;
       const current = layout.current;
-      if (!current) return;
+      if (!current || (!unsaved.current.size&&!viewportUnsaved.current)) return;
       const sent = { ...current, positions: { ...current.positions } };
       const sentIris = [...unsaved.current];
       const sentViewport = viewportUnsaved.current;
       try {
-        settle((await putLayout(projectId, doc, sent))?.generation);
+        settle((await putLayout(projectId, doc, sent, basis.current??undefined))?.generation);
+        lastFailure.current=null;blockedAuto.current=false;
+        if(isTeamMode())basis.current=expectedTeamVersions();
       } catch (e) {
+        lastFailure.current=e;
+        if(isTeamMode()){
+          blockedAuto.current=true;
+          if(timer.current!==null)window.clearTimeout(timer.current);
+          timer.current=null;
+        }
         setSaveError({ cause: e, message: makeUiMessage("canvasUI.layoutFailed"), token: ++failureSerial.current });
         return;
       }
@@ -146,33 +182,67 @@ export function useCanvasData(
         if (now && then && now[0] === then[0] && now[1] === then[1]) unsaved.current.delete(iri);
       }
       if (sentViewport && layout.current?.viewport === sent.viewport) viewportUnsaved.current = false;
+      if(isTeamMode()&&!moving.current&&timer.current===null&&(unsaved.current.size>0||viewportUnsaved.current))
+        timer.current=window.setTimeout(()=>void save(),SAVE_DELAY_MS);
     };
     const promise = run();
     inFlight.current = promise;
+    publishDraft();
     void promise.finally(() => {
       if (inFlight.current === promise) inFlight.current = null;
+      publishDraft();
     });
     return promise;
-  }, [projectId, doc]);
+  }, [projectId, doc, publishDraft]);
 
   const scheduleSave = useCallback(() => {
+    if(blockedAuto.current||readingLayout.current){publishDraft();return;}
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => void save(), SAVE_DELAY_MS);
-  }, [save]);
+    publishDraft();
+  }, [save,publishDraft]);
 
   /** Write what is pending now, and wait for it (and for any save already
-   *  out). Resolves whether or not the write succeeded; a failure is in
-   *  saveError. */
+   *  out). Team failures retain their owner and reject so Close stays put;
+   *  local mode keeps its historical best-effort behavior. */
   const flush = useCallback(async (): Promise<void> => {
-    const pending = timer.current !== null || unsaved.current.size > 0 || viewportUnsaved.current;
-    if (pending) await save();
-    else if (inFlight.current) await inFlight.current.catch(() => undefined);
-  }, [save]);
+    moving.current=false;
+    if(timer.current!==null)window.clearTimeout(timer.current);
+    timer.current=null;publishDraft();
+    if(inFlight.current){
+      await inFlight.current.catch(()=>undefined);
+      if(isTeamMode()&&lastFailure.current)throw lastFailure.current;
+    }
+    const pending=unsaved.current.size>0||viewportUnsaved.current;
+    if(isTeamMode()&&layout.current&&(pending||shownWriting.current)){
+      // Explicit retry reads the current file, retaining only this owner's
+      // unsaved positions/viewport. Its separately retained CAS basis stays
+      // unchanged, so a newer server read cannot silently approve a write.
+      readingLayout.current=true;publishDraft();
+      try{
+        const fresh=await getLayout(projectId,doc);
+        const local=layout.current;const positions={...fresh.positions};
+        for(const iri of unsaved.current)if(local.positions[iri])positions[iri]=local.positions[iri];
+        layout.current={version:fresh.version,generation:fresh.generation,positions,shown:fresh.shown,
+          viewport:viewportUnsaved.current?local.viewport:fresh.viewport};
+        setPositions({...positions});setShownState(fresh.shown);
+      }catch(error){
+        lastFailure.current=error;blockedAuto.current=true;
+        setSaveError({cause:error,message:makeUiMessage("canvasUI.layoutFailed"),token:++failureSerial.current});
+        throw error;
+      }finally{readingLayout.current=false;publishDraft();}
+    }
+    if(pending)await save(true);
+    if(isTeamMode()&&lastFailure.current)throw lastFailure.current;
+  },[save,publishDraft,projectId,doc]);
+  flushRef.current=flush;
 
   // Leaving the canvas writes what is pending rather than dropping it.
   useEffect(() => () => {
+    moving.current=false;
     if (timer.current !== null) void save();
-  }, [save]);
+    else publishDraft();
+  }, [save,publishDraft]);
 
   useEffect(() => {
     layout.current = null;
@@ -208,7 +278,7 @@ export function useCanvasData(
         current.positions = { ...current.positions, ...placed };
         setPositions({ ...current.positions });
         setShownState(current.shown);
-        setView(fetched);
+        setView(fetched);setReadGeneration(refreshGeneration);
         if (added.length) scheduleSave();
       })
       .catch((e: unknown) => !cancelled && setError({ cause: e, token: ++failureSerial.current }));
@@ -217,18 +287,21 @@ export function useCanvasData(
     };
     // `inferred` is read through its key, so a new object for the same
     // switch does not refetch.
-  }, [projectId, doc, revision, language, attempt, scheduleSave, inferredKey]);
+  }, [projectId, doc, revision, language, attempt, scheduleSave, inferredKey,refreshGeneration]);
 
   /** A box moved by drag or arrow key. */
   const move = useCallback(
     (iri: string, at: [number, number]) => {
       if (!layout.current) return;
+      const before=layout.current.positions[iri];
+      if(before&&before[0]===at[0]&&before[1]===at[1]){moving.current=false;publishDraft();return;}
       layout.current.positions = { ...layout.current.positions, [iri]: at };
       unsaved.current.add(iri);
+      moving.current=false;
       setPositions({ ...layout.current.positions });
       scheduleSave();
     },
-    [scheduleSave],
+    [scheduleSave,publishDraft],
   );
 
   /** A box made on the canvas goes where it was dropped, and stays there
@@ -238,6 +311,7 @@ export function useCanvasData(
       if (!layout.current) return;
       layout.current.positions = { ...layout.current.positions, [iri]: at };
       unsaved.current.add(iri);
+      moving.current=false;
       setPositions({ ...layout.current.positions });
       void save();
     },
@@ -249,24 +323,28 @@ export function useCanvasData(
    *  write leaves the set as it was and says so; it never rejects. */
   const setShown = useCallback(
     async (next: string[]) => {
-      const current = layout.current;
+      let current = layout.current;
       if (!current) return;
       const before = current.shown;
+      shownWriting.current=true;publishDraft();
       try {
         await flush();
-        settle((await putLayout(projectId, doc, { ...current, positions: { ...current.positions }, shown: next }))?.generation);
+        current=layout.current??current;
+        settle((await putLayout(projectId, doc, { ...current, positions: { ...current.positions }, shown: next },basis.current??undefined))?.generation);
       } catch (e) {
         current.shown = before;
         setShownState(before);
         setSaveError({ cause: e, message: makeUiMessage("canvasUI.shownFailed"), token: ++failureSerial.current });
+        shownWriting.current=false;publishDraft();
         return;
       }
       current.shown = next;
       setShownState(next);
       setSaveError(null);
       setAttempt((a) => a + 1);
+      shownWriting.current=false;publishDraft();
     },
-    [projectId, doc, flush],
+    [projectId, doc, flush,publishDraft],
   );
   const show = useCallback(
     (iri: string) => {
@@ -293,16 +371,21 @@ export function useCanvasData(
   const setViewport = useCallback(
     (viewport: { x: number; y: number; zoom: number }) => {
       if (!layout.current) return;
+      moving.current=false;
+      const previous=layout.current.viewport;
+      if(previous&&previous.x===viewport.x&&previous.y===viewport.y&&previous.zoom===viewport.zoom){publishDraft();return;}
       layout.current.viewport = viewport;
       viewportUnsaved.current = true;
       scheduleSave();
     },
-    [scheduleSave],
+    [scheduleSave,publishDraft],
   );
 
   return {
     view,
     positions,
+    readGeneration,
+    beginMove:()=>{moving.current=true;publishDraft();},
     error,
     saveError,
     loading: view === null && error === null,

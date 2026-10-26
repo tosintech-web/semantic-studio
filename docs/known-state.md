@@ -3141,3 +3141,50 @@ when they appear in paths, archives or approved binary metadata. Removing a valu
 from the current tree does not erase existing Git or PR history. The integration
 status and privacy boundaries are documented separately in `docs/p2-verification.md`
 and `docs/team-configuration-privacy.md`.
+
+## Team commits publish only accepted candidates
+
+P2 adds an explicit team mode. Existing local services retain their behavior,
+while request-bound proxies resolve to detached team candidates. Immutable file
+blobs and typed RDF resources preserve original bytes, namespaces and blank-node
+identities. The SQLite transaction checks all expected versions and commits the
+resource changes, audit and actor-scoped request replay together. Failed candidate
+work cannot publish a shared edit. Full-operation inverse records enforce both
+latest-version and actor constraints; restoring a graph belongs to the existing
+store owner rather than an exception to the direct-mutation architecture test.
+Imports, snapshots and derived read caches keep their own generations and leases;
+a long read cannot lose its candidate directory while a later commit retires it.
+
+## Team input survives the browser
+
+A real Chrome InputEvent exposed a gap that jsdom change events missed: a parent
+input-capture handler that renders synchronously, or in a microtask, can reset a
+controlled field before the target's React onChange reads its native value. Dirty
+bookkeeping captures refs immediately and publishes its UI in a later task.
+Retained forms stay mounted across401 and409; suspended hosts are inert and hidden,
+and their document-level modal handlers do not trap recovery controls. Conflict
+review reads the current saved source between two matching version snapshots,
+then accepts only the explicitly reviewed baseline without resending the write.
+Background auth/versions polling does not count as user activity for idle expiry.
+
+## Team queued authentication
+
+SQLite BEGIN IMMEDIATE can wait behind a writer. Team authentication therefore
+runs in the threadpool, so public health and other async requests remain live.
+Production callers supply a clock function sampled after the transaction acquires
+its lock: a queued request's earlier timestamp must not falsely precede the last
+seen time written by another request. Numeric test clocks still enforce actual
+backward-clock rejection and precise idle/absolute expiry boundaries.
+
+## Team input owns its basis
+
+Canvas debounce, pending movements and in-flight saves register ownership before
+polling can replace their basis. Failed or unmounted owners retain their intent;
+only explicit recovery overlays their positions/viewport on the latest layout,
+preserving other members' positions. Query drafts track semantic content and save
+prompts rather than translated labels. Late acknowledgements and old-session
+failures cannot rebind a new document/query/session or roll its basis backward.
+Version HTTP headers use ASCII JSON so arbitrary Unicode resource names survive
+browser transport. Team export/duplicate projects current typed graph authority
+while preserving original saved bytes; export serializes a clone to avoid mutating
+namespaces as a side effect of a read.

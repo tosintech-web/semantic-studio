@@ -1694,6 +1694,7 @@
     "team.auth_required": {},
     "team.auth_expired": {},
     "team.auth_failed": {},
+    "team.invalid_request": {},
     "team.config_unavailable": {},
     "team.forbidden": {},
     "team.csrf": {},

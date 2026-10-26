@@ -41,6 +41,7 @@ import { I18nProvider } from "../i18n/I18nProvider";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderEn as render } from "../testutils/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {TeamContext} from "../team/TeamProvider";
 import AboutPanel, { ABOUT } from "./AboutPanel";
 // The repository's licence, one directory above the frontend. Vite's ?raw
 // rather than node:fs, which would need @types/node as a dependency — the same
@@ -349,4 +350,14 @@ it("links to the notices shipped with a production frontend", () => {
     const link = screen.getByRole("link", {name:"Notices included with this build →"});
     expect(link.getAttribute("href")).toBe(new URL("/THIRD_PARTY_NOTICES.md", window.location.href).href);
   } finally { vi.unstubAllEnvs(); }
+});
+
+
+it.each([
+ ['en','Team dictionaries are stored on your shared server.'],
+ ['ja','辞書はチームの共有サーバーに保存されます。'],
+])('describes shared storage and Google identity correctly in team %s', (locale,message)=>{
+ localStorage.setItem('semantic-studio.uiLocale.v1',locale);
+ render(<I18nProvider><TeamContext.Provider value={{mode:'team',canEdit:false,canAdmin:false,suspended:false}}><AboutPanel onClose={vi.fn()}/></TeamContext.Provider></I18nProvider>);
+ expect(screen.getByText(message)).toBeTruthy();expect(screen.queryByText('Your ontologies stay on this machine.')).toBeNull();
 });

@@ -66,7 +66,7 @@ def create_auth_router(config: TeamConfig, store: AuthStore, identity: GoogleIde
         token = request.cookies.get(SESSION_COOKIE)
         if token:
             try:
-                view = store.authenticate(token, now=clock())
+                view = store.authenticate(token, now=clock, touch=False)
             except AuthRefused:
                 pass
             else:
@@ -115,7 +115,7 @@ def create_auth_router(config: TeamConfig, store: AuthStore, identity: GoogleIde
         token = request.cookies.get(SESSION_COOKIE)
         if token:
             try:
-                view = store.authenticate(token, now=clock())
+                view = store.authenticate(token, now=clock)
             except AuthRefused:
                 pass
             else:

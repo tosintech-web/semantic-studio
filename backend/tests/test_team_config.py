@@ -119,3 +119,18 @@ def test_valid_ip_literals_and_dns_origins_are_supported(origin):
     env = team_env()
     env["SEMANTIC_STUDIO_PUBLIC_ORIGIN"] = origin
     assert TeamConfig.from_env(env).public_origin == origin
+
+
+@pytest.mark.parametrize('configured,browser_origin', [
+    ('https://STUDIO.EXAMPLE.ORG', 'https://studio.example.org'),
+    ('https://studio.example.org:443', 'https://studio.example.org'),
+    ('https://STUDIO.EXAMPLE.ORG:08443', 'https://studio.example.org:8443'),
+    ('https://[2001:0db8:0000:0000:0000:0000:0000:0001]:443', 'https://[2001:db8::1]'),
+    ('https://[0:0:0:0:0:FFFF:192.0.2.1]', 'https://[::ffff:c000:201]'),
+])
+def test_public_origin_matches_browser_url_origin_fixtures(configured, browser_origin):
+    # Captured from the WHATWG URL implementation's URL.origin. Browsers send
+    # this canonical form in Origin/Host, irrespective of operator spelling.
+    env = team_env()
+    env['SEMANTIC_STUDIO_PUBLIC_ORIGIN'] = configured
+    assert TeamConfig.from_env(env).public_origin == browser_origin

@@ -27,3 +27,5 @@
 **/*.db-*
 **/*.db.*
 **/*.private-values
+**/team-data
+**/team-backups

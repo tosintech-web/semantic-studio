@@ -47,6 +47,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "../i18n/I18nProvider";
 import { renderServerError } from "../i18n/serverMessage";
@@ -80,6 +81,7 @@ export interface Runner {
 /** `doc` names the document the commands go to; the open one by default.
  *  The Shapes view passes "shapes" (shacl-authoring 5.3). */
 export function useRunner(doc?: ProjectDocName): Runner {
+  const team = useTeam();
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [refusals, setRefusals] = useState<Record<string, RunnerRefusal>>({});
@@ -109,7 +111,7 @@ export function useRunner(doc?: ProjectDocName): Runner {
       announcement?: (result: ChangeResult) => ProjectNoticeInput,
       refused?: (message: string, error: unknown) => void,
     ) => {
-      if (inFlight.current) return null;
+      if (inFlight.current || !team.canEdit || team.suspended) return null;
       inFlight.current = true;
       setBusy(true);
       clear(field);
@@ -127,7 +129,7 @@ export function useRunner(doc?: ProjectDocName): Runner {
         if (mounted.current) setBusy(false);
       }
     },
-    [doc, clear],
+    [doc, clear, team.canEdit, team.suspended],
   );
   const alive = useCallback(() => mounted.current, []);
   return { busy, errors, refusals, run, clear, alive };

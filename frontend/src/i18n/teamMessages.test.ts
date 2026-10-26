@@ -20,6 +20,9 @@ import { renderServerMessage, validWireMessage } from "./serverMessage";
 import type { Translator, UiLocale } from "./types";
 const translator = (locale: UiLocale) => ((code, args) => translate(locale, code, args)) as Translator;
 const refusals = [
+  { code: "team.invalid_request", args: {},
+    en: "This request is invalid. Check the input and try again.",
+    ja: "要求が正しくありません。入力を確認して再試行してください。" },
   {
     "code": "team.auth_required",
     "args": {},

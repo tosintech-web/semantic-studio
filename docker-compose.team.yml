@@ -1,0 +1,33 @@
+# ==============================================================================
+# FILE: docker-compose.team.yml
+# SUMMARY
+#     Explicit single-process team deployment behind an operator-managed HTTPS proxy.
+# BASIC IDEA
+#     Fail on missing private environment settings; keep persistent data in a named
+#     volume and suppress callback query logging. The proxy must also omit queries.
+# INPUTS / INPUT SOURCES
+#     Required server environment and an existing HTTPS reverse proxy.
+# EXPECTED OUTPUT
+#     One loopback-bound authenticated application with private persistent storage.
+# ==============================================================================
+services:
+  semantic-studio-team:
+    build: .
+    image: semantic-studio:team
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      SEMANTIC_STUDIO_MODE: team
+      SEMANTIC_STUDIO_DATA_DIR: /data
+      SEMANTIC_STUDIO_PUBLIC_ORIGIN: ${SEMANTIC_STUDIO_PUBLIC_ORIGIN:?required}
+      SEMANTIC_STUDIO_GOOGLE_CLIENT_ID: ${SEMANTIC_STUDIO_GOOGLE_CLIENT_ID:?required}
+      SEMANTIC_STUDIO_GOOGLE_CLIENT_SECRET: ${SEMANTIC_STUDIO_GOOGLE_CLIENT_SECRET:?required}
+      SEMANTIC_STUDIO_ALLOWED_DOMAINS: ${SEMANTIC_STUDIO_ALLOWED_DOMAINS:?required}
+      SEMANTIC_STUDIO_BOOTSTRAP_SUBS: ${SEMANTIC_STUDIO_BOOTSTRAP_SUBS:?required}
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--no-proxy-headers"]
+    volumes:
+      - semantic-studio-team-data:/data
+    restart: unless-stopped
+
+volumes:
+  semantic-studio-team-data:

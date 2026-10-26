@@ -1848,6 +1848,7 @@ export const SERVER_CONTRACTS = {
   "team.csrf": {},
   "team.disabled": {},
   "team.forbidden": {},
+  "team.invalid_request": {},
   "team.last_admin": {},
   "team.request_mismatch": {},
   "team.revision_conflict": {},
@@ -2779,6 +2780,7 @@ export interface ServerMessageArgs {
   "team.csrf": undefined;
   "team.disabled": undefined;
   "team.forbidden": undefined;
+  "team.invalid_request": undefined;
   "team.last_admin": undefined;
   "team.request_mismatch": undefined;
   "team.revision_conflict": undefined;

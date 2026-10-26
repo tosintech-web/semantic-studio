@@ -61,6 +61,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {useTeam} from "../team/TeamProvider";
 import { useI18n } from "../i18n/I18nProvider";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import { describeKindCounts } from "../explore/suggestions";
@@ -114,6 +115,7 @@ function OntologyCard({
   onRemove,
   onStartProject,
 }: Props) {
+  const team = useTeam();
   const { t, locale } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const headingId = useId();
@@ -289,14 +291,16 @@ function OntologyCard({
                     // first so its focus trap records the stable ⋮ button as
                     // what to return to, as Download documentation does.
                     <button
+                      disabled={!team.canEdit}
                       onClick={() => {
                         closeMenu();
-                        onStartProject(summary.id);
+                        if (team.canEdit) onStartProject(summary.id);
                       }}
                     >{t("home.fromThis")}</button>
                   )}
                   <button
                     className="danger"
+                    disabled={!team.canAdmin}
                     onClick={() => {
                       // closeMenu first, as the items above: focus waits on
                       // the ⋮ button through the count and the dialog.

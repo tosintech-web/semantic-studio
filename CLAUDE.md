@@ -58,10 +58,10 @@ run everything, budgets included. Dated P1 results live in `docs/p1-verification
 so test counts are not maintained as a second, easily stale copy here.
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to
-`main`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
+`main` and `publish/**`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
 `backend-windows` (Python 3.14), `frontend` (`npm run test:ci`, `tsc -b`,
 `vite build`) and `docker` (`docker build .`). `budgets` only reports. A build
-is not done until CI is green on its pull request.
+is not done until CI is green on its pull request or inspected publication branch.
 
 **Timing budgets are separated, not deleted.** Backend timing tests carry
 `@pytest.mark.perf`; frontend timing tests have `[budget]` in their title. CI runs
@@ -195,6 +195,9 @@ backend/app/
   hierarchy.py       subClassOf / broader / subPropertyOf forests for the tree view
   docs_export.py     The documentation-site zip (with docs_assets/)
   provenance.py      Activity records for exports
+  team/              Explicit team configuration, Google sessions and roles,
+                     SQLite resources/audit/replay, detached candidate editing,
+                     immutable blobs, versioned Undo and maintenance
   routers/           HTTP layer only; the real work lives in the modules above
 
 frontend/src/
@@ -251,6 +254,9 @@ in a module.
 
 ## Load-bearing rules
 
+- Team handlers use request-bound detached services; the database commits resources, audit and replay before any successful response. Local fallback services never initialize in team mode. [Team commits publish only accepted candidates]
+- Team polling never renews idle sessions. Retained forms suspend their document key handlers, and input-capture bookkeeping publishes in a later task, after the target reads native input. [Team input survives the browser]
+
 - Third-party originals are raw bytes keyed by inventory hashes; text-mode normalization breaks their provenance. [Third-party notices preserve original bytes]
 
 - Import message carriers need explicit sibling metadata before JSON persistence; local-only retries keep that metadata with the saved failure. [Import refusal facts persist]
@@ -261,6 +267,7 @@ before undoing a rule, and add a line here and an entry there when a build
 leaves one behind.
 
 **Security and network**
+- Team authentication waits for SQLite off the event loop and samples live time after acquiring its transaction. [Team queued authentication]
 - Approval purposes come from source facts; an unknown redirect descriptor keeps the complete original reason visible. [Approval purposes carry source facts]
 - Only `network_broker.py` connects out; policy is asked before any name resolves. [outbound connection]
 - The broker connects to the judged address (`_pinned_url`), the name in `Host` and SNI. [outbound connection]
@@ -269,8 +276,8 @@ leaves one behind.
 - Never read rdflib's `service_string`; blocks come from `find_service_blocks` and `match_blocks`. [SERVICE]
 - The SERVICE handler never raises `NotImplementedError`; that sends local rows as `VALUES`. [SERVICE]
 - The scanner reads `expandUnicodeEscapes(query)`; `parseQuery` gets the raw query. [SERVICE]
-- `local_guard` is added last in `main.py`; every mutating `api.ts` call spreads `CLIENT_HEADER`. [own page]
-- Backend `TestClient`s use `base_url="http://localhost"` and the client header. [own page]
+- Local mode adds `local_guard` last in `main.py`; team mode uses its outermost authenticated boundary. Every mutating `api.ts` call spreads `CLIENT_HEADER`. [own page]
+- Local-mode backend `TestClient`s use `base_url="http://localhost"` and the client header; team tests use their configured exact HTTPS public origin. [own page]
 - `install_rdflib_guard` patches both `_urlopen`s, and UNIT-4 asserts it. [S-4]
 - The upload cap is enforced twice: middleware and `_read_capped`. [enforced twice]
 - Network tests assert a recording server saw zero requests, not only a 4xx. [S-1, S-2]
@@ -454,7 +461,7 @@ leaves one behind.
 - The button set is `:where()` rules, and the plain `button` rule sets no font or padding: element specificity outranks the set. [Portal foundations]
 - Removal starts only in a Home card's menu; its ⋮ is `aria-disabled` while counting, and Home refocuses when the card goes. [Portal foundations]
 - Home's start focus is `focus({ preventScroll: true })`. [Portal foundations]
-- Mount makes two requests, the ontology list and the project list; the home screen makes none to `/graph`. [card grid, authoring foundations]
+- After the mode/auth probe, mount loads the ontology list and the project list; the home screen makes no request to `/graph`. [card grid, authoring foundations]
 - Home shows no catalogue and downloads nothing: the examples are library entries (D-111); `CatalogueList` is the Load dialog's alone. [Home and examples]
 - The catalogue order is deliberate, and FOAF is not in it because it is a bundled example; read the comment above `CATALOGUE`. [leads with FOAF, Home and examples]
 - An example is told by `source === "example"` and its `example` record, never its name, and always follows the person's work (`home/libraryOrder.ts`). [Home and examples]
@@ -481,6 +488,7 @@ leaves one behind.
 - Unsupported reason metadata follows the deduplicated legacy strings, and metadata-only names never allocate namespace prefixes. [Shape-form integer precision]
 
 **Edit page**
+- Team pending canvas/query input owns its exact session and CAS basis; accepting reviewed versions never resends an edit. [Team input owns its basis]
 - Canvas state belongs to a project/document provider; late saves must not change the next target's failure or generation. UI language does not change that owner. [Canvas failures belong]
 - Unnamed-shape metadata uses the captured fallback carrier; authored identical English names stay literal. [Editing keeps unnamed shapes distinct]
 - An outline section clips its content; open sections have a 120 px minimum and are capped at their rows. [Edit page]

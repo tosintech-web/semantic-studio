@@ -117,10 +117,10 @@ Principalはsub/email/role/disabled。raw tokenを保存しない。
 共有更新のCSRF tokenとOriginを検証。read-only computationのPOSTを編集と混同しない。
 local modeでは既存挙動を維持。docs/openapiはteamで非公開。healthはデータなし。
 
-- [ ] 全既存ルートを列挙し、未分類route追加で試験失敗させる。
-- [ ] 未認証のAPI、HEAD、ZIP、原文、URL encoded path、docs/static漏れを試験する。
-- [ ] 3role×操作分類、他Origin、偽proxy header、設定不足/二重processの試験を書く。
-- [ ] RED→境界実装→GREEN。既存local_guard/main/API試験も実行し、コミット。
+- [x] 全既存ルートを列挙し、未分類route追加で試験失敗させる。
+- [x] 未認証のAPI、HEAD、ZIP、原文、URL encoded path、docs/static漏れを試験する。
+- [x] 3role×操作分類、他Origin、偽proxy header、設定不足/二重processの試験を書く。
+- [x] RED→境界実装→GREEN。既存local_guard/main/API試験も実行し、コミット。
 
 ### Task 6: 全共有更新・Undoの永続化とサービス接続
 
@@ -134,10 +134,10 @@ team responseには現在のresourceVersionsを付加する。既存localのJSON
 `undo(actor, key, expected, request_id)` / redoは最新の本人操作のみを逆操作の新revisionとして記録する。
 open/closeは個別画面の参照で、共有文書を破棄しない。
 
-- [ ] 2利用者/2接続の更新、model+shapesの複数基底、layout/snapshot/manifest/queries/policyの競合試験を書く。
-- [ ] 他者Undo防止、再起動Undo、応答喪失再送、DB失敗、blob失敗、閉じる/破棄の非破壊を試験する。
-- [ ] team版の保存警告・元text・namespace・空白ノード維持をfixtureで確認する。
-- [ ] RED→候補評価/commit/公開の順に実装→GREEN。更新ルート全分類の試験と既存編集一式、コミット。
+- [x] 2利用者/2接続の更新、model+shapesの複数基底、layout/snapshot/manifest/queries/policyの競合試験を書く。
+- [x] 他者Undo防止、再起動Undo、応答喪失再送、DB失敗、blob失敗、閉じる/破棄の非破壊を試験する。
+- [x] team版の保存警告・元text・namespace・空白ノード維持をfixtureで確認する。
+- [x] RED→候補評価/commit/公開の順に実装→GREEN。更新ルート全分類の試験と既存編集一式、コミット。
 
 ### Task 7: 認証・権限・履歴・競合の日英UI
 
@@ -148,9 +148,9 @@ open/closeは個別画面の参照で、共有文書を破棄しない。
 roleに沿って既存操作をdisable/説明する。履歴APIは `GET /api/team/history?key&offset&limit`、管理は `GET/PATCH /api/team/users`。
 他者更新は10秒間隔のversion読取で検知し、未送信入力がない時だけ表示を更新する。
 
-- [ ] 日英のlogin/logout/role/history/conflict/session expiryとキーボード/AXをcomponent試験する。
-- [ ] 入力中の401/409・辞書切替・UI言語切替・遅延応答に対する所有者保全を試験する。
-- [ ] RED→UI/中央API接続→GREEN。カタログキー/引数/利用箇所、tsc/build、既存App/編集試験、コミット。
+- [x] 日英のlogin/logout/role/history/conflict/session expiryとキーボード/AXをcomponent試験する。
+- [x] 入力中の401/409・辞書切替・UI言語切替・遅延応答に対する所有者保全を試験する。
+- [x] RED→UI/中央API接続→GREEN。カタログキー/引数/利用箇所、tsc/build、既存App/編集試験、コミット。
 
 ### Task 8: 移行・バックアップ・配備
 
@@ -160,22 +160,22 @@ roleに沿って既存操作をdisable/説明する。履歴APIは `GET /api/tea
 migrationは新領域のみ、元は読取専用。restoreは新領域のみ、sessions/loginsを全失効。
 運用secretは環境で渡し、.env.exampleは空/placeholderのみ。データvolumeはイメージへ含めない。
 
-- [ ] 元データ不変、RDF同値、未知項目/空白ノード、missing blob拒否、失効済みrestoreを試験する。
-- [ ] 稼働中backupの整合性、既存destination拒否、複数process排他を試験する。
-- [ ] RED→CLI/配備例/復旧手順→GREEN、実Docker検査と公開検査、コミット。
+- [x] 元データ不変、RDF同値、未知項目/空白ノード、missing blob拒否、失効済みrestoreを試験する。
+- [x] 稼働中backupの整合性、既存destination拒否、複数process排他を試験する。
+- [x] RED→CLI/配備例/復旧手順→GREEN、実Docker検査と公開検査、コミット。
 
-### Task 9: 統合検証・独立レビュー・PR
+### Task 9: 統合検証・独立レビュー・公開
 
 **Files:** Modify `.claude/skills/run-semantic-viewer/driver.mjs`（teamシナリオ）、Create `docs/p2-verification.md`, `docs/p2-user-guide.md`; Update CLAUDE/known-state、spec進捗。
 
 **Interfaces:** 合成Google署名fixtureと実2ブラウザsessionで認可と編集競合を再現する。
 本番資格情報を使わず全自動検証を完結させ、実Google loginの運用確認は別欄で管理する。
 
-- [ ] backend全体・frontend全体・契約生成・公開検査・tsc/build、既存smokeを成功させる。
-- [ ] 実Chromeで日英/IME/権限/履歴/競合/401復帰/Undo/再起動、AX/Tab、2利用者を確認する。
-- [ ] 単一process排他・バックアップ復元・Docker秘密非混入を確認する。
-- [ ] 全差分の独立レビューとセキュリティレビューを行い、指摘を根拠付きで修正・再検証する。
-- [ ] 本番Google login未確認なら「P2本番利用可能」としない。未確認を検証書とPRに明記する。
+- [x] backend全体・frontend全体・契約生成・公開検査・tsc/build、既存smokeを成功させる。
+- [x] 実Chromeで日英/IME/権限/履歴/競合/401復帰/Undo/再起動、AX/Tab、2利用者を確認する。
+- [x] 単一process排他・バックアップ復元・Docker秘密非混入を確認する。
+- [x] 全差分の独立レビューとセキュリティレビューを行い、指摘を根拠付きで修正・再検証する。
+- [x] 本番Google login未確認なら「P2本番利用可能」としない。未確認を検証書とPRに明記する。
 - [ ] 公開先とPRの基準ブランチを確定し、履歴検査済みのrefだけを送信して日本語PRを作成する。公開用snapshotは旧mainと共通祖先がないため、既存リポジトリの通常PR用には使わない。必須CI（Linux/Windows/frontend/docker）とpublication・budgets結果を確認する。
 
 ## 自己レビュー・実行方針
@@ -191,6 +191,16 @@ CLIの運用向け技術診断はcodeと機械可読結果を保持し、アプ�
 Tasks 1〜4を実装・独立レビュー済み。Task 8の公開検査部分を必要性により前倒し。
 全体試験はbackend 2,812成功、frontend 2,498成功、scripts 31成功、build/型検査とDocker成功。
 `docs/p2-verification.md`に証跡と未接続の境界を記録した。
-次にTask 5のAPI全体の認証・認可、その後Task 6の既存共有更新への接続を行う。
-ログイン等の製品画面（Task 7）と配備・受け入れ（Tasks 8〜9）はまだ完了していない。
+このチェックポイントではTask 5のAPI全体の認証・認可、その後Task 6の既存共有更新への接続が次の作業だった。
+当時はログイン等の製品画面（Task 7）と配備・受け入れ（Tasks 8〜9）は未完了。
 P2全体を完了・本番利用可能と扱わない。
+
+## 統合チェックポイント（2026-10-26）
+
+Tasks 5〜8を実装し、指摘を修正した独立コード・静的セキュリティ再レビューで残る修正指摘なし。
+実Chromeのlocal/P1/P2、Docker原文通知・非公開値検査、frontend全2,549試験、scripts39試験は成功。
+最終backend全体は2,951成功（性能予算込み、399.97秒）。GitHub CIを確認してTask 9を閉じる。
+ユーザーは既存GitHubへの公開用ブランチpushを指定した。旧mainと共通祖先がないため通常PRを作らず、
+公開用branch pushのCIで確認する。共有main・開発履歴・バックアップrefは送信しない。
+本番Google login・配備は未確認の運用境界として残し、本番利用可能とは記載しない。
+最新の証跡・変更一覧・判断は `docs/p2-verification.md` と `docs/p2-review.md` に集約する。

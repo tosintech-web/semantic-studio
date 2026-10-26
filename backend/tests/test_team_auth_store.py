@@ -219,3 +219,72 @@ def test_login_failure_audit_contains_only_finite_server_owned_facts(auth):
     assert event["before_payload"] is None and event["after_payload"] is None
     reopened = AuthStore(auth.path, bootstrap_subs=auth.bootstrap_subs)
     assert reopened.events() == events
+
+
+def test_background_status_authentication_does_not_extend_idle_time(tmp_path):
+    store = AuthStore(tmp_path / 'team.sqlite', bootstrap_subs=frozenset({'owner'}))
+    store.identity('owner','owner@example.org','example.org',now=0)
+    token = store.create_session('owner',now=0)
+    store.authenticate(token,now=1700,touch=False)
+    with pytest.raises(AuthRefused,match='auth_expired'):
+        store.authenticate(token,now=1800,touch=False)
+
+
+@pytest.mark.parametrize('access_first', [False, True])
+def test_request_ids_are_actor_scoped_across_access_and_graph_updates(tmp_path, access_first):
+    from app.team.repository import RequestMismatch
+    store = AuthStore(tmp_path / 'team.sqlite', bootstrap_subs=frozenset({'owner'}))
+    store.identity('owner','owner@example.org','example.org',now=0)
+    store.identity('peer','peer@example.org','example.org',now=0)
+    def access():
+        return store.change_access('owner','peer',expected_version=1,role='editor',disabled=False,request_id='same-id',now=1)
+    def graph():
+        return store.repository.commit('owner','same-id',{'model':None},{'model':{'value':1}},'edit')
+    if access_first:
+        access()
+        with pytest.raises(RequestMismatch):
+            graph()
+        assert store.repository.read('model') is None
+    else:
+        graph()
+        with pytest.raises(AuthRefused,match='request_mismatch'):
+            access()
+        assert next(user for user in store.users() if user.sub == 'peer').role == 'viewer'
+
+
+def test_live_authentication_clock_is_sampled_after_the_writer_lock(auth, monkeypatch):
+    from contextlib import contextmanager
+    import threading
+
+    auth.identity('owner', 'owner@example.org', 'example.org', now=100)
+    token = auth.create_session('owner', now=100)
+    approached = threading.Event()
+    sampled = threading.Event()
+    original_connection = auth.repository.connection
+
+    @contextmanager
+    def observed_connection():
+        with original_connection() as db:
+            approached.set()
+            yield db
+
+    def live_clock():
+        sampled.set()
+        return 200.0
+
+    with sqlite3.connect(auth.path, isolation_level=None) as writer:
+        writer.execute('BEGIN IMMEDIATE')
+        monkeypatch.setattr(auth.repository, 'connection', observed_connection)
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            pending = workers.submit(auth.authenticate, token, now=live_clock)
+            try:
+                if not approached.wait(timeout=2):
+                    # Surface an unsupported live-clock implementation rather
+                    # than misreporting a worker setup timeout as the failure.
+                    pending.result(timeout=2)
+                assert approached.is_set()
+                assert not sampled.is_set(), 'a queued request must not retain an older clock sample'
+            finally:
+                writer.rollback()
+            assert pending.result(timeout=5).principal.sub == 'owner'
+    assert sampled.is_set()
