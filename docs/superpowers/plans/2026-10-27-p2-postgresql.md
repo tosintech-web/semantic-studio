@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜4の接続基盤・repository・認証を検証済み、製品runtime切替は未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜5のPG runtime/編集を検証済み、保守・製品Compose・全試験移植は未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 
 ## Global Constraints
@@ -177,16 +177,16 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 - workspace/historyはTask 3/4のメソッドを消費し、直接connection/SQLを持たない。候補作成前にreadを閉じ、確定時に現在の認可を再確認。
 - history/conflictsがimportする`test_team_workspace.Harness/harness`をこのTaskでPG storage・合成user/session・RequestAuthへ先に移植する。認証scope直入れだけで再認可を回避しない。Task 7は残るcaseと全体inventoryを扱う。
 
-- [ ] **Step 1: runtime/workspace試験を書く。**
+- [x] **Step 1: runtime/workspace試験を書く。**
   - `test_pg_lease_loss_fences_old_app`: `assert old_app_write.status_code == 503`; 第二appが異なるblob directoryでも同じDB leaseを取れない。
   - `test_pg_health_precedes_blocked_authenticated_request`: `assert order == ['health','authenticated']`。eventで制御しtiming閾値に頼らない。
   - `test_pg_demotion_during_candidate_denies_commit`: 準備後の停止/降格で403/401、`assert resources_and_audit == before`。
   - `test_pg_commit_reply_loss_replays_after_restart`: 確定後の通信断では成功を捏造せず、同IDで確定応答を回収し二重適用しない。
   - `test_local_mode_never_loads_pg_driver`: `assert pg_connect_calls == []`。
-- [ ] **Step 2: RED。** `PGTEST tests/test_pg_runtime.py tests/test_pg_workspace.py -q` → 未接続runtime/認可/終了連携で失敗。
-- [ ] **Step 3: 実装。** process lease・唯一のwrite接続・fatal終了を接続。storage busyは一時503、connection喪失はfatalと区別。候補blob→DB原子確定→cache/応答公開を維持。owner検査・storage待ちはthreadpoolへ、公開livenessへDB問い合わせを追加しない。
-- [ ] **Step 4: GREEN。** 上記＋`PGTEST tests/test_team_history.py tests/test_team_conflicts.py -q` → 全成功。他者Undo・再帰的Redo・降格後の削除/復元・複数基底・入力保持用409 DTOを確認。
-- [ ] **Step 5: commit。** runtime/server/workspaceのPG接続と試験をcommit。
+- [x] **Step 2: RED。** `PGTEST tests/test_pg_runtime.py tests/test_pg_workspace.py -q` → 未接続runtime/認可/終了連携で失敗。
+- [x] **Step 3: 実装。** process lease・唯一のwrite接続・fatal終了を接続。storage busyは一時503、connection喪失はfatalと区別。候補blob→DB原子確定→cache/応答公開を維持。owner検査・storage待ちはthreadpoolへ、公開livenessへDB問い合わせを追加しない。
+- [x] **Step 4: GREEN。** 上記＋`PGTEST tests/test_team_history.py tests/test_team_conflicts.py -q` → 全成功。他者Undo・再帰的Redo・降格後の削除/復元・複数基底・入力保持用409 DTOを確認。
+- [x] **Step 5: commit。** runtime/server/workspaceのPG接続と試験をcommit。
 
 ## Task 6: localファイル移行・世代backup/restore・保守CLI
 
@@ -305,3 +305,5 @@ Task 2：固定DNS能力・hostaddr pin・単一write接続・DB lease/write gat
 Task 3：9 table/46 columnのPG schema、read-onlyの厳密catalog照合、repositoryの資源・墓標・audit・replayと必須transaction認可を実装。catalog参照`backend/app/team/sql/001_initial.catalog.json`を固定DDLから生成し、版行だけの偽装や列/制約/index/ACLの違いを拒否する。全PG基盤＋RDF codec＋source guard 102件が成功。部分schemaを自動修復せず、operation group/版/確定応答は同じread snapshotから返す。旧constructorを使うauth/runtime/既存team fixtureは後続Taskで移植する途中段階。
 
 Task 4：AuthStoreを共通PG writerへ移植。auth clockをgate後に取得し、pollはread-only、全更新/replayの現在session/role検査にRequestAuthと必須authorize callbackを提供する。`change_access`にもcallbackを必須とし、Task 5のworkspace接続で渡す。DB障害を認証失効と混同せず、全auth endpointでCookieを消さず503を返す。既存Google署名/nonce/state/PKCE・broker・Cookie契約を保ち、ここまでのPG基盤/認証/HTTP/Google/RDF/source guard 193件が成功。
+
+Task 5：runtime/共有workspace/UndoをPGへ接続し、blob lockとDB lease、fatal後のserver終了、現在session/roleと元操作・逆操作の効果を同じWriteTxで再検査する。共有Harnessと再起動fixtureを実session/新writerへ移植し、SQLを業務層から除去。自己レビューでUndo再送時の降格をREDで再現して修正。対象50件、ここまでの全PG対象244件が成功（既存Starlette警告1件）。実HTTP listenerの終了、DB待機中のhealth応答、確定後の応答喪失注入と新writerでの再送回収を含む。保守CLI/全旧team fixture/製品Compose/CIの切替は未完了。

@@ -19,6 +19,8 @@ from pathlib import Path
 import secrets
 import sys
 
+_restarted_storages = []
+
 
 def role_config(role='app'):
     from app.team.pg_config import load_pg_config, ROLES
@@ -53,6 +55,27 @@ def reset_test_schema():
         for table in ('team_sessions', 'team_login_attempts', 'team_auth_events',
                       'team_access_requests', 'team_users', 'audit', 'requests', 'resources', 'team_schema'):
             db.execute('DROP TABLE IF EXISTS semantic_studio.' + table + ' CASCADE')
+
+
+def restart_workspace(workspace):
+    from app.team.pg_storage import PgStorage
+    from app.team.repository import TeamRepository
+    from app.team.auth_store import AuthStore
+    from app.team.workspace import TeamWorkspace
+    config, directory = workspace.repository.storage.config, workspace.data_dir
+    bootstrap = workspace.auth_store.bootstrap_subs if workspace.auth_store else frozenset({'alice', 'bob'})
+    workspace.close()
+    workspace.repository.storage.close()
+    storage = PgStorage(config, on_fatal=lambda kind: None)
+    _restarted_storages.append(storage)
+    storage.start_writer()
+    return TeamWorkspace(TeamRepository(storage), directory,
+                         auth_store=AuthStore(storage, bootstrap_subs=bootstrap))
+
+
+def close_restarted_storages():
+    while _restarted_storages:
+        _restarted_storages.pop().close()
 
 
 if __name__ == '__main__':

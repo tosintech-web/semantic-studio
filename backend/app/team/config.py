@@ -24,6 +24,7 @@ from ipaddress import ip_address, IPv6Address
 import re
 from typing import Literal
 from urllib.parse import urlsplit
+from .pg_config import PgConfig, load_pg_config
 
 
 _DOMAIN = re.compile(r"(?=.{1,253}\Z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z", re.ASCII)
@@ -98,6 +99,7 @@ class TeamConfig:
     allowed_domains: frozenset[str] = frozenset()
     bootstrap_subs: frozenset[str] = frozenset()
     data_dir: Path | None = None
+    db: PgConfig | None = None
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> TeamConfig:
@@ -117,4 +119,4 @@ class TeamConfig:
         directory = _required(env, "DATA_DIR")
         if "\0" in directory:
             raise ValueError("Invalid SEMANTIC_STUDIO_DATA_DIR")
-        return cls("team", origin, client_id, secret, domains, subs, Path(directory))
+        return cls("team", origin, client_id, secret, domains, subs, Path(directory), load_pg_config(env, role='app'))

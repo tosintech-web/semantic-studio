@@ -110,6 +110,17 @@ def test_only_pg_storage_imports_the_database_driver():
     assert offenders == []
 
 
+def test_workspace_and_history_do_not_open_sql_connections():
+    for name in ('workspace.py', 'history.py'):
+        path = APP_DIR / 'team' / name
+        source = path.read_text(encoding='utf-8')
+        assert source.strip() and not postgres_imports(source)
+        tree = ast.parse(source)
+        calls = [node.func.attr for node in ast.walk(tree) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Attribute) and node.func.attr in {'connection', 'cursor', 'execute', 'executemany'}]
+        assert calls == [], name
+
+
 def test_the_scan_sees_every_forbidden_form():
     planted = [
         "import httpx",

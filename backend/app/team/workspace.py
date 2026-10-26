@@ -31,8 +31,9 @@ from starlette.responses import JSONResponse
 from .blobs import BlobStore
 from .commands import Candidate
 from .context import bind_services
-from .history import inverse, authorize_inverse
+from .history import inverse, authorize_inverse, authorize_replayed_inverse
 from .repository import RepositoryError, MissingExpectation, Conflict, InvalidRequest, StorageError
+from .auth_store import AuthRefused, RequestAuth
 
 
 class TeamWorkspace:
@@ -145,12 +146,10 @@ class TeamWorkspace:
             parsed = json.loads(body)
         except (ValueError, UnicodeError):
             return body
-        latest_rows = self.repository.history("workspace", limit=1)
-        latest = latest_rows[0] if latest_rows else None
-        group = []
-        if latest is not None:
-            with self.repository.connection() as db:
-                group = [dict(row) for row in db.execute("SELECT key,before_payload FROM audit WHERE actor=? AND request_id=?", (latest["actor"], latest["request_id"]))]
+        operation_group = self.repository.latest_operation("workspace")
+        latest = ({"actor": operation_group.actor, "request_id": operation_group.request_id,
+                   "operation": operation_group.operation} if operation_group else None)
+        group = operation_group.entries if operation_group else []
         permitted = role in {"editor", "admin"}
         if permitted and role != "admin":
             # Advertise exactly the inverse that the next write would evaluate.
@@ -231,24 +230,43 @@ class TeamWorkspace:
                 "body": hashlib.sha256(body).hexdigest(), "expected": expected,
                 "content_type": content_type}
 
-    def undo(self, actor, key, expected, request_id, *, redo=False):
+    def undo(self, actor, key, expected, request_id, *, authorize, redo=False):
         identity = {"key": key, "expected": expected, "redo": redo}
-        replay = self.repository.read_request(actor, request_id, identity)
+        def authorize_replay(tx):
+            principal = authorize(tx)
+            authorize_replayed_inverse(self.repository, actor, request_id, principal.role, tx=tx)
+            return principal
+        replay = self.repository.read_request(actor, request_id, identity, authorize=authorize_replay)
         if replay is not None:
             return replay
         changes, operation = inverse(self.repository, actor, key, expected, redo=redo)
-        return self.repository.commit(actor, request_id, expected, changes, operation, identity=identity)
+        def final_authorize(tx):
+            principal = authorize(tx)
+            resources, _ = self.repository.snapshot(tx=tx)
+            authorize_inverse(self.repository, actor, operation.split(':', 1)[1], changes,
+                              resources, principal.role, tx=tx)
+            return principal
+        return self.repository.commit(actor, request_id, expected, changes, operation,
+                                      identity=identity, authorize=final_authorize)
 
     async def handle_request(self, scope, receive, send, policy, inner_app):
         try:
             await self._request(scope, receive, send, policy, inner_app)
+        except AuthRefused as error:
+            code = error.code if error.code in {'auth_required', 'auth_expired', 'disabled', 'forbidden'} else 'auth_failed'
+            await JSONResponse({'code': code, 'uiMessage': {'code': 'team.' + code, 'args': {}}},
+                               status_code=401 if code in {'auth_required', 'auth_expired', 'disabled'} else 403,
+                               headers={'Cache-Control': 'no-store'})(scope, receive, send)
         except RepositoryError as error:
-            status = 503 if isinstance(error, StorageError) else 403 if error.code == "forbidden" else 428 if isinstance(error, MissingExpectation) else 409 if error.code in ("revision_conflict", "request_mismatch", "undo_forbidden") else 400
-            current = self.repository.snapshot()[1] if not isinstance(error, StorageError) else {}
+            status = 403 if error.code == "forbidden" else 428 if isinstance(error, MissingExpectation) else 409 if error.code in ("revision_conflict", "request_mismatch", "undo_forbidden") else 400
+            try:
+                current = (await run_in_threadpool(self.repository.snapshot))[1]
+            except StorageError:
+                return await JSONResponse({'code': 'storage_error', 'uiMessage': {'code': 'team.config_unavailable', 'args': {}}}, status_code=503)(scope, receive, send)
             message_code = {"missing_expectation": "version_required", "storage_error": "config_unavailable"}.get(error.code, error.code)
             await JSONResponse({"code": error.code, "currentVersions": current,
                                 "uiMessage": {"code": "team." + message_code, "args": {}}}, status_code=status)(scope, receive, send)
-        except (OSError, ValueError):
+        except (StorageError, OSError, ValueError):
             await JSONResponse({"code": "storage_error", "uiMessage": {"code": "team.config_unavailable", "args": {}}}, status_code=503)(scope, receive, send)
 
     @staticmethod
@@ -256,7 +274,17 @@ class TeamWorkspace:
         return {key.lower(): value for key, value in scope.get("headers", [])}
 
     async def _request(self, scope, receive, send, policy, inner_app):
+        await run_in_threadpool(self.repository.storage.ensure_owner)
         actor = scope["state"]["principal"].sub
+        request_auth = scope['state'].get('team_request_auth')
+        if self.auth_store is None or not isinstance(request_auth, RequestAuth):
+            raise AuthRefused('auth_required')
+        def authorize(tx):
+            principal = self.auth_store.require_current_principal(tx, token_hash=request_auth.token_hash,
+                                                                  operation=request_auth.operation)
+            if scope['path'].endswith(('/undo', '/redo')) and scope['path'].startswith('/api/projects/'):
+                authorize_replayed_inverse(self.repository, actor, request_id, principal.role, tx=tx)
+            return principal
         headers = self._headers(scope)
         shared = policy.shared_update
         chunks, total = [], 0
@@ -286,7 +314,8 @@ class TeamWorkspace:
             if "workspace" not in expected:
                 raise MissingExpectation(["workspace"])
             identity = self._identity(scope, headers, body, expected)
-            replay = await run_in_threadpool(self.repository.read_request, actor, request_id, identity)
+            access = scope['path'] == '/api/team/users' or scope['path'].startswith('/api/team/users/')
+            replay = None if access else await run_in_threadpool(self.repository.read_request, actor, request_id, identity, authorize=authorize)
             if replay is not None:
                 return await self._send(replay["response"], send)
         resources, versions = await run_in_threadpool(self.repository.snapshot)
@@ -295,13 +324,14 @@ class TeamWorkspace:
         if path == "/api/team/versions" and scope["method"] == "GET":
             return await JSONResponse({"resourceVersions": versions}, headers={"X-Semantic-Studio-Versions": json.dumps(versions)})(scope, receive, send)
         if path == "/api/team/users" or path.startswith("/api/team/users/"):
-            from .auth_store import AuthRefused, AccessConflict
+            from .auth_store import AccessConflict
             if self.auth_store is None:
-                raise StorageError(None)
+                raise StorageError('writer_unavailable')
             if scope["state"]["principal"].role != "admin":
                 return await JSONResponse({"code": "forbidden", "uiMessage": {"code": "team.forbidden", "args": {}}}, status_code=403)(scope, receive, send)
             if scope["method"] == "GET":
-                result = {"users": [asdict(user) for user in self.auth_store.users()], "resourceVersions": versions}
+                users = await run_in_threadpool(self.auth_store.users)
+                result = {"users": [asdict(user) for user in users], "resourceVersions": versions}
             else:
                 try:
                     payload = json.loads(body)
@@ -310,7 +340,7 @@ class TeamWorkspace:
                         raise InvalidRequest("user")
                     user = await run_in_threadpool(self.auth_store.change_access, actor, target,
                         expected_version=payload["expectedVersion"], role=payload["role"],
-                        disabled=payload["disabled"], request_id=request_id, now=time.time(), identity=identity)
+                        disabled=payload["disabled"], request_id=request_id, now=time.time, identity=identity, authorize=authorize)
                 except (KeyError, TypeError, json.JSONDecodeError):
                     raise InvalidRequest("user") from None
                 except AuthRefused as error:
@@ -340,7 +370,8 @@ class TeamWorkspace:
                 raise InvalidRequest("pagination") from None
             if not 0 <= limit <= 100:
                 raise InvalidRequest("pagination")
-            result = {"history": self.repository.history(key, offset, limit), "resourceVersions": versions}
+            history = await run_in_threadpool(self.repository.history, key, offset, limit)
+            result = {"history": history, "resourceVersions": versions}
             return await JSONResponse(result, headers={"X-Semantic-Studio-Versions": json.dumps(versions)})(scope, receive, send)
         # Closing a screen never rolls an authoritative document back.
         if path.endswith("/close") and path.startswith("/api/projects/"):
@@ -351,8 +382,8 @@ class TeamWorkspace:
             if undo:
                 from ..projects import document_id
                 parts = path.split("/")
-                changes, operation = inverse(self.repository, actor, "workspace", expected, redo=path.endswith("/redo"))
-                authorize_inverse(self.repository, actor, operation.split(":", 1)[1], changes, resources, scope["state"]["principal"].role)
+                changes, operation = await run_in_threadpool(inverse, self.repository, actor, "workspace", expected, redo=path.endswith("/redo"))
+                await run_in_threadpool(authorize_inverse, self.repository, actor, operation.split(":", 1)[1], changes, resources, scope["state"]["principal"].role)
                 if not any(key.startswith("file:projects/" + parts[3] + "/") or parts[3] in key and key.startswith(("graph:", "state:")) for key in changes):
                     raise RepositoryError("undo_forbidden")
                 if changes.get("file:projects/" + parts[3] + "/project.json", {}) is None:
@@ -374,16 +405,15 @@ class TeamWorkspace:
                     except UnknownDocument:
                         state = candidate.services["editing_service"].document(parts[3], parts[5]).state()
                         state.update(triples=0, dirty=False, revision=(versions.get("state:" + state["ontologyId"]) or 0) + 1)
-                    latest = self.repository.history("workspace", limit=1)[0]
-                    with self.repository.connection() as db:
-                        row = db.execute("SELECT result FROM requests WHERE actor=? AND request_id=?", (latest["actor"], latest["request_id"])).fetchone()
-                    previous = json.loads(base64.b64decode(json.loads(row[0])["response"]["body"])) if row is not None and "response" in json.loads(row[0]) else {}
+                    latest = await run_in_threadpool(self.repository.latest_operation, "workspace")
+                    prior = latest.request_result
+                    previous = json.loads(base64.b64decode(prior['response']['body'])) if prior and 'response' in prior else {}
                     result = {"state": state, "revision": state["revision"],
                               "documents": [document.state() for document in documents.values()],
                               "removedDocuments": [parts[5]] if parts[5] not in documents else [],
-                              "label": previous.get("label", latest["operation"]),
+                              "label": previous.get("label", latest.operation),
                               **({"uiMessage": previous["uiMessage"]} if "uiMessage" in previous else {})}
-                    payload = self._states(json.dumps(result).encode(), actor, scope["state"]["principal"].role, resources, changes, operation)
+                    payload = await run_in_threadpool(self._states, json.dumps(result).encode(), actor, scope["state"]["principal"].role, resources, changes, operation)
                     output = self._response(200, [(b"content-type", b"application/json")], payload, versions)
             else:
                 messages = []
@@ -403,7 +433,8 @@ class TeamWorkspace:
                 payload = b"".join(message.get("body", b"") for message in messages if message["type"] == "http.response.body")
                 if start["status"] >= 400 or not shared:
                     json_response = any(key.lower() == b"content-type" and b"application/json" in value for key, value in start.get("headers", []))
-                    return await self._send(self._response(start["status"], start.get("headers", []), self._states(payload, actor, scope["state"]["principal"].role, resources, enabled=json_response), versions), send)
+                    decorated = await run_in_threadpool(self._states, payload, actor, scope["state"]["principal"].role, resources, enabled=json_response)
+                    return await self._send(self._response(start["status"], start.get("headers", []), decorated, versions), send)
                 staged = await run_in_threadpool(candidate.capture)
                 # Preserve lazily unloaded library graphs, but never resources
                 # whose corresponding raw ontology was explicitly removed.
@@ -414,7 +445,8 @@ class TeamWorkspace:
                             staged[key] = value
                 changes = {key: staged.get(key) for key in resources.keys() | staged.keys()
                            if key.startswith(("file:", "graph:", "state:")) and resources.get(key) != staged.get(key)}
-                output = self._response(start["status"], start.get("headers", []), self._states(payload, actor, scope["state"]["principal"].role, resources, changes, operation), versions)
+                decorated = await run_in_threadpool(self._states, payload, actor, scope["state"]["principal"].role, resources, changes, operation)
+                output = self._response(start["status"], start.get("headers", []), decorated, versions)
             if shared:
                 changes["workspace"] = {"kind": "workspace"}
                 missing = [key for key in changes if key in versions and key not in expected]
@@ -425,7 +457,14 @@ class TeamWorkspace:
                 commit_expected = {**expected, **{key: None for key in changes if key not in versions}}
                 new_versions = {**versions, **{key: (versions.get(key) or 0) + 1 for key in changes}}
                 output = self._response(output["status"], [(key.encode("latin1"), value.encode("latin1")) for key, value in output["headers"]], base64.b64decode(output["body"]), new_versions)
-                committed = await run_in_threadpool(self.repository.commit, actor, request_id, commit_expected, changes, operation, identity=identity, response=output)
+                def final_authorize(tx):
+                    principal = authorize(tx)
+                    if undo:
+                        current_resources, _ = self.repository.snapshot(tx=tx)
+                        authorize_inverse(self.repository, actor, operation.split(':', 1)[1], changes,
+                                          current_resources, principal.role, tx=tx)
+                    return principal
+                committed = await run_in_threadpool(self.repository.commit, actor, request_id, commit_expected, changes, operation, identity=identity, response=output, authorize=final_authorize)
                 won = committed["response"] == output
                 output = committed["response"]
                 if won:

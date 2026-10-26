@@ -27,6 +27,7 @@ from starlette.responses import JSONResponse
 from ..messages import make_message
 from ..routers.auth import SESSION_COOKIE
 from .auth_store import AuthRefused
+from .pg_storage import StorageError
 from .permissions import allows, classify_route
 
 
@@ -71,7 +72,7 @@ class TeamMiddleware:
             await refuse(scope, receive, send, 'auth_required', 401)
             return
         try:
-            # Session refresh shares SQLite's writer lock with graph commits.
+            # Session refresh shares PostgreSQL's writer gate with graph commits.
             # A lock wait must leave the event loop free to answer health and
             # cancellation requests, just as FastAPI's synchronous routes do.
             view = await run_in_threadpool(
@@ -80,6 +81,9 @@ class TeamMiddleware:
         except AuthRefused as error:
             code = error.code if error.code in {'disabled', 'auth_expired'} else 'auth_required'
             await refuse(scope, receive, send, code, 401)
+            return
+        except StorageError:
+            await refuse(scope, receive, send, 'config_unavailable', 503)
             return
         if match is None:
             await refuse(scope, receive, send, 'forbidden', 403)
@@ -97,7 +101,8 @@ class TeamMiddleware:
                 return
         state = scope.setdefault('state', {})
         state.update(principal=view.principal, team_route_policy=policy,
-                     team_route_template=policy.template, team_path_params=params)
+                     team_route_template=policy.template, team_path_params=params,
+                     team_request_auth=self.runtime.auth_store.bind_request(token, policy.operation))
         if policy.shared_update:
             versions = headers.getlist('x-semantic-studio-versions')
             ids = headers.getlist('x-semantic-studio-request-id')

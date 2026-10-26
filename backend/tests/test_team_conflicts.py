@@ -15,6 +15,8 @@ EXPECTED OUTPUT
 """
 import pytest
 from test_team_workspace import Harness, harness
+
+pytestmark = pytest.mark.team_db
 from app.team.repository import StorageError
 
 
@@ -50,7 +52,7 @@ def test_committed_but_lost_response_replays_without_second_mutation(harness, mo
     commit = harness.workspace.repository.commit
     def lost_response(*args, **kwargs):
         commit(*args, **kwargs)
-        raise StorageError(10)
+        raise StorageError("db_error")
     monkeypatch.setattr(harness.workspace.repository, "commit", lost_response)
     first = harness.request("POST", "/api/projects", request_id="lost", versions=initial, json={"name": "Synthetic"})
     assert first.status_code == 503
@@ -81,7 +83,7 @@ def test_snapshot_generation_conflicts_and_survives_restart(harness, tmp_path):
     assert switched.status_code == 200, switched.text
     refused = peer.request("PATCH", f"/api/projects/{pid}/data/{sid}", request_id="stale-switch", json={"enabled": True})
     assert refused.status_code == 409
-    restarted = Harness(TeamWorkspace(TeamRepository(tmp_path / "team.sqlite3"), tmp_path))
+    restarted = harness.restarted()
     read = restarted.request("GET", f"/api/projects/{pid}/data")
     assert read.status_code == 200, read.text
     assert read.json()["generation"] > generation

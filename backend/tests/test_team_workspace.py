@@ -8,26 +8,37 @@ BASIC IDEA
     Supply an authenticated scope at the workspace boundary, then assert the
     persisted results across actors, restart, replay and injected storage failure.
 INPUTS / INPUT SOURCES
-    - Temporary SQLite databases and synthetic projects.
+    - Dedicated internal PostgreSQL and synthetic projects/sessions.
 EXPECTED OUTPUT
     - Atomic updates, stable HTTP replay and non-destructive screen closure.
 ================================================================================
 """
 import json
+import time
 from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
+from starlette.concurrency import run_in_threadpool
+from starlette.responses import JSONResponse
 
 from app.team.repository import TeamRepository
 from app.team.workspace import TeamWorkspace
+from app.team.auth_store import AuthStore, AuthRefused
+from app.team.pg_storage import StorageError
+
+pytestmark = pytest.mark.team_db
 
 
 class Harness:
     def __init__(self, workspace, actor="alice"):
         from app.routers import projects, queries, network, data, ontologies, examples
         self.workspace, self.actor = workspace, actor
+        if workspace.auth_store is None:
+            workspace.auth_store = AuthStore(workspace.repository.storage, bootstrap_subs=frozenset({'alice', 'bob'}))
+        workspace.auth_store.identity(actor, actor + '@example.org', 'example.org', now=time.time)
+        self.token = workspace.auth_store.create_session(actor, now=time.time)
         self.app = FastAPI()
         for module in (projects, queries, network, data, ontologies, examples):
             self.app.include_router(module.router)
@@ -37,10 +48,20 @@ class Harness:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-        scope.setdefault("state", {})["principal"] = SimpleNamespace(sub=self.actor, role="admin")
+        try:
+            view = await run_in_threadpool(self.workspace.auth_store.authenticate, self.token, now=time.time)
+        except StorageError:
+            return await JSONResponse({'code': 'storage_error'}, status_code=503)(scope, receive, send)
+        except AuthRefused as error:
+            return await JSONResponse({'code': error.code}, status_code=401)(scope, receive, send)
+        scope.setdefault("state", {})["principal"] = view.principal
         path = scope["path"]
         shared = scope["method"] not in ("GET", "HEAD") and not path.endswith(("/open", "/close", "/validate", "/reasoning"))
-        policy = SimpleNamespace(method=scope["method"], template=path, operation="edit", shared_update=shared)
+        from app.team.permissions import classify_route
+        match = classify_route(scope['method'], path)
+        operation = match[0].operation if match else 'edit'
+        policy = SimpleNamespace(method=scope["method"], template=path, operation=operation, shared_update=shared)
+        scope['state']['team_request_auth'] = self.workspace.auth_store.bind_request(self.token, operation)
         await self.workspace.handle_request(scope, receive, send, policy, self.app)
 
     def request(self, method, path, *, request_id=None, versions=None, **kwargs):
@@ -58,11 +79,23 @@ class Harness:
         assert response.status_code == 200, response.text
         return response.json()["id"]
 
+    def restarted(self):
+        from pg_support import restart_workspace
+        self.workspace = restart_workspace(self.workspace)
+        return Harness(self.workspace, self.actor)
+
+    def authorize(self, tx):
+        auth = self.workspace.auth_store
+        request_auth = auth.bind_request(self.token, 'admin')
+        return auth.require_current_principal(tx, token_hash=request_auth.token_hash, operation='admin')
+
 
 @pytest.fixture
-def harness(tmp_path):
-    repository = TeamRepository(tmp_path / "team.sqlite3")
-    return Harness(TeamWorkspace(repository, tmp_path))
+def harness(tmp_path, pg_repository):
+    instance = Harness(TeamWorkspace(pg_repository, tmp_path))
+    yield instance
+    instance.workspace.close()
+    instance.client.close()
 
 
 def test_requires_versions_and_does_not_touch_local_store(harness):
@@ -99,7 +132,7 @@ def test_actor_conflict_and_failed_commit_do_not_publish(harness, monkeypatch):
     assert conflict.status_code == 409
     assert conflict.json()["currentVersions"]
     from app.team.repository import StorageError
-    monkeypatch.setattr(harness.workspace.repository, "commit", lambda *a, **kw: (_ for _ in ()).throw(StorageError(10)))
+    monkeypatch.setattr(harness.workspace.repository, "commit", lambda *a, **kw: (_ for _ in ()).throw(StorageError("db_error")))
     failed = harness.request("PATCH", f"/api/projects/{pid}", request_id="fail", json={"name": "Lost"})
     assert failed.status_code == 503
     assert harness.request("GET", "/api/projects").json()[0]["name"] == "Alice"
@@ -113,7 +146,7 @@ def test_command_survives_restart_and_discard(harness, tmp_path):
     assert response.status_code == 200, response.text
     close = harness.request("POST", f"/api/projects/{pid}/close", json={"discard": True})
     assert close.status_code == 200
-    restarted = Harness(TeamWorkspace(TeamRepository(tmp_path / "team.sqlite3"), tmp_path))
+    restarted = harness.restarted()
     response = restarted.request("GET", f"/api/projects/{pid}/documents/model/source")
     assert response.status_code == 200, response.text
     assert "Durable" in response.text
@@ -129,7 +162,7 @@ def test_durable_undo_redo_and_actor_guard(harness, tmp_path):
     assert command(harness, pid, "First", "first").status_code == 200
     source = harness.request("POST", f"/api/projects/{pid}/open")
     assert source.json()["documents"][0]["canUndo"] is True
-    restarted = Harness(TeamWorkspace(TeamRepository(tmp_path / "team.sqlite3"), tmp_path))
+    restarted = harness.restarted()
     restarted.versions = harness.versions
     undone = restarted.request("POST", f"/api/projects/{pid}/documents/model/undo", request_id="undo")
     assert undone.status_code == 200, undone.text
@@ -179,7 +212,7 @@ def test_original_text_namespaces_bnodes_and_comment_warning_survive(harness, tm
     key = "graph:" + document_id(pid, "model")
     before = decode_graph(harness.workspace.repository.read(key).payload["graph"])
     nodes = {str(term) for triple in before for term in triple if isinstance(term, BNode)}
-    restarted = Harness(TeamWorkspace(TeamRepository(tmp_path / "team.sqlite3"), tmp_path))
+    restarted = harness.restarted()
     restarted.versions = harness.versions
     assert restarted.request("GET", path + "/source").json()["text"] == source
     assert command(restarted, pid, "Another", "another").status_code == 200
@@ -200,7 +233,7 @@ def test_original_text_namespaces_bnodes_and_comment_warning_survive(harness, tm
 
 def test_admin_users_are_versioned_and_last_admin_protected(harness):
     from app.team.auth_store import AuthStore
-    auth = AuthStore(harness.workspace.repository.path, bootstrap_subs=frozenset({"alice"}))
+    auth = AuthStore(harness.workspace.repository.storage, bootstrap_subs=frozenset({"alice"}))
     auth.identity("alice", "alice@example.org", "example.org", now=1)
     auth.identity("bob", "bob@example.org", "example.org", now=1)
     harness.workspace.auth_store = auth
@@ -241,7 +274,7 @@ def test_versions_entrypoint_exposes_empty_collection_and_current_keys(harness):
     assert any(key.startswith("graph:") for key in current.json()["resourceVersions"])
 
 
-def test_real_team_app_auth_versions_and_project_transaction(tmp_path):
+def test_real_team_app_auth_versions_and_project_transaction(tmp_path, pg_schema):
     import os
     import subprocess
     import sys
@@ -319,7 +352,7 @@ def test_once_grant_crosses_candidate_commit_and_is_spent_on_retry(harness, tmp_
     assert remembered.status_code == 200
     offline = harness.request("PUT", "/api/network/offline", request_id="offline", json={"offline": True})
     assert offline.status_code == 200
-    restarted = Harness(TeamWorkspace(TeamRepository(tmp_path / "team.sqlite3"), tmp_path))
+    restarted = harness.restarted()
     policy = restarted.request("GET", "/api/network/policy").json()
     assert policy["offline"] is True
     assert policy["grants"][0]["host"] == "docs.example.org"
@@ -331,6 +364,7 @@ def test_chunked_actual_body_limit_refuses_before_evaluation(harness):
     import asyncio
     scope = {"type": "http", "method": "POST", "path": "/api/projects", "headers": [],
              "state": {"principal": SimpleNamespace(sub="alice", role="admin"),
+                       "team_request_auth": harness.workspace.auth_store.bind_request(harness.token, 'edit'),
                        "team_body_limit": 3, "team_body_refusal": {"detail": "Synthetic body cap"}}}
     chunks = iter([{"type": "http.request", "body": b"ab", "more_body": True},
                    {"type": "http.request", "body": b"cd", "more_body": False}])
@@ -396,7 +430,7 @@ def test_auth_failed_network_activity_is_visible_to_next_request(harness):
 
 def test_access_response_does_not_leak_user_expectations_into_graph_versions(harness):
     from app.team.auth_store import AuthStore
-    auth = AuthStore(harness.workspace.repository.path, bootstrap_subs=frozenset({"alice"}))
+    auth = AuthStore(harness.workspace.repository.storage, bootstrap_subs=frozenset({"alice"}))
     auth.identity("alice", "alice@example.org", "example.org", now=1)
     auth.identity("bob", "bob@example.org", "example.org", now=1)
     harness.workspace.auth_store = auth
@@ -419,7 +453,7 @@ def test_access_response_does_not_leak_user_expectations_into_graph_versions(har
 
 
 @pytest.mark.parametrize("scenario", ["undo_deleted", "redo_deleted", "undo_import", "redo_import"])
-def test_real_team_inverse_rechecks_current_role_and_destructive_effects(tmp_path, scenario):
+def test_real_team_inverse_rechecks_current_role_and_destructive_effects(tmp_path, scenario, pg_schema):
     import os
     import subprocess
     import sys
@@ -525,8 +559,8 @@ def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_
     # Exercise both raw encodings on every host, including a Windows-like
     # negative control for accidental newline normalization in ZIP or copy.
     fixture_bytes = original.encode("utf-8").replace(b"\n", saved_newline)
-    harness.workspace.repository.commit("fixture", "saved-newline", {original_key: saved.version},
-        {original_key: {"blob": harness.workspace.blobs.put(fixture_bytes)}}, "fixture")
+    harness.workspace.repository.commit(harness.actor, "saved-newline", {original_key: saved.version},
+        {original_key: {"blob": harness.workspace.blobs.put(fixture_bytes)}}, "fixture", authorize=harness.authorize)
     original_bytes = harness.workspace.blobs.get(harness.workspace.repository.read(original_key).payload["blob"])
     assert original_bytes == fixture_bytes
     assert original_bytes.replace(b"\r\n", b"\n") == original.encode("utf-8")
@@ -549,7 +583,7 @@ def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_
     changes = {"file:projects/" + pid + "/opaque.bin": {"blob": harness.workspace.blobs.put(b'\x00opaque\r\n\xff')},
                "file:projects/" + pid + "/.semantic-studio-originals/model.ttl": {"blob": harness.workspace.blobs.put(b'opaque existing original entry')}}
     expected = {**versions, **{key: None for key in changes if key not in versions}}
-    harness.workspace.repository.commit("fixture", "opaque", expected, changes, "fixture")
+    harness.workspace.repository.commit(harness.actor, "opaque", expected, changes, "fixture", authorize=harness.authorize)
     harness.request("GET", "/api/team/versions")
     assert harness.request("POST", f"/api/projects/{pid}/open").status_code == 200
     candidate = next(iter(harness.workspace._views.values()))["candidate"]
@@ -585,12 +619,12 @@ def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_
     assert harness.workspace.blobs.get(after["file:projects/" + new_id + "/opaque.bin"]["blob"]) == b'\x00opaque\r\n\xff'
     if mode == "shape":
         assert after["graph:" + new_id + "-shapes"] == before[0]["graph:" + pid + "-shapes"]
-    restarted = Harness(TeamWorkspace(TeamRepository(tmp_path / "team.sqlite3"), tmp_path))
+    restarted = harness.restarted()
     assert "Accepted" in restarted.request("GET", f"/api/projects/{new_id}/documents/model/source").json()["text"]
     assert restarted.workspace.repository.read("graph:" + new_id + "-model").payload == before[0]["graph:" + pid + "-model"]
 
 
-def test_real_viewer_exports_accepted_graph_without_mutation(tmp_path):
+def test_real_viewer_exports_accepted_graph_without_mutation(tmp_path, pg_schema):
     import os
     import subprocess
     import sys

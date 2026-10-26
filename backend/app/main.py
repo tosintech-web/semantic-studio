@@ -74,6 +74,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -106,11 +107,18 @@ async def lifespan(_app: FastAPI):
     come in can be added back from the Load dialog."""
     team = getattr(_app.state, "team", None)
     if team is not None:
-        team.start()
+        from .team.pg_storage import StorageError
+        from .team.repository import UnsupportedSchema
+        try:
+            await run_in_threadpool(team.start)
+        except (StorageError, UnsupportedSchema):
+            # Uvicorn logs startup exceptions. Suppress the lower SQL/catalog
+            # stack as well as its driver cause, keeping only a finite reason.
+            raise RuntimeError('team_startup_failed') from None
         try:
             yield
         finally:
-            team.close()
+            await run_in_threadpool(team.close)
         return
     try:
         library_examples.seed(store)

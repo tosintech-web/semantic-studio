@@ -18,7 +18,7 @@ from pathlib import PurePosixPath
 from .repository import RepositoryError, Conflict
 
 
-def authorize_inverse(repository, actor, request_id, changes, resources, role, *, operation=None):
+def authorize_inverse(repository, actor, request_id, changes, resources, role, *, operation=None, tx=None):
     """Authorize the origin and resource effects using the current role.
 
     Undo is another write, not a retained capability from when the actor made
@@ -35,25 +35,24 @@ def authorize_inverse(repository, actor, request_id, changes, resources, role, *
     # A pending response has no audit row yet; its server-owned operation can
     # enter the same policy/effect checks without staging another candidate.
     visited = set()
-    with repository.connection() as db:
-        while True:
-            if operation is None:
-                if request_id in visited:
-                    raise RepositoryError("forbidden")
-                visited.add(request_id)
-                row = db.execute("SELECT operation FROM audit WHERE actor=? AND request_id=? LIMIT 1", (actor, request_id)).fetchone()
-                if row is None:
-                    raise RepositoryError("forbidden")
-                operation = row["operation"]
-            if operation.startswith(("undo:", "redo:")):
-                request_id = operation.split(":", 1)[1]
-                operation = None
-                continue
-            method, separator, path = operation.partition(" ")
-            classified = classify_route(method, path) if separator else None
-            if classified is None or not allows(role, classified[0].operation):
+    while True:
+        if operation is None:
+            if request_id in visited:
                 raise RepositoryError("forbidden")
-            break
+            visited.add(request_id)
+            rows = repository.read_operation_group(actor, request_id, tx=tx)
+            if not rows:
+                raise RepositoryError("forbidden")
+            operation = rows[0]["operation"]
+        if operation.startswith(("undo:", "redo:")):
+            request_id = operation.split(":", 1)[1]
+            operation = None
+            continue
+        method, separator, path = operation.partition(" ")
+        classified = classify_route(method, path) if separator else None
+        if classified is None or not allows(role, classified[0].operation):
+            raise RepositoryError("forbidden")
+        break
     for key, payload in changes.items():
         if key == "file:network-policy.json" or key == "file:examples.json":
             raise RepositoryError("forbidden")
@@ -70,17 +69,27 @@ def authorize_inverse(repository, actor, request_id, changes, resources, role, *
 
 
 def inverse(repository, actor, key, expected, *, redo=False):
-    entries = repository.history(key, limit=1)
-    if not entries or entries[0]["actor"] != actor:
+    group = repository.latest_operation(key)
+    if group is None or group.actor != actor:
         raise RepositoryError("undo_forbidden")
-    latest = entries[0]
-    if redo != latest["operation"].startswith("undo:"):
+    if redo != group.operation.startswith("undo:"):
         raise RepositoryError("undo_forbidden")
-    with repository.connection() as db:
-        rows = db.execute("SELECT * FROM audit WHERE actor=? AND request_id=? ORDER BY id", (actor, latest["request_id"])).fetchall()
-    actual = repository.versions(row["key"] for row in rows)
+    rows = group.entries
+    actual = group.versions
     basis = {row["key"]: row["after_version"] for row in rows}
     if actual != basis:
         raise Conflict(basis, actual)
     changes = {row["key"]: json.loads(row["before_payload"]) if row["before_payload"] is not None else None for row in rows}
-    return changes, ("redo:" if redo else "undo:") + latest["request_id"]
+    return changes, ("redo:" if redo else "undo:") + group.request_id
+
+
+def authorize_replayed_inverse(repository, actor, request_id, role, *, tx):
+    rows = repository.read_operation_group(actor, request_id, tx=tx)
+    if not rows or not rows[0]['operation'].startswith(('undo:', 'redo:')):
+        return
+    changes = {row['key']: json.loads(row['after_payload']) if row['after_payload'] is not None else None for row in rows}
+    before = {row['key']: json.loads(row['before_payload']) if row['before_payload'] is not None else None for row in rows}
+    # A replay is not a retained administrator capability. Its recorded origin
+    # and actual effects are checked under the same gate as the replay lookup.
+    authorize_inverse(repository, actor, request_id, changes, before, role,
+                      operation=rows[0]['operation'], tx=tx)

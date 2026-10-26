@@ -157,11 +157,15 @@ class TeamRepository:
             result[key] = row["version"] if row is not None else None
         return result
 
-    def snapshot(self) -> tuple[dict, dict]:
-        with self.storage.read_snapshot() as tx:
+    def snapshot(self, *, tx=None) -> tuple[dict, dict]:
+        def read(tx):
             rows = tx.execute("SELECT key,version,payload FROM resources").fetchall()
-        return ({row["key"]: json.loads(row["payload"]) for row in rows if row["payload"] is not None},
-                {row["key"]: row["version"] for row in rows})
+            return ({row["key"]: json.loads(row["payload"]) for row in rows if row["payload"] is not None},
+                    {row["key"]: row["version"] for row in rows})
+        if tx is not None:
+            return read(tx)
+        with self.storage.read_snapshot() as snapshot:
+            return read(snapshot)
 
     @staticmethod
     def _authorize(tx, actor, authorize):

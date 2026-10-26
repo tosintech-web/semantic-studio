@@ -82,6 +82,8 @@ def pg_repository(pg_schema):
         yield TeamRepository(storage)
     finally:
         storage.close()
+        from pg_support import close_restarted_storages
+        close_restarted_storages()
 
 PUBLIC_FOR_TESTS = ipaddress.ip_address("127.0.0.1")
 
