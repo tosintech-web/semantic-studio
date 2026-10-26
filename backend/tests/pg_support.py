@@ -44,6 +44,17 @@ def write_test_secrets(destination: Path):
             os.chmod(path, 0o444)
 
 
+def reset_test_schema():
+    """Drop known test tables only; never expose reset as a product CLI."""
+    from pg_probe import connect
+    if os.environ.get('SEMANTIC_STUDIO_TEST_DB') != '1':
+        raise RuntimeError('dedicated_test_database_required')
+    with connect(role_config('maintenance')) as db:
+        for table in ('team_sessions', 'team_login_attempts', 'team_auth_events',
+                      'team_access_requests', 'team_users', 'audit', 'requests', 'resources', 'team_schema'):
+            db.execute('DROP TABLE IF EXISTS semantic_studio.' + table + ' CASCADE')
+
+
 if __name__ == '__main__':
     if len(sys.argv) != 3 or sys.argv[1] != '--init-secrets':
         raise SystemExit('test_secret_arguments_invalid')

@@ -1,0 +1,2154 @@
+{
+  "basis": "Reviewed PostgreSQL 18 version 1 migration, parsed catalog reference; no application data.",
+  "catalog": {
+    "column_grants": [],
+    "columns": [
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "after_version",
+        "not_null": true,
+        "position": 8,
+        "table_name": "audit",
+        "type": "bigint"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "before_version",
+        "not_null": false,
+        "position": 7,
+        "table_name": "audit",
+        "type": "bigint"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "created",
+        "not_null": true,
+        "position": 3,
+        "table_name": "team_sessions",
+        "type": "double precision"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "created",
+        "not_null": true,
+        "position": 5,
+        "table_name": "team_login_attempts",
+        "type": "double precision"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "disabled",
+        "not_null": true,
+        "position": 5,
+        "table_name": "team_users",
+        "type": "boolean"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "id",
+        "not_null": true,
+        "position": 1,
+        "table_name": "team_schema",
+        "type": "smallint"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "last_seen",
+        "not_null": true,
+        "position": 4,
+        "table_name": "team_sessions",
+        "type": "double precision"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "timestamp",
+        "not_null": true,
+        "position": 5,
+        "table_name": "team_auth_events",
+        "type": "double precision"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "version",
+        "not_null": true,
+        "position": 2,
+        "table_name": "resources",
+        "type": "bigint"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "version",
+        "not_null": true,
+        "position": 2,
+        "table_name": "team_schema",
+        "type": "integer"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "",
+        "name": "version",
+        "not_null": true,
+        "position": 6,
+        "table_name": "team_users",
+        "type": "bigint"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "a",
+        "name": "id",
+        "not_null": true,
+        "position": 1,
+        "table_name": "audit",
+        "type": "bigint"
+      },
+      {
+        "collation": "-",
+        "default_value": null,
+        "deterministic": null,
+        "identity": "a",
+        "name": "id",
+        "not_null": true,
+        "position": 1,
+        "table_name": "team_auth_events",
+        "type": "bigint"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "actor",
+        "not_null": false,
+        "position": 2,
+        "table_name": "team_auth_events",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "actor",
+        "not_null": true,
+        "position": 1,
+        "table_name": "requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "actor",
+        "not_null": true,
+        "position": 1,
+        "table_name": "team_access_requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "actor",
+        "not_null": true,
+        "position": 3,
+        "table_name": "audit",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "after_payload",
+        "not_null": false,
+        "position": 10,
+        "table_name": "audit",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "after_payload",
+        "not_null": false,
+        "position": 7,
+        "table_name": "team_auth_events",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "before_payload",
+        "not_null": false,
+        "position": 6,
+        "table_name": "team_auth_events",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "before_payload",
+        "not_null": false,
+        "position": 9,
+        "table_name": "audit",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "body_hash",
+        "not_null": true,
+        "position": 3,
+        "table_name": "requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "body_hash",
+        "not_null": true,
+        "position": 3,
+        "table_name": "team_access_requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "browser_hash",
+        "not_null": true,
+        "position": 2,
+        "table_name": "team_login_attempts",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "domain",
+        "not_null": true,
+        "position": 3,
+        "table_name": "team_users",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "email",
+        "not_null": true,
+        "position": 2,
+        "table_name": "team_users",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "fingerprint",
+        "not_null": true,
+        "position": 3,
+        "table_name": "team_schema",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "key",
+        "not_null": true,
+        "position": 1,
+        "table_name": "resources",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "key",
+        "not_null": true,
+        "position": 2,
+        "table_name": "audit",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "nonce",
+        "not_null": true,
+        "position": 3,
+        "table_name": "team_login_attempts",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "operation",
+        "not_null": true,
+        "position": 4,
+        "table_name": "team_auth_events",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "operation",
+        "not_null": true,
+        "position": 5,
+        "table_name": "audit",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "payload",
+        "not_null": false,
+        "position": 3,
+        "table_name": "resources",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "request_id",
+        "not_null": true,
+        "position": 2,
+        "table_name": "requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "request_id",
+        "not_null": true,
+        "position": 2,
+        "table_name": "team_access_requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "request_id",
+        "not_null": true,
+        "position": 6,
+        "table_name": "audit",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "result",
+        "not_null": true,
+        "position": 4,
+        "table_name": "requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "result",
+        "not_null": true,
+        "position": 4,
+        "table_name": "team_access_requests",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "role",
+        "not_null": true,
+        "position": 4,
+        "table_name": "team_users",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "state_hash",
+        "not_null": true,
+        "position": 1,
+        "table_name": "team_login_attempts",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "sub",
+        "not_null": true,
+        "position": 1,
+        "table_name": "team_users",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "sub",
+        "not_null": true,
+        "position": 2,
+        "table_name": "team_sessions",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "target",
+        "not_null": false,
+        "position": 3,
+        "table_name": "team_auth_events",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "timestamp",
+        "not_null": true,
+        "position": 4,
+        "table_name": "audit",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "token_hash",
+        "not_null": true,
+        "position": 1,
+        "table_name": "team_sessions",
+        "type": "text"
+      },
+      {
+        "collation": "\"default\"",
+        "default_value": null,
+        "deterministic": true,
+        "identity": "",
+        "name": "verifier",
+        "not_null": true,
+        "position": 4,
+        "table_name": "team_login_attempts",
+        "type": "text"
+      }
+    ],
+    "constraints": [
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (\"timestamp\" >= 0::double precision AND \"timestamp\" < 'Infinity'::double precision)",
+        "name": "team_auth_events_timestamp_check",
+        "table_name": "team_auth_events",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (after_version > 0)",
+        "name": "audit_after_version_check",
+        "table_name": "audit",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (before_version > 0)",
+        "name": "audit_before_version_check",
+        "table_name": "audit",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (created >= 0::double precision AND created < 'Infinity'::double precision)",
+        "name": "team_login_attempts_created_check",
+        "table_name": "team_login_attempts",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (created >= 0::double precision AND created < 'Infinity'::double precision)",
+        "name": "team_sessions_created_check",
+        "table_name": "team_sessions",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (id = 1)",
+        "name": "team_schema_id_check",
+        "table_name": "team_schema",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (last_seen >= created AND last_seen < 'Infinity'::double precision)",
+        "name": "team_sessions_check",
+        "table_name": "team_sessions",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (role = ANY (ARRAY['viewer'::text, 'editor'::text, 'admin'::text]))",
+        "name": "team_users_role_check",
+        "table_name": "team_users",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (version > 0)",
+        "name": "resources_version_check",
+        "table_name": "resources",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (version > 0)",
+        "name": "team_schema_version_check",
+        "table_name": "team_schema",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "CHECK (version > 0)",
+        "name": "team_users_version_check",
+        "table_name": "team_users",
+        "type": "c",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "FOREIGN KEY (sub) REFERENCES team_users(sub)",
+        "name": "team_sessions_sub_fkey",
+        "table_name": "team_sessions",
+        "type": "f",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL \"timestamp\"",
+        "name": "audit_timestamp_not_null",
+        "table_name": "audit",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL \"timestamp\"",
+        "name": "team_auth_events_timestamp_not_null",
+        "table_name": "team_auth_events",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL actor",
+        "name": "audit_actor_not_null",
+        "table_name": "audit",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL actor",
+        "name": "requests_actor_not_null",
+        "table_name": "requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL actor",
+        "name": "team_access_requests_actor_not_null",
+        "table_name": "team_access_requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL after_version",
+        "name": "audit_after_version_not_null",
+        "table_name": "audit",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL body_hash",
+        "name": "requests_body_hash_not_null",
+        "table_name": "requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL body_hash",
+        "name": "team_access_requests_body_hash_not_null",
+        "table_name": "team_access_requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL browser_hash",
+        "name": "team_login_attempts_browser_hash_not_null",
+        "table_name": "team_login_attempts",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL created",
+        "name": "team_login_attempts_created_not_null",
+        "table_name": "team_login_attempts",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL created",
+        "name": "team_sessions_created_not_null",
+        "table_name": "team_sessions",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL disabled",
+        "name": "team_users_disabled_not_null",
+        "table_name": "team_users",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL domain",
+        "name": "team_users_domain_not_null",
+        "table_name": "team_users",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL email",
+        "name": "team_users_email_not_null",
+        "table_name": "team_users",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL fingerprint",
+        "name": "team_schema_fingerprint_not_null",
+        "table_name": "team_schema",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL id",
+        "name": "audit_id_not_null",
+        "table_name": "audit",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL id",
+        "name": "team_auth_events_id_not_null",
+        "table_name": "team_auth_events",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL id",
+        "name": "team_schema_id_not_null",
+        "table_name": "team_schema",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL key",
+        "name": "audit_key_not_null",
+        "table_name": "audit",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL key",
+        "name": "resources_key_not_null",
+        "table_name": "resources",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL last_seen",
+        "name": "team_sessions_last_seen_not_null",
+        "table_name": "team_sessions",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL nonce",
+        "name": "team_login_attempts_nonce_not_null",
+        "table_name": "team_login_attempts",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL operation",
+        "name": "audit_operation_not_null",
+        "table_name": "audit",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL operation",
+        "name": "team_auth_events_operation_not_null",
+        "table_name": "team_auth_events",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL request_id",
+        "name": "audit_request_id_not_null",
+        "table_name": "audit",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL request_id",
+        "name": "requests_request_id_not_null",
+        "table_name": "requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL request_id",
+        "name": "team_access_requests_request_id_not_null",
+        "table_name": "team_access_requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL result",
+        "name": "requests_result_not_null",
+        "table_name": "requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL result",
+        "name": "team_access_requests_result_not_null",
+        "table_name": "team_access_requests",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL role",
+        "name": "team_users_role_not_null",
+        "table_name": "team_users",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL state_hash",
+        "name": "team_login_attempts_state_hash_not_null",
+        "table_name": "team_login_attempts",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL sub",
+        "name": "team_sessions_sub_not_null",
+        "table_name": "team_sessions",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL sub",
+        "name": "team_users_sub_not_null",
+        "table_name": "team_users",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL token_hash",
+        "name": "team_sessions_token_hash_not_null",
+        "table_name": "team_sessions",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL verifier",
+        "name": "team_login_attempts_verifier_not_null",
+        "table_name": "team_login_attempts",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL version",
+        "name": "resources_version_not_null",
+        "table_name": "resources",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL version",
+        "name": "team_schema_version_not_null",
+        "table_name": "team_schema",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "NOT NULL version",
+        "name": "team_users_version_not_null",
+        "table_name": "team_users",
+        "type": "n",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (actor, request_id)",
+        "name": "requests_pkey",
+        "table_name": "requests",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (actor, request_id)",
+        "name": "team_access_requests_pkey",
+        "table_name": "team_access_requests",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (id)",
+        "name": "audit_pkey",
+        "table_name": "audit",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (id)",
+        "name": "team_auth_events_pkey",
+        "table_name": "team_auth_events",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (id)",
+        "name": "team_schema_pkey",
+        "table_name": "team_schema",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (key)",
+        "name": "resources_pkey",
+        "table_name": "resources",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (state_hash)",
+        "name": "team_login_attempts_pkey",
+        "table_name": "team_login_attempts",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (sub)",
+        "name": "team_users_pkey",
+        "table_name": "team_users",
+        "type": "p",
+        "validated": true
+      },
+      {
+        "deferrable": false,
+        "deferred": false,
+        "definition": "PRIMARY KEY (token_hash)",
+        "name": "team_sessions_pkey",
+        "table_name": "team_sessions",
+        "type": "p",
+        "validated": true
+      }
+    ],
+    "indexes": [
+      {
+        "definition": "CREATE INDEX audit_key_id ON semantic_studio.audit USING btree (key, id DESC)",
+        "immediate": true,
+        "live": true,
+        "name": "audit_key_id",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "audit",
+        "unique_index": false,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX audit_pkey ON semantic_studio.audit USING btree (id)",
+        "immediate": true,
+        "live": true,
+        "name": "audit_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "audit",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX requests_pkey ON semantic_studio.requests USING btree (actor, request_id)",
+        "immediate": true,
+        "live": true,
+        "name": "requests_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "requests",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX resources_pkey ON semantic_studio.resources USING btree (key)",
+        "immediate": true,
+        "live": true,
+        "name": "resources_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "resources",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX team_access_requests_pkey ON semantic_studio.team_access_requests USING btree (actor, request_id)",
+        "immediate": true,
+        "live": true,
+        "name": "team_access_requests_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "team_access_requests",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX team_auth_events_pkey ON semantic_studio.team_auth_events USING btree (id)",
+        "immediate": true,
+        "live": true,
+        "name": "team_auth_events_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "team_auth_events",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX team_login_attempts_pkey ON semantic_studio.team_login_attempts USING btree (state_hash)",
+        "immediate": true,
+        "live": true,
+        "name": "team_login_attempts_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "team_login_attempts",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX team_schema_pkey ON semantic_studio.team_schema USING btree (id)",
+        "immediate": true,
+        "live": true,
+        "name": "team_schema_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "team_schema",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX team_sessions_pkey ON semantic_studio.team_sessions USING btree (token_hash)",
+        "immediate": true,
+        "live": true,
+        "name": "team_sessions_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "team_sessions",
+        "unique_index": true,
+        "valid": true
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX team_users_pkey ON semantic_studio.team_users USING btree (sub)",
+        "immediate": true,
+        "live": true,
+        "name": "team_users_pkey",
+        "nulls_not_distinct": false,
+        "ready": true,
+        "table_name": "team_users",
+        "unique_index": true,
+        "valid": true
+      }
+    ],
+    "relations": [
+      {
+        "force_rls": false,
+        "kind": "S",
+        "name": "audit_id_seq",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "S",
+        "name": "team_auth_events_id_seq",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "audit_key_id",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "audit_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "requests_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "resources_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "team_access_requests_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "team_auth_events_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "team_login_attempts_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "team_schema_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "team_sessions_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "i",
+        "name": "team_users_pkey",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "audit",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "requests",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "resources",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "team_access_requests",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "team_auth_events",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "team_login_attempts",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "team_schema",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "team_sessions",
+        "owner": "team_maintenance",
+        "rls": false
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "team_users",
+        "owner": "team_maintenance",
+        "rls": false
+      }
+    ],
+    "schema_grants": [
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "owner": "team_maintenance",
+        "privilege": "USAGE"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "owner": "team_maintenance",
+        "privilege": "USAGE"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "owner": "team_maintenance",
+        "privilege": "CREATE"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "owner": "team_maintenance",
+        "privilege": "USAGE"
+      }
+    ],
+    "table_grants": [
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "audit_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_auth_events_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "USAGE",
+        "table_name": "audit_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_app",
+        "grantor": "team_maintenance",
+        "privilege": "USAGE",
+        "table_name": "team_auth_events_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_backup",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "DELETE",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "INSERT",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "MAINTAIN",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "REFERENCES",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "audit_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_auth_events_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "SELECT",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRIGGER",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "TRUNCATE",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "audit"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "audit_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "resources"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_access_requests"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_auth_events"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_auth_events_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_login_attempts"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_schema"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_sessions"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "UPDATE",
+        "table_name": "team_users"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "USAGE",
+        "table_name": "audit_id_seq"
+      },
+      {
+        "grantable": false,
+        "grantee": "team_maintenance",
+        "grantor": "team_maintenance",
+        "privilege": "USAGE",
+        "table_name": "team_auth_events_id_seq"
+      }
+    ],
+    "triggers": []
+  },
+  "ddl_sha256": "1856cda279efe06332dbc07e90c22c8725855c9f59d2b2aab29f53a6e177349c"
+}

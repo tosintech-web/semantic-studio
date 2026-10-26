@@ -60,6 +60,7 @@ services:
     environment:
       <<: *db-environment
       SEMANTIC_STUDIO_DB_USER: team_app
+      SEMANTIC_STUDIO_TEST_DB: "1"
       SEMANTIC_STUDIO_DB_PASSWORD_FILE: /run/secrets/team_db_app
       BUDGET_FACTOR: ${BUDGET_FACTOR:-1}
     networks: [db_internal]

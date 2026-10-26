@@ -1,30 +1,32 @@
 """
 ================================================================================
 FILE: backend/app/team/repository.py
-================================================================================
 SUMMARY
-    Stores team resources, monotonic revisions, audit and request replay in SQLite.
+    PostgreSQL resources, monotonic revisions, audit and actor-scoped replay.
 BASIC IDEA
-    Every operation opens its own connection. BEGIN IMMEDIATE serializes writers
-    before comparing all dependency versions; data, audit and replay commit
-    together. Deleted rows retain their generation so recreation cannot hide an
-    intervening change. Structural schema checks refuse incompatible databases;
-    JSON snapshots preserve unknown application fields.
+    Read consistent snapshots and serialize shared updates on the storage writer
+    gate. Reauthorize before replay or CAS; commit data/audit/response together.
+    Deleted resources retain versions. Canonical JSON TEXT preserves opaque data.
 INPUTS / INPUT SOURCES
-    - A private database path and validated actor/request/resource JSON values.
+    Shared PgStorage, validated requests and a trusted in-transaction authorizer.
 EXPECTED OUTPUT
-    - Detached resources, structured failures, durable history and SQLite backups.
+    Detached resources, finite domain/storage failures and durable operation groups.
 ================================================================================
 """
-from contextlib import contextmanager
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
 import math
-from pathlib import Path
-import sqlite3
-from typing import Iterable
+from typing import TYPE_CHECKING
+
+from .pg_storage import PgStorage, ReadTx, WriteTx, StorageError
+
+if TYPE_CHECKING:
+    from .auth_store import Principal
 
 
 class RepositoryError(Exception):
@@ -67,12 +69,6 @@ class UnsupportedSchema(RepositoryError):
         super().__init__("unsupported_schema", version=version)
 
 
-class StorageError(RepositoryError):
-    def __init__(self, sqlite_code: int | None):
-        self.sqlite_code = sqlite_code
-        super().__init__("storage_error", sqlite_code=sqlite_code)
-
-
 @dataclass(frozen=True)
 class Resource:
     key: str
@@ -80,22 +76,13 @@ class Resource:
     payload: dict
 
 
-_SCHEMA = (
-    "CREATE TABLE resources (key TEXT PRIMARY KEY, version INTEGER NOT NULL CHECK(version > 0), payload TEXT)",
-    "CREATE TABLE audit (id INTEGER PRIMARY KEY, key TEXT NOT NULL, actor TEXT NOT NULL, timestamp TEXT NOT NULL, operation TEXT NOT NULL, request_id TEXT NOT NULL, before_version INTEGER, after_version INTEGER NOT NULL, before_payload TEXT, after_payload TEXT)",
-    "CREATE INDEX audit_key_id ON audit(key, id DESC)",
-    "CREATE TABLE requests (actor TEXT NOT NULL, request_id TEXT NOT NULL, body_hash TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(actor, request_id))",
-)
-_COLUMNS = {
-    "resources": {"key", "version", "payload"},
-    "audit": {"id", "key", "actor", "timestamp", "operation", "request_id", "before_version", "after_version", "before_payload", "after_payload"},
-    "requests": {"actor", "request_id", "body_hash", "result"},
-}
-
-
 def _text(value, field):
-    if not isinstance(value, str) or not value:
+    if not isinstance(value, str) or not value or "\0" in value:
         raise InvalidRequest(field)
+    try:
+        value.encode("utf-8")
+    except UnicodeError:
+        raise InvalidRequest(field) from None
 
 
 def _json(value, field):
@@ -127,79 +114,30 @@ def _json(value, field):
         raise InvalidRequest(field) from exc
 
 
+@dataclass(frozen=True)
+class OperationGroup:
+    actor: str
+    request_id: str
+    operation: str
+    entries: tuple[dict, ...]
+    versions: dict[str, int | None]
+    request_result: dict | None
+
+
 class TeamRepository:
-    def __init__(self, path: Path):
-        self.path = Path(path)
-        with self.connection() as db:
-            db.execute("BEGIN IMMEDIATE")
-            version = db.execute("PRAGMA user_version").fetchone()[0]
-            tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-            if version == 0 and not tables:
-                for statement in _SCHEMA:
-                    db.execute(statement)
-                db.execute("PRAGMA user_version=1")
-            elif version != 1 or not _COLUMNS.keys() <= tables:
-                raise UnsupportedSchema(version)
-            else:
-                self._validate_schema(db, version)
-            db.commit()
-
-    @staticmethod
-    def _validate_schema(db, version):
-        # Column names alone miss the uniqueness that makes ON CONFLICT and
-        # actor-scoped replay safe. Compare SQLite's parsed structures against
-        # this version's fresh schema, without changing the inspected database.
-        with sqlite3.connect(":memory:") as reference:
-            for statement in _SCHEMA:
-                reference.execute(statement)
-            for table in _COLUMNS:
-                actual_columns = [tuple(row) for row in db.execute(f"PRAGMA table_xinfo({table})")]
-                known_columns = list(reference.execute(f"PRAGMA table_xinfo({table})"))
-                if actual_columns != known_columns:
-                    raise UnsupportedSchema(version)
-                actual_indexes = {row[1]: tuple(row)[2:] for row in db.execute(f"PRAGMA index_list({table})")}
-                known_indexes = {row[1]: tuple(row)[2:] for row in reference.execute(f"PRAGMA index_list({table})")}
-                if actual_indexes != known_indexes:
-                    raise UnsupportedSchema(version)
-                for name in known_indexes:
-                    # Index names come from the known schema, never user SQL.
-                    actual = [tuple(row) for row in db.execute(f"PRAGMA index_xinfo({name})")]
-                    known = list(reference.execute(f"PRAGMA index_xinfo({name})"))
-                    if actual != known:
-                        raise UnsupportedSchema(version)
-            # SQLite exposes no parsed CHECK expressions. Version 1 owns this
-            # DDL, so require its known definition (ignoring whitespace/case),
-            # rather than accepting a lookalike CHECK hidden inside a comment.
-            actual_sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='resources'").fetchone()[0]
-            known_sql = reference.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='resources'").fetchone()[0]
-            if "".join(actual_sql.split()).casefold() != "".join(known_sql.split()).casefold():
-                raise UnsupportedSchema(version)
-
-    @contextmanager
-    def connection(self):
-        """Use this connection policy for later auth tables in the same database.
-
-        Callers explicitly begin/commit transactions; failures always roll back.
-        Extensions must keep user_version=1 and version their own schema.
-        """
-        db = None
-        try:
-            db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
-            db.row_factory = sqlite3.Row
-            db.execute("PRAGMA foreign_keys=ON")
-            yield db
-        except sqlite3.Error as exc:
-            raise StorageError(getattr(exc, "sqlite_errorcode", None)) from exc
-        finally:
-            if db is not None:
-                if db.in_transaction:
-                    db.rollback()
-                db.close()
+    def __init__(self, storage: PgStorage):
+        if not isinstance(storage, PgStorage):
+            raise TypeError("PgStorage required")
+        self.storage = storage
+        # Construction can validate but never create/repair a schema. The
+        # maintenance job is the only initializer, even for a new database.
+        from .pg_schema import validate_schema
+        validate_schema(storage)
 
     def read(self, key: str) -> Resource | None:
         _text(key, "key")
-        with self.connection() as db:
-            row = db.execute("SELECT version, payload FROM resources WHERE key=?", (key,)).fetchone()
+        with self.storage.read_snapshot() as tx:
+            row = tx.execute("SELECT version,payload FROM resources WHERE key=%s", (key,)).fetchone()
         if row is None or row["payload"] is None:
             return None
         return Resource(key, row["version"], json.loads(row["payload"]))
@@ -208,45 +146,54 @@ class TeamRepository:
         keys = list(keys)
         for key in keys:
             _text(key, "key")
-        with self.connection() as db:
-            # Multiple lookups share a read snapshot, including tombstones.
-            db.execute("BEGIN")
-            return self._versions(db, keys)
+        with self.storage.read_snapshot() as tx:
+            return self._versions(tx, keys)
 
     @staticmethod
-    def _versions(db, keys):
+    def _versions(tx, keys):
         result = {}
         for key in keys:
-            row = db.execute("SELECT version FROM resources WHERE key=?", (key,)).fetchone()
-            result[key] = row[0] if row is not None else None
+            row = tx.execute("SELECT version FROM resources WHERE key=%s", (key,)).fetchone()
+            result[key] = row["version"] if row is not None else None
         return result
 
     def snapshot(self) -> tuple[dict, dict]:
-        """Read payloads and tombstone versions in one SQLite snapshot."""
-        with self.connection() as db:
-            rows = db.execute("SELECT key,version,payload FROM resources").fetchall()
+        with self.storage.read_snapshot() as tx:
+            rows = tx.execute("SELECT key,version,payload FROM resources").fetchall()
         return ({row["key"]: json.loads(row["payload"]) for row in rows if row["payload"] is not None},
                 {row["key"]: row["version"] for row in rows})
 
-    def read_request(self, actor: str, request_id: str, identity: dict) -> dict | None:
-        digest = hashlib.sha256(_json(identity, "identity").encode("utf-8")).hexdigest()
-        with self.connection() as db:
-            replay = db.execute("SELECT body_hash,result FROM requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone()
-        if replay is None:
-            return None
-        if replay["body_hash"] != digest:
-            raise RequestMismatch(actor, request_id)
-        return json.loads(replay["result"])
-
     @staticmethod
-    def _access_request_exists(db, actor, request_id):
-        # Auth is an optional schema extension, but request identities are a
-        # single actor-scoped namespace across every shared update family.
-        exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='team_access_requests'").fetchone()
-        return bool(exists and db.execute("SELECT 1 FROM team_access_requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone())
+    def _authorize(tx, actor, authorize):
+        principal = authorize(tx)
+        if getattr(principal, "sub", None) != actor:
+            raise InvalidRequest("authorization_actor")
+        return principal
+
+    def lookup_request(self, actor: str, request_id: str, body_hash: str, *, tx: ReadTx | WriteTx):
+        for field, value in (("actor", actor), ("request_id", request_id), ("body_hash", body_hash)):
+            _text(value, field)
+        # Access-management requests and RDF updates share actor/request IDs.
+        # Both checks occur after the common gate for every replay decision.
+        if tx.execute("SELECT 1 FROM team_access_requests WHERE actor=%s AND request_id=%s", (actor, request_id)).fetchone():
+            raise RequestMismatch(actor, request_id)
+        row = tx.execute("SELECT body_hash,result FROM requests WHERE actor=%s AND request_id=%s", (actor, request_id)).fetchone()
+        if row is None:
+            return None
+        if row["body_hash"] != body_hash:
+            raise RequestMismatch(actor, request_id)
+        return json.loads(row["result"])
+
+    def read_request(self, actor: str, request_id: str, identity: dict, *,
+                     authorize: Callable[[WriteTx], Principal]) -> dict | None:
+        digest = hashlib.sha256(_json(identity, "identity").encode("utf-8")).hexdigest()
+        with self.storage.write_transaction() as tx:
+            self._authorize(tx, actor, authorize)
+            return self.lookup_request(actor, request_id, digest, tx=tx)
 
     def commit(self, actor: str, request_id: str, expected: dict[str, int | None],
-               changes: dict[str, dict | None], operation: str, *, identity: dict | None = None,
+               changes: dict[str, dict | None], operation: str, *,
+               authorize: Callable[[WriteTx], Principal], identity: dict | None = None,
                response: dict | None = None) -> dict:
         for field, value in (("actor", actor), ("request_id", request_id), ("operation", operation)):
             _text(value, field)
@@ -254,7 +201,7 @@ class TeamRepository:
             raise InvalidRequest("expected_changes")
         for key, version in expected.items():
             _text(key, "key")
-            if version is not None and (type(version) is not int or version < 1 or version > 9223372036854775807):
+            if version is not None and (type(version) is not int or not 1 <= version <= 9223372036854775807):
                 raise InvalidRequest("expected")
         for key, payload in changes.items():
             _text(key, "key")
@@ -263,7 +210,6 @@ class TeamRepository:
         missing = sorted(changes.keys() - expected.keys())
         if missing:
             raise MissingExpectation(missing)
-        # Snapshot both caller-owned mappings before entering the transaction.
         body = _json({"expected": expected, "changes": changes, "operation": operation}, "request")
         snapshot = json.loads(body)
         expected = snapshot["expected"]
@@ -271,43 +217,42 @@ class TeamRepository:
                     for key, payload in snapshot["changes"].items()}
         digest = hashlib.sha256((body if identity is None else _json(identity, "identity")).encode("utf-8")).hexdigest()
         response = None if response is None else json.loads(_json(response, "response"))
-        with self.connection() as db:
-            db.execute("BEGIN IMMEDIATE")
-            if self._access_request_exists(db, actor, request_id):
-                raise RequestMismatch(actor, request_id)
-            replay = db.execute("SELECT body_hash, result FROM requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone()
+        with self.storage.write_transaction() as tx:
+            self._authorize(tx, actor, authorize)
+            replay = self.lookup_request(actor, request_id, digest, tx=tx)
             if replay is not None:
-                if replay["body_hash"] != digest:
-                    raise RequestMismatch(actor, request_id)
-                return json.loads(replay["result"])
-            actual = self._versions(db, expected)
+                return replay
+            actual = self._versions(tx, expected)
             if actual != expected:
                 raise Conflict(expected, actual)
             timestamp = datetime.now(timezone.utc).isoformat()
             versions = {}
             for key in sorted(payloads):
-                previous = db.execute("SELECT payload FROM resources WHERE key=?", (key,)).fetchone()
-                before = previous[0] if previous is not None else None
+                previous = tx.execute("SELECT payload FROM resources WHERE key=%s", (key,)).fetchone()
+                before = previous["payload"] if previous is not None else None
                 version = (actual[key] or 0) + 1
                 if version > 9223372036854775807:
                     raise InvalidRequest("version_exhausted")
                 payload = payloads[key]
-                db.execute("INSERT INTO resources(key, version, payload) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET version=excluded.version, payload=excluded.payload", (key, version, payload))
-                db.execute("INSERT INTO audit(key,actor,timestamp,operation,request_id,before_version,after_version,before_payload,after_payload) VALUES(?,?,?,?,?,?,?,?,?)", (key, actor, timestamp, operation, request_id, actual[key], version, before, payload))
+                tx.execute("INSERT INTO resources(key,version,payload) VALUES(%s,%s,%s) ON CONFLICT(key) DO UPDATE SET version=excluded.version,payload=excluded.payload", (key, version, payload))
+                tx.execute("INSERT INTO audit(key,actor,timestamp,operation,request_id,before_version,after_version,before_payload,after_payload) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                           (key, actor, timestamp, operation, request_id, actual[key], version, before, payload))
                 versions[key] = version
             result = {"request_id": request_id, "versions": versions}
             if response is not None:
                 result["response"] = response
-            db.execute("INSERT INTO requests(actor,request_id,body_hash,result) VALUES(?,?,?,?)", (actor, request_id, digest, _json(result, "result")))
-            db.commit()
-            return result
+            tx.execute("INSERT INTO requests(actor,request_id,body_hash,result) VALUES(%s,%s,%s,%s)",
+                       (actor, request_id, digest, _json(result, "result")))
+        # Leaving the context is the COMMIT boundary. Never publish success
+        # from inside it: a lost COMMIT response must remain an unknown result.
+        return result
 
     def history(self, key: str, offset=0, limit=50) -> list[dict]:
         _text(key, "key")
         if type(offset) is not int or offset < 0 or type(limit) is not int or limit < 0 or max(offset, limit) > 9223372036854775807:
             raise InvalidRequest("pagination")
-        with self.connection() as db:
-            rows = db.execute("SELECT * FROM audit WHERE key=? ORDER BY id DESC LIMIT ? OFFSET ?", (key, limit, offset)).fetchall()
+        with self.storage.read_snapshot() as tx:
+            rows = tx.execute("SELECT * FROM audit WHERE key=%s ORDER BY id DESC LIMIT %s OFFSET %s", (key, limit, offset)).fetchall()
         result = []
         for row in rows:
             entry = dict(row)
@@ -315,19 +260,32 @@ class TeamRepository:
             result.append(entry)
         return result
 
-    def backup(self, path: Path):
-        path = Path(path)
-        # Exclusive creation prevents accidentally replacing a backup or the live
-        # database. SQLite's backup API takes the consistent source snapshot.
-        with path.open("xb"):
-            pass
-        try:
-            with self.connection() as source:
-                target = sqlite3.connect(path)
-                try:
-                    source.backup(target)
-                finally:
-                    target.close()
-        except BaseException:
-            path.unlink(missing_ok=True)
-            raise
+    def _operation_group(self, tx, actor, request_id):
+        rows = tx.execute("SELECT * FROM audit WHERE actor=%s AND request_id=%s ORDER BY id", (actor, request_id)).fetchall()
+        versions = self._versions(tx, (row["key"] for row in rows))
+        return [{**row, "current_version": versions[row["key"]]} for row in rows]
+
+    def read_operation_group(self, actor: str, request_id: str, *, tx=None) -> list[dict]:
+        _text(actor, "actor")
+        _text(request_id, "request_id")
+        if tx is not None:
+            return self._operation_group(tx, actor, request_id)
+        with self.storage.read_snapshot() as snapshot:
+            return self._operation_group(snapshot, actor, request_id)
+
+    def latest_operation(self, key: str, *, tx=None) -> OperationGroup | None:
+        _text(key, "key")
+        def read(snapshot):
+            latest = snapshot.execute("SELECT actor,request_id,operation FROM audit WHERE key=%s ORDER BY id DESC LIMIT 1", (key,)).fetchone()
+            if latest is None:
+                return None
+            actor, request_id = latest["actor"], latest["request_id"]
+            entries = self._operation_group(snapshot, actor, request_id)
+            request = snapshot.execute("SELECT result FROM requests WHERE actor=%s AND request_id=%s", (actor, request_id)).fetchone()
+            return OperationGroup(actor, request_id, latest["operation"], tuple(entries),
+                                  {row["key"]: row["current_version"] for row in entries},
+                                  json.loads(request["result"]) if request else None)
+        if tx is not None:
+            return read(tx)
+        with self.storage.read_snapshot() as snapshot:
+            return read(snapshot)

@@ -54,6 +54,35 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer  # noqa: E40
 
 import pytest  # noqa: E402
 
+
+@pytest.fixture
+def pg_schema():
+    """Only explicit Compose integration cases request destructive fixtures."""
+    from pg_support import reset_test_schema, role_config
+    from app.team.pg_storage import PgStorage
+    from app.team.pg_schema import ensure_schema
+    reset_test_schema()
+    maintenance = PgStorage(role_config('maintenance'), on_fatal=lambda kind: None)
+    try:
+        assert ensure_schema(maintenance) == 'created'
+    finally:
+        maintenance.close()
+    yield
+    reset_test_schema()
+
+
+@pytest.fixture
+def pg_repository(pg_schema):
+    from app.team.pg_storage import PgStorage
+    from app.team.repository import TeamRepository
+    from pg_support import role_config
+    storage = PgStorage(role_config(), on_fatal=lambda kind: None)
+    try:
+        storage.start_writer()
+        yield TeamRepository(storage)
+    finally:
+        storage.close()
+
 PUBLIC_FOR_TESTS = ipaddress.ip_address("127.0.0.1")
 
 

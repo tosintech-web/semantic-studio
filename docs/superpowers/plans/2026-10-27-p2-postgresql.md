@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜2の接続基盤を検証済み、製品runtime切替は未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜3の接続基盤・repositoryを検証済み、製品runtime切替は未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 
 ## Global Constraints
@@ -134,16 +134,16 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 - `StorageError(kind: str, *, sqlstate: str | None=None)`は有限kindだけを公開し、既存HTTP `storage_error`/503へ接続。`sqlite_code`を残さない。
 - `commit(..., authorize: Callable[[WriteTx], Principal])`を必須keywordとして追加する。gate取得後、replayを返す前も含め同じtransactionでcallbackを実行し、返されたactorと要求actorを照合する。HTTP更新ではTask 4の再認可を渡し、別transactionや省略可能な認可fallbackを作らない。保守移行はmaintenance roleを検証した専用入口で扱う。
 
-- [ ] **Step 1: repository/schema試験を書く。**
+- [x] **Step 1: repository/schema試験を書く。**
   - `test_pg_commit_is_atomic_under_injected_failure`: `assert resources == before`; `assert audit == before_audit`; `assert replay is None`。
   - `test_pg_cas_one_winner_and_tombstone_aba`: 唯一のwriterを共有する2要求で同じ期待版は一勝一敗、削除/再作成でも単調版。別接続のgate競合はtest専用SQL helperで注入し、第二writerを許す製品用bypassを作らない。
   - `test_pg_replay_canonical_json_is_lossless`: 再送結果同一、異内容同ID拒否。`'001'`、日本語、emoji、JSON内NUL、未知項目を保持。
   - `test_schema_rejects_forged_version_or_missing_constraint`: version行だけ似せても制約/unique/index/権限不一致は拒否し、部分DDLなし。
   - `test_schema_role_privileges`: 存在するtableでappのDDL/監査UPDATE/DELETE、backupのDMLをSQLSTATE `42501`で拒否。appの通常DML/監査INSERTとbackupのSELECTは成功し、sequence/default権限も検証。
-- [ ] **Step 2: RED。** `PGTEST tests/test_pg_schema.py tests/test_pg_repository.py -q` → API/PG schema不足で失敗。
-- [ ] **Step 3: 9テーブルを実装。** schema/version1、BIGINT版、identity audit ID、boolean disabled、Unix秒double。payload/要求結果はcanonical ASCII JSON TEXT。writer gate取得後に両要求tableと版を読む。変更・audit・replay応答を一括commit。metadata/DDL検査をpg_catalogへ移し、`?`/PRAGMA/sqlite_master等を除く。
-- [ ] **Step 4: GREEN。** 上記command＋`PGTEST tests/test_team_rdf_codec.py -q` → 全成功。空白ノード・namespace・lexicalを含む実rdflib往復を維持。
-- [ ] **Step 5: commit。** schema/repositoryと対象試験をcommit。旧SQLでPGへ接続する互換層は作らない。
+- [x] **Step 2: RED。** `PGTEST tests/test_pg_schema.py tests/test_pg_repository.py -q` → API/PG schema不足で失敗。
+- [x] **Step 3: 9テーブルを実装。** schema/version1、BIGINT版、identity audit ID、boolean disabled、Unix秒double。payload/要求結果はcanonical ASCII JSON TEXT。writer gate取得後に両要求tableと版を読む。変更・audit・replay応答を一括commit。metadata/DDL検査をpg_catalogへ移し、`?`/PRAGMA/sqlite_master等を除く。
+- [x] **Step 4: GREEN。** 上記command＋`PGTEST tests/test_team_rdf_codec.py -q` → 全成功。空白ノード・namespace・lexicalを含む実rdflib往復を維持。
+- [x] **Step 5: commit。** schema/repositoryと対象試験をcommit。旧SQLでPGへ接続する互換層は作らない。
 
 ## Task 4: AuthStore・current-role・認証と編集の要求ID境界
 
@@ -301,3 +301,5 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
 Task 1：専用internal Compose上の設定/bootstrap 24件、配布通知の7試験、実配布imageのPython 42依存/native 13 package照合に成功。DBのport非公開・内部IPv4だけの参加・secret非出力も確認。driverはhash固定のpure psycopg 3.3.6とDebian libpq5 17.11を使用し、binary wheelを配布しない。依存導入に必要なDockerfileと通知generatorの変更はTask 1へ前倒しした。製品runtimeと旧team試験はまだSQLite版で、Task 2以降は未完了。
 
 Task 2：固定DNS能力・hostaddr pin・単一write接続・DB lease/write gate・REPEATABLE READ read・有限障害変換を実装。設定/bootstrap/storage/network guardの46試験が成功。別read接続失敗時にmutex外でwriterを閉じる自己レビュー指摘をREDで再現し、実writerの所有権をmutex内で検査する修正後GREEN。未知の診断値も有限codeへ変換。製品runtime切替とrepository/auth/保守移植は未完了。
+
+Task 3：9 table/46 columnのPG schema、read-onlyの厳密catalog照合、repositoryの資源・墓標・audit・replayと必須transaction認可を実装。catalog参照`backend/app/team/sql/001_initial.catalog.json`を固定DDLから生成し、版行だけの偽装や列/制約/index/ACLの違いを拒否する。全PG基盤＋RDF codec＋source guard 102件が成功。部分schemaを自動修復せず、operation group/版/確定応答は同じread snapshotから返す。旧constructorを使うauth/runtime/既存team fixtureは後続Taskで移植する途中段階。
