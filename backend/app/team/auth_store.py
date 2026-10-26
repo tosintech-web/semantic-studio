@@ -4,13 +4,13 @@ FILE: backend/app/team/auth_store.py
 SUMMARY
     Durable, server-owned identities, one-use login attempts and opaque sessions.
 BASIC IDEA
-    SQLite transactions serialize replay consumption and administrator changes.
+    PostgreSQL's shared writer gate serializes replay and administrator changes.
     Bearer values are hashed before storage; authorization uses the current user
     row, never a role copied into a browser token. Google claims are verified by
     the authentication service before it calls identity().
 INPUTS / INPUT SOURCES
     Verified sub/email/domain, explicit bootstrap subjects, opaque browser values
-    and an injected Unix clock. The repository owns the SQLite connection policy.
+    and an injected Unix clock. PgStorage owns the sole writer and bounded read snapshots.
 EXPECTED OUTPUT
     Principals, expiring sessions and credential-free success/failure audits,
     or structured refusals without credentials.
@@ -25,45 +25,17 @@ import hashlib
 import hmac
 import json
 import math
-from pathlib import Path
+import time
+import re
 import secrets
 
-from .repository import TeamRepository
+from .repository import TeamRepository, _json
+from .pg_storage import PgStorage, WriteTx
 
 ABSOLUTE_SECONDS = 3600
 IDLE_SECONDS = 1800
 LOGIN_SECONDS = 300
 ROLES = frozenset({"viewer", "editor", "admin"})
-
-# Schema text is checked on reopen, before any extension writes occur.
-_AUTH_SCHEMA = (
-    """CREATE TABLE team_auth_schema (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL)""",
-    """CREATE TABLE team_users (
-                    sub TEXT PRIMARY KEY, email TEXT NOT NULL, domain TEXT NOT NULL,
-                    role TEXT NOT NULL CHECK(role IN ('viewer','editor','admin')),
-                    disabled INTEGER NOT NULL CHECK(disabled IN (0,1)),
-                    version INTEGER NOT NULL CHECK(version > 0)
-                )""",
-    """CREATE TABLE team_sessions (
-                    token_hash TEXT PRIMARY KEY, sub TEXT NOT NULL REFERENCES team_users(sub),
-                    created REAL NOT NULL, last_seen REAL NOT NULL
-                )""",
-    """CREATE TABLE team_login_attempts (
-                    state_hash TEXT PRIMARY KEY, browser_hash TEXT NOT NULL,
-                    nonce TEXT NOT NULL, verifier TEXT NOT NULL, created REAL NOT NULL
-                )""",
-    """CREATE TABLE team_auth_events (
-                    id INTEGER PRIMARY KEY, actor TEXT, target TEXT,
-                    operation TEXT NOT NULL, timestamp REAL NOT NULL,
-                    before_payload TEXT, after_payload TEXT
-                )""",
-    """CREATE TABLE team_access_requests (
-                    actor TEXT NOT NULL, request_id TEXT NOT NULL,
-                    body_hash TEXT NOT NULL, result TEXT NOT NULL,
-                    PRIMARY KEY(actor, request_id)
-                )""",
-)
-
 
 class AuthRefused(Exception):
     """The HTTP boundary translates this finite code, not exception text."""
@@ -117,10 +89,15 @@ def _hash(value: str) -> str:
 def _text(value, *, maximum=1024) -> str:
     if not isinstance(value, str) or not value or len(value) > maximum or "\x00" in value:
         raise AuthRefused()
+    try:
+        value.encode("utf-8")
+    except UnicodeError:
+        raise AuthRefused() from None
     return value
 
 
 def _clock(now) -> float:
+    now = now() if callable(now) else now
     if isinstance(now, bool) or not isinstance(now, (int, float)) or not math.isfinite(now) or now < 0:
         raise ValueError("Invalid authentication clock")
     return float(now)
@@ -130,175 +107,182 @@ def _principal(row) -> Principal:
     return Principal(row["sub"], row["email"], row["domain"], row["role"], bool(row["disabled"]), row["version"])
 
 
+@dataclass(frozen=True)
+class RequestAuth:
+    token_hash: str = field(repr=False)
+    operation: str
+
+
 class AuthStore:
-    def __init__(self, path: Path, *, bootstrap_subs: frozenset[str]):
-        self.path = Path(path)
+    def __init__(self, storage: PgStorage, *, bootstrap_subs: frozenset[str]):
+        self.storage = storage
         self.bootstrap_subs = frozenset(_text(sub) for sub in bootstrap_subs)
-        self.repository = TeamRepository(self.path)
-        with self.repository.connection() as db:
-            # Separate namespaces let auth and versioned RDF share one backup
-            # without claiming that login-attempt rows are RDF mutations.
-            db.execute("BEGIN IMMEDIATE")
-            names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name GLOB 'team_*'")}
-            expected = {statement.split()[2] for statement in _AUTH_SCHEMA}
-            if not names:
-                for statement in _AUTH_SCHEMA:
-                    db.execute(statement)
-                db.execute("INSERT INTO team_auth_schema VALUES(1,1)")
-            else:
-                if names != expected:
-                    raise AuthRefused("config_unavailable")
-                for statement in _AUTH_SCHEMA:
-                    actual = db.execute("SELECT sql FROM sqlite_master WHERE name=?", (statement.split()[2],)).fetchone()[0]
-                    if " ".join(actual.split()) != " ".join(statement.split()):
-                        raise AuthRefused("config_unavailable")
-                versions = list(db.execute("SELECT id,version FROM team_auth_schema"))
-                if len(versions) != 1 or tuple(versions[0]) != (1, 1):
-                    raise AuthRefused("config_unavailable")
-            db.commit()
+        self.repository = TeamRepository(storage)
 
     @contextmanager
     def _transaction(self):
-        with self.repository.connection() as db:
-            db.execute("BEGIN IMMEDIATE")
-            yield db
-            db.commit()
+        with self.storage.write_transaction() as tx:
+            yield tx
 
     @staticmethod
-    def _event(db, operation: str, now: float, *, actor=None, target=None, before=None, after=None):
-        db.execute(
-            "INSERT INTO team_auth_events(actor,target,operation,timestamp,before_payload,after_payload) VALUES (?,?,?,?,?,?)",
-            (actor, target, operation, now, json.dumps(before) if before is not None else None,
-             json.dumps(after) if after is not None else None),
+    def _event(tx, operation: str, now: float, *, actor=None, target=None, before=None, after=None):
+        tx.execute(
+            "INSERT INTO team_auth_events(actor,target,operation,timestamp,before_payload,after_payload) VALUES (%s,%s,%s,%s,%s,%s)",
+            (actor, target, operation, now, _json(before, "auth_event") if before is not None else None,
+             _json(after, "auth_event") if after is not None else None),
         )
 
-    def record_failure(self, *, now: float) -> None:
-        now = _clock(now)
-        # Failed authentication has no trusted principal. Keep the durable
-        # event finite rather than carrying provider claims or bearer values.
-        with self._transaction() as db:
-            self._event(db, "login_failed", now)
+    def record_failure(self, *, now) -> None:
+        with self._transaction() as tx:
+            self._event(tx, "login_failed", _clock(now))
 
-    def identity(self, sub: str, email: str, domain: str, *, now: float) -> Principal:
-        sub, email, domain, now = _text(sub), _text(email), _text(domain), _clock(now)
-        with self._transaction() as db:
-            row = db.execute("SELECT * FROM team_users WHERE sub=?", (sub,)).fetchone()
+    def identity(self, sub: str, email: str, domain: str, *, now) -> Principal:
+        sub, email, domain = _text(sub), _text(email), _text(domain)
+        with self._transaction() as tx:
+            now = _clock(now)
+            row = tx.execute("SELECT * FROM team_users WHERE sub=%s", (sub,)).fetchone()
             if row is None:
                 role = "admin" if sub in self.bootstrap_subs else "viewer"
-                db.execute("INSERT INTO team_users VALUES(?,?,?,?,0,1)", (sub, email, domain, role))
-                self._event(db, "identity_created", now, actor=sub, target=sub, after={"role": role})
+                tx.execute("INSERT INTO team_users VALUES(%s,%s,%s,%s,false,1)", (sub, email, domain, role))
+                self._event(tx, "identity_created", now, actor=sub, target=sub, after={"role": role})
             elif row["disabled"]:
                 raise AuthRefused("disabled")
             elif row["email"] != email or row["domain"] != domain:
-                db.execute("UPDATE team_users SET email=?, domain=?, version=version+1 WHERE sub=?", (email, domain, sub))
-                self._event(db, "identity_updated", now, actor=sub, target=sub)
-            return _principal(db.execute("SELECT * FROM team_users WHERE sub=?", (sub,)).fetchone())
+                tx.execute("UPDATE team_users SET email=%s,domain=%s,version=version+1 WHERE sub=%s", (email, domain, sub))
+                self._event(tx, "identity_updated", now, actor=sub, target=sub)
+            return _principal(tx.execute("SELECT * FROM team_users WHERE sub=%s", (sub,)).fetchone())
 
-    def begin_login(self, *, now: float) -> LoginAttempt:
-        now = _clock(now)
+    def begin_login(self, *, now) -> LoginAttempt:
         attempt = LoginAttempt(*(secrets.token_urlsafe(32) for _ in range(4)))
-        with self._transaction() as db:
-            db.execute("DELETE FROM team_login_attempts WHERE created<=?", (now - LOGIN_SECONDS,))
-            if db.execute("SELECT count(*) FROM team_login_attempts").fetchone()[0] >= 1000:
-                raise AuthRefused("auth_failed")
-            db.execute("INSERT INTO team_login_attempts VALUES(?,?,?,?,?)", (_hash(attempt.state), _hash(attempt.browser_cookie), attempt.nonce, attempt.code_verifier, now))
+        with self._transaction() as tx:
+            now = _clock(now)
+            tx.execute("DELETE FROM team_login_attempts WHERE created<=%s", (now - LOGIN_SECONDS,))
+            if tx.execute("SELECT count(*) AS count FROM team_login_attempts").fetchone()["count"] >= 1000:
+                raise AuthRefused()
+            tx.execute("INSERT INTO team_login_attempts VALUES(%s,%s,%s,%s,%s)", (_hash(attempt.state), _hash(attempt.browser_cookie), attempt.nonce, attempt.code_verifier, now))
         return attempt
 
-    def consume_login(self, state: str, browser_cookie: str, *, now: float) -> LoginState:
-        now = _clock(now)
+    def consume_login(self, state: str, browser_cookie: str, *, now) -> LoginState:
         state_hash, browser_hash = _hash(_text(state)), _hash(_text(browser_cookie))
-        with self._transaction() as db:
-            row = db.execute("SELECT * FROM team_login_attempts WHERE state_hash=?", (state_hash,)).fetchone()
+        with self._transaction() as tx:
+            now = _clock(now)
+            row = tx.execute("SELECT * FROM team_login_attempts WHERE state_hash=%s", (state_hash,)).fetchone()
             if row is None or not hmac.compare_digest(row["browser_hash"], browser_hash) or not row["created"] <= now < row["created"] + LOGIN_SECONDS:
                 raise AuthRefused()
-            db.execute("DELETE FROM team_login_attempts WHERE state_hash=?", (state_hash,))
+            tx.execute("DELETE FROM team_login_attempts WHERE state_hash=%s", (state_hash,))
             return LoginState(row["nonce"], row["verifier"])
 
-    def create_session(self, sub: str, *, now: float) -> str:
-        sub, now = _text(sub), _clock(now)
+    def create_session(self, sub: str, *, now) -> str:
+        sub = _text(sub)
         token = secrets.token_urlsafe(32)
-        with self._transaction() as db:
-            row = db.execute("SELECT * FROM team_users WHERE sub=?", (sub,)).fetchone()
+        with self._transaction() as tx:
+            now = _clock(now)
+            row = tx.execute("SELECT * FROM team_users WHERE sub=%s", (sub,)).fetchone()
             if row is None or row["disabled"]:
                 raise AuthRefused()
-            db.execute("DELETE FROM team_sessions WHERE created<=? OR last_seen<=?", (now - ABSOLUTE_SECONDS, now - IDLE_SECONDS))
-            db.execute("INSERT INTO team_sessions VALUES(?,?,?,?)", (_hash(token), sub, now, now))
-            self._event(db, "login", now, actor=sub, target=sub)
+            tx.execute("DELETE FROM team_sessions WHERE created<=%s OR last_seen<=%s", (now - ABSOLUTE_SECONDS, now - IDLE_SECONDS))
+            tx.execute("INSERT INTO team_sessions VALUES(%s,%s,%s,%s)", (_hash(token), sub, now, now))
+            self._event(tx, "login", now, actor=sub, target=sub)
         return token
+
+    @staticmethod
+    def bind_request(token: str, operation: str) -> RequestAuth:
+        from .permissions import allows
+        if not allows('admin', operation):
+            raise AuthRefused('forbidden')
+        return RequestAuth(_hash(_text(token)), operation)
+
+    @staticmethod
+    def _session_user(tx, token_hash: str, now: float):
+        row = tx.execute("SELECT * FROM team_sessions WHERE token_hash=%s", (token_hash,)).fetchone()
+        if row is None or not row["last_seen"] <= now < min(row["created"] + ABSOLUTE_SECONDS, row["last_seen"] + IDLE_SECONDS):
+            raise AuthRefused("auth_expired")
+        user = tx.execute("SELECT * FROM team_users WHERE sub=%s", (row["sub"],)).fetchone()
+        if user is None or user["disabled"]:
+            raise AuthRefused("disabled")
+        return _principal(user), row
+
+    def require_current_principal(self, tx: WriteTx, *, token_hash: str, operation: str,
+                                  now: float | Callable[[],float] = time.time) -> Principal:
+        from .permissions import allows
+        if not isinstance(tx, WriteTx) or not re.fullmatch(r'[0-9a-f]{64}', _text(token_hash, maximum=64)):
+            raise AuthRefused()
+        principal, _ = self._session_user(tx, token_hash, _clock(now))
+        if not allows(principal.role, operation):
+            raise AuthRefused('forbidden')
+        return principal
 
     def authenticate(self, token: str, *, now: float | Callable[[], float], touch: bool = True) -> SessionView:
         token_hash = _hash(_text(token))
-        with self._transaction() as db:
-            # Concurrent server requests can acquire SQLite in a different
-            # order from their arrival. Sample the live clock after the lock
-            # so an older queued request cannot look like a backwards clock
-            # after another request has refreshed last_seen. Explicit numeric
-            # clocks retain deterministic expiry/backwards-time test behavior.
-            now = _clock(now() if callable(now) else now)
-            row = db.execute("SELECT * FROM team_sessions WHERE token_hash=?", (token_hash,)).fetchone()
-            if row is None or not row["last_seen"] <= now < min(row["created"] + ABSOLUTE_SECONDS, row["last_seen"] + IDLE_SECONDS):
-                raise AuthRefused("auth_expired")
-            user = db.execute("SELECT * FROM team_users WHERE sub=?", (row["sub"],)).fetchone()
-            if user is None or user["disabled"]:
-                raise AuthRefused("disabled")
+        context = self._transaction() if touch else self.storage.read_snapshot()
+        with context as tx:
+            # Sampling follows the actual mutex AND advisory gate, not arrival
+            # time. Polls use a short read only and cannot extend idle lifetime.
+            now = _clock(now)
+            principal, row = self._session_user(tx, token_hash, now)
             if touch:
-                db.execute("UPDATE team_sessions SET last_seen=? WHERE token_hash=?", (now, token_hash))
-            # The browser can fetch this derived value after authenticating but
-            # cannot derive it from the stored hash or a foreign-page response.
+                tx.execute("UPDATE team_sessions SET last_seen=%s WHERE token_hash=%s", (now, token_hash))
             csrf = hmac.new(token.encode(), b"semantic-studio:csrf:v1", hashlib.sha256).hexdigest()
-            return SessionView(_principal(user), csrf, row["created"] + ABSOLUTE_SECONDS)
+            return SessionView(principal, csrf, row["created"] + ABSOLUTE_SECONDS)
 
-    def revoke(self, token: str, *, now: float) -> None:
-        now = _clock(now)
+    def revoke(self, token: str, *, now) -> None:
         token_hash = _hash(_text(token))
-        with self._transaction() as db:
-            row = db.execute("SELECT sub FROM team_sessions WHERE token_hash=?", (token_hash,)).fetchone()
+        with self._transaction() as tx:
+            now = _clock(now)
+            row = tx.execute("SELECT sub FROM team_sessions WHERE token_hash=%s", (token_hash,)).fetchone()
             if row:
-                db.execute("DELETE FROM team_sessions WHERE token_hash=?", (token_hash,))
-                self._event(db, "logout", now, actor=row["sub"], target=row["sub"])
+                tx.execute("DELETE FROM team_sessions WHERE token_hash=%s", (token_hash,))
+                self._event(tx, "logout", now, actor=row["sub"], target=row["sub"])
 
     def users(self) -> list[Principal]:
-        with self.repository.connection() as db:
-            return [_principal(row) for row in db.execute("SELECT * FROM team_users ORDER BY sub")]
+        with self.storage.read_snapshot() as tx:
+            return [_principal(row) for row in tx.execute("SELECT * FROM team_users ORDER BY sub").fetchall()]
 
     def events(self, *, offset: int = 0, limit: int = 50) -> list[dict]:
-        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
+        if type(offset) is not int or not 0 <= offset <= 9223372036854775807 or type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("Invalid event page")
-        with self.repository.connection() as db:
-            return [dict(row) for row in db.execute("SELECT * FROM team_auth_events ORDER BY id DESC LIMIT ? OFFSET ?", (limit, offset))]
+        with self.storage.read_snapshot() as tx:
+            return [dict(row) for row in tx.execute("SELECT * FROM team_auth_events ORDER BY id DESC LIMIT %s OFFSET %s", (limit, offset)).fetchall()]
 
     def change_access(self, actor: str, target: str, *, expected_version: int, role: str,
-                      disabled: bool, request_id: str, now: float, identity: dict | None = None) -> Principal:
-        actor, target, request_id, now = _text(actor), _text(target), _text(request_id, maximum=128), _clock(now)
-        if role not in ROLES or type(disabled) is not bool or type(expected_version) is not int or expected_version < 1:
+                      disabled: bool, request_id: str, now, authorize: Callable[[WriteTx],Principal],
+                      identity: dict | None = None) -> Principal:
+        actor, target, request_id = _text(actor), _text(target), _text(request_id, maximum=128)
+        if (not isinstance(role, str) or role not in ROLES or type(disabled) is not bool
+                or type(expected_version) is not int or not 1 <= expected_version <= 9223372036854775807):
             raise AuthRefused()
-        fingerprint = _hash(json.dumps([target, expected_version, role, disabled] if identity is None else identity,
-                                      sort_keys=True, separators=(",", ":")))
-        with self._transaction() as db:
-            admin = db.execute("SELECT * FROM team_users WHERE sub=?", (actor,)).fetchone()
+        fingerprint = _hash(_json([target, expected_version, role, disabled] if identity is None else identity, 'access_request'))
+        with self._transaction() as tx:
+            now = _clock(now)
+            principal = authorize(tx)
+            if getattr(principal, 'sub', None) != actor:
+                raise AuthRefused('forbidden')
+            admin = tx.execute("SELECT * FROM team_users WHERE sub=%s", (actor,)).fetchone()
             if admin is None or admin["disabled"] or admin["role"] != "admin":
                 raise AuthRefused("forbidden")
-            if db.execute("SELECT 1 FROM requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone():
+            if tx.execute("SELECT 1 FROM requests WHERE actor=%s AND request_id=%s", (actor, request_id)).fetchone():
                 raise AuthRefused("request_mismatch")
-            replay = db.execute("SELECT * FROM team_access_requests WHERE actor=? AND request_id=?", (actor, request_id)).fetchone()
+            replay = tx.execute("SELECT * FROM team_access_requests WHERE actor=%s AND request_id=%s", (actor, request_id)).fetchone()
             if replay:
                 if not hmac.compare_digest(replay["body_hash"], fingerprint):
                     raise AuthRefused("request_mismatch")
                 return Principal(**json.loads(replay["result"]))
-            row = db.execute("SELECT * FROM team_users WHERE sub=?", (target,)).fetchone()
+            row = tx.execute("SELECT * FROM team_users WHERE sub=%s", (target,)).fetchone()
             if row is None:
                 raise AuthRefused()
             if row["version"] != expected_version:
                 raise AccessConflict(row["version"])
             if row["role"] == "admin" and not row["disabled"] and (role != "admin" or disabled):
-                count = db.execute("SELECT count(*) FROM team_users WHERE role='admin' AND disabled=0").fetchone()[0]
+                count = tx.execute("SELECT count(*) AS count FROM team_users WHERE role='admin' AND disabled=false").fetchone()['count']
                 if count <= 1:
                     raise AuthRefused("last_admin")
+            if row['version'] == 9223372036854775807:
+                raise AuthRefused('config_unavailable')
             before = _principal(row)
-            db.execute("UPDATE team_users SET role=?,disabled=?,version=version+1 WHERE sub=?", (role, int(disabled), target))
+            tx.execute("UPDATE team_users SET role=%s,disabled=%s,version=version+1 WHERE sub=%s", (role, disabled, target))
             if disabled:
-                db.execute("DELETE FROM team_sessions WHERE sub=?", (target,))
-            result = _principal(db.execute("SELECT * FROM team_users WHERE sub=?", (target,)).fetchone())
-            self._event(db, "access_changed", now, actor=actor, target=target, before=asdict(before), after=asdict(result))
-            db.execute("INSERT INTO team_access_requests VALUES(?,?,?,?)", (actor, request_id, fingerprint, json.dumps(asdict(result))))
-            return result
+                tx.execute("DELETE FROM team_sessions WHERE sub=%s", (target,))
+            result = _principal(tx.execute("SELECT * FROM team_users WHERE sub=%s", (target,)).fetchone())
+            self._event(tx, "access_changed", now, actor=actor, target=target, before=asdict(before), after=asdict(result))
+            tx.execute("INSERT INTO team_access_requests VALUES(%s,%s,%s,%s)", (actor, request_id, fingerprint, _json(asdict(result), 'access_result')))
+        return result

@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜3の接続基盤・repositoryを検証済み、製品runtime切替は未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜4の接続基盤・repository・認証を検証済み、製品runtime切替は未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 
 ## Global Constraints
@@ -156,15 +156,15 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 - middlewareは認証済cookieからhashを作り、内部専用の`RequestAuth(token_hash, operation)`をscope stateへ渡す。生token/hashをレスポンスやログへ出さない。Task 5はこれを閉じ込めたauthorize callbackをrepositoryへ渡す。callbackは受け取ったtxだけを使用し、再度mutex/transactionを取得しない。
 - auth/編集のreplay照合はTask 3の両要求tableを同じwrite gate内で確認し、actor/request IDのnamespaceを分裂させない。
 
-- [ ] **Step 1: 認証再現試験を書く。**
+- [x] **Step 1: 認証再現試験を書く。**
   - `test_pg_last_admin_and_login_state_race`: 唯一writerを共有する同時要求でも有効adminが最低1人、同じstate消費は1回。
   - `test_pg_clock_sampled_after_writer_wait`: `assert clock_called_after_gate`; queued requestで誤失効せず、明示numeric逆行は拒否。
   - `test_pg_poll_does_not_touch_idle`: `assert last_seen_after == last_seen_before`; 60/30/5分の境界を既存値で検証。
   - `test_pg_request_id_cannot_cross_access_and_edit`: 同一actor同ID異操作は409、他actorへ応答を返さない。
-- [ ] **Step 2: RED。** `PGTEST tests/test_pg_auth_store.py tests/test_team_auth_routes.py -q` → storage constructor/PG transaction不足で失敗。
-- [ ] **Step 3: 実装。** AuthStore自身のschema作成を除きTask 3へ統一。共通writerを使用し、公開エラーへdriver例外を渡さない。Google署名/nonce/state/PKCE、broker固定endpoint、Cookie設定を変えない。
-- [ ] **Step 4: GREEN。** 上記＋`PGTEST tests/test_team_auth.py tests/test_team_google_transport.py -q` → 全成功。実秘密や実Google資格情報は使わない。
-- [ ] **Step 5: commit。** auth保存層・接続点・試験をcommit。
+- [x] **Step 2: RED。** `PGTEST tests/test_pg_auth_store.py tests/test_team_auth_routes.py -q` → storage constructor/PG transaction不足で失敗。
+- [x] **Step 3: 実装。** AuthStore自身のschema作成を除きTask 3へ統一。共通writerを使用し、公開エラーへdriver例外を渡さない。Google署名/nonce/state/PKCE、broker固定endpoint、Cookie設定を変えない。
+- [x] **Step 4: GREEN。** 上記＋`PGTEST tests/test_team_auth.py tests/test_team_google_transport.py -q` → 全成功。実秘密や実Google資格情報は使わない。
+- [x] **Step 5: commit。** auth保存層・接続点・試験をcommit。
 
 ## Task 5: workspace・Undo・runtime/serverのPostgreSQL接続
 
@@ -303,3 +303,5 @@ Task 1：専用internal Compose上の設定/bootstrap 24件、配布通知の7�
 Task 2：固定DNS能力・hostaddr pin・単一write接続・DB lease/write gate・REPEATABLE READ read・有限障害変換を実装。設定/bootstrap/storage/network guardの46試験が成功。別read接続失敗時にmutex外でwriterを閉じる自己レビュー指摘をREDで再現し、実writerの所有権をmutex内で検査する修正後GREEN。未知の診断値も有限codeへ変換。製品runtime切替とrepository/auth/保守移植は未完了。
 
 Task 3：9 table/46 columnのPG schema、read-onlyの厳密catalog照合、repositoryの資源・墓標・audit・replayと必須transaction認可を実装。catalog参照`backend/app/team/sql/001_initial.catalog.json`を固定DDLから生成し、版行だけの偽装や列/制約/index/ACLの違いを拒否する。全PG基盤＋RDF codec＋source guard 102件が成功。部分schemaを自動修復せず、operation group/版/確定応答は同じread snapshotから返す。旧constructorを使うauth/runtime/既存team fixtureは後続Taskで移植する途中段階。
+
+Task 4：AuthStoreを共通PG writerへ移植。auth clockをgate後に取得し、pollはread-only、全更新/replayの現在session/role検査にRequestAuthと必須authorize callbackを提供する。`change_access`にもcallbackを必須とし、Task 5のworkspace接続で渡す。DB障害を認証失効と混同せず、全auth endpointでCookieを消さず503を返す。既存Google署名/nonce/state/PKCE・broker・Cookie契約を保ち、ここまでのPG基盤/認証/HTTP/Google/RDF/source guard 193件が成功。

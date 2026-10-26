@@ -2,7 +2,7 @@
 ================================================================================
 FILE: backend/tests/test_team_auth_routes.py
 SUMMARY
-    Authentication HTTP contracts with real SQLite and synthetic identity.
+    Authentication HTTP contracts with real PostgreSQL and synthetic identity.
 BASIC IDEA
     HTTPS clients exercise browser binding, replay, expiry, cookies and CSRF.
 INPUTS / INPUT SOURCES
@@ -23,6 +23,7 @@ ORIGIN = "https://studio.example.org"
 GUARD = {"Origin": ORIGIN, "X-Semantic-Studio": "1"}
 SESSION = "__Host-semantic-studio-session"
 LOGIN = "__Host-semantic-studio-login"
+pytestmark = pytest.mark.team_db
 
 
 class Identity:
@@ -46,11 +47,11 @@ class Identity:
 
 
 @pytest.fixture
-def setup(tmp_path):
+def setup(tmp_path, pg_repository):
     config = TeamConfig(mode="team", public_origin=ORIGIN, google_client_id="synthetic-client",
         google_client_secret="replace-me", allowed_domains=frozenset({"example.org"}),
         bootstrap_subs=frozenset({"owner"}), data_dir=tmp_path)
-    store = AuthStore(tmp_path / "team.sqlite", bootstrap_subs=config.bootstrap_subs)
+    store = AuthStore(pg_repository.storage, bootstrap_subs=config.bootstrap_subs)
     identity, now = Identity(), [100.0]
     app = FastAPI()
     app.include_router(create_auth_router(config, store, identity, clock=lambda: now[0]))
@@ -270,13 +271,33 @@ def test_denied_login_attempt_is_audited_without_provider_data(setup):
     client, store, _, now = setup
     # Exercise the real store's outstanding-attempt cap rather than replacing
     # the behavior whose refusal must leave an audit record.
-    with store.repository.connection() as db:
-        db.executemany("INSERT INTO team_login_attempts VALUES(?,?,?,?,?)",
-            [(f"state-{index}", "browser", "nonce", "verifier", now[0]) for index in range(1000)])
-        db.commit()
+    with store.storage.write_transaction() as tx:
+        for index in range(1000):
+            tx.execute("INSERT INTO team_login_attempts VALUES(%s,%s,%s,%s,%s)",
+                       (f"state-{index}", "browser", "nonce", "verifier", now[0]))
     response = client.post("/api/auth/login", headers=GUARD)
     assert response.status_code == 403 and response.json()["code"] == "auth_failed"
     events = store.events()
     assert len(events) == 1 and events[0]["operation"] == "login_failed"
     assert events[0]["actor"] is None and events[0]["target"] is None
     assert events[0]["before_payload"] is None and events[0]["after_payload"] is None
+
+
+@pytest.mark.parametrize('method,path', [('GET', '/api/auth/status'), ('POST', '/api/auth/login'),
+                                        ('GET', '/api/auth/callback'), ('POST', '/api/auth/logout')])
+def test_database_loss_is_503_without_clearing_existing_cookie(setup, method, path):
+    from pg_probe import connect
+    from pg_support import role_config
+    client, store, _, _ = setup
+    state, _ = start(client)
+    finish(client, state)
+    token = client.cookies.get(SESSION)
+    csrf = client.get('/api/auth/status').json()['csrf']
+    with store.storage.write_transaction() as tx:
+        pid = tx.execute('SELECT pg_backend_pid() AS pid').fetchone()['pid']
+    with connect(role_config()) as probe:
+        probe.execute('SELECT pg_terminate_backend(%s)', (pid,))
+    response = client.request(method, path, headers={**GUARD, 'X-Semantic-Studio-CSRF': csrf})
+    assert response.status_code == 503 and response.json()['code'] == 'config_unavailable'
+    assert 'set-cookie' not in response.headers and client.cookies.get(SESSION) == token
+    assert response.headers['cache-control'] == 'no-store'

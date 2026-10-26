@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import asdict
+from functools import wraps
 import hmac
 import time
 
@@ -30,6 +31,7 @@ from ..messages import make_message
 from ..team.auth import GoogleIdentity
 from ..team.auth_store import ABSOLUTE_SECONDS, LOGIN_SECONDS, AuthRefused, AuthStore
 from ..team.config import TeamConfig
+from ..team.pg_storage import StorageError
 
 
 SESSION_COOKIE = "__Host-semantic-studio-session"
@@ -56,11 +58,24 @@ def _clear_login(response: Response) -> None:
     response.delete_cookie(LOGIN_COOKIE, **_COOKIE_FLAGS)
 
 
+def _storage_boundary(function):
+    @wraps(function)
+    def guarded(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except StorageError:
+            # Losing storage says nothing about the validity of the browser's
+            # credential. Preserve it and let the UI retain unsent input.
+            return _refused('config_unavailable', 503)
+    return guarded
+
+
 def create_auth_router(config: TeamConfig, store: AuthStore, identity: GoogleIdentity,
                        clock: Callable[[], float] = time.time) -> APIRouter:
     router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
     @router.get("/status")
+    @_storage_boundary
     def status(request: Request):
         body = {"mode": "team", "authenticated": False, "user": None, "csrf": None}
         token = request.cookies.get(SESSION_COOKIE)
@@ -74,20 +89,22 @@ def create_auth_router(config: TeamConfig, store: AuthStore, identity: GoogleIde
         return JSONResponse(body, headers={"Cache-Control": "no-store"})
 
     @router.post("/login")
+    @_storage_boundary
     def login(request: Request):
         if not _guard(request, config):
             return _refused("csrf")
         try:
-            attempt = store.begin_login(now=clock())
+            attempt = store.begin_login(now=clock)
             url = identity.authorization_url(attempt)
         except AuthRefused as error:
-            store.record_failure(now=clock())
+            store.record_failure(now=clock)
             return _refused(error.code, 503 if error.code == "config_unavailable" else 403)
         response = JSONResponse({"url": url}, headers={"Cache-Control": "no-store"})
         response.set_cookie(LOGIN_COOKIE, attempt.browser_cookie, max_age=LOGIN_SECONDS, **_COOKIE_FLAGS)
         return response
 
     @router.get("/callback")
+    @_storage_boundary
     def callback(request: Request):
         try:
             query = request.query_params
@@ -95,12 +112,12 @@ def create_auth_router(config: TeamConfig, store: AuthStore, identity: GoogleIde
                     or "error" in query or not query["code"]):
                 raise AuthRefused()
             browser = request.cookies.get(LOGIN_COOKIE, "")
-            state = store.consume_login(query["state"], browser, now=clock())
+            state = store.consume_login(query["state"], browser, now=clock)
             verified = identity.exchange(query["code"], state)
-            principal = store.identity(verified["sub"], verified["email"], verified["hd"], now=clock())
-            token = store.create_session(principal.sub, now=clock())
+            principal = store.identity(verified["sub"], verified["email"], verified["hd"], now=clock)
+            token = store.create_session(principal.sub, now=clock)
         except AuthRefused:
-            store.record_failure(now=clock())
+            store.record_failure(now=clock)
             response = RedirectResponse("/?auth=failed", status_code=303, headers={"Cache-Control": "no-store"})
         else:
             response = RedirectResponse("/", status_code=303, headers={"Cache-Control": "no-store"})
@@ -109,6 +126,7 @@ def create_auth_router(config: TeamConfig, store: AuthStore, identity: GoogleIde
         return response
 
     @router.post("/logout")
+    @_storage_boundary
     def logout(request: Request):
         if not _guard(request, config):
             return _refused("csrf")
@@ -122,7 +140,7 @@ def create_auth_router(config: TeamConfig, store: AuthStore, identity: GoogleIde
                 supplied = request.headers.getlist("x-semantic-studio-csrf")
                 if len(supplied) != 1 or not hmac.compare_digest(supplied[0].encode(), view.csrf_token.encode()):
                     return _refused("csrf")
-                store.revoke(token, now=clock())
+                store.revoke(token, now=clock)
         response = JSONResponse({"authenticated": False}, headers={"Cache-Control": "no-store"})
         response.delete_cookie(SESSION_COOKIE, **_COOKIE_FLAGS)
         return response
