@@ -11,6 +11,7 @@
 ## 1. 目的・範囲
 
 - team版の正本をPostgreSQLに一本化する。SQLiteとの選択式、接続失敗時のSQLite/localフォールバックは作らない。
+- SQLite reader/exporter/importer、互換adapter、SQLiteを作成・接続するテストfixtureも設けない。保守・移行だけの例外を残さない。
 - アプリ専用DBサービス・DB・ロール・永続volumeを、このComposeプロジェクト内に設ける。外部DBや既存の他用途DBを利用しない。
 - DBの5432をホストへpublishしない。DBは専用internal networkだけに参加する。
 - local版の既存ファイル保存とWindows利用を維持する。local版はDB接続もPostgreSQLの起動も要求しない。
@@ -146,7 +147,7 @@ schema管理を含む9テーブルを基本とし、DB名・schema・columns・c
 - 認証時刻はUnix秒のdouble precision、disabledはbooleanへ明示変換する。TTLの60/30/5分は維持する。
 - 実ファイルは引き続き`/data/blobs/<sha256>`。RDF処理はrdflibで行い、SQLでSPARQLを実行しない。
 - 元のnamespace、言語、空白ノード、数値literalのlexical、未知述語、元のファイルbytesを変えない。
-- DBのTEXT列に使う識別子はUTF-8・NULなしを検査する。変換不能な旧識別子は移行を拒否し、黙って置換しない。
+- DBのTEXT列に使う識別子はUTF-8・NULなしを検査する。変換不能な移行元localファイルの資源識別子は移行を拒否し、黙って置換しない。
 
 ## 6. 保存層の境界
 
@@ -217,22 +218,25 @@ team用server入口がruntimeのfatal状態を受けてuvicornを終了させ、
 DB接続の状態だけを見てlocalへ切り替えず、Composeのapp再起動で新しい所有権を取得する。
 read cache・once grant・実行中jobは引き続き単一app内の状態。PostgreSQL化だけでmulti-workerを許可しない。
 
-## 9. 移行
+## 9. 初期化とlocalファイルからの移行
 
-新しいteamサービスはSQLiteを開かない。既存`.sqlite`をdata directoryに発見した場合は、明示移行が必要として拒否する。
-localファイルからの移行は維持し、行先を空のPostgreSQL schema＋新しいblob volumeへ変更する。
-inspect/dry-runで件数・型付きRDF・namespace・ファイルhashを検査し、元領域を変更しない。
+新しいteamサービスは、PostgreSQLへの新規初期化とlocalファイル領域からの明示移行だけを扱う。
+SQLite DB・SQLite backupの読取、変換、論理export、importを本製品の機能として実装しない。
+旧案にあった`tools/legacy/`のoffline exporterとSQLite fixtureは撤回する。
 
-既存SQLite版teamデータがある場合だけ、停止した旧appの領域を**一回限りのoffline exporter**で読む。
-exporterは別の`tools/legacy/`に隔離し、本番app image・通常CLI・runtime dependencyへ含めない。
-SQLite backendを残すためのadapterやDB種別selectorは作らない。旧schema・欠損blobは有限codeで拒否する。
-このexporterとテストfixtureだけはPython標準sqlite3で旧形式を読むことがあるが、新appのDB機能には含めない。
+既存の旧DBファイルがdata directoryにある場合は、未対応の旧保存領域として起動を拒否する。
+ファイルをDBとして開かず、読み取り・自動変換・上書き・削除を試みない。
+新しい空のPostgreSQL DBと新しいblob volumeを明示的に用意する。
+旧保存領域を自動廃棄して「移行済み」と扱うことを禁止する。
 
-exportは現在資源・墓標version・全audit・再送記録・users/roles/auth_events・全参照blobを保存する。
-PostgreSQL側は空の行先のみを受け付け、既存データを上書きしない。
-外部から与えた旧セッション・未完了loginは引き継がず、移行後は再ログインさせる。
-復元したID列の次値を調整し、過去audit IDを再利用しない。
-移行確認後も元SQLite・元blobを消さず、切替前の読取専用rollback元として保持する。
+localファイルからの移行では、inspect/dry-runで件数・型付きRDF・namespace・ファイルhashを検査し、元領域を変更しない。
+移行先は空のPostgreSQL schemaと新しいblob volumeだけとし、既存データを上書きしない。
+localファイルにない過去の利用者・監査・版番号・再送記録・Undo履歴を作らず、移行操作を`migration`として記録する。
+セッション・未完了loginを外部入力から復活させず、移行後は再ログインさせる。
+
+旧SQLite版の監査・Undo等を新DBへ自動継承できるとは主張しない。
+旧DBに必要な実データがあると判明した場合は、既存領域を保持したまま別の移行要件として判断する。
+この判断をSQLiteの移行用依存を復活させる口実にせず、元データの削除や履歴欠落を伴う切替を自動実行しない。
 
 ## 10. backup/restore
 
@@ -286,11 +290,16 @@ CIごとに専用Compose project/DBを作り、test fixtureだけでschemaを初
 - 停止・降格と準備中更新の競合で、不許可の変更を確定しない。
 - DB確定前の例外・blob失敗・COMMIT応答喪失・DB再起動で、部分更新や架空の成功を残さない。
 - 別blob directoryの二重appも起動拒否。lease切断後の旧appが別接続で更新を継続しない。
-- RDF・原文・空白ノード・namespace・未知項目、履歴・Undo/Redo・再送が再起動/移行/復元後にも一致。
+- RDF・原文・空白ノード・namespace・未知項目がlocalファイル移行とPostgreSQLの再起動/復元後にも一致。
+- PostgreSQLの世代backup/restoreでは墓標version・全audit・要求再送記録・users/rolesを保持し、ID列の次値を再設定する。履歴・Undo/Redo・再送の意味が一致し、sessions/login_attemptsだけは失効する。
+- localファイル移行で、存在しない旧DB履歴を生成・継承したと表示しない。旧DB入力を与えても開かず、元ファイルと既存DBを変更しない。
 - 稼働中backupの整合性、旧auditだけのblob、失敗した復元先の非公開、移行元不変、復元後再ログイン。
 - 日英UI、401/409/503での入力保持、実HTTPS・2利用者・Shapes/model履歴・AX/Tabを再検証。
 - backend/frontend全体と既存性能予算、型検査/build、配布通知・秘密検査、実PostgreSQL Compose統合を必須gateにする。
-- 本番appのimport・依存経路にsqlite3/SQLite接続設定なし。legacy readerは本番image外であることをsource/imageの両方で検査。
+- 製品のアプリ・保守/移行CLI・補助tool・テストfixtureにsqlite3/SQLite接続・専用SQL・backend selectorなし。reader/exporter/importerを配布先だけ変えて残すことも禁止。
+- source scanで製品コードのSQLite import・接続・PRAGMA・sqlite_master・SQLite専用transactionを検出し、テスト/補助toolを免除しない。拒否試験はDBを作らずopaque bytesを入力する。
+- 検出器を検証する禁止例のソース断片は文字列としてだけ扱い、SQLiteをimport/実行して再現しない。仕様・履歴文書・拒否対象の文字列と、実際のDB利用を区別する。
+- app imageに製品のSQLite実装・互換adapterを含めず、runtime呼出しにもSQLite接続がないことを検査する。Python標準ライブラリ一般に未使用moduleが存在することと、本製品のDB利用・依存は区別する。
 
 ## 13. 実装時に変更するファイル群
 
@@ -300,14 +309,14 @@ CIごとに専用Compose project/DBを作り、test fixtureだけでschemaを初
 | 保存・認証 | `repository.py`、`auth_store.py`、`runtime.py`、`config.py`。SQLite依存を除去しstorageを共有 |
 | team起動 | 新規`backend/app/team/server.py`。既存uvicorn設定を引き継ぎ、DB lease喪失時の終了・再起動を管理 |
 | 業務層 | `workspace.py`、`history.py`。直接SQLを保存メソッドへ移す。候補/確定/公開の順序を維持 |
-| 保守 | `maintenance.py`、新規`manage.py`、`scripts/team_workspace.py`、隔離legacy exporter。PostgreSQL世代backupと別領域restore |
+| 保守 | `maintenance.py`、新規`manage.py`、`scripts/team_workspace.py`。PostgreSQL世代backup/restoreとlocalファイル移行だけ。SQLite用reader等は新設しない |
 | 配備 | `docker-compose.team.yml`、DB初期化/HBA生成、`.env.example`、Dockerfile・除外。DB専用network/volume/secrets |
 | 依存・通知 | requirements/constraints、licenses台帳・実配布通知。新driverと同梱native成分を検証 |
 | 試験 | 既存`test_team_*`をPostgreSQL実接続へ移植。DB lease/backup/network/切断故障注入を追加 |
 | browser/CI | `team_browser_server.py`、P2 driverのfixture起動、Compose test runner、CIのDB統合matrix・Windows local job |
 | 文書 | P2設計・計画・利用/運用/検証書、CLAUDE、known-state。実装前に完了扱いしない |
 
-実装は、接続/配備境界 → repository/auth → workspace/Undo → 保守/旧データ移行 → 全体/実ブラウザ/配布検証の順に進める。
+実装は、接続/配備境界 → repository/auth → workspace/Undo → 保守/localファイル移行 → 全体/実ブラウザ/配布検証の順に進める。
 これは作業範囲の分解であり、RED/GREEN手順を含む詳細実装計画は本設計の確認後に作成する。
 
 ## 14. 設計側の判断と未実施事項
@@ -337,3 +346,11 @@ CIごとに専用Compose project/DBを作り、test fixtureだけでschemaを初
 `docker compose config --quiet`、文書の相対リンク、公開ポリシーと外部の非公開値リストによる検査が成功。
 この確認は設計文書に対するもの。PostgreSQL container起動・実接続・HBAの実動作・移行/復旧・性能・CIはまだ試験していない。
 変更は本書と既存文書の参照/状態表示だけで、製品コード・依存・実Compose・実データには触れていない。
+
+### SQLite完全廃止の設計再レビュー
+
+移行用offline exporter・SQLite fixtureを許していた箇所を撤回し、SQLite利用の例外をなくした。
+あわせて、旧DB履歴の自動継承という前提を削除し、localファイル移行とPostgreSQL世代復元の保証を分けた。
+現行の`repository.py`・`auth_store.py`・`maintenance.py`等にはSQLite実装が残っており、まだ廃止済みとは報告しない。
+今回の依頼は設計レビュー・修正であるとユーザーが明示しており、製品コードの置換は別工程とする。
+独立した全節の再レビューでも、SQLite利用の例外や旧DB履歴の暗黙移行は残っておらず、重要な修正指摘なしを確認した。

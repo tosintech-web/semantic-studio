@@ -206,3 +206,8 @@ backend全体の再実行も2,954成功・1skip・network 2除外・71 warnings�
 [新設計](superpowers/specs/2026-10-27-p2-postgresql-design.md)に保存層、network/HBA、secrets、排他、移行/復旧、CIを集約した。
 この段階の変更は設計文書だけで、コード・Compose・依存・DB・実データには変更していない。
 上記のSQLite版の試験・PR CI成功は、PostgreSQL版の試験証跡として流用しない。
+
+同日の設計再レビューで、移行用SQLite reader/exporterとSQLite fixtureを許していた例外を撤回した。
+製品のアプリ・CLI・補助tool・テストを通してSQLiteを利用しない設計へ統一し、旧DBの直接importも対象外とした。
+localファイル移行とPostgreSQL世代復元の保証を分け、旧DBの監査・Undoが自動継承されるとは記載しない。
+独立再レビューで残る重要な設計指摘なし。ユーザー指定どおり設計だけを修正しており、現行SQLiteコードの廃止完了は未確認・未実施である。
