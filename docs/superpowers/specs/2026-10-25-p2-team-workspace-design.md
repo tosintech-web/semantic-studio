@@ -3,7 +3,7 @@
 作成日：2026-10-25（日本時間）
 
 **2026-10-27 DB設計変更：** SQLiteを廃止する[PostgreSQL置換設計](2026-10-27-p2-postgresql-design.md)を追加した。
-以後のDB・Compose network・復旧方式は新設計を優先する。現在のコードはまだSQLite版であり、
+以後のDB・Compose network・復旧方式は新設計を優先する。現行コード・ComposeはPostgreSQLへ置換済みで、
 以下のBuilt・試験結果はSQLite版の記録であって、PostgreSQL実装の完了を意味しない。
 
 状態：SQLite版Built（2026-10-26）。main宛て[PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)の実装修正CIは全6ジョブ成功。

@@ -20,9 +20,11 @@ them by clicking, without writing SPARQL by hand.
 を参照してください。改変版の問い合わせは
 [このリポジトリのIssues](https://github.com/tosintech-web/semantic-studio/issues) へお願いします。
 
-チーム版はGoogle Workspace認証、閲覧者・編集者・管理者の権限、SQLiteへの即時保存、
+チーム版はGoogle Workspace認証、閲覧者・編集者・管理者の権限、専用PostgreSQLへの即時保存、
 変更履歴と版の競合検査を使います。[チーム版の操作](docs/p2-user-guide.md)、
 [設定・移行・バックアップ](docs/p2-team-operations.md)、[P2検証記録](docs/p2-verification.md)を参照してください。
+DBはDocker Composeの専用internal network内だけで利用し、5432をホストへ公開しません。
+[PostgreSQL置換の検証](docs/p2-postgresql-verification.md)も参照してください。
 既定のローカル版は継続します。本番Google認証・配備環境での確認は別途必要です。
 
 ソフトウェア本体は元作者の著作権表示を含む [MIT License](LICENSE) を維持します。

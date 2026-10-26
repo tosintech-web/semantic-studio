@@ -1,12 +1,13 @@
 # P2 PostgreSQL置換・Compose内限定接続の設計
 
-作成日：2026-10-27（日本時間）。状態：独立builder check済みの設計案／実装未着手。
+作成日：2026-10-27（日本時間）。状態：Task 1〜8の実装・対象検証済み。最終全体試験・独立レビュー・PR CIはTask 9で進行中。
 ユーザー指定：SQLiteを廃止し、専用PostgreSQLをDocker Composeで起動する。同じDocker network内のアクセスだけで利用する。
 対象ブランチ：`feat/p2-team-workspace`。調査起点：`dd0c63d`（SQLite版P2、PR #3）。
 
 本書は[P2詳細設計](2026-10-25-p2-team-workspace-design.md)のDB選択・保存・起動・復旧・CI構成を置き換える。
 認証、権限、日英UI、RDF、競合、監査、Undoの製品契約は引き継ぐ。
-**現行コードとComposeはまだSQLite版であり、本書のPostgreSQL構成は未実装。**
+現行の製品コード・Composeは本設計のPostgreSQL構成へ置換済み。
+旧SQLite版の記録は履歴として区別し、[実装検証記録](../../p2-postgresql-verification.md)で現在の証跡を管理する。
 実装手順・試験・受け入れ順序は[PostgreSQL置換の実装計画](../plans/2026-10-27-p2-postgresql.md)で管理する。
 
 ## 1. 目的・範囲
@@ -19,9 +20,9 @@
 - 一つのチーム・一つのアプリプロセスというP2の初期構成を維持する。複数アプリサーバー、レプリケーション、S3へのblob移行は今回含めない。
 - 実Google設定、実データ移行の実行、デプロイ、mainへのマージは別作業。本書では実装や依存追加を行わない。
 
-## 2. 現行実装との差分
+## 2. 置換前の実装との差分
 
-| 現在 | 置換後 |
+| 置換前 | 置換後 |
 | --- | --- |
 | `team.sqlite`、Python標準sqlite3 | 専用PostgreSQL、psycopg 3系 |
 | `BEGIN IMMEDIATE`とSQLite制約 | 明示トランザクション、共通write gate、PostgreSQL制約 |
@@ -31,8 +32,8 @@
 | 同じデータdirectoryのOS排他 | 同じDBのsession advisory lock＋同じblob directoryのOS排他 |
 | teamのDB試験もホスト上で実行 | teamの実DB試験は同じCompose network内のrunnerで実行 |
 
-PostgreSQLは18系安定版を設計対象とし、実装時に公式imageのpatchとdigestを固定する。`latest`・RCは使わない。
-psycopgは3系を採用し、Linux/Python 3.12とWindows/Python 3.14の配布物を確認してpatch・hashを固定する。
+PostgreSQLは18系安定版を対象とし、実装は公式18.6-bookwormのpatch/digestを固定した。`latest`・RCは使わない。
+psycopgはpure 3.3.6 wheelのpatch/hashとsystem libpq5 17.11を固定した。実DBはLinux/Python 3.12/3.14、Windowsはlocal/純粋logicの互換範囲で検証する。
 binary配布物に同梱されるlibpq等も含め、実物のライセンス原文・依存台帳・Docker配布通知を更新する。
 SQLAlchemy等のORMは追加しない。既存SQLと保存契約を明示的に置換する。
 
@@ -340,7 +341,7 @@ CIごとに専用Compose project/DBを作り、test fixtureだけでschemaを初
 
 製品として採用する制約と、資料に記載されたDB/Docker自体の機能は区別する。
 
-## 16. 設計の確認記録
+## 16. 設計作成時の確認記録
 
 2026-10-27、独立した実装担当者の視点でbuilder checkを行い、計画作成を妨げる重要な未決事項なし。
 設計例のYAMLをparseし、DBのport非公開・network参加・internal設定・IPv6無効・18系のvolume位置を検査した。
@@ -352,6 +353,6 @@ CIごとに専用Compose project/DBを作り、test fixtureだけでschemaを初
 
 移行用offline exporter・SQLite fixtureを許していた箇所を撤回し、SQLite利用の例外をなくした。
 あわせて、旧DB履歴の自動継承という前提を削除し、localファイル移行とPostgreSQL世代復元の保証を分けた。
-現行の`repository.py`・`auth_store.py`・`maintenance.py`等にはSQLite実装が残っており、まだ廃止済みとは報告しない。
+設計再レビュー時点では`repository.py`・`auth_store.py`・`maintenance.py`等にSQLite実装が残っており、廃止済みとは報告しなかった。
 今回の依頼は設計レビュー・修正であるとユーザーが明示しており、製品コードの置換は別工程とする。
 独立した全節の再レビューでも、SQLite利用の例外や旧DB履歴の暗黙移行は残っておらず、重要な修正指摘なしを確認した。

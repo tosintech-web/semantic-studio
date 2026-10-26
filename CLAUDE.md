@@ -58,9 +58,12 @@ run everything, budgets included. Dated P1 results live in `docs/p1-verification
 so test counts are not maintained as a second, easily stale copy here.
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to
-`main`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
-`backend-windows` (Python 3.14), `frontend` (`npm run test:ci`, `tsc -b`,
-`vite build`) and `docker` (`docker build .`). `budgets` only reports. A build
+`main`. The existing blocking names `backend-linux` and `backend-windows` aggregate the
+Linux local/PG/Compose-browser jobs and Windows native local compatibility,
+respectively. Real PostgreSQL tests run in internal-only Linux containers on
+Python 3.12 and 3.14. Windows does not run native team DB integration. `frontend`
+(`npm run test:ci`, `tsc -b`, `vite build`), `docker` and `publication` also gate.
+`budgets` only reports, including the P1 browser median. A build
 is not done until CI is green on its pull request.
 
 **Timing budgets are separated, not deleted.** Backend timing tests carry
@@ -196,7 +199,7 @@ backend/app/
   docs_export.py     The documentation-site zip (with docs_assets/)
   provenance.py      Activity records for exports
   team/              Explicit team configuration, Google sessions and roles,
-                     SQLite resources/audit/replay, detached candidate editing,
+                     PostgreSQL resources/audit/replay, detached candidate editing,
                      immutable blobs, versioned Undo and maintenance
   routers/           HTTP layer only; the real work lives in the modules above
 
@@ -267,7 +270,7 @@ before undoing a rule, and add a line here and an entry there when a build
 leaves one behind.
 
 **Security and network**
-- Team authentication waits for SQLite off the event loop and samples live time after acquiring its transaction. [Team queued authentication]
+- Team authentication waits for PostgreSQL off the event loop and samples live time after acquiring the common write gate. [Team queued authentication]
 - Approval purposes come from source facts; an unknown redirect descriptor keeps the complete original reason visible. [Approval purposes carry source facts]
 - Only `network_broker.py` connects out; policy is asked before any name resolves. [outbound connection]
 - The broker connects to the judged address (`_pinned_url`), the name in `Host` and SNI. [outbound connection]
@@ -539,3 +542,10 @@ Small and single-purpose. Say what changed and why, and include before and after
 numbers for anything touching performance. If a change alters an endpoint, a
 cap, a data shape, or a dependency, say so explicitly in the description so the
 architecture document can be updated.
+
+**PostgreSQL team storage (P2)**
+- Only `team/pg_storage.py` connects to psycopg. One lease-holding autocommit writer handles every explicit write transaction and common gate; no pool/reconnect/fallback. Read-only snapshots stay short.
+- The app cannot create/repair schema. Maintenance owns the versioned DDL/catalog reference; backup has SELECT only. `db:5432`, internal IPv4, HBA gateway denial and file-backed role secrets are enforced in product/tests/CI.
+- Never add SQLite readers, exporters, adapters or executable test fixtures. Old stores are refused without being opened. Local file migration and PostgreSQL generations are the only supported imports.
+- After restore/import failure, retain the incomplete marker and refuse startup; never invent COMMIT success or automatically reset/overwrite the target.
+- Use the dedicated Compose runner for `team_db`; native Windows covers local/pure/file compatibility. The machine inventory preserves every prior case ID. See `docs/p2-postgresql-verification.md` and the current operations guide.

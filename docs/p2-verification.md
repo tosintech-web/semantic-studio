@@ -1,4 +1,8 @@
-# P2 実装・検証記録
+# P2 SQLite版の実装・検証記録（履歴）
+
+> 以下はPostgreSQL置換前の記録です。現行実装・試験・レビューは
+> [PostgreSQL検証記録](p2-postgresql-verification.md)を参照してください。
+
 
 起点：main `c3c00a0`（PR #2）。ブランチ：`feat/p2-team-workspace`。
 現在の方針：独立公開ブランチを削除し、このmain派生ブランチの日本語PRで最終確認する。
@@ -210,7 +214,7 @@ backend全体の再実行も2,954成功・1skip・network 2除外・71 warnings�
 同日の設計再レビューで、移行用SQLite reader/exporterとSQLite fixtureを許していた例外を撤回した。
 製品のアプリ・CLI・補助tool・テストを通してSQLiteを利用しない設計へ統一し、旧DBの直接importも対象外とした。
 localファイル移行とPostgreSQL世代復元の保証を分け、旧DBの監査・Undoが自動継承されるとは記載しない。
-独立再レビューで残る重要な設計指摘なし。ユーザー指定どおり設計だけを修正しており、現行SQLiteコードの廃止完了は未確認・未実施である。
+この設計再レビュー時点では、ユーザー指定どおり設計だけを修正し、SQLiteコード廃止の実装・確認は別工程とした。
 
 ## PostgreSQL置換の実装計画（2026-10-27）
 

@@ -3147,7 +3147,7 @@ and `docs/team-configuration-privacy.md`.
 P2 adds an explicit team mode. Existing local services retain their behavior,
 while request-bound proxies resolve to detached team candidates. Immutable file
 blobs and typed RDF resources preserve original bytes, namespaces and blank-node
-identities. The SQLite transaction checks all expected versions and commits the
+identities. The PostgreSQL common-gate transaction checks all expected versions and commits the
 resource changes, audit and actor-scoped request replay together. Failed candidate
 work cannot publish a shared edit. Full-operation inverse records enforce both
 latest-version and actor constraints; restoring a graph belongs to the existing
@@ -3169,7 +3169,7 @@ Background auth/versions polling does not count as user activity for idle expiry
 
 ## Team queued authentication
 
-SQLite BEGIN IMMEDIATE can wait behind a writer. Team authentication therefore
+The shared PostgreSQL write gate can wait behind a writer. Team authentication therefore
 runs in the threadpool, so public health and other async requests remain live.
 Production callers supply a clock function sampled after the transaction acquires
 its lock: a queued request's earlier timestamp must not falsely precede the last
@@ -3188,3 +3188,29 @@ Version HTTP headers use ASCII JSON so arbitrary Unicode resource names survive
 browser transport. Team export/duplicate projects current typed graph authority
 while preserving original saved bytes; export serializes a clone to avoid mutating
 namespaces as a side effect of a read.
+
+## PostgreSQL team boundary — 2026-10-27
+
+The current team runtime replaces the historical SQLite foundation. PostgreSQL
+is a dedicated Compose service on one IPv4 internal bridge, with no host DB port.
+HBA rejects its gateway, other DBs/roles and network superuser access. Every
+connector validates service DNS against the shared CIDR and pins hostaddr for
+that runtime. App, maintenance and backup receive only their own secret file.
+
+The session lease and write gate use distinct fixed keys. The lease connection
+is the only writer, so losing ownership cannot be hidden by a pool reconnect.
+The server exits on fatal storage loss and Compose restarts a fresh process.
+Clock and current session/role checks occur after the gate, including replayed
+Undo. Auth outages return 503 without erasing the cookie or retained input.
+
+Backup streams one consistent generation plus current/history-only immutable
+blobs. Restore targets another empty DB/blob volume, validates discarded login
+rows too, and removes sessions/attempts before publishing. A durable incomplete
+marker fences failed or uncertain imports. Legacy SQLite files are refused,
+never opened, converted or removed. Local mode keeps its file persistence.
+
+Actual network denials, real UID access, distinct-secret failures, changed-IP DB
+recreation, live-source/two-project recovery and runtime SQLite audit are tested.
+The database partition runs in Linux 3.12/3.14; Windows remains local/pure/file
+compatibility. Dated historical checkpoints are not replacement verification;
+use the PostgreSQL verification record.
