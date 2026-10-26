@@ -7,6 +7,7 @@
 本書は[P2詳細設計](2026-10-25-p2-team-workspace-design.md)のDB選択・保存・起動・復旧・CI構成を置き換える。
 認証、権限、日英UI、RDF、競合、監査、Undoの製品契約は引き継ぐ。
 **現行コードとComposeはまだSQLite版であり、本書のPostgreSQL構成は未実装。**
+実装手順・試験・受け入れ順序は[PostgreSQL置換の実装計画](../plans/2026-10-27-p2-postgresql.md)で管理する。
 
 ## 1. 目的・範囲
 

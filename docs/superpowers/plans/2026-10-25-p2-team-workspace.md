@@ -3,7 +3,7 @@
 **2026-10-27追記：本書はSQLite版の実装・検証記録。**
 DB方式は[PostgreSQL置換設計](../specs/2026-10-27-p2-postgresql-design.md)へ変更する。
 完了チェックはSQLite版に対するものであり、PostgreSQL対応が実装済みという意味ではない。
-PostgreSQL版の詳細実装計画は新設計の確認後に別途作成する。
+PostgreSQL版の作業は[専用の実装計画](2026-10-27-p2-postgresql.md)で管理する。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
