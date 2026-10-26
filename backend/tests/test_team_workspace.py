@@ -501,7 +501,8 @@ with TestClient(app,base_url="https://studio.example.org") as client:
 
 
 @pytest.mark.parametrize("mode", ["visual", "source", "shape"])
-def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_path, mode, monkeypatch):
+@pytest.mark.parametrize("saved_newline", [b"\n", b"\r\n"], ids=["lf", "crlf"])
+def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_path, mode, monkeypatch, saved_newline):
     from io import BytesIO
     from zipfile import ZipFile
     from rdflib import Graph, Literal, URIRef
@@ -515,6 +516,23 @@ def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_
     applied = harness.request("PUT", path + "/source", request_id="initial-source", json={"text": original})
     assert applied.status_code == 200, applied.text
     assert harness.request("POST", path + "/save", request_id="initial-save").status_code == 200
+    original_key = "file:projects/" + pid + "/model.ttl"
+    saved = harness.workspace.repository.read(original_key)
+    saved_bytes = harness.workspace.blobs.get(saved.payload["blob"])
+    # Legacy text-mode Save may use the host's line endings. Check the full
+    # authored content before using its immutable blob as byte provenance.
+    assert saved_bytes.replace(b"\r\n", b"\n") == original.encode("utf-8")
+    # Exercise both raw encodings on every host, including a Windows-like
+    # negative control for accidental newline normalization in ZIP or copy.
+    fixture_bytes = original.encode("utf-8").replace(b"\n", saved_newline)
+    harness.workspace.repository.commit("fixture", "saved-newline", {original_key: saved.version},
+        {original_key: {"blob": harness.workspace.blobs.put(fixture_bytes)}}, "fixture")
+    original_bytes = harness.workspace.blobs.get(harness.workspace.repository.read(original_key).payload["blob"])
+    assert original_bytes == fixture_bytes
+    assert original_bytes.replace(b"\r\n", b"\n") == original.encode("utf-8")
+    if saved_newline == b"\r\n":
+        assert original_bytes != original.encode("utf-8")
+    harness.request("GET", "/api/team/versions")
     if mode == "source":
         changed = harness.request("PUT", path + "/source", request_id="new-source", json={"text": original + 'ex:next ex:unknown "Accepted" .\n'})
     else:
@@ -553,7 +571,7 @@ def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_
         assert archive.read(".semantic-studio-originals/model.ttl") == b'opaque existing original entry'
         originals = [name for name in archive.namelist() if name.endswith("/model.ttl") and name.startswith(".semantic-studio-originals-")]
         assert len(originals) == 1
-        assert archive.read(originals[0]) == original.encode()
+        assert archive.read(originals[0]) == original_bytes
         if mode == "shape":
             shapes = decode_graph(before[0]["graph:" + pid + "-shapes"]["graph"])
             assert isomorphic(Graph().parse(data=archive.read("shapes.ttl"), format="turtle"), shapes)
@@ -563,7 +581,7 @@ def test_export_and_duplicate_use_authority_before_formatting_save(harness, tmp_
     after, _ = harness.workspace.repository.snapshot()
     assert after["graph:" + new_id + "-model"] == before[0]["graph:" + pid + "-model"]
     assert after["state:" + new_id + "-model"] == before[0]["state:" + pid + "-model"]
-    assert harness.workspace.blobs.get(after["file:projects/" + new_id + "/model.ttl"]["blob"]) == original.encode()
+    assert harness.workspace.blobs.get(after["file:projects/" + new_id + "/model.ttl"]["blob"]) == original_bytes
     assert harness.workspace.blobs.get(after["file:projects/" + new_id + "/opaque.bin"]["blob"]) == b'\x00opaque\r\n\xff'
     if mode == "shape":
         assert after["graph:" + new_id + "-shapes"] == before[0]["graph:" + pid + "-shapes"]

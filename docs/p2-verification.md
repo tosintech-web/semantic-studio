@@ -135,6 +135,12 @@ Tasks 5〜8を接続し、Task 9の最終検証を実施した。先の「未実
 
 GitHub CIの最終結果は、公開用ブランチのpush後に本節へ追記する。
 
+最初の[公開用CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40259089634)では
+publication・Linux・frontend・Dockerが成功。Windowsで追加の原文テスト3件にLF固定の期待値の問題を検出した。
+製品の原文保持動作は正しく、テストをLF/CRLF両方の実blobとの完全一致へ修正し再検証する。
+参考budgetsのbackend40件は成功。frontendの既存Homeカード比率は上限1.20に対し1.2000878で超過した。
+同じテストのローカル再実行は成功。測定方法・閾値は変更していない。
+
 ### レビュー・運用境界
 
 全差分の独立コード・セキュリティレビューと修正後の再レビューを実施する。
