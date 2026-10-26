@@ -29,3 +29,6 @@
 **/*.private-values
 **/team-data
 **/team-backups
+
+**/secrets
+**/team-local-source

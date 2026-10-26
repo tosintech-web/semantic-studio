@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜7の保存・編集・保守・既存試験移植を検証済み、製品Compose・CI・最終受入は未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜8の保存・編集・保守・試験・製品Compose/CI接続を検証済み、最終レビュー・全予算・PR CIは未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 本追補は計画のレビュー・修正だけを対象とする。既存の実装コミットと未コミット変更は保持し、実装の続行・commit・pushはこの計画作成作業では行わない。
 
@@ -251,17 +251,17 @@ Create `scripts/test_pg_compose_network.py`, `test_pg_compose_lifecycle.py`（te
 - browser fixtureは同じinternal networkのtest containerで実DBに接続。hostへpublishするのは合成HTTPS appのloopback endpointだけ。Chrome/CDPは既存driverが所有し、production imageに署名fixtureを入れない。
 - hostのorchestrationだけがDocker CLIを使用する。containerへDocker socket/CAP_NET_ADMINをmount/追加しない。
 
-- [ ] **Step 1: 実境界と障害試験を書く。**
+- [x] **Step 1: 実境界と障害試験を書く。**
   - `test_pg_bootstrap_rejects_reused_or_invalid_passwords`: 4 roleの重複・空・複数行secretで初期化を拒否し、SQL実行前に停止する。実container UIDの読取可否も確認する。値は診断へ出さない。
   - `test_pg_compose_network_boundary`: inspectでDB port bindingなし/internalだけ。同networkのapp成功、hostと別networkの正しい合成credentialでもDB session拒否、別role/別DB拒否。
   - `test_pg_compose_restart_and_owner_loss`: DB再起動/lease切断で旧appが更新できず、app終了→再起動後にDNS再解決・永続data保持。
   - `test_pg_compose_backup_and_restore`: app稼働中backup→別Compose projectの空DB/volumeへrestore、過去履歴blobと失効を確認。元appと元sessionを生かしたまま検証し、元DB/元blobが不変、元sessionは引き続き有効、復元先sessionだけが失効したことを確認する。同一test DBのresetだけでこの受入条件を満たした扱いにしない。
   - browser P2で401/409/503の未送信入力、日英、2利用者CAS、再送、Undo、Shapes/model履歴、AX/Tabを実UIで確認。
-- [ ] **Step 2: RED。** `python -m unittest scripts.test_pg_compose_network scripts.test_pg_compose_lifecycle`とdriver P2 → 製品Compose未接続/fixture未移植を検出。
-- [ ] **Step 3: 製品・CIを接続。** app/DB/backup volumeを分離し秘密とdataをbuild contextから除外。host access拒否試験だけはhostからの接続試行を行い、成功を許容しない。固定DB IPではなくinspectで取得した現在IPを使う。DB外向き経路なし、app brokerの外向き経路ありを確認する。
+- [x] **Step 2: RED。** `python -m unittest scripts.test_pg_compose_network scripts.test_pg_compose_lifecycle`とdriver P2 → 製品Compose未接続/fixture未移植を検出。
+- [x] **Step 3: 製品・CIを接続。** app/DB/backup volumeを分離し秘密とdataをbuild contextから除外。host access拒否試験だけはhostからの接続試行を行い、成功を許容しない。固定DB IPではなくinspectで取得した現在IPを使う。DB外向き経路なし、app brokerの外向き経路ありを確認する。
   CIはLinux containerのPG統合3.12/3.14を必須化。Windowsはlocal/純粋logic/ファイル互換、job名・検証範囲を明示。frontend・Docker・publicationは維持。budgetsはlocal/PG双方の全perfとfrontendを実行し参考結果を残す。未分類caseで失敗する収集gateを追加する。
-- [ ] **Step 4: GREEN。** 上記2 unittest、`node .claude/skills/run-semantic-viewer/driver.mjs smoke`、`... p1`、`... p2`、実image notices/秘密検査 → 全成功。Compose起動・破棄は専用projectだけで行い、通常手順に`down -v`を入れない。
-- [ ] **Step 5: commit。** 製品Compose・CI・browser/境界試験をcommit。実Google/本番volume/実dataを使わない。
+- [x] **Step 4: GREEN。** 上記2 unittest、`node .claude/skills/run-semantic-viewer/driver.mjs smoke`、`... p1`、`... p2`、実image notices/秘密検査 → 全成功。Compose起動・破棄は専用projectだけで行い、通常手順に`down -v`を入れない。
+- [x] **Step 5: commit。** 製品Compose・CI・browser/境界試験をcommit。実Google/本番volume/実dataを使わない。
 
 ## Task 9: 全体検証・レビュー修正・文書・main向けPR
 
@@ -330,3 +330,5 @@ Task 5：runtime/共有workspace/UndoをPGへ接続し、blob lockとDB lease、
 Task 6：PostgreSQLの世代archive・空DBへの復元・localファイル移行・保守CLIを実装。全PG対象293件、最新CLIを含む再build後の対象103件、補助script42件が成功。型付きliteralの原文ログ、破損sessionの制約検証、未完了marker、DDLのcheckout改行を再現して修正した。稼働元を残す別Compose projectへの復元はTask 8で別途検証する。
 
 Task 7：残るrepository/auth/runtime/access/config試験をPGへ移植し、製品・補助tool・testのSQLite import/専用SQLを除去。全試験に接続監査を適用し、旧2957 caseと現3080 caseの一対一対応・DB263 caseの分類を機械検査する。DB群263件、local/純粋logic群2774件（任意依存skip 1件）、最終変更対象48件、script44件が成功。性能予算は除外せずTask 9で全実行する。製品ComposeとCIはTask 8で切り替える。
+
+Task 8：製品Composeを専用PG/internal network・role別secrets・schema job・server supervisorへ接続し、CIはPG3.12/3.14とWindows local群を明示。既存必須check名は全新必須jobを待つ集約gateとして維持した。実network/不正secret/UID/復元・再作成を検証し、DBの実IP変更後も新appが再解決して復帰。別DB復元後の再送・Undo/Redo・履歴blob・identityも成功。3.14実DB259件、最終接続/guard76件、smoke/P1/P2実HTTPSが成功。P1の通常中央値252.06ms（基準500ms）。CIの時間予算は参考jobへ分離し、通常の基準とdefault強制は維持。実GitHub CIの結果確認はTask 9で行う。

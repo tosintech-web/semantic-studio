@@ -34,6 +34,26 @@ def configuration(directory):
                       data_dir=directory, db=role_config())
 
 
+def test_team_server_preserves_access_log_and_proxy_boundary(monkeypatch):
+    from types import SimpleNamespace
+    import threading
+    import uvicorn
+    from app.team.server import serve_team
+    captured = []
+    class Server:
+        should_exit = False
+        def __init__(self, config):
+            captured.append(config)
+        async def serve(self):
+            return
+    monkeypatch.setattr(uvicorn, 'Server', Server)
+    application = SimpleNamespace(state=SimpleNamespace(team=SimpleNamespace(fatal=threading.Event())))
+    asyncio.run(serve_team(application))
+    assert captured[0].access_log is False
+    assert captured[0].proxy_headers is False
+    assert captured[0].workers == 1 and captured[0].reload is False
+
+
 @pytest.mark.team_db
 def test_two_apps_with_different_blob_directories_cannot_share_db(pg_schema, tmp_path):
     first = TeamRuntime(configuration(tmp_path / 'first'))

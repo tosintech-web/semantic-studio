@@ -9,6 +9,8 @@ BASIC IDEA
     independence, same-name identity and project edit/undo/save/reload through UI.
 INPUTS / INPUT SOURCES
     Injected harness operations and independently generated synthetic RDF only.
+    BUDGET_REPORT_ONLY=1 reports milliseconds for blocking CI functional checks;
+    default runs and the informational budgets job enforce the unchanged limit.
 EXPECTED OUTPUT
     Assertions, measured response-to-click time and screenshots; no publication.
 ================================================================================
@@ -96,7 +98,12 @@ export async function runP1({ROOT,DATA_DIR,BASE,Browser,api,uploadOntology,start
     }
     interactionSamples.sort((a,b)=>a-b);
     const interactiveMs=interactionSamples[3];
-    assert.ok(interactiveMs<=limitMs(500),`response-to-click median ${interactiveMs.toFixed(2)}ms exceeds budget`);
+    const budgetPassed=interactiveMs<=limitMs(500);
+    if(process.env.BUDGET_REPORT_ONLY==='1') {
+      log('p1-budget',`response-to-click median=${interactiveMs.toFixed(2)}ms limit=${limitMs(500)}ms passed=${budgetPassed} (report only)`);
+    } else {
+      assert.ok(budgetPassed,`response-to-click median ${interactiveMs.toFixed(2)}ms exceeds budget`);
+    }
     await browser.eval('document.querySelector(".entity-list input").focus()'); await key('Tab');
     assert.ok(await browser.eval('document.activeElement===document.querySelector(".entity-list-controls select") && document.activeElement.matches(":focus-visible")'));
     await key('Tab'); assert.ok(await browser.eval('document.activeElement===document.querySelectorAll(".entity-list-controls select")[1]'));

@@ -22,8 +22,11 @@ from app.team import pg_storage
 from app.team.pg_storage import PgStorage, StorageError, WRITE_GATE_KEY
 from pg_probe import connect
 from pg_support import role_config
+from test_pg_config import pg_env
+from app.team.pg_config import load_pg_config
+import builtins
+import os
 
-pytestmark = pytest.mark.team_db
 
 
 @pytest.fixture
@@ -34,14 +37,30 @@ def storage():
     store.close()
 
 
+@pytest.fixture
+def isolated_pg_env(pg_env, monkeypatch):
+    # Windows runners may preinstall PostgreSQL and set PGROOT/PGBIN. These
+    # DNS-only tests use their explicit synthetic capability, never libpq's
+    # ambient configuration or the runner's unrelated PostgreSQL install.
+    for key in os.environ:
+        if key.startswith('PG'):
+            monkeypatch.delenv(key)
+    return pg_env
+
+
 @pytest.mark.parametrize('address', ['8.8.8.8', '::1', 'gateway'])
-def test_dns_outside_subnet_never_connects(monkeypatch, address):
-    config = role_config()
+def test_dns_outside_subnet_never_connects(monkeypatch, address, isolated_pg_env):
+    config = load_pg_config(isolated_pg_env, role='app')
     address = str(config.gateway) if address == 'gateway' else address
     monkeypatch.setattr(pg_storage, '_resolve_db_addresses', lambda: [address])
-    import psycopg
     calls = []
-    monkeypatch.setattr(psycopg, 'connect', lambda **kwargs: calls.append(kwargs))
+    original_import = builtins.__import__
+    def guarded_import(name, *args, **kwargs):
+        if name.split('.')[0] == 'psycopg':
+            calls.append(name)
+            raise AssertionError('driver_loaded_before_endpoint_validation')
+        return original_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, '__import__', guarded_import)
     store = PgStorage(config, on_fatal=lambda kind: None)
     with pytest.raises(StorageError) as caught:
         store.start_writer()
@@ -49,17 +68,22 @@ def test_dns_outside_subnet_never_connects(monkeypatch, address):
     assert calls == []
 
 
-def test_dns_response_after_deadline_never_starts_connection(monkeypatch):
+def test_dns_response_after_deadline_never_starts_connection(monkeypatch, isolated_pg_env):
     entered, release = threading.Event(), threading.Event()
     def delayed():
         entered.set()
         release.wait(5)
         return ['10.253.53.2']
     monkeypatch.setattr(pg_storage, '_resolve_db_addresses', delayed)
-    import psycopg
     calls = []
-    monkeypatch.setattr(psycopg, 'connect', lambda **kwargs: calls.append(kwargs))
-    config = replace(role_config(), dns_timeout=0.02)
+    original_import = builtins.__import__
+    def guarded_import(name, *args, **kwargs):
+        if name.split('.')[0] == 'psycopg':
+            calls.append(name)
+            raise AssertionError('driver_loaded_before_endpoint_validation')
+        return original_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, '__import__', guarded_import)
+    config = replace(load_pg_config(isolated_pg_env, role='app'), dns_timeout=0.02)
     try:
         with pytest.raises(StorageError) as caught:
             PgStorage(config, on_fatal=lambda kind: None).start_writer()
@@ -69,6 +93,7 @@ def test_dns_response_after_deadline_never_starts_connection(monkeypatch):
     assert calls == []
 
 
+@pytest.mark.team_db
 def test_writer_retains_same_backend_and_lease(storage):
     with storage.write_transaction() as tx:
         before = tx.execute('SELECT pg_backend_pid() AS pid').fetchone()['pid']
@@ -86,6 +111,7 @@ def test_writer_retains_same_backend_and_lease(storage):
         other.close()
 
 
+@pytest.mark.team_db
 def test_writer_is_not_reopened_after_connection_loss(monkeypatch):
     fatal = []
     store = PgStorage(role_config(), on_fatal=fatal.append)
@@ -112,6 +138,7 @@ def test_writer_is_not_reopened_after_connection_loss(monkeypatch):
         store.close()
 
 
+@pytest.mark.team_db
 def test_waiting_writer_uses_read_committed_after_gate(storage):
     with connect(role_config('maintenance')) as setup:
         setup.execute('CREATE TABLE semantic_studio.pg_storage_probe (value int NOT NULL)')
@@ -144,12 +171,14 @@ def test_waiting_writer_uses_read_committed_after_gate(storage):
             setup.execute('DROP TABLE semantic_studio.pg_storage_probe')
 
 
+@pytest.mark.team_db
 def test_read_snapshot_is_repeatable_and_read_only(storage):
     with storage.read_snapshot() as tx:
         assert tx.execute('SHOW transaction_isolation').fetchone()['transaction_isolation'] == 'repeatable read'
         assert tx.execute('SHOW transaction_read_only').fetchone()['transaction_read_only'] == 'on'
 
 
+@pytest.mark.team_db
 def test_backup_cannot_acquire_writer_but_can_read():
     store = PgStorage(role_config('backup'), on_fatal=lambda kind: None)
     try:
@@ -161,6 +190,7 @@ def test_backup_cannot_acquire_writer_but_can_read():
         store.close()
 
 
+@pytest.mark.team_db
 def test_failed_read_connection_checks_writer_before_fencing(monkeypatch, storage):
     import psycopg
     def failed_read():
@@ -174,6 +204,7 @@ def test_failed_read_connection_checks_writer_before_fencing(monkeypatch, storag
     storage.ensure_owner()
 
 
+@pytest.mark.team_db
 def test_lock_timeout_is_busy_and_writer_recovers():
     fatal = []
     config = replace(role_config(), lock_timeout_ms=50)
@@ -193,6 +224,7 @@ def test_lock_timeout_is_busy_and_writer_recovers():
         store.close()
 
 
+@pytest.mark.team_db
 def test_dns_is_pinned_for_read_connections_after_start(monkeypatch, storage):
     def changed_dns():
         pytest.fail('runtime re-resolved its pinned database endpoint')
@@ -202,6 +234,7 @@ def test_dns_is_pinned_for_read_connections_after_start(monkeypatch, storage):
         assert IPv4Address(address) in storage.config.subnet
 
 
+@pytest.mark.team_db
 def test_statement_timeout_does_not_poison_writer():
     store = PgStorage(replace(role_config(), statement_timeout_ms=50), on_fatal=lambda kind: None)
     try:

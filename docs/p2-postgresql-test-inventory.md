@@ -28,3 +28,5 @@ Linux containerの3.12/3.14は実DB、Windows nativeは `not team_db` の互換�
 
 保守の単一DBリセットによるunit復元試験は、元appを稼働させた別Compose projectへの
 復元試験の代替ではない。後者の受入証跡はTask 8/9で別途記録する。
+
+Task 8の分類レビューで、DBを使わないDNS拒否/期限の4 caseをlibpq importなしへ整理し、Windowsの純粋logic群へ戻した。server起動設定と分類退行の2 caseを追加し、現行は3082 case（実DB259 case）。旧2957 caseの対応は保持している。

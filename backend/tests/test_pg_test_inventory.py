@@ -18,6 +18,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_pure_dns_guards_remain_in_native_compatibility_partition():
+    inventory = json.loads(ROOT.joinpath('docs/p2-postgresql-test-inventory.json').read_text())
+    assert not any('test_dns_outside_subnet_never_connects' in node or
+                   'test_dns_response_after_deadline_never_starts_connection' in node
+                   for node in inventory['team_db'])
+
+
 def test_test_inventory_matches_actual_collection(tmp_path):
     import subprocess
     import sys

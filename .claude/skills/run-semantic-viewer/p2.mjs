@@ -14,7 +14,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 import assert from 'node:assert/strict';
-import {spawn} from 'node:child_process';
+import {spawn, spawnSync} from 'node:child_process';
 import {request} from 'node:https';
 import {join} from 'node:path';
 import {mkdirSync} from 'node:fs';
@@ -22,10 +22,25 @@ import {mkdirSync} from 'node:fs';
 export async function runP2({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,sleep}) {
   const port=Number(process.env.TEAM_PORT||8011), base=`https://127.0.0.1:${port}`;
   const directory=join(DATA_DIR,'team-acceptance');mkdirSync(directory,{recursive:true});
+  const prepared=spawnSync(pythonExe(),['scripts/pg_compose_support.py','prepare-browser',directory,String(port)],{
+    cwd:ROOT,encoding:'utf8',timeout:180000});
+  assert.equal(prepared.status,0,'dedicated internal PostgreSQL browser preparation');
+  const stack=JSON.parse(prepared.stdout);
+  const fixtureEnvironment={...process.env,...stack.environment};
+  const docker=(args)=>{
+    const result=spawnSync(stack.arguments[0],[...stack.arguments.slice(1),...args],{cwd:ROOT,env:fixtureEnvironment,encoding:'utf8',timeout:90000});
+    assert.equal(result.status,0,'owned browser Compose operation');
+  };
   const start=()=>{
-    const proc=spawn(pythonExe(),['tests/team_browser_server.py',directory,String(port)],{
-      cwd:join(ROOT,'backend'),env:{...process.env,PYTHONPATH:join(ROOT,'backend')},stdio:['ignore','pipe','pipe']});
+    const proc=spawn(stack.arguments[0],[...stack.arguments.slice(1),'up','--no-deps','--no-build','--force-recreate','semantic-studio-team'],{
+      cwd:ROOT,env:fixtureEnvironment,stdio:['ignore','pipe','pipe']});
     proc.stderr.on('data',data=>process.stderr.write(data));return proc;
+  };
+  const stopFixture=async(proc,abrupt=false)=>{
+    if(!proc)return;
+    const stopped=proc.exitCode===null?new Promise(resolve=>proc.once('exit',resolve)):Promise.resolve();
+    docker(['stop','--timeout',abrupt?'0':'5','semantic-studio-team']);
+    await stopped;
   };
   const health=()=>new Promise(resolve=>{
     const req=request(base+'/api/health',{rejectUnauthorized:false},res=>{res.resume();resolve(res.statusCode===200);});
@@ -121,6 +136,38 @@ export async function runP2({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,slee
     assert.equal(await browser.eval('document.querySelector("#new-project-name").value'),'未送信の入力');
     assert.equal((await inApi(browser,'GET','/api/projects')).body.length,1,'review never automatically resubmits creation');
     log('p2-conflict-ui','dirty form retained through latest-saved review and explicit baseline acceptance without replay');
+    // A real PostgreSQL gate timeout reaches the shipped 503 path. This holds
+    // no lease and adds no testing endpoint to the application.
+    const gateCode=`import os,time,psycopg
+from app.team.pg_config import load_pg_config
+c=load_pg_config(os.environ,role='app')
+with psycopg.connect(host='db',port=5432,dbname=c.dbname,user=c.user,password=c.password_file.read_text().strip()) as db:
+ db.execute('SELECT pg_advisory_xact_lock(%s,%s)',(1397969989,2))
+ print('gate-held',flush=True)
+ time.sleep(12)
+`;
+    const gate=spawn(stack.arguments[0],[...stack.arguments.slice(1),'run','--rm','--no-deps','-T','--entrypoint','python','semantic-studio-team','-'],
+      {cwd:ROOT,env:fixtureEnvironment,stdio:['pipe','pipe','pipe']});
+    gate.stdin.end(gateCode);
+    const gateDone=new Promise(resolve=>gate.once('exit',resolve));
+    await new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(Error('database gate fixture unavailable')),15000);
+      gate.stdout.on('data',data=>{if(String(data).includes('gate-held')){clearTimeout(timer);resolve();}});
+      gate.once('exit',()=>{clearTimeout(timer);reject(Error('database gate fixture exited'));});
+    });
+    await browser.send('Network.enable');
+    let sawUnavailable=false;
+    const stopNetwork=browser.on('Network.responseReceived',event=>{
+      if(event.response?.url===base+'/api/projects'&&event.response.status===503)sawUnavailable=true;
+    });
+    await browser.click('[role="dialog"] button[type="submit"]');
+    await browser.waitFor('document.querySelector("[role=dialog] [role=alert]")?.textContent.includes("unavailable")',15000);
+    stopNetwork();assert.equal(sawUnavailable,true,'real database timeout returned 503');
+    assert.equal(await browser.eval('document.querySelector("#new-project-name").value'),'未送信の入力');
+    assert.match(await browser.eval('document.querySelector(".team-account").innerText'),/owner@example.org/);
+    await gateDone;
+    assert.equal((await inApi(browser,'GET','/api/projects')).body.length,1,'503 never automatically resubmits creation');
+    log('p2-storage-ui','real PostgreSQL 503 retained the unsent form and authenticated owner without replay');
     // Revoke the real session, then submit through the shipped frontend so its
     // centralized 401 boundary must preserve the already mounted dialog.
     assert.equal((await inApi(browser,'POST','/api/auth/logout',{})).status,200);
@@ -204,11 +251,9 @@ export async function runP2({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,slee
     await browser.goto(base);
     removeUnloadListener();
     assert.equal(warnedBeforeUnload,true,'retained unsent input warns before leaving');
-    const stopped=new Promise(resolve=>server.once('exit',resolve));
     // Terminate the owned fixture process completely before opening its locked
     // directory again. An abrupt stop also checks committed-data durability.
-    if(process.platform==='win32')stopServer(server);else server.kill('SIGKILL');
-    await stopped;server=start();await waitHealth();
+    await stopFixture(server,true);server=start();await waitHealth();
     await browser.goto(base);await browser.waitFor('document.querySelector(".team-account")');
     const retained=(await inApi(browser,'GET',`/api/projects/${pid}/documents/model/source`)).body;
     assert.ok(JSON.stringify(retained).includes('合成の犬'));
@@ -223,6 +268,7 @@ export async function runP2({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,slee
     throw error;
   }finally{
     if(context&&browser)await browser.send('Target.disposeBrowserContext',{browserContextId:context},false).catch(()=>{});
-    if(browser)await browser.close();stopServer(server);
+    if(browser)await browser.close();await stopFixture(server);
+    docker(['down','--remove-orphans']);
   }
 }

@@ -19,7 +19,7 @@ import os
 import sys
 
 
-async def serve_team(application=None, *, host='0.0.0.0', port=8000):
+async def serve_team(application=None, *, host='0.0.0.0', port=8000, ssl_keyfile=None, ssl_certfile=None):
     import uvicorn
     if application is None:
         from ..main import app
@@ -28,7 +28,9 @@ async def serve_team(application=None, *, host='0.0.0.0', port=8000):
     if runtime is None or os.environ.get('WEB_CONCURRENCY', '1') != '1':
         raise ValueError('single_team_process_required')
     server = uvicorn.Server(uvicorn.Config(application, host=host, port=port, workers=1,
-                                         reload=False, timeout_graceful_shutdown=5))
+                                         reload=False, timeout_graceful_shutdown=5,
+                                         access_log=False, proxy_headers=False,
+                                         ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile))
     serving = asyncio.create_task(server.serve())
     try:
         while not serving.done():

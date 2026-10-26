@@ -30,12 +30,24 @@ from cryptography.x509.oid import NameOID
 from google.auth import jwt
 from google.auth.crypt import RSASigner
 import uvicorn
+import asyncio
+import hashlib
+
+
+def refuse_sqlite(event, arguments):
+    if event == 'sqlite3.connect':
+        raise AssertionError('forbidden_storage_connection')
+
+
+# Audit the actual shipped app during HTTPS acceptance, including its imported
+# libraries, without importing or constructing the rejected database engine.
+sys.addaudithook(refuse_sqlite)
 
 
 def serve(directory, port):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    origin = f"https://127.0.0.1:{port}"
+    origin = f"https://127.0.0.1:{os.environ.get('TEAM_BROWSER_PUBLIC_PORT', port)}"
     os.environ.update(SEMANTIC_STUDIO_MODE="team", SEMANTIC_STUDIO_DATA_DIR=str(directory / "team"),
                       SEMANTIC_STUDIO_PUBLIC_ORIGIN=origin, SEMANTIC_STUDIO_GOOGLE_CLIENT_ID="synthetic-client",
                       SEMANTIC_STUDIO_GOOGLE_CLIENT_SECRET="replace-me", SEMANTIC_STUDIO_ALLOWED_DOMAINS="example.org",
@@ -63,19 +75,22 @@ def serve(directory, port):
 
     def start():
         original_start()
-        key_name = "file:合成原本.bin"
-        if runtime.repository.read(key_name) is None:
-            digest = runtime.workspace.blobs.put(b"synthetic opaque original")
-            runtime.repository.commit("migration", "fixture-unicode-original",
-                                      {key_name: None, "workspace": None},
-                                      {key_name: {"blob": digest}, "workspace": {"schema": 1}}, "migrate")
         store = runtime.auth_store
         timestamp = time.time()
         store.identity("owner", "owner@example.org", "example.org", now=timestamp)
         store.identity("editor", "editor@example.org", "example.org", now=timestamp)
+        token = store.create_session('owner', now=timestamp)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        authorize = lambda tx: store.require_current_principal(tx, token_hash=token_hash, operation='admin', now=time.time)
+        key_name = "file:合成原本.bin"
+        if runtime.repository.read(key_name) is None:
+            digest = runtime.workspace.blobs.put(b"synthetic opaque original")
+            runtime.repository.commit("owner", "fixture-unicode-original",
+                                      {key_name: None, "workspace": None},
+                                      {key_name: {"blob": digest}, "workspace": {"schema": 1}}, "migrate", authorize=authorize)
         if next(user for user in store.users() if user.sub == "editor").role == "viewer":
             store.change_access("owner", "editor", expected_version=1, role="editor", disabled=False,
-                                request_id="fixture-editor", now=timestamp)
+                                request_id="fixture-editor", now=timestamp, authorize=authorize)
         store.identity("reader", "reader@example.org", "example.org", now=timestamp)
         signer = RSASigner.from_string(private, key_id="fixture")
         def request(url, **kwargs):
@@ -100,8 +115,9 @@ def serve(directory, port):
                 return self.verify(jwt.encode(signer, claims).decode(), state.nonce)
         runtime.identity = FixtureIdentity(runtime.config, SimpleNamespace(authentication_request=request))
     runtime.start = start
-    uvicorn.run(app, host="127.0.0.1", port=port, ssl_keyfile=str(key_path), ssl_certfile=str(cert_path),
-                access_log=False, proxy_headers=False, log_level="warning")
+    from app.team.server import serve_team
+    asyncio.run(serve_team(app, host=os.environ.get('TEAM_BROWSER_BIND_HOST', '127.0.0.1'), port=port,
+                           ssl_keyfile=str(key_path), ssl_certfile=str(cert_path)))
 
 
 if __name__ == "__main__":
