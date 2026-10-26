@@ -58,10 +58,10 @@ run everything, budgets included. Dated P1 results live in `docs/p1-verification
 so test counts are not maintained as a second, easily stale copy here.
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to
-`main` and `publish/**`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
+`main`. Four jobs block: `backend-linux` (Python 3.12, the Docker image's),
 `backend-windows` (Python 3.14), `frontend` (`npm run test:ci`, `tsc -b`,
 `vite build`) and `docker` (`docker build .`). `budgets` only reports. A build
-is not done until CI is green on its pull request or inspected publication branch.
+is not done until CI is green on its pull request.
 
 **Timing budgets are separated, not deleted.** Backend timing tests carry
 `@pytest.mark.perf`; frontend timing tests have `[budget]` in their title. CI runs

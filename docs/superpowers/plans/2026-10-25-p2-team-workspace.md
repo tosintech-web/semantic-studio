@@ -16,7 +16,7 @@
 - サーバーの既知エラーは安定codeとuiMessageを返す。英語完成文の推定翻訳、UI言語によるRDF・氏名・IRIの変更を禁止。
 - 許可Workspaceドメインは非公開のサーバー運用設定。公開コードは導入先に応じて設定可能。メール末尾は認証根拠にしない。
 - 実ドメインはテストや公開文書にも残さない。例示用ドメインを使い、公開前にリポジトリ外の非公開値リストでGit blobと履歴を検査する。設定方針は `docs/team-configuration-privacy.md`。
-- 公開先へ送るのは履歴検査済みのrefだけとする。開発用P2は旧mainの履歴を継承するため、そのまま公開しない。`docs/publication-history.md` に従い公開用snapshotを更新し、一括の `--all` / `--mirror` pushをしない。
+- main派生の `feat/p2-team-workspace` のP2追加履歴を検査してpushし、main宛てに日本語PRを作成する。既存公開mainの継承を新規漏洩と混同しない。独立した公開用ブランチは削除し、一括の `--all` / `--mirror` pushをしない。
 - Google署名/aud/iss/exp/hd/email_verified/nonceを検証。subを恒久IDとする。
 - 絶対60分、無操作30分、ログイン試行5分。未認証・設定不備でデータへ到達させない。
 - 全共有更新は期待versionとrequest ID必須。不足428、競合409。二重要求は二重適用しない。
@@ -176,7 +176,7 @@ migrationは新領域のみ、元は読取専用。restoreは新領域のみ、s
 - [x] 単一process排他・バックアップ復元・Docker秘密非混入を確認する。
 - [x] 全差分の独立レビューとセキュリティレビューを行い、指摘を根拠付きで修正・再検証する。
 - [x] 本番Google login未確認なら「P2本番利用可能」としない。未確認を検証書とPRに明記する。
-- [x] ユーザー指定の既存GitHubへ履歴検査済みの公開用refだけを送信。旧mainと共通祖先がないため通常PRは作成しない。実装CIの必須Linux/Windows/frontend/dockerとpublication・budgets全成功を確認。
+- [ ] P2追加履歴の機密情報検査後、main派生の実装ブランチをpushし、日本語PRを作成。PRの必須Linux/Windows/frontend/docker・publicationと参考budgetsの結果を確認する。
 
 ## 自己レビュー・実行方針
 
@@ -199,10 +199,10 @@ P2全体を完了・本番利用可能と扱わない。
 
 Tasks 5〜8を実装し、指摘を修正した独立コード・静的セキュリティ再レビューで残る修正指摘なし。
 実Chromeのlocal/P1/P2、Docker原文通知・非公開値検査、frontend全2,549試験、scripts39試験は成功。
-最終backend全体は2,954成功（性能予算込み、399.04秒）。GitHub実装CIの全6ジョブ成功を確認し、Task 9まで完了。
-ユーザーは既存GitHubへの公開用ブランチpushを指定した。旧mainと共通祖先がないため通常PRを作らず、
-公開用branch pushのCIで確認する。共有main・開発履歴・バックアップrefは送信しない。
+最終backend全体は2,954成功（性能予算込み、399.04秒）。当時のGitHub実装CIの全6ジョブ成功を確認。main宛てPRの作成・CI確認をTask 9の残作業として再開する。
+ユーザーは混乱の元となった独立公開ブランチの削除と、main派生の実装ブランチへの統一を指定した。
+P2追加履歴を検査し、日本語PRで確認する。共有main・バックアップrefは変更・送信しない。
 本番Google login・配備は未確認の運用境界として残し、本番利用可能とは記載しない。
 最新の証跡・変更一覧・判断は `docs/p2-verification.md` と `docs/p2-review.md` に集約する。
 
-完了記録の文書だけを更新した後も公開用ブランチのCIを確認する。実装CI・初回失敗と修正・未確認の運用境界は検証記録を正本とする。
+最新の完了判断はmain宛てPRの必須CI成功後に行う。実装CI・初回失敗と修正・未確認の運用境界は検証記録を正本とする。

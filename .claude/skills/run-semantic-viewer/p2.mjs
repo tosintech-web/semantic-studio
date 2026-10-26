@@ -175,6 +175,20 @@ export async function runP2({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,slee
       if(result.status===200&&result.body!==null){validated=true;break;}await sleep(200);
     }
     assert.equal(validated,true,'reader validation through the actual UI');
+    // Account history belongs to the currently selected RDF document, including
+    // Shapes. Switching documents must replace the visible audit owner.
+    // Audit operation names use route templates; compare the actual stored
+    // document diffs rather than looking for a literal document in that name.
+    const historyText=entries=>entries.map(entry=>entry.operation+(entry.diff?'\n'+JSON.stringify(entry.diff,null,2):''));
+    const shapeHistory=historyText((await inApi(other,'GET',`/api/team/history?key=${encodeURIComponent('graph:'+pid+'-shapes')}`)).body.history);
+    const modelHistory=historyText((await inApi(other,'GET',`/api/team/history?key=${encodeURIComponent('graph:'+pid+'-model')}`)).body.history);
+    assert.ok(shapeHistory.length>0&&modelHistory.length>0);assert.notDeepEqual(shapeHistory,modelHistory);
+    await other.click('.team-account > button');
+    await other.clickText('.team-account button','Change history');
+    await other.waitFor(`JSON.stringify(Array.from(document.querySelectorAll(".team-account section pre")).map(node=>node.textContent))===${JSON.stringify(JSON.stringify(shapeHistory))}`);
+    await other.clickNav('Edit');
+    await other.waitFor(`JSON.stringify(Array.from(document.querySelectorAll(".team-account section pre")).map(node=>node.textContent))===${JSON.stringify(JSON.stringify(modelHistory))}`);
+    log('p2-history','reader history follows Shapes and model in the actual UI');
     log('p2-viewer','reader can export and read legal notices while direct and UI edits are refused');
     // Reopen a clean page before process restart. Existing valid cookies and
     // durable graph/history must survive a completely new application process.

@@ -4,7 +4,7 @@
 #
 # SUMMARY
 #     Continuous integration: both test suites, the type check, the production
-#     build and Docker, on pull requests and pushes to main/publication branches.
+#     build and the Docker image, on every pull request and every push to main.
 #     Specified by ci-and-housekeeping (backlog X-8).
 #
 # BASIC IDEA
@@ -41,7 +41,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, 'publish/**']
+    branches: [main]
 
 # A new push to a pull request makes the run for the previous one worthless.
 concurrency:

@@ -1,6 +1,7 @@
 # P2 実装・検証記録
 
 起点：main `c3c00a0`（PR #2）。ブランチ：`feat/p2-team-workspace`。
+現在の方針：独立公開ブランチを削除し、このmain派生ブランチの日本語PRで最終確認する。
 設計・実装継続の承認：2026-10-25。多言語化必須の追加指定も同日。
 
 ## 多言語化の必須条件
@@ -136,7 +137,9 @@ Tasks 5〜8を接続し、Task 9の最終検証を実施した。先の「未実
 [修正後の実装CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40260199430)は全6ジョブ成功。
 必須のLinux・Windows・frontend・Dockerに加え、publicationと参考budgetsも成功した。
 ローカル全体の再検証も成功し、下記の初回CIの問題は解消・再確認済み。
-完了記録だけの後続コミットについても、[公開用ブランチのCI](https://github.com/tosintech-web/semantic-studio/actions?query=branch%3Apublish%2Fp2-clean-history)を確認する。
+当時の完了記録コミットの[CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40261089162)は必須5ジョブ成功。
+参考budgetsではlayout保存が120.3ms（CI上限40ms）で超過し、他のbackend39件とfrontend14件は成功した。
+現在の最終確認先はmain宛てPRである。
 
 最初の[公開用CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40259089634)では
 publication・Linux・frontend・Dockerが成功。Windowsで追加の原文テスト3件にLF固定の期待値の問題を検出した。
@@ -154,10 +157,10 @@ publication・Linux・frontend・Dockerが成功。Windowsで追加の原文テ�
 本番Google login、実際のWorkspace/TLS終端・proxyログ・運用backup手順の現地確認、
 本番配備は未実施。「P2本番利用可能」とはしない。
 [運用手順](p2-team-operations.md)に、別の空領域でGoogle subを確認してから初期管理者を指定する手順を記載した。
-実データ・実秘密は使用しない。公開先はユーザー指定の既存GitHubの公開用ブランチであり、
-旧mainと共通祖先がないため通常PRは作らず、branch pushによるCIを確認する。
+実データ・実秘密は使用しない。現在はmain派生の実装ブランチを使い、main宛ての日本語PRとCIで確認する。
+以前の独立公開ブランチはユーザーの指示で削除した。
 
-### 完了記録
+### 初回公開時点の記録（以後の方針変更は次節）
 
 2026-10-26、承認済みP2計画Tasks 1〜9の実装・修正・受け入れを完了。
 開発ブランチ `feat/p2-team-workspace` と同一treeの公開用履歴だけを、
@@ -169,3 +172,20 @@ publication・Linux・frontend・Dockerが成功。Windowsで追加の原文テ�
 日英契約・カタログ、移行CLI・Compose・CI、テスト・ブラウザdriver、運用/利用者/検証文書。
 設計書の改訂記録と計画チェックリスト、`CLAUDE.md` と `docs/known-state.md` も更新した。
 本番配備・本番Google loginの未確認事項は、実装完了と区別して前節に保持する。
+
+### main宛てPRへの統一（2026-10-26）
+
+ユーザーの指示で `publish/p2-clean-history` をローカル・GitHubから削除した。
+削除前に、レビュー修正済みの全内容が `feat/p2-team-workspace` に保持され、treeが一致することを確認した。
+既存公開mainをベースにすることは新たな機密情報の公開ではない。
+P2追加の既存4コミットの全blob・metadataは、非公開値リストと公開ポリシーによる検査で全件成功した。
+新しい修正コミットも同様に検査してから送信する。
+独立した計画照合で、Shapes履歴がmodel固定になる実装不足を1件発見し、現在文書へ追従するよう修正した。
+旧実装で統合テスト2件が失敗し、修正後は関連23件成功、TypeScript・Vite buildも成功。
+実HTTPS・合成署名・2利用者のChrome受け入れも、Shapes/modelのUI履歴と保存済み監査差分の一致を含め全成功した。
+この修正後の独立再レビューに残るコード・文書指摘はない。
+廃止した公開ブランチ専用のCI起動条件も除去し、通常のmain/PR用に戻した。
+修正後のfrontend全体は135ファイル・2,551件成功、113.79秒。既存性能予算も含み、閾値は変更していない。
+backendコードは直前の2,954成功時から変更していないが、全体を再実行して確認する。
+全体試験とmain宛てPRの必須CIを最終の完了判定とする。
+本番Google設定・実データ移行・配備は設計書で明示した対象外の運用作業として維持する。

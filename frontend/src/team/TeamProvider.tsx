@@ -2,7 +2,7 @@
 ================================================================================
 FILE: frontend/src/team/TeamProvider.tsx
 SUMMARY
-    Authentication gate, retained-input recovery and conservative version polling.
+    Authentication gate, retained-input recovery, document history and version polling.
 BASIC IDEA
     Native controls expose visible names and use the shared focus-visible rule.
     Team identity and input owners remain independent of interface language.
@@ -190,7 +190,7 @@ export function TeamProvider({children}:{children:ReactNode}){
  if(!status||!entered)return <>{failed?<section className="team-panel" role="alert"><p>{t("team.refresh.failed")}</p><UiLanguageSelect/><button type="button" onClick={()=>void refresh()}>{t("common.retry")}</button></section>:status?<LoginPanel refresh={refresh}/>:<p role="status">{t("common.loading")}</p>}</>;
  return <TeamContext.Provider value={{mode:status.mode,suspended:expired||notice||accessChange!==null,canEdit:status.mode==="local"||(status.user?.role!=="viewer"),canAdmin:status.mode==="local"||(status.user?.role==="admin"),hasUnsentInput:(exceptEditor=false)=>!cleanNow(exceptEditor)}}>
   {status.mode==="team"&&<>
-   {expired?<LoginPanel expired refresh={refresh}/>:status.user&&<AccountMenu user={accessChange?.user??status.user} logout={logout} resourceKey={projectId?`graph:${projectId}-model`:"workspace"}/>}
+   {expired?<LoginPanel expired refresh={refresh}/>:status.user&&<AccountMenu user={accessChange?.user??status.user} logout={logout} resourceKey={projectId?`graph:${projectId}-${activeDoc}`:"workspace"}/>}
    {!expired&&accessChange?.user&&<section className="team-panel" aria-label={t("team.workspace")}>
     <UiLanguageSelect/><p role="status">{t("team.access.changed",{role:t(`team.role.${accessChange.user.role}`)})}</p>
     <button type="button" onClick={()=>void refresh()}>{t("team.refresh")}</button>
