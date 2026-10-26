@@ -1,7 +1,12 @@
 # P2 チーム利用：詳細設計案
 
 作成日：2026-10-25（日本時間）
-状態：Built（2026-10-26）。main宛て[PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)の実装修正CIは全6ジョブ成功。
+
+**2026-10-27 DB設計変更：** SQLiteを廃止する[PostgreSQL置換設計](2026-10-27-p2-postgresql-design.md)を追加した。
+以後のDB・Compose network・復旧方式は新設計を優先する。現在のコードはまだSQLite版であり、
+以下のBuilt・試験結果はSQLite版の記録であって、PostgreSQL実装の完了を意味しない。
+
+状態：SQLite版Built（2026-10-26）。main宛て[PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)の実装修正CIは全6ジョブ成功。
 2026-10-25、ユーザーが推奨案による詳細計画・実装を承認。本番Google login・配備は未確認。
 ホスティング・公開URL・本番OAuth設定は配備前に確定する。
 起点：main `c3c00a0fce91fb7b2a99a05d7b980c3aa4e57013`（P1 / PR #2）。
@@ -42,15 +47,16 @@ P3の公開版/API、P4のWordNet全件、P5のタグExcel・組織JSON専用取
 - `api.ts` / `projectStore.ts`：認証失効と競合の区別、権限に沿う操作、
   自分以外の更新を取り込む処理、入力中データの保全が必要。
 
-## 3. 保存方式の比較と推奨案
+## 3. SQLite版で採用した保存方式（履歴）
 
 | 案 | 適合する運用 | 負担・制約 |
 | --- | --- | --- |
-| SQLite + 単一アプリプロセス（推奨） | 単一チーム、単一サーバー、ローカル永続ディスク | 配備を簡素化できる。複数レプリカ・共有ネットワークディスクは対象外 |
+| SQLite + 単一アプリプロセス（初期実装） | 単一チーム、単一サーバー、ローカル永続ディスク | 配備を簡素化できる。複数レプリカ・共有ネットワークディスクは対象外 |
 | PostgreSQL | 複数アプリサーバーや既存の管理DBを使う運用 | DB運用と接続設定が増える。グラフキャッシュのプロセス間同期も必要 |
 | 現行ファイル + 別の監査DB | 現行保存への変更を小さくしたい場合 | ファイルと監査DBの二重書込を復旧する仕組みが必要。今回の推奨から外す |
 
-推奨は、SQLiteをチーム版の正本として導入し、RDFの読取・編集意味論にはrdflibを使う構成。
+この実装段階ではSQLiteを正本、RDFの読取・編集にはrdflibを使う構成を採用した。
+現在のPostgreSQLへの見直しは冒頭の新設計に従う。
 RDFを独自語彙モデルへ変換せず、未知の述語・言語タグ・IRIを保持する。
 受理済み変更・リビジョン・監査を一つのトランザクションで確定する。
 実装計画では完全な内部保存形式と空白ノードの同一性維持を試験付きで具体化する。
@@ -235,3 +241,6 @@ main派生の `feat/p2-team-workspace` からmain宛ての日本語PRを作成�
 frontend全2,551件、backend全2,954件（別途1skip・network 2除外）と実Chromeが成功。
 [main宛て実装修正CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40341015141)はLinux・Windows・frontend・Docker・publication・budgetsの全件成功。
 完了文書のみの後続コミットの最終CI結果はPRで管理する。
+
+2026-10-27、ユーザー指定によりSQLite廃止・専用PostgreSQL Compose・同network限定接続へDB設計を変更。
+新設計は別紙に集約し、実装と詳細実装計画は未着手とする。

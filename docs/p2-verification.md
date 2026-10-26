@@ -199,3 +199,10 @@ backend全体の再実行も2,954成功・1skip・network 2除外・71 warnings�
 - frontend全2,551件、backend全2,954件、型検査/build、scripts39件、契約生成、実HTTPS・2利用者のChrome受け入れが成功。
 - 実装修正のPR CIは必須5ジョブと参考budgetsも成功。完了文書だけの最終コミットもPRのchecksを確認する。
 - mainへのマージ・本番Google設定・実データ移行・配備は行っていない。設計に明記した運用境界を維持する。
+
+## PostgreSQLへのDB設計見直し（2026-10-27）
+
+ユーザー指定により、SQLite廃止・専用PostgreSQLのCompose起動・同Docker network限定接続へ見直す。
+[新設計](superpowers/specs/2026-10-27-p2-postgresql-design.md)に保存層、network/HBA、secrets、排他、移行/復旧、CIを集約した。
+この段階の変更は設計文書だけで、コード・Compose・依存・DB・実データには変更していない。
+上記のSQLite版の試験・PR CI成功は、PostgreSQL版の試験証跡として流用しない。
