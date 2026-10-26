@@ -30,3 +30,34 @@ Linux containerの3.12/3.14は実DB、Windows nativeは `not team_db` の互換�
 復元試験の代替ではない。後者の受入証跡はTask 8/9で別途記録する。
 
 Task 8の分類レビューで、DBを使わないDNS拒否/期限の4 caseをlibpq importなしへ整理し、Windowsの純粋logic群へ戻した。server起動設定と分類退行の2 caseを追加し、現行は3082 case（実DB259 case）。旧2957 caseの対応は保持している。
+
+## 全集合の実行
+
+local/純粋logicは通常のnative開発環境で、時間予算も含めて実行する。
+
+```sh
+cd backend
+python -m pytest tests -m "not team_db and not network" -q
+```
+
+DB群はLinux上のrepository rootから、専用Compose projectで実行する。次のsubnet/gatewayは
+例示であり、hostの既存networkと重複しないRFC1918範囲へ両方を合わせる。実データをmountせず、
+secret生成helperは既存fileを自動更新しない。DBはhostへ公開しない。
+
+```sh
+export COMPOSE_PROJECT_NAME="ss-pg-tests-$(date +%s)"
+export TEAM_TEST_SECRETS_DIR="$(mktemp -d /tmp/semantic-studio-pg-tests.XXXXXX)"
+export TEAM_DB_SUBNET=10.253.53.0/24
+export TEAM_DB_GATEWAY=10.253.53.1
+python backend/tests/pg_support.py --init-secrets "$TEAM_TEST_SECRETS_DIR"
+PYTHON_VERSION=3.12 docker compose -f docker-compose.postgresql-test.yml build pg-tests
+PYTHON_VERSION=3.12 docker compose -f docker-compose.postgresql-test.yml run --rm pg-tests python -m pytest tests -m "team_db and not network" -q -o cache_dir=/tmp/pytest-cache
+PYTHON_VERSION=3.14 docker compose -f docker-compose.postgresql-test.yml build pg-tests
+PYTHON_VERSION=3.14 docker compose -f docker-compose.postgresql-test.yml run --rm pg-tests python -m pytest tests -m "team_db and not network" -q -o cache_dir=/tmp/pytest-cache
+docker compose -f docker-compose.postgresql-test.yml down
+```
+
+両集合の和が全非network caseで、重複はない。`test_pg_test_inventory.py`の再収集照合も省略しない。
+`not perf`は付けず、nativeの倍率1・標本数・データ件数・閾値を維持する。
+Windows互換集合はCIのnative Windows jobで検証し、team DB群のWindows native成功とは呼ばない。
+通常停止はvolumeを保持する。再利用する場合は同じproject名・secret file・IPAM設定を保持する。

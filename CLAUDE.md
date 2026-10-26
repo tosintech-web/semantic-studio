@@ -49,12 +49,20 @@ app writes into the real per-user ontology library.
 ## Testing
 
 ```bash
-cd backend  && python -m pytest tests    # full suite, including performance budgets
+cd backend  && python -m pytest tests -m "not team_db and not network"  # all local/pure tests and budgets
 cd frontend && npm run test              # full suite, including performance budgets
 ```
 
-Both suites must pass before any change is considered done, and locally both
-run everything, budgets included. Dated P1 results live in `docs/p1-verification.md`,
+Run the entire `team_db and not network` partition in the dedicated internal
+Compose runner on both Python 3.12 and 3.14; see
+`docs/p2-postgresql-test-inventory.md` and `docs/p2-team-operations.md` for its
+isolated secrets/project setup. Never publish the DB port for host tests.
+The native and Compose partitions together must cover every non-network
+backend case; no performance test is omitted. Bare `pytest tests` includes
+the DB cases and belongs inside the configured Compose runner.
+
+Both suites and the full DB partition must pass before any change is considered
+done, including the native default-factor performance budgets. Dated P1 results live in `docs/p1-verification.md`,
 so test counts are not maintained as a second, easily stale copy here.
 
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to

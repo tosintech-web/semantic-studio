@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜8の保存・編集・保守・試験・製品Compose/CI接続を検証済み、最終レビュー・全予算・PR CIは未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装・手元の全試験集合・独立レビュー修正と再レビュー済み。Task 9のGitHub最新head CI確認が残る。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 本追補は計画のレビュー・修正だけを対象とする。既存の実装コミットと未コミット変更は保持し、実装の続行・commit・pushはこの計画作成作業では行わない。
 
@@ -271,11 +271,12 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
 **Interfaces:** 一つの検証記録に実際のimage/driver固定版、schema、test集合/件数、command、結果、reviewと修正を集約する。
 実装前のSQLite試験数をPG成功数として再利用せず、旧SQLite設計/計画は履歴と明示する。
 
-- [ ] **Step 1: 設計全節と本計画を照合。** 下の対応表・Review Focus・変更fileを確認し、抜けた受入条件には再現試験を追加。
-- [ ] **Step 2: 全体検証。** localは`PGTEST tests -q`（全team/local/perf、network除外）とfrontendの`npm run test -- --maxWorkers=2`、`npm run build`、契約生成check、scripts、source/image SQLite不使用、network/復旧/browser/通知/非公開値検査を全成功させる。Windows local集合も別に成功させる。
+- [x] **Step 1: 設計全節と本計画を照合。** 下の対応表・Review Focus・変更fileを確認し、抜けた受入条件には再現試験を追加。
+- [x] **Step 2: 全体検証。** backendの全非network caseを、nativeの`python -m pytest tests -m "not team_db and not network" -q`（全local/純粋logic/perf、通常倍率1）と`PGTEST tests -m "team_db and not network" -q`（全DB case、3.12/3.14）の互いに重ならない和集合として全成功させる。収集inventoryで全caseが含まれることを確認し、perfを除外しない。frontendの`npm run test -- --maxWorkers=2`、`npm run build`、契約生成check、scripts、source/image SQLite不使用、network/復旧/browser/通知/非公開値検査も全成功させる。Windows local集合はStep 5の最新PR CIで確認し、完了判定まで必須とする。
   性能超過があれば、同じimage・Python版・入力・実行条件で置換前commitと比較し、command/中央値/基準値/失敗数を記録する。旧版も超過することは回帰の調査材料であり、合格の代用にしない。閾値・標本数・データ件数・耐久性を維持し、原因と必要な修正を確認して失敗した全体gateを再実行する。CIの参考budgetsとlocalの必須全予算は別に判定し、未解決ならTask 9を未完了に保つ。
-- [ ] **Step 3: 独立した全差分の通常コード/静的securityレビュー。** 既存P2認可・SQL・秘密・外向き通信・lease・復元を含め、指摘を検証し、再現RED→修正GREEN。指摘が残らなくなるまで修正/再レビューを繰り返す。hosted scanと呼ぶのは実際に実行した場合だけ。
-- [ ] **Step 4: 文書と状態を更新。** PostgreSQLの実際の起動/保守手順、secret permission、Windows coverage、唯一writer、DB再起動、拒否される旧DB入力、restore markerを記録。全既存性能予算の実測・差異を記録し、未検証の本番Google/配備を分ける。
+  以前の必須gateだった`PGTEST tests -q`は4時間予算で失敗した。その結果と同条件の旧版の4件超過を保持した上で、設計12節の全case・全予算とhost port非公開を両立するため、実行partitionを上記へ変更する。過去の必須gateを遡って成功や単なる補助測定とは扱わない。同じ4試験をnativeで成功させただけでは完了せず、上記の全集合を実行する。CIの実DB・Windows local・通常機能・参考budgetsの境界は維持する。
+- [x] **Step 3: 独立した全差分の通常コード/静的securityレビュー。** 既存P2認可・SQL・秘密・外向き通信・lease・復元を含め、指摘を検証し、再現RED→修正GREEN。指摘が残らなくなるまで修正/再レビューを繰り返す。hosted scanと呼ぶのは実際に実行した場合だけ。
+- [x] **Step 4: 文書と状態を更新。** PostgreSQLの実際の起動/保守手順、secret permission、Windows coverage、唯一writer、DB再起動、拒否される旧DB入力、restore markerを記録。全既存性能予算の実測・差異を記録し、未検証の本番Google/配備を分ける。
 - [ ] **Step 5: commit/公開。** `feat/p2-team-workspace`のP2追加各commitとmetadataを非公開値リストで検査し、同branchだけpush、main宛て日本語PR #3を更新する。共有main・local backup refへ触れず、別の公開履歴を作らない。PR最新headの必須PG3.12/3.14・Windows local・frontend・Docker・publicationと参考budgetsを確認して完了。mainへmergeしない。
 
 ## 設計・受け入れ対応表

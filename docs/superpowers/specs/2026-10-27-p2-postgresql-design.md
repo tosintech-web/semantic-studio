@@ -1,6 +1,6 @@
 # P2 PostgreSQL置換・Compose内限定接続の設計
 
-作成日：2026-10-27（日本時間）。状態：Task 1〜8の実装・対象検証済み。最終全体試験・独立レビュー・PR CIはTask 9で進行中。
+作成日：2026-10-27（日本時間）。状態：実装・手元の全試験集合・独立レビュー修正と再レビュー済み。Task 9のGitHub最新head CI確認が残る。
 ユーザー指定：SQLiteを廃止し、専用PostgreSQLをDocker Composeで起動する。同じDocker network内のアクセスだけで利用する。
 対象ブランチ：`feat/p2-team-workspace`。調査起点：`dd0c63d`（SQLite版P2、PR #3）。
 

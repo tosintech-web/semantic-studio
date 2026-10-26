@@ -215,17 +215,22 @@ itself at <http://localhost:8000>.
 
 ```bash
 cd backend
-.venv/Scripts/python -m pytest tests
+.venv/Scripts/python -m pytest tests -m "not team_db and not network"
 
-cd frontend
+cd ../frontend
 npm run test
 ```
 
-Both run everything locally, performance budgets included. CI runs both suites
-on every pull request — the backend on Linux (Python 3.12) and Windows (Python
-3.14), the frontend with its type check and production build, and the Docker
-image — with the timing budgets in a separate, informational job, because a
-shared runner is a loaded machine.
+The native backend command runs every local/pure case and performance budget;
+on Linux/macOS use `.venv/bin/python`. Run the entire database partition on
+Compose Python 3.12 and 3.14 using the
+[isolated test setup](docs/p2-postgresql-test-inventory.md#全集合の実行).
+Both partitions together cover every non-network backend case. Never publish
+a database port for host tests. The frontend command includes all its budgets.
+CI requires Linux local/PostgreSQL/Compose-browser coverage, Windows native local
+compatibility, the frontend type check/build, Docker and publication checks.
+Timing budgets run in a separate informational job because a shared runner is
+a loaded machine.
 
 ## Try it
 

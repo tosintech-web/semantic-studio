@@ -1,7 +1,7 @@
 # P2 PostgreSQL置換の実装・検証記録
 
 2026-10-27。対象はmain派生の`feat/p2-team-workspace`、置換実装の起点は`d112965`です。
-Task 1〜8は実装・対象検証済み。最終全体試験・独立レビュー・GitHub最新headのCIは進行中です。
+実装・手元の全試験集合・独立レビュー修正と再レビューを完了しました。GitHub最新headのCIは公開後に確認します。
 [実装計画](superpowers/plans/2026-10-27-p2-postgresql.md)のTask 9が完了するまで、公開工程の完了とは扱いません。
 
 ## 実装された契約
@@ -61,8 +61,13 @@ docker compose -f docker-compose.postgresql-test.yml run --rm pg-tests python -m
 | 既存local smoke | 実API/Chromeの全step成功。graph screenshotを目視確認 |
 | P1実Chrome | 全step成功、response-to-click中央値252.06ms（通常基準500ms） |
 | P2実HTTPS/2 cookie context | 全step成功。実DB503・再起動を含めSQLite接続audit hook下で検証 |
-| backend全体（予算込み）初回 | 3075 passed、4時間予算 failed、1 skipped、2 network deselected、729.03秒。閾値を維持して同条件の旧版比較を調査中 |
-| frontend全体/型/build | 最終実行待ち。結果確認後に追記 |
+| 以前の必須gate：containerでのbackend全体（予算込み） | 3075 passed、4時間予算 failed、1 skipped、2 network deselected、729.03秒。下記の同条件旧版比較・partition変更を記録 |
+| 同じ4時間予算のnative Python 3.14測定 | 4 passed、1 warning、54.61秒。全体成功の代用とはせず、下記の最終全集合検証を実行 |
+| native全非DB群（全時間予算、倍率1） | 2820 passed、1 optional-lxml skipped、261 deselected（DB259 + network2）、69 warnings、382.47秒 |
+| 最終全DB群（内部network、Python 3.12） | 259 passed、2823 deselected、3 warnings、198.81秒 |
+| 最終全DB群（内部network、Python 3.14） | 259 passed、2823 deselected、3 warnings、208.73秒 |
+| 補助script最終検証 | 52 tests、47 passed、5 explicit Compose opt-in skipped、13.880秒。実Compose受入は上記8件で別途検証 |
+| frontend全体/型/build | 135 files・2551 tests passed、111.41秒。TypeScript/Vite build成功 |
 | GitHub最新headの必須CI | push後に確認。Windows native team DB統合成功とは報告しない |
 
 境界試験は、正しい合成credentialを同networkで確認した上でhost/別network拒否を検証する。
@@ -81,12 +86,47 @@ backend/frontendの時間予算とP1 browser中央値は参考`budgets` jobへ�
 CI budgetsは既存どおり倍率2。P1 blocking機能試験のreport-onlyは時間測定結果も出し、参考jobでは
 同じ基準を強制する。判定分離の否定試験にだけ使った0.5msの合成値は性能実績として扱わない。
 
+### 時間予算の環境比較と最終gate
+
+公式containerのPython 3.12で失敗したのは、canvas union attributes（150ms）、2 snapshotの
+推論（8000ms）、6000結論のfilter/group/explain（300ms）、2 snapshotのopen（1000ms）の4件。
+同じimage・依存版・入力の置換前`d112965`でも4件とも超過した（順に157.8/10386.58/348.13/1040.55ms）。
+置換後の同条件再測定はcanvasが成功し、残る3件は10312.29/355.92/1058.01msだった。
+container Python 3.14でも4件が超過した。一方、既存native Python 3.14では4件とも通常倍率1で成功した。
+このcontainer全体実行は当初の必須gateであり、失敗した事実を保持する。下記の実行partitionへ変更するが、
+過去の必須gateを成功や単なる補助測定と呼び替えない。
+
+推論workerではnamed graph管理の負荷を計測し、SimpleMemoryの候補で中央値8769msまで改善したが、
+8000msに届かず候補は撤回した。GC計測も方針変更を裏付けず、推論コード・GC動作は変更していない。
+閾値、標本数、データ件数、永続化の耐久性は変更していない。
+
+正式な最終backend検証は、nativeの全`not team_db and not network`（全perf込み、倍率1）と、
+内部networkの全`team_db and not network`（Python 3.12/3.14）の和集合とする。
+単なる問題4件の再実行や一部試験の成功で済ませず、機械inventoryで全caseを照合する。
+これにより既存local/nativeの時間予算と、host DB portを開かない実DB検証を両立する。
+公式containerでの倍率1の時間予算は上記の失敗として残し、CIの参考budgetsは既存どおり倍率2で判定する。
+native/Compose 3.12/Compose 3.14からそれぞれ全件を再収集し、3082 case IDと259 DB IDが
+機械inventoryと完全一致した。正式な和集合はnative2821（成功2820 + 任意依存skip1）＋DB259で、
+外部networkの2件を明示除外する。全時間予算を含み、試験の削除・一括skipはしていない。
+
+最終製品imageは`sha256:f1a10d075f76bc574e01de8f0e49c04401e5482d1ed0131617549ffa95d2b820`。
+networkなしの一時containerでapp全107 fileのSHA-256 manifestを取り、SQLite不使用を検証した
+レビュー済みsourceとbyte単位の一致を確認した。buildには実依存・原文通知検証も含む。
+
 ## レビューと未実施事項
 
 自己レビューで、read接続失敗時のwriter閉鎖、Undo再送後の降格、復元時の失効対象FK、
 duplicate JSON key、不正墓標path、private RDF警告、CRLF DDL fingerprint、secret重複、
 初期化中の誤healthy、backup blob-root、server proxy/access log継承を再現して修正した。
-独立した全差分レビューと静的securityレビューはTask 9で実施し、結果と修正をここへ追記する。
+独立した全差分コード/静的securityレビューの指摘と修正結果は次のとおり。
+
+独立レビュー第1回（`c3c00a0..b85a742`）で、同期health handlerが認証DB待機と同じAnyIO workerを
+要求するため、worker飽和時にlivenessも停止する指摘を受けた。実DB gate待機とlimiter 1でREDを確認し、
+handlerをasyncへ変更した。DB観測・解放は独立executorから行い、limiterはfinallyで復元する。
+修正後の関連72件が成功（35.41秒）、同じ実DB回帰試験の再実行も成功（1.71秒）。
+新しいcontextの独立レビュー第2回（`c3c00a0..5dff3ce`）では、追加のCritical/Important/Minor指摘なし。
+通常コードと静的securityの確認であり、hosted scanや動的攻撃試験の成功という意味ではない。
+全試験・性能受入・最新headのCIは別の必須gateとして完了まで維持する。
 
 実Googleクライアント作成・本番ログイン、実データ移行、デプロイ、main mergeは実施しない。
 local/P1/P2の合成受入成功を、本番配備済みという意味では使わない。
