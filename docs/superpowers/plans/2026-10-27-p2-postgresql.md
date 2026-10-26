@@ -182,12 +182,12 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 
 - [x] **Step 1: runtime/workspace試験を書く。**
   - `test_pg_lease_loss_fences_old_app`: `assert old_app_write.status_code == 503`; 第二appが異なるblob directoryでも同じDB leaseを取れない。
-  - `test_pg_health_precedes_blocked_authenticated_request`: `assert order == ['health','authenticated']`。eventで制御しtiming閾値に頼らない。
+  - `test_pg_health_precedes_blocked_authenticated_request`: AnyIO worker limiterを1に制限し、そのworkerを実DBのgate待機で占有してからhealthを要求する。`assert order == ['health','authenticated']`。DBの観測・gate解放は独立executorから行い、共有limiterを使って試験自体をdeadlockさせない。eventで制御しtiming閾値に頼らず、finallyでlimiterを復元する。
   - `test_pg_demotion_during_candidate_denies_commit`: 準備後の停止/降格で403/401、`assert resources_and_audit == before`。
   - `test_pg_commit_reply_loss_replays_after_restart`: 確定後の通信断では成功を捏造せず、同IDで確定応答を回収し二重適用しない。
   - `test_local_mode_never_loads_pg_driver`: `assert pg_connect_calls == []`。
 - [x] **Step 2: RED。** `PGTEST tests/test_pg_runtime.py tests/test_pg_workspace.py -q` → 未接続runtime/認可/終了連携で失敗。
-- [x] **Step 3: 実装。** process lease・唯一のwrite接続・fatal終了を接続。storage busyは一時503、connection喪失はfatalと区別。候補blob→DB原子確定→cache/応答公開を維持。owner検査・storage待ちはthreadpoolへ、公開livenessへDB問い合わせを追加しない。
+- [x] **Step 3: 実装。** process lease・唯一のwrite接続・fatal終了を接続。storage busyは一時503、connection喪失はfatalと区別。候補blob→DB原子確定→cache/応答公開を維持。owner検査・storage待ちはthreadpoolへ、公開livenessはasync handlerとして共有workerを要求せず、DB問い合わせも追加しない。上記worker飽和条件はTask 9の再レビューでも検証する。
 - [x] **Step 4: GREEN。** 上記＋`PGTEST tests/test_team_history.py tests/test_team_conflicts.py -q` → 全成功。他者Undo・再帰的Redo・降格後の削除/復元・複数基底・入力保持用409 DTOを確認。
 - [x] **Step 5: commit。** runtime/server/workspaceのPG接続と試験をcommit。
 
@@ -273,6 +273,7 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
 
 - [ ] **Step 1: 設計全節と本計画を照合。** 下の対応表・Review Focus・変更fileを確認し、抜けた受入条件には再現試験を追加。
 - [ ] **Step 2: 全体検証。** localは`PGTEST tests -q`（全team/local/perf、network除外）とfrontendの`npm run test -- --maxWorkers=2`、`npm run build`、契約生成check、scripts、source/image SQLite不使用、network/復旧/browser/通知/非公開値検査を全成功させる。Windows local集合も別に成功させる。
+  性能超過があれば、同じimage・Python版・入力・実行条件で置換前commitと比較し、command/中央値/基準値/失敗数を記録する。旧版も超過することは回帰の調査材料であり、合格の代用にしない。閾値・標本数・データ件数・耐久性を維持し、原因と必要な修正を確認して失敗した全体gateを再実行する。CIの参考budgetsとlocalの必須全予算は別に判定し、未解決ならTask 9を未完了に保つ。
 - [ ] **Step 3: 独立した全差分の通常コード/静的securityレビュー。** 既存P2認可・SQL・秘密・外向き通信・lease・復元を含め、指摘を検証し、再現RED→修正GREEN。指摘が残らなくなるまで修正/再レビューを繰り返す。hosted scanと呼ぶのは実際に実行した場合だけ。
 - [ ] **Step 4: 文書と状態を更新。** PostgreSQLの実際の起動/保守手順、secret permission、Windows coverage、唯一writer、DB再起動、拒否される旧DB入力、restore markerを記録。全既存性能予算の実測・差異を記録し、未検証の本番Google/配備を分ける。
 - [ ] **Step 5: commit/公開。** `feat/p2-team-workspace`のP2追加各commitとmetadataを非公開値リストで検査し、同branchだけpush、main宛て日本語PR #3を更新する。共有main・local backup refへ触れず、別の公開履歴を作らない。PR最新headの必須PG3.12/3.14・Windows local・frontend・Docker・publicationと参考budgetsを確認して完了。mainへmergeしない。
@@ -332,3 +333,9 @@ Task 6：PostgreSQLの世代archive・空DBへの復元・localファイル移�
 Task 7：残るrepository/auth/runtime/access/config試験をPGへ移植し、製品・補助tool・testのSQLite import/専用SQLを除去。全試験に接続監査を適用し、旧2957 caseと現3080 caseの一対一対応・DB263 caseの分類を機械検査する。DB群263件、local/純粋logic群2774件（任意依存skip 1件）、最終変更対象48件、script44件が成功。性能予算は除外せずTask 9で全実行する。製品ComposeとCIはTask 8で切り替える。
 
 Task 8：製品Composeを専用PG/internal network・role別secrets・schema job・server supervisorへ接続し、CIはPG3.12/3.14とWindows local群を明示。既存必須check名は全新必須jobを待つ集約gateとして維持した。実network/不正secret/UID/復元・再作成を検証し、DBの実IP変更後も新appが再解決して復帰。別DB復元後の再送・Undo/Redo・履歴blob・identityも成功。3.14実DB259件、最終接続/guard76件、smoke/P1/P2実HTTPSが成功。P1の通常中央値252.06ms（基準500ms）。CIの時間予算は参考jobへ分離し、通常の基準とdefault強制は維持。実GitHub CIの結果確認はTask 9で行う。
+
+### 今回の計画レビュー・修正
+
+- 第1回：設計7/8節の「公開healthがDB待機で止まらない」条件について、workerに空きがある試験だけでは不足するため、Task 5にworker飽和・独立したDB解放・limiter復元を明記した。既存Taskの完了checkboxは過去の実施記録として保持し、追加条件の検証は未完了のTask 9でも実施する。
+- 第2回：設計12節と全体gateを照合し、性能超過のbaseline比較と合否を分けた。同じ環境の比較、変更してはいけない試験条件、全体gateの再実行、未解決時の未完了表示をTask 9へ追記した。
+- 第3回：修正後の設計全16節、9 Task間の接続、5つのReview Focusと試験の対応、SQLite廃止の例外なし、network/秘密/復元の境界を自己再レビューし、追加の修正事項なし。今回の追加は計画書だけであり、既存の実装差分や試験結果を変更せず、実装完了も宣言しない。

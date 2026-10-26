@@ -84,9 +84,8 @@ def test_pg_commit_reply_loss_replays_after_restart(harness, monkeypatch):
 
 
 def test_pg_health_precedes_blocked_authenticated_request(harness):
-    from fastapi import FastAPI
     import httpx
-    from starlette.concurrency import run_in_threadpool
+    from anyio.to_thread import current_default_thread_limiter
     from app.main import health
     from app.routers.auth import SESSION_COOKIE
     from app.team.middleware import TeamMiddleware
@@ -103,30 +102,38 @@ def test_pg_health_precedes_blocked_authenticated_request(harness):
         gate.execute('BEGIN')
         gate.execute('SELECT pg_advisory_xact_lock(%s,%s)', WRITE_GATE_KEY)
         async def scenario():
-            transport = httpx.ASGITransport(app=middleware)
-            async with httpx.AsyncClient(transport=transport, base_url='https://studio.example.org',
-                                         cookies={SESSION_COOKIE: harness.token}) as client:
-                async def authenticated():
-                    response = await client.get('/api/projects')
-                    order.append('authenticated')
-                    return response
-                waiting = asyncio.create_task(authenticated())
-                try:
-                    # Observe the actual writer blocked on PostgreSQL's gate,
-                    # without a fake authenticate or a timing-budget assertion.
-                    for _ in range(100):
-                        row = await run_in_threadpool(lambda: gate.execute('SELECT wait_event FROM pg_stat_activity WHERE pid=%s', (pid,)).fetchone())
-                        if row['wait_event'] == 'advisory':
-                            break
-                        await asyncio.sleep(0.01)
-                    else:
-                        raise AssertionError('authenticated request did not reach the database gate')
-                    response = await client.get('/api/health')
-                    assert response.status_code == 200
-                    order.append('health')
-                finally:
-                    await run_in_threadpool(gate.execute, 'COMMIT')
-                assert (await waiting).status_code == 200
+            limiter = current_default_thread_limiter()
+            previous_tokens = limiter.total_tokens
+            limiter.total_tokens = 1
+            try:
+                transport = httpx.ASGITransport(app=middleware)
+                async with httpx.AsyncClient(transport=transport, base_url='https://studio.example.org',
+                                             cookies={SESSION_COOKIE: harness.token}) as client:
+                    async def authenticated():
+                        response = await client.get('/api/projects')
+                        order.append('authenticated')
+                        return response
+                    waiting = asyncio.create_task(authenticated())
+                    try:
+                        # One worker is enough to saturate this deliberately
+                        # small limiter. Observe PostgreSQL on an independent
+                        # stdlib executor so the test itself cannot take the
+                        # worker whose availability it is verifying.
+                        for _ in range(100):
+                            row = await asyncio.to_thread(lambda: gate.execute('SELECT wait_event FROM pg_stat_activity WHERE pid=%s', (pid,)).fetchone())
+                            if row['wait_event'] == 'advisory':
+                                break
+                            await asyncio.sleep(0.01)
+                        else:
+                            raise AssertionError('authenticated request did not reach the database gate')
+                        response = await client.get('/api/health')
+                        assert response.status_code == 200
+                        order.append('health')
+                    finally:
+                        await asyncio.to_thread(gate.execute, 'COMMIT')
+                    assert (await waiting).status_code == 200
+            finally:
+                limiter.total_tokens = previous_tokens
         asyncio.run(scenario())
     assert order == ['health', 'authenticated']
 

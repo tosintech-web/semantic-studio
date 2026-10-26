@@ -296,7 +296,7 @@ async def _offline(_request: Request, exc: Offline) -> JSONResponse:
 # A trivial liveness probe. Deployment tooling (and our own scripts) hit this
 # to confirm the server is up before doing anything else.
 @app.get("/api/health")
-def health() -> dict:
+async def health() -> dict:
     return {"status": "ok"}
 
 
