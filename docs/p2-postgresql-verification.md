@@ -25,6 +25,7 @@
 | PostgreSQL | `18.6-bookworm@sha256:bbf83594798e144bff365a9c191c5d779f181fb3135902064ab8ff11918020fc` |
 | driver | hash固定pure `psycopg 3.3.6` wheel。psycopg-binary/ORMは追加しない |
 | system libpq | Debian `libpq5=17.11-0+deb13u1` |
+| Python runtime base | `3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704` |
 | schema | version 1、9 table/46 column。DDLと固定catalog参照を検査 |
 | archive | version 1、manifest + 8業務tableのNDJSON + blob |
 
@@ -109,7 +110,7 @@ native/Compose 3.12/Compose 3.14からそれぞれ全件を再収集し、3082 c
 機械inventoryと完全一致した。正式な和集合はnative2821（成功2820 + 任意依存skip1）＋DB259で、
 外部networkの2件を明示除外する。全時間予算を含み、試験の削除・一括skipはしていない。
 
-最終製品imageは`sha256:f1a10d075f76bc574e01de8f0e49c04401e5482d1ed0131617549ffa95d2b820`。
+最終製品imageは`sha256:ebdd57dd31a601a3b8305063c514ce8d8e922e10df28ee19d4117c236857734d`。
 networkなしの一時containerでapp全107 fileのSHA-256 manifestを取り、SQLite不使用を検証した
 レビュー済みsourceとbyte単位の一致を確認した。buildには実依存・原文通知検証も含む。
 
@@ -133,6 +134,16 @@ job作成前に失敗した。`jobs.<id>.env`で利用できない`runner.temp`�
 2箇所で参照していた。公式releaseのSHA-256を照合したactionlint 1.7.12で同じ2エラーを再現し、
 実行step内の`RUNNER_TEMP`から`GITHUB_ENV`へsecret directoryを設定する形へ修正した。
 修正後actionlintと、空白を含むpathでの両Bash stepの実行検査が成功した。製品の依存は追加していない。
+
+次の[CI run 40409773850](https://github.com/tosintech-web/semantic-studio/actions/runs/40409773850)では
+両PG版・Linux local・Windows local・frontend・publicationが成功した一方、DockerとComposeは
+native通知検査で停止した。mutableなPython base tagの更新により、`libssl3t64`が手元cacheの
+`3.5.7-1~deb13u2`からCIの`3.5.7-1~deb13u3`へ変わっていた。
+CIと同じ公式base digestで同じlibpqを実際に導入し、全13 native package名と全原文hashを照合した。
+差はこのrevisionだけで、原文bytesはすべて同一。台帳をu3へ更新し、製品baseを上記digestへ固定して
+配布通知検証を通す再buildに成功した。検査の省略・許可範囲の緩和はしていない。
+この固定はruntime baseのtag変動を防ぐもので、APTやfrontend baseまで不変にするものではない。
+将来の未知のnative版・原文変更は引き続きbuildを失敗させ、再レビューを要求する。
 
 実Googleクライアント作成・本番ログイン、実データ移行、デプロイ、main mergeは実施しない。
 local/P1/P2の合成受入成功を、本番配備済みという意味では使わない。

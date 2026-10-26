@@ -4386,7 +4386,7 @@
     {
       "ecosystem": "debian",
       "name": "libssl3t64",
-      "version": "3.5.7-1~deb13u2",
+      "version": "3.5.7-1~deb13u3",
       "source": "https://packages.debian.org/trixie/libssl3t64",
       "license": "See original Debian copyright",
       "status": "text-collected",
