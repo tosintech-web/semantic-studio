@@ -27,7 +27,9 @@ SCHEMA_VERSION = 1
 
 
 def ddl_fingerprint():
-    return hashlib.sha256(SQL_PATH.read_bytes()).hexdigest()
+    # SQL is a controlled text migration, not an authored RDF/blob artifact.
+    # Git's Windows checkout may change LF to CRLF without changing its schema.
+    return hashlib.sha256(SQL_PATH.read_text(encoding='utf-8').encode('utf-8')).hexdigest()
 
 
 def describe_schema(tx):

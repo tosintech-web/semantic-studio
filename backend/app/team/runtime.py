@@ -23,6 +23,7 @@ from .auth_store import AuthStore
 from .repository import TeamRepository
 from .pg_storage import PgStorage
 from .pg_schema import ensure_schema
+from .maintenance_io import MARKER, is_legacy_store
 
 
 class _PrivateAccessLog(logging.Filter):
@@ -77,7 +78,8 @@ class TeamRuntime:
         try:
             # Never open, convert, overwrite or remove an old database, even
             # while another destination is being prepared by maintenance.
-            if (directory / '.team-import-incomplete').exists() or any((directory / name).exists() for name in ('team.sqlite', 'team.sqlite3')):
+            marker = directory / MARKER
+            if marker.exists() or marker.is_symlink() or any(is_legacy_store(path.name) for path in directory.iterdir()):
                 raise ValueError('team_storage_not_ready')
             self.storage = PgStorage(self.config.db, on_fatal=self.fail_storage)
             self.storage.start_writer()

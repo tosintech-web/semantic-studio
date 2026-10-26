@@ -129,3 +129,12 @@ def test_pg_health_precedes_blocked_authenticated_request(harness):
                 assert (await waiting).status_code == 200
         asyncio.run(scenario())
     assert order == ['health', 'authenticated']
+
+
+def test_team_source_keeps_private_ill_typed_literal_out_of_logs(harness, caplog):
+    pid = harness.create()
+    value = 'synthetic-private-lexical'
+    response = harness.request('PUT', f'/api/projects/{pid}/documents/model/source', request_id='private-source',
+        json={'text': '<urn:s> <urn:p> "' + value + '"^^<http://www.w3.org/2001/XMLSchema#integer> .'})
+    assert response.status_code == 200, response.text
+    assert value not in caplog.text

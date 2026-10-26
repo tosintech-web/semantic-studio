@@ -10,8 +10,9 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜5のPG runtime/編集を検証済み、保守・製品Compose・全試験移植は未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜6のPG runtime/編集・保守を検証済み、製品Compose・全試験移植は未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
+本追補は計画のレビュー・修正だけを対象とする。既存の実装コミットと未コミット変更は保持し、実装の続行・commit・pushはこの計画作成作業では行わない。
 
 ## Global Constraints
 
@@ -21,6 +22,7 @@
 - `db:5432`、IPv4、RFC1918の専用internal bridgeのみ。DBのhost port・host network・外部network参加・port tunnelを禁止。CIも同じ境界を使う。
 - subnet/gatewayをCompose IPAM・HBA・接続検証へ共通入力として渡す。gatewayとその他networkからのDB sessionを拒否する。
 - HBAはTCP SYNの到達不能を保証するものではない。Docker管理者・host rootは境界外。別host運用・DB TLS必須化は今回含めない。
+- DB管理/app/maintenance/backupには、空でない単一行の異なる4つのパスワードを使い、初期化SQLを実行する前に重複も拒否する。
 - DBの秘密はfile-backed Compose secrets。appに管理/maintenance/backup credentialをmountしない。実値・資格入りDSN・SQL parameterをGit/ログ/argvに出さない。
 - PostgreSQL 18安定patch/digestとpsycopg 3 patch/hashをTask 1で実物確認・固定する。RC/latest、ORM追加、未確認licenseの配布をしない。
 - appは1プロセス。DB leaseを持つ唯一のwrite接続をautocommitで保持し、更新だけを明示transactionで囲む。poolへの返却・自動再接続は禁止。
@@ -86,7 +88,8 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 **Interfaces:**
 - `load_pg_config(env: Mapping[str,str], *, role: Literal['app','maintenance','backup']) -> PgConfig`。roleはtrustedな呼出し側が固定する。
 - `PgConfig`はhost=`db`、port=5432、validated dbname、role対応user、secret file、network/gateway、上記timeoutを保持。秘密をreprに含めない。
-- `render_hba(config: PgConfig) -> str`, `write_db_config(env, destination: Path) -> None`。前者はgateway拒否→対象DB/role/subnet SCRAM許可→IPv4/IPv6全拒否の順。
+- `PgEndpoint`は秘密を含まない接続先/network設定、`PgConfig`はこれにrole別secret fileを加えた設定とする。
+- `render_hba(config: PgEndpoint) -> str`, `write_db_config(env, destination: Path) -> None`。前者はgateway拒否→対象DB/role/subnet SCRAM許可→IPv4/IPv6全拒否の順。
 - `db-config` jobはnetworkなしでHBA volumeを生成。`db`はその完了後に起動し、HBA volumeをread-only mountする。
 - `init-roles.sh/sql`はUnix peerで固定roleを作り、PUBLICのCONNECT/CREATEを閉じる。passwordはfile→process内変数→安全なSQL literalへ渡し、argv/ログに出さない。
 - `pg-tests`はapp/maintenance/backupの合成secretを持つtest image。production appへ保守credentialを流用しない。
@@ -129,7 +132,7 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 **Interfaces:**
 - `ensure_schema(storage: PgStorage) -> Literal['created','current']`。maintenanceだけがDDL可能。currentならread-only検査で終了、変更にはapp停止・lease/gate必須。
 - `TeamRepository(storage)`。`Resource`、`read/versions/snapshot/commit/read_request/history`の利用者向け戻り値・codeを維持。DB pathとSQLite backup methodは廃止。
-- `read_operation_group(actor, request_id) -> list[AuditEntry]`、`latest_operation(key) -> OperationGroup | None`を追加。groupと依存版は同じread snapshotから返す。
+- `read_operation_group(actor: str, request_id: str, *, tx: ReadTx | WriteTx | None = None) -> list[dict]`、`latest_operation(key: str, *, tx: ReadTx | WriteTx | None = None) -> OperationGroup | None`を追加。`OperationGroup`は操作・依存版・確定応答を保持するDTO。groupと依存版は同じread snapshotから返す。
 - `lookup_request(actor, request_id, body_hash, *, tx: ReadTx | WriteTx) -> dict | None`は設計の要求照合入口。既存`read_request`の呼出しを整理し、更新/replay判定はwrite gate内のtxを渡す。
 - `StorageError(kind: str, *, sqlstate: str | None=None)`は有限kindだけを公開し、既存HTTP `storage_error`/503へ接続。`sqlite_code`を残さない。
 - `commit(..., authorize: Callable[[WriteTx], Principal])`を必須keywordとして追加する。gate取得後、replayを返す前も含め同じtransactionでcallbackを実行し、返されたactorと要求actorを照合する。HTTP更新ではTask 4の再認可を渡し、別transactionや省略可能な認可fallbackを作らない。保守移行はmaintenance roleを検証した専用入口で扱う。
@@ -190,27 +193,33 @@ project名・secret file・volumeは各検証専用にし、実data directoryを
 
 ## Task 6: localファイル移行・世代backup/restore・保守CLI
 
-**Files:** Modify `backend/app/team/maintenance.py`, `runtime.py`, `scripts/team_workspace.py`; Create `backend/app/team/manage.py`, `pg_archive.py`, `backend/tests/test_pg_maintenance.py`, `test_pg_archive.py`; Modify `backend/tests/test_team_maintenance.py`, `test_pg_runtime.py`。
+**Files:** Modify `backend/app/team/maintenance.py`, `runtime.py`, `pg_schema.py`, `rdf_codec.py`, `workspace.py`, `backend/app/main.py`, `scripts/team_workspace.py`; Create `backend/app/team/manage.py`, `pg_archive.py`, `maintenance_io.py`, `backend/tests/test_pg_maintenance.py`, `test_pg_archive.py`; Modify `backend/tests/test_team_maintenance.py`, `test_pg_runtime.py`。
 
 **Interfaces:**
 - `inspect_local(source)`, `migrate_local(storage, source, destination, *, dry_run=False)`, `backup(storage, blob_root, destination)`, `restore(storage, archive, destination)`。storageはmaintenance/backup専用role、Google/app secret不要。
 - `python -m app.team.manage`に`init-schema`, `inspect-local`, `migrate --source --destination [--dry-run]`, `backup --blob-root --destination`, `restore --archive --destination`。source wrapperはこのmainへ委譲する。
 - archive version1は`manifest.json`＋table別NDJSON＋`blobs/<sha256>`。schema version/fingerprint、table件数/hash、blob size/hashを記録。
-- `team_schema`の固定metadataはmanifestへ保存し、復元先のschema行へ二重INSERTしない。業務8テーブルを保存し、restoreでsessions/login_attemptsは検証後に失効扱いで除外。
+- `team_schema`の固定metadataはmanifestへ保存し、復元先のschema行へ二重INSERTしない。業務8テーブルを保存し、restoreでsessions/login_attemptsも同じ未公開transaction内へINSERTしてFK/unique/CHECKを検証し、COMMIT前に両tableをDELETEして失効させる。失効対象だからという理由で制約検証を省略しない。
+- `maintenance_io.py`は有限エラー・安全な通常file読取・hash付きコピー・fsync・行先公開/未完了markerを担当し、CLIやSQLを持たない。
+- archive上限は行256 MiB、manifest 16 MiB、manifestを除くtable/blob合計64 GiB、全file 1,000,000件、各table 10,000,000行、JSON深さ1,000。超過・duplicate JSON key・NaN/Infinityを有限codeで拒否する。
+- schema fingerprintは管理下のDDLだけ改行をLFへ統一して計算する。利用者のRDF・元file bytesは正規化しない。
 
-- [ ] **Step 1: 移行/復旧試験を書く。**
+- [x] **Step 1: 移行/復旧試験を書く。**
   - `test_pg_backup_keeps_single_snapshot_and_history_blobs`: 同時更新中でも同一世代。現資源とauditの`file:` payloadだけから参照を集め、履歴だけのblobを保持。
   - `test_pg_archive_preserves_opaque_json_and_bytes`: JSONの任意`blob`キーを参照と誤認しない。NUL escape、`001`、空白ノード、未知項目、CRLF bytesを完全保持。
   - `test_pg_restore_failure_never_publishes_destination`: `assert source_unchanged`; 新行先は未完了markerで起動拒否。途中/COMMIT応答不明でも成功を返さない。
-  - `test_pg_restore_keeps_history_but_revokes_login`: `assert sessions == [] and attempts == []`; users/版/墓標/audit/replay一致、ID sequenceは最大IDの次以降。
+  - `test_pg_restore_keeps_history_but_revokes_login`: `assert sessions == [] and attempts == []`; users/版/墓標/audit/replay一致、ID sequenceは最大IDの次以降。不正な失効対象sessionのFKも復元失敗にする。
   - `test_pg_migrate_rejects_opaque_old_store_without_opening`: 旧DB名のopaque bytesを入力し、読まず変更せず拒否。実SQLite fixtureは作らない。
-- [ ] **Step 2: RED。** `PGTEST tests/test_pg_archive.py tests/test_pg_maintenance.py -q` → 旧backup API/新形式未対応で失敗。
-- [ ] **Step 3: 実装。** backupは単一read-only snapshotからstreamし、GCせずblobをhash確認して私有一時領域へコピー、完成時だけrename。restore/local移行は空DB・新blob volumeのみ。最初に`.team-import-incomplete`をfsyncして作成、全blobを最終行先へ先行確定後にSQLを一括commitし、既知成功と再検証の後だけmarkerを除去/fsyncして成功を返す。
+  - `test_pg_archive_rejects_invalid_limits_and_json`: 各上限の直前/一致/超過、duplicate key、不正型、NaN、path/symlink、payload NULL墓標の不正識別子を拒否し、元archiveは変更しない。
+  - `test_private_rdf_diagnostics_preserves_lexical`: 型付きliteralの不正lexicalも値は保持し、移行CLI/HTTP/codecのstdout/stderr/logへ原文を出さない。scope外の通常診断は保持する。
+  - `test_schema_fingerprint_ignores_checkout_line_endings`: DDLのLF/CRLFで同じfingerprint、利用者のCRLF blobはbyte一致。
+- [x] **Step 2: RED。** `PGTEST tests/test_pg_archive.py tests/test_pg_maintenance.py -q` → 旧backup API/新形式未対応で失敗。
+- [x] **Step 3: 実装。** backupは単一read-only snapshotからstreamし、GCせずblobをhash確認して私有一時領域へコピー、完成時だけrename。restore/local移行は空DB・新blob volumeのみ。最初に`.team-import-incomplete`をfsyncして作成、全blobを最終行先へ先行確定後にSQLを一括commitし、既知成功と再検証の後だけmarkerを除去/fsyncして成功を返す。
   失敗/COMMIT不明ならmarkerを残してapp起動を拒否。自動resume・上書き・削除はしない。別の新規行先へやり直せるよう元archive/元dataを保持する。
   runtimeはmarkerと旧DBファイルをschema/service公開より前に検査し拒否する。故障注入でmarker残存先の実際の`TeamRuntime.start()`が失敗することを確認する。
   archiveのtable/columnは固定許可list、path/symlink/drive/stream/サイズ/深さ/hash/件数/schemaを検査し、入力SQLを実行しない。local移行は新しい`migration`操作だけを記録し、存在しない旧履歴を生成しない。
-- [ ] **Step 4: GREEN。** 上記＋`PGTEST tests/test_team_maintenance.py -q` → 全成功。既存destination・不正schema・欠損blob・不正path・失効を含め、CLI stdout/stderrに秘密/私有pathを出さない。
-- [ ] **Step 5: commit。** 保守/CLI/archiveと試験をcommit。SQLite用exporterや変換scriptは追加しない。
+- [x] **Step 4: GREEN。** 上記＋`PGTEST tests/test_team_maintenance.py -q` → 全成功。既存destination・不正schema・欠損blob・不正path・失効を含め、CLI stdout/stderrに秘密/私有pathを出さない。
+- [x] **Step 5: commit。** 保守/CLI/archiveと試験をcommit。SQLite用exporterや変換scriptは追加しない。
 
 ## Task 7: 全既存team試験の移植とSQLite利用経路の除去
 
@@ -238,14 +247,15 @@ Create `scripts/test_pg_compose_network.py`, `test_pg_compose_lifecycle.py`（te
 **Interfaces:**
 - 製品serviceは`db-config → db healthy → db-migrate current/成功 → semantic-studio-team`。appのcommandは`python -m app.team.server`。
 - `db-config`はnetworkなし、`db`はinternalだけ、appは両network、maintenance/backup/restoreはprofileでinternalだけ。
-- HBA生成/role初期化はTask 1の同じ実装を製品とtestで共有する。production appはapp secretだけ。
+- HBA生成/role初期化はTask 1の同じ実装を製品とtestで共有する。production appはapp secretだけ。4 roleのsecret重複拒否は本追補で追加した未完了項目としてこのTaskで実装・検証し、Task 1の過去の完了記録には含めない。
 - browser fixtureは同じinternal networkのtest containerで実DBに接続。hostへpublishするのは合成HTTPS appのloopback endpointだけ。Chrome/CDPは既存driverが所有し、production imageに署名fixtureを入れない。
 - hostのorchestrationだけがDocker CLIを使用する。containerへDocker socket/CAP_NET_ADMINをmount/追加しない。
 
 - [ ] **Step 1: 実境界と障害試験を書く。**
+  - `test_pg_bootstrap_rejects_reused_or_invalid_passwords`: 4 roleの重複・空・複数行secretで初期化を拒否し、SQL実行前に停止する。実container UIDの読取可否も確認する。値は診断へ出さない。
   - `test_pg_compose_network_boundary`: inspectでDB port bindingなし/internalだけ。同networkのapp成功、hostと別networkの正しい合成credentialでもDB session拒否、別role/別DB拒否。
   - `test_pg_compose_restart_and_owner_loss`: DB再起動/lease切断で旧appが更新できず、app終了→再起動後にDNS再解決・永続data保持。
-  - `test_pg_compose_backup_and_restore`: app稼働中backup→別Compose projectの空DB/volumeへrestore、過去履歴blobと失効を確認。
+  - `test_pg_compose_backup_and_restore`: app稼働中backup→別Compose projectの空DB/volumeへrestore、過去履歴blobと失効を確認。元appと元sessionを生かしたまま検証し、元DB/元blobが不変、元sessionは引き続き有効、復元先sessionだけが失効したことを確認する。同一test DBのresetだけでこの受入条件を満たした扱いにしない。
   - browser P2で401/409/503の未送信入力、日英、2利用者CAS、再送、Undo、Shapes/model履歴、AX/Tabを実UIで確認。
 - [ ] **Step 2: RED。** `python -m unittest scripts.test_pg_compose_network scripts.test_pg_compose_lifecycle`とdriver P2 → 製品Compose未接続/fixture未移植を検出。
 - [ ] **Step 3: 製品・CIを接続。** app/DB/backup volumeを分離し秘密とdataをbuild contextから除外。host access拒否試験だけはhostからの接続試行を行い、成功を許容しない。固定DB IPではなくinspectで取得した現在IPを使う。DB外向き経路なし、app brokerの外向き経路ありを確認する。
@@ -283,7 +293,7 @@ Create `docs/p2-postgresql-verification.md`、case対応表`docs/p2-postgresql-t
 
 ## 計画の確認記録
 
-この計画書の作成・レビューは製品実装ではない。全checkboxは実装開始前の未完了状態とする。
+初版作成時の計画レビューは製品実装ではなく、当時は全checkboxが未完了だった。現在のcheckboxと「実装の進捗」は後続工程の記録であり、本追補で完了判定を追加しない。
 設計との対応、型/API名の一致、RED/GREEN順、内部networkだけで実行可能な検証command、SQLite例外なしを自己レビューする。
 独立レビューで指摘された計画の不足を修正し、再レビューで指摘がなくなるまで繰り返す。
 詳細な結果は計画書の末尾へ追記し、製品コード・依存・Compose実ファイルにはこの段階で変更を加えない。
@@ -307,3 +317,14 @@ Task 3：9 table/46 columnのPG schema、read-onlyの厳密catalog照合、repos
 Task 4：AuthStoreを共通PG writerへ移植。auth clockをgate後に取得し、pollはread-only、全更新/replayの現在session/role検査にRequestAuthと必須authorize callbackを提供する。`change_access`にもcallbackを必須とし、Task 5のworkspace接続で渡す。DB障害を認証失効と混同せず、全auth endpointでCookieを消さず503を返す。既存Google署名/nonce/state/PKCE・broker・Cookie契約を保ち、ここまでのPG基盤/認証/HTTP/Google/RDF/source guard 193件が成功。
 
 Task 5：runtime/共有workspace/UndoをPGへ接続し、blob lockとDB lease、fatal後のserver終了、現在session/roleと元操作・逆操作の効果を同じWriteTxで再検査する。共有Harnessと再起動fixtureを実session/新writerへ移植し、SQLを業務層から除去。自己レビューでUndo再送時の降格をREDで再現して修正。対象50件、ここまでの全PG対象244件が成功（既存Starlette警告1件）。実HTTP listenerの終了、DB待機中のhealth応答、確定後の応答喪失注入と新writerでの再送回収を含む。保守CLI/全旧team fixture/製品Compose/CIの切替は未完了。
+
+### 計画追補のレビュー（2026-10-27）
+
+- 第1回（設計全節・受入条件）：4 roleのsecret重複検証、失効対象sessionの制約検査、独立した復元先と稼働中の元sessionの検証を具体化した。既存進捗と初版レビュー記録の時点を区別した。
+- 第2回（API・責務・異常入力）：`render_hba`とoperation groupの型を現存の契約へ合わせ、保守IOの責務、archive上限、重複JSON key、不正literalのログ抑制、DDL改行の検証を明記した。
+- 第3回（修正後の全節再照合）：設計16節、9 Taskの依存、RED/GREENと最終gate、SQLite例外なし、DB port非公開、元データ保持を再確認し、新規secret検証が完了済みTask 1へ混入していたため未完了のTask 8へ移し、実装済みと誤認しない形に修正した。これは自己レビューの結果であり、独立レビューや製品試験の成功を追加主張するものではない。
+- この追補で変更するのは本計画書だけ。製品実装・container起動・実データ移行・GitHub公開は実行しない。
+
+- 第4回（前回修正後の再レビュー）：追加要件の実施先と未完了表示を含めて再照合し、追加の修正事項なし。文書の相対リンク、9 Task/45 stepの構造、差分の空白、公開ポリシー検査を確認した。
+
+Task 6：PostgreSQLの世代archive・空DBへの復元・localファイル移行・保守CLIを実装。全PG対象293件、最新CLIを含む再build後の対象103件、補助script42件が成功。型付きliteralの原文ログ、破損sessionの制約検証、未完了marker、DDLのcheckout改行を再現して修正した。稼働元を残す別Compose projectへの復元はTask 8で別途検証する。

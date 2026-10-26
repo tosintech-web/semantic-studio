@@ -99,3 +99,13 @@ def test_storage_error_does_not_reflect_unknown_diagnostics():
     error = StorageError('private-inline-value', sqlstate='private-inline-value')
     assert error.kind == 'db_error' and error.sqlstate is None
     assert error.details == {'kind': 'db_error'}
+
+
+def test_schema_fingerprint_survives_windows_checkout_line_endings(tmp_path, monkeypatch):
+    import json
+    from app.team import pg_schema
+    expected = json.loads(pg_schema.CATALOG_PATH.read_text())['ddl_sha256']
+    copy = tmp_path / 'migration.sql'
+    copy.write_bytes(pg_schema.SQL_PATH.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+    monkeypatch.setattr(pg_schema, 'SQL_PATH', copy)
+    assert pg_schema.ddl_fingerprint() == expected

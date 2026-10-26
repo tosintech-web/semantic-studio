@@ -111,7 +111,7 @@ async def lifespan(_app: FastAPI):
         from .team.repository import UnsupportedSchema
         try:
             await run_in_threadpool(team.start)
-        except (StorageError, UnsupportedSchema):
+        except (StorageError, UnsupportedSchema, OSError, ValueError):
             # Uvicorn logs startup exceptions. Suppress the lower SQL/catalog
             # stack as well as its driver cause, keeping only a finite reason.
             raise RuntimeError('team_startup_failed') from None

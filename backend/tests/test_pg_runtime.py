@@ -21,7 +21,7 @@ import socket
 import pytest
 
 from app.team.config import TeamConfig
-from app.team.pg_storage import StorageError
+from app.team.pg_storage import StorageError, PgStorage
 from app.team.runtime import TeamRuntime
 from pg_probe import connect
 from pg_support import role_config
@@ -97,6 +97,33 @@ def test_local_mode_never_loads_pg_driver(tmp_path):
         "import sys; from app.main import app; assert 'psycopg' not in sys.modules; assert getattr(app.state,'team',None) is None"],
         env=environment, capture_output=True, timeout=30)
     assert result.returncode == 0, result.stderr.decode()
+
+
+@pytest.mark.parametrize('filename', ['team.sqlite', 'team.sqlite3', 'team.db', 'team.sqlite3.bak',
+    '.team-import-incomplete', pytest.param('marker-link', marks=pytest.mark.skipif(os.name == 'nt', reason='POSIX symlink fixture'))])
+def test_incomplete_or_legacy_directory_is_refused_before_any_connection(tmp_path, monkeypatch, filename):
+    from app.team.pg_config import load_pg_config
+    secret = tmp_path / 'app-secret'
+    secret.write_text('synthetic-password')
+    db = load_pg_config({'SEMANTIC_STUDIO_DB_HOST': 'db', 'SEMANTIC_STUDIO_DB_PORT': '5432',
+                         'SEMANTIC_STUDIO_DB_NAME': 'semantic_studio_team', 'SEMANTIC_STUDIO_DB_USER': 'team_app',
+                         'SEMANTIC_STUDIO_DB_PASSWORD_FILE': str(secret),
+                         'SEMANTIC_STUDIO_DB_SUBNET': '172.30.53.0/24', 'SEMANTIC_STUDIO_DB_GATEWAY': '172.30.53.1'}, role='app')
+    root = tmp_path / 'data'
+    root.mkdir()
+    if filename == 'marker-link':
+        (root / '.team-import-incomplete').symlink_to(root / 'missing')
+    else:
+        (root / filename).write_bytes(b'opaque unsupported storage')
+    calls = []
+    def forbidden_connect(self):
+        calls.append(True)
+        raise AssertionError('connected before refusing an unsupported data directory')
+    monkeypatch.setattr(PgStorage, '_connect', forbidden_connect)
+    runtime = TeamRuntime(TeamConfig(mode='team', public_origin='https://studio.example.org', data_dir=root, db=db))
+    with pytest.raises(ValueError, match='team_storage_not_ready'):
+        runtime.start()
+    assert calls == []
 
 
 @pytest.mark.team_db

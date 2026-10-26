@@ -18,11 +18,35 @@ from __future__ import annotations
 
 import json
 import re
+import logging
+from contextlib import contextmanager
+from contextvars import ContextVar
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.term import Identifier
 
 
 _LANGUAGE = re.compile(r"[a-zA-Z]+(?:-[a-zA-Z0-9]+)*\Z", re.ASCII)
+_PRIVATE_DIAGNOSTICS = ContextVar('team_private_rdf_diagnostics', default=False)
+
+
+class _PrivateTermDiagnostics(logging.Filter):
+    def filter(self, record):
+        # rdflib retains ill-typed literals, but its conversion warning carries
+        # authored values in exception text. Do not turn that private data into
+        # a CLI/server log; other threads/contexts keep their ordinary logging.
+        return not _PRIVATE_DIAGNOSTICS.get()
+
+
+logging.getLogger('rdflib.term').addFilter(_PrivateTermDiagnostics())
+
+
+@contextmanager
+def private_rdf_diagnostics():
+    token = _PRIVATE_DIAGNOSTICS.set(True)
+    try:
+        yield
+    finally:
+        _PRIVATE_DIAGNOSTICS.reset(token)
 
 
 def _error() -> ValueError:
@@ -76,6 +100,7 @@ def encode_graph(graph: Graph) -> dict:
     return {"version": 1, "namespaces": namespaces, "triples": triples}
 
 
+@private_rdf_diagnostics()
 def decode_graph(payload: dict) -> Graph:
     if (not isinstance(payload, dict) or set(payload) != {"version", "namespaces", "triples"}
             or type(payload["version"]) is not int or payload["version"] != 1

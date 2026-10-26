@@ -135,3 +135,16 @@ def test_duplicate_namespace_iri_is_rejected_instead_of_losing_an_alias():
     with pytest.raises(ValueError):
         decode_graph(payload)
     assert payload == before
+def test_decoding_does_not_log_private_ill_typed_literal(caplog):
+    import logging
+    from app.team.rdf_codec import decode_graph
+    value = 'synthetic-private-lexical'
+    payload = {'version': 1, 'namespaces': [], 'triples': [[
+        {'type': 'uri', 'value': 'urn:s'}, {'type': 'uri', 'value': 'urn:p'},
+        {'type': 'literal', 'value': value, 'language': None,
+         'datatype': 'http://www.w3.org/2001/XMLSchema#integer'}]]}
+    graph = decode_graph(payload)
+    assert str(next(graph.objects())) == value
+    assert value not in caplog.text
+    logging.getLogger('rdflib.term').warning('unrelated diagnostic stays visible')
+    assert 'unrelated diagnostic stays visible' in caplog.text

@@ -34,6 +34,7 @@ from .context import bind_services
 from .history import inverse, authorize_inverse, authorize_replayed_inverse
 from .repository import RepositoryError, MissingExpectation, Conflict, InvalidRequest, StorageError
 from .auth_store import AuthRefused, RequestAuth
+from .rdf_codec import private_rdf_diagnostics
 
 
 class TeamWorkspace:
@@ -126,18 +127,19 @@ class TeamWorkspace:
 
     @asynccontextmanager
     async def _candidate(self, resources, versions, shared):
-        if shared:
-            with tempfile.TemporaryDirectory(prefix="semantic-studio-candidate-") as root:
-                candidate = await run_in_threadpool(Candidate, Path(root), resources, self.blobs)
-                self._prepare_candidate(candidate)
-                candidate.services["broker"].policy._once = dict(self._once)
-                yield candidate
-        else:
-            entry = await run_in_threadpool(self._acquire_view, resources, versions)
-            try:
-                yield entry["candidate"]
-            finally:
-                self._release_view(entry)
+        with private_rdf_diagnostics():
+            if shared:
+                with tempfile.TemporaryDirectory(prefix="semantic-studio-candidate-") as root:
+                    candidate = await run_in_threadpool(Candidate, Path(root), resources, self.blobs)
+                    self._prepare_candidate(candidate)
+                    candidate.services["broker"].policy._once = dict(self._once)
+                    yield candidate
+            else:
+                entry = await run_in_threadpool(self._acquire_view, resources, versions)
+                try:
+                    yield entry["candidate"]
+                finally:
+                    self._release_view(entry)
 
     def _states(self, body, actor, role, resources, changes=None, operation=None, *, enabled=True):
         if not enabled:
