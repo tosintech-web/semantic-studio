@@ -176,7 +176,7 @@ migrationは新領域のみ、元は読取専用。restoreは新領域のみ、s
 - [x] 単一process排他・バックアップ復元・Docker秘密非混入を確認する。
 - [x] 全差分の独立レビューとセキュリティレビューを行い、指摘を根拠付きで修正・再検証する。
 - [x] 本番Google login未確認なら「P2本番利用可能」としない。未確認を検証書とPRに明記する。
-- [ ] 公開先とPRの基準ブランチを確定し、履歴検査済みのrefだけを送信して日本語PRを作成する。公開用snapshotは旧mainと共通祖先がないため、既存リポジトリの通常PR用には使わない。必須CI（Linux/Windows/frontend/docker）とpublication・budgets結果を確認する。
+- [x] ユーザー指定の既存GitHubへ履歴検査済みの公開用refだけを送信。旧mainと共通祖先がないため通常PRは作成しない。実装CIの必須Linux/Windows/frontend/dockerとpublication・budgets全成功を確認。
 
 ## 自己レビュー・実行方針
 
@@ -199,8 +199,10 @@ P2全体を完了・本番利用可能と扱わない。
 
 Tasks 5〜8を実装し、指摘を修正した独立コード・静的セキュリティ再レビューで残る修正指摘なし。
 実Chromeのlocal/P1/P2、Docker原文通知・非公開値検査、frontend全2,549試験、scripts39試験は成功。
-最終backend全体は2,951成功（性能予算込み、399.97秒）。GitHub CIを確認してTask 9を閉じる。
+最終backend全体は2,954成功（性能予算込み、399.04秒）。GitHub実装CIの全6ジョブ成功を確認し、Task 9まで完了。
 ユーザーは既存GitHubへの公開用ブランチpushを指定した。旧mainと共通祖先がないため通常PRを作らず、
 公開用branch pushのCIで確認する。共有main・開発履歴・バックアップrefは送信しない。
 本番Google login・配備は未確認の運用境界として残し、本番利用可能とは記載しない。
 最新の証跡・変更一覧・判断は `docs/p2-verification.md` と `docs/p2-review.md` に集約する。
+
+完了記録の文書だけを更新した後も公開用ブランチのCIを確認する。実装CI・初回失敗と修正・未確認の運用境界は検証記録を正本とする。

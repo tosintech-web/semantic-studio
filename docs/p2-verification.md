@@ -122,7 +122,7 @@ Tasks 5〜8を接続し、Task 9の最終検証を実施した。先の「未実
 
 ### 最新ソースでの検証
 
-- バックエンド全体：2,951成功、1skip、network 2除外、71 warnings、399.97秒。`.venv/bin/python -m pytest tests -q` を単独で実行し、既存の性能予算も成功。閾値と `BUDGET_FACTOR=1` は変更していない。
+- バックエンド全体：2,954成功、1skip、network 2除外、71 warnings、399.04秒。`.venv/bin/python -m pytest tests -q` を単独で実行し、既存の性能予算も成功。閾値と `BUDGET_FACTOR=1` は変更していない。
 - フロントエンド全体：134ファイル、2,549成功、113.95秒。既存性能予算を含み、閾値は変更していない。`npm run test -- --maxWorkers=2` を使用。
 - TypeScript・Vite本番build、メッセージ契約生成check、配布通知検査5件に成功。
 - 公開・通知スクリプト：39成功、12.864秒。
@@ -133,17 +133,20 @@ Tasks 5〜8を接続し、Task 9の最終検証を実施した。先の「未実
 - 閲覧者の直接編集403とUI抑止、ZIP/通知読取、実UIから推論・Shapes検証を確認。未送信入力のbeforeunload警告、強制停止後のsession・RDF・監査の保持も確認。
 - 最新Docker build成功。実イメージをネットワークなしで調べ、Python依存41件の実版・通知原文、MIT、公式Googleライブラリを確認。`/app` の340ファイルの名前・内容へ、外部から指定した非公開値が含まれない。検査値はソース・イメージ・ログへ保存していない。
 
-GitHub CIの最終結果は、公開用ブランチのpush後に本節へ追記する。
+[修正後の実装CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40260199430)は全6ジョブ成功。
+必須のLinux・Windows・frontend・Dockerに加え、publicationと参考budgetsも成功した。
+ローカル全体の再検証も成功し、下記の初回CIの問題は解消・再確認済み。
+完了記録だけの後続コミットについても、[公開用ブランチのCI](https://github.com/tosintech-web/semantic-studio/actions?query=branch%3Apublish%2Fp2-clean-history)を確認する。
 
 最初の[公開用CI](https://github.com/tosintech-web/semantic-studio/actions/runs/40259089634)では
 publication・Linux・frontend・Dockerが成功。Windowsで追加の原文テスト3件にLF固定の期待値の問題を検出した。
-製品の原文保持動作は正しく、テストをLF/CRLF両方の実blobとの完全一致へ修正し再検証する。
+製品の原文保持動作は正しく、テストをLF/CRLF両方の実blobとの完全一致へ修正し、独立再レビュー・関連128件と全体2,954件・Windows CIで成功を確認した。
 参考budgetsのbackend40件は成功。frontendの既存Homeカード比率は上限1.20に対し1.2000878で超過した。
-同じテストのローカル再実行は成功。測定方法・閾値は変更していない。
+同じテストのローカル再実行と修正後CIのbudgetsは成功。測定方法・閾値は変更していない。
 
 ### レビュー・運用境界
 
-全差分の独立コード・セキュリティレビューと修正後の再レビューを実施する。
+全差分の独立コード・静的セキュリティレビューと修正後の再レビューを実施し、残る具体的な修正指摘はない。
 指摘・再現試験・実装判断は [P2レビュー](p2-review.md) に記録する。
 外部architecture/decisions/backlog/log文書は作業領域に存在しないため、これらを架空に更新せず、
 本記録と設計・計画・既知の制約を更新した。
@@ -153,3 +156,16 @@ publication・Linux・frontend・Dockerが成功。Windowsで追加の原文テ�
 [運用手順](p2-team-operations.md)に、別の空領域でGoogle subを確認してから初期管理者を指定する手順を記載した。
 実データ・実秘密は使用しない。公開先はユーザー指定の既存GitHubの公開用ブランチであり、
 旧mainと共通祖先がないため通常PRは作らず、branch pushによるCIを確認する。
+
+### 完了記録
+
+2026-10-26、承認済みP2計画Tasks 1〜9の実装・修正・受け入れを完了。
+開発ブランチ `feat/p2-team-workspace` と同一treeの公開用履歴だけを、
+既存GitHubの `publish/p2-clean-history` へpushした。旧main・開発履歴・バックアップrefは送信していない。
+公開履歴の全blobとcommit metadataを、外部から指定した非公開値と通常の公開ポリシーで検査した。
+原MIT・第三者通知を保持し、元作業領域の利用者のstaged変更にも触れていない。
+
+変更は `backend/app/team/` と認証・共有サービス接続、`frontend/src/team/` と既存画面、
+日英契約・カタログ、移行CLI・Compose・CI、テスト・ブラウザdriver、運用/利用者/検証文書。
+設計書の改訂記録と計画チェックリスト、`CLAUDE.md` と `docs/known-state.md` も更新した。
+本番配備・本番Google loginの未確認事項は、実装完了と区別して前節に保持する。
