@@ -22,6 +22,10 @@ from app.team.permissions import classify_route, ROUTE_POLICIES, allows
 from app.routers import ontologies, queries, projects, data, network, examples
 from app.routers.auth import create_auth_router, SESSION_COOKIE
 from test_team_runtime import configuration
+from test_team_auth_store import access
+from pg_probe import connect
+from pg_support import role_config
+from app.team.pg_storage import WRITE_GATE_KEY
 
 ORIGIN='https://studio.example.org'
 GUARD={'Origin':ORIGIN,'X-Semantic-Studio':'1'}
@@ -49,7 +53,7 @@ def test_role_matrix(role,operation,expected):
 
 
 @pytest.fixture
-def boundary(tmp_path):
+def boundary(pg_schema, tmp_path):
     runtime=TeamRuntime(configuration(tmp_path))
     runtime.start()
     class PassThroughWorkspace:
@@ -77,7 +81,7 @@ def session(client,runtime,role):
     user=runtime.auth_store.identity('member','member@example.org','example.org',now=time.time())
     if role!='viewer':
         runtime.auth_store.identity('owner','owner@example.org','example.org',now=time.time())
-        user=runtime.auth_store.change_access('owner','member',expected_version=user.version,role=role,disabled=False,request_id='access',now=time.time())
+        user=access(runtime.auth_store, 'owner','member',expected_version=user.version,role=role,disabled=False,request_id='access',now=time.time())
     token=runtime.auth_store.create_session(user.sub,now=time.time())
     client.cookies.set(SESSION_COOKIE,token)
     return {**GUARD,'X-Semantic-Studio-CSRF':runtime.auth_store.authenticate(token,now=time.time()).csrf_token}
@@ -166,7 +170,7 @@ def test_disabled_user_refused_next_request(boundary):
     session(client,runtime,'viewer')
     user=next(user for user in runtime.auth_store.users() if user.sub=='member')
     runtime.auth_store.identity('owner','owner@example.org','example.org',now=time.time())
-    runtime.auth_store.change_access('owner','member',expected_version=user.version,role='viewer',disabled=True,request_id='stop',now=time.time())
+    access(runtime.auth_store, 'owner','member',expected_version=user.version,role='viewer',disabled=True,request_id='stop',now=time.time())
     assert client.get('/api/ontologies').status_code==401
 
 
@@ -244,7 +248,7 @@ def test_user_api_request_refreshes_idle_deadline(boundary, monkeypatch):
     assert client.get('/api/team/versions').status_code == 401
 
 
-def test_sqlite_writer_wait_cannot_block_public_health(boundary, monkeypatch):
+def test_postgresql_writer_wait_cannot_block_public_health(boundary, monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
     import threading
 
@@ -267,13 +271,14 @@ def test_sqlite_writer_wait_cannot_block_public_health(boundary, monkeypatch):
         release_writer.set()
 
     def held_writer():
-        with runtime.repository.connection() as connection:
-            connection.execute('BEGIN IMMEDIATE')
+        with connect(role_config()) as connection:
+            connection.execute('BEGIN')
+            connection.execute('SELECT pg_advisory_xact_lock(%s,%s)', WRITE_GATE_KEY)
             writer_ready.set()
             # This timeout only breaks a deadlock on a broken implementation;
             # correctness is the event ordering below, never elapsed duration.
             release_writer.wait(timeout=5)
-            connection.rollback()
+            connection.execute('ROLLBACK')
 
     monkeypatch.setattr(runtime.auth_store, 'authenticate', authenticate)
     runtime._test_health_callback = health

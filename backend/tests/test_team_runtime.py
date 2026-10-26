@@ -6,7 +6,7 @@ SUMMARY
 BASIC IDEA
     Temporary directories prove one-owner locking and release after failure.
 INPUTS / INPUT SOURCES
-    Synthetic configuration and temporary SQLite state.
+    Synthetic configuration, private blob roots and dedicated PostgreSQL state.
 EXPECTED OUTPUT
     No silent fallback or simultaneous directory owners.
 ================================================================================
@@ -14,19 +14,20 @@ EXPECTED OUTPUT
 import pytest
 from app.team.config import TeamConfig
 from app.team.runtime import TeamRuntime
+from pg_support import role_config
 
 
 def configuration(path):
     return TeamConfig(mode='team', public_origin='https://studio.example.org',
         google_client_id='synthetic', google_client_secret='replace-me',
-        allowed_domains=frozenset({'example.org'}), bootstrap_subs=frozenset({'owner'}), data_dir=path)
+        allowed_domains=frozenset({'example.org'}), bootstrap_subs=frozenset({'owner'}), data_dir=path, db=role_config())
 
 
-def test_exclusive_ownership_and_release(tmp_path):
+def test_exclusive_ownership_and_release(pg_schema, tmp_path):
     first, second = TeamRuntime(configuration(tmp_path)), TeamRuntime(configuration(tmp_path))
     first.start()
-    assert first.repository.path == tmp_path / 'team.sqlite'
-    assert first.auth_store.path == first.repository.path
+    assert first.repository.storage is first.storage
+    assert first.auth_store.storage is first.storage
     assert first.identity.config == first.config
     with pytest.raises(RuntimeError):
         second.start()
@@ -35,12 +36,12 @@ def test_exclusive_ownership_and_release(tmp_path):
     second.close()
 
 
-def test_failed_start_releases_lock(tmp_path):
-    tmp_path.joinpath('team.sqlite').write_bytes(b'not SQLite')
+def test_failed_start_releases_lock(pg_schema, tmp_path):
+    tmp_path.joinpath('team.db').write_bytes(b'opaque unsupported old store')
     runtime = TeamRuntime(configuration(tmp_path))
     with pytest.raises(Exception):
         runtime.start()
-    tmp_path.joinpath('team.sqlite').unlink()
+    tmp_path.joinpath('team.db').unlink()
     replacement = TeamRuntime(configuration(tmp_path))
     replacement.start()
     replacement.close()
@@ -56,7 +57,7 @@ def test_missing_config_fails_closed():
         TeamConfig.from_env({'SEMANTIC_STUDIO_MODE':'team'})
 
 
-def test_team_main_mounts_auth_skips_local_seed_and_closes(tmp_path):
+def test_team_main_mounts_auth_skips_local_seed_and_closes(pg_schema, tmp_path):
     import os
     import subprocess
     import sys
@@ -73,6 +74,11 @@ def test_team_main_mounts_auth_skips_local_seed_and_closes(tmp_path):
     static.joinpath('assets/app.js').write_text('/* synthetic login UI */')
     static.joinpath('private.ttl').write_text('synthetic private RDF')
     result = subprocess.run([sys.executable, '-c', """
+import sys
+def refuse_sqlite(event,args):
+    if event == 'sqlite3.connect':
+        raise AssertionError('forbidden_storage_connection')
+sys.addaudithook(refuse_sqlite)
 from fastapi.testclient import TestClient
 from app.main import app
 from app import library_examples
@@ -120,7 +126,7 @@ assert not app.state.team.started
     assert result.returncode == 0, result.stderr + result.stdout
 
 
-def test_lock_prevents_independent_python_process(tmp_path):
+def test_lock_prevents_independent_python_process(pg_schema, tmp_path):
     import subprocess
     import sys
     runtime=TeamRuntime(configuration(tmp_path))
@@ -129,11 +135,13 @@ def test_lock_prevents_independent_python_process(tmp_path):
         result=subprocess.run([sys.executable,'-c', '''
 import sys
 from pathlib import Path
+import os
+from app.team.pg_config import load_pg_config
 from app.team.runtime import TeamRuntime
 from app.team.config import TeamConfig
 runtime=TeamRuntime(TeamConfig(mode='team',public_origin='https://studio.example.org',
     google_client_id='synthetic',google_client_secret='replace-me',allowed_domains=frozenset({'example.org'}),
-    bootstrap_subs=frozenset({'owner'}),data_dir=Path(sys.argv[1])))
+    bootstrap_subs=frozenset({'owner'}),data_dir=Path(sys.argv[1]),db=load_pg_config(os.environ,role='app')))
 try:
     runtime.start()
 except RuntimeError:
@@ -145,7 +153,7 @@ sys.exit(1)
         runtime.close()
 
 
-def test_runtime_closes_workspace_before_releasing_ownership(tmp_path):
+def test_runtime_closes_workspace_before_releasing_ownership(pg_schema, tmp_path):
     runtime = TeamRuntime(configuration(tmp_path))
     runtime.start()
     events = []
@@ -163,7 +171,7 @@ def test_runtime_closes_workspace_before_releasing_ownership(tmp_path):
         runtime.close()
 
 
-def test_team_static_distribution_links_match_generated_inventory(tmp_path):
+def test_team_static_distribution_links_match_generated_inventory(pg_schema, tmp_path):
     import json
     import os
     from pathlib import Path
@@ -222,6 +230,11 @@ def test_local_auth_status_bootstrap_preserves_library_and_exposes_no_login(tmp_
     tmp_path.joinpath('web').mkdir()
     tmp_path.joinpath('web/index.html').write_text('<html>local shell</html>')
     result = subprocess.run([sys.executable, '-c', """
+import sys
+def refuse_sqlite(event,args):
+    if event == 'sqlite3.connect':
+        raise AssertionError('forbidden_storage_connection')
+sys.addaudithook(refuse_sqlite)
 from fastapi.testclient import TestClient
 from app.main import app
 from app.store import store

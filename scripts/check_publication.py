@@ -41,7 +41,8 @@ DATA_EXTENSIONS = {'.ttl', '.rdf', '.nt', '.nq', '.trig', '.n3', '.jsonld', '.cs
 RULES = {'private-path', 'credentials', 'source-record', 'internal-source', 'example-secret'}
 PLACEHOLDERS = {'', 'replace-me', 'change-me', 'your-client-secret', 'example', 'dummy', 'unset'}
 CREDENTIAL_KEYS = {'client_secret', 'session_secret', 'session_key', 'private_key', 'access_token', 'refresh_token',
-                   'google_client_secret', 'semantic_studio_google_client_secret'}
+                   'google_client_secret', 'semantic_studio_google_client_secret',
+                   'db_password', 'postgres_password', 'semantic_studio_db_password'}
 SECRETS = re.compile(
     r'-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----'
     r'|\bGOCSPX-[A-Za-z0-9_-]{12,}'
@@ -49,6 +50,8 @@ SECRETS = re.compile(
     r'|\bgh[pousr]_[A-Za-z0-9]{30,}'
     r'|\bgithub_pat_[A-Za-z0-9_]{30,}'
     r'|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}'
+    r'''|\bpostgres(?:ql)?://[^\s'"/@:]+:[^\s'"/@]+@'''
+    r'''|\bpostgres(?:ql)?://[^\s'"]*[?&]password=[^\s'"&]+'''
 )
 # Match actual literal assignments, not a documentation mention of a field.
 ASSIGNMENT = re.compile(

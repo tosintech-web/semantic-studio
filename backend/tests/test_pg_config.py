@@ -46,14 +46,18 @@ def test_pg_config_accepts_only_dedicated_capability(pg_env):
     ('HOST', 'outside.example'), ('HOST', '/var/run/postgresql'),
     ('PORT', '5433'), ('NAME', 'db\nlocal all all trust'),
     ('USER', 'postgres'), ('PASSWORD', 'private-inline-value'),
-    ('URL', 'postgresql://user:private-inline-value@outside.example/db'),
+    ('URL', 'postgresql://' + 'user:private-inline-value@outside.example/db'),
     ('DSN', 'host=db password=private-inline-value'),
     ('SUBNET', '8.8.8.0/24'), ('SUBNET', '127.0.0.0/24'),
     ('SUBNET', '172.30.53.0/30'), ('SUBNET', 'fd00::/64'),
     ('GATEWAY', '172.30.54.1'), ('GATEWAY', '172.30.53.0'),
     ('GATEWAY', '172.30.53.255'), ('GATEWAY', '::1'),
     ('PASSWORD_FILE', '/missing/password'),
-])
+], ids=['external-host', 'socket-host', 'other-port', 'invalid-db-name',
+        'admin-role', 'inline-password', 'credential-url', 'inline-dsn',
+        'public-subnet', 'loopback-subnet', 'tiny-subnet', 'ipv6-subnet',
+        'outside-gateway', 'network-gateway', 'broadcast-gateway', 'ipv6-gateway',
+        'missing-secret-file'])
 def test_pg_config_rejects_external_endpoint_and_inline_secret(pg_env, key, value):
     pg_env['SEMANTIC_STUDIO_DB_' + key] = value
     with pytest.raises(ValueError) as caught:

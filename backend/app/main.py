@@ -9,7 +9,7 @@ SUMMARY
     API, enables cross-origin requests from the dev frontend, exposes a health
     check, and — in a production/Docker build — serves the compiled frontend
     as static files from the same server. Explicit team mode adds a locked
-    SQLite/auth runtime and default-deny authorization before all data routes.
+    PostgreSQL/auth runtime and default-deny authorization before all data routes.
 
 BASIC IDEA
     A single FastAPI "app" object is the thing an ASGI server (uvicorn) runs.

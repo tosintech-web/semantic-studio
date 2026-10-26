@@ -57,6 +57,17 @@ def reset_test_schema():
             db.execute('DROP TABLE IF EXISTS semantic_studio.' + table + ' CASCADE')
 
 
+def restart_repository(repository):
+    from app.team.pg_storage import PgStorage
+    from app.team.repository import TeamRepository
+    config = repository.storage.config
+    repository.storage.close()
+    storage = PgStorage(config, on_fatal=lambda kind: None)
+    _restarted_storages.append(storage)
+    storage.start_writer()
+    return TeamRepository(storage)
+
+
 def restart_workspace(workspace):
     from app.team.pg_storage import PgStorage
     from app.team.repository import TeamRepository

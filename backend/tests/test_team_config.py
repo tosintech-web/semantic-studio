@@ -36,7 +36,7 @@ def test_local_default_needs_no_credentials():
 
 
 def test_team_settings_are_explicit_immutable_and_without_side_effects(tmp_path):
-    env = team_env()
+    env = configured_env(tmp_path)
     env["SEMANTIC_STUDIO_DATA_DIR"] = str(tmp_path / "uncreated")
     before = dict(env)
     config = TeamConfig.from_env(env)
@@ -115,8 +115,8 @@ def test_origin_requires_a_valid_dns_hostname_or_ip_literal(origin):
 
 
 @pytest.mark.parametrize("origin", ["https://[::1]", "https://[2001:db8::1]:8443", "https://192.0.2.1", "https://studio.example.org"])
-def test_valid_ip_literals_and_dns_origins_are_supported(origin):
-    env = team_env()
+def test_valid_ip_literals_and_dns_origins_are_supported(origin, tmp_path):
+    env = configured_env(tmp_path)
     env["SEMANTIC_STUDIO_PUBLIC_ORIGIN"] = origin
     assert TeamConfig.from_env(env).public_origin == origin
 
@@ -128,9 +128,18 @@ def test_valid_ip_literals_and_dns_origins_are_supported(origin):
     ('https://[2001:0db8:0000:0000:0000:0000:0000:0001]:443', 'https://[2001:db8::1]'),
     ('https://[0:0:0:0:0:FFFF:192.0.2.1]', 'https://[::ffff:c000:201]'),
 ])
-def test_public_origin_matches_browser_url_origin_fixtures(configured, browser_origin):
+def test_public_origin_matches_browser_url_origin_fixtures(configured, browser_origin, tmp_path):
     # Captured from the WHATWG URL implementation's URL.origin. Browsers send
     # this canonical form in Origin/Host, irrespective of operator spelling.
-    env = team_env()
+    env = configured_env(tmp_path)
     env['SEMANTIC_STUDIO_PUBLIC_ORIGIN'] = configured
     assert TeamConfig.from_env(env).public_origin == browser_origin
+
+
+def configured_env(tmp_path):
+    secret = tmp_path / 'app-secret'
+    secret.write_text('synthetic-test-password')
+    return dict(team_env(), SEMANTIC_STUDIO_DB_HOST='db', SEMANTIC_STUDIO_DB_PORT='5432',
+                SEMANTIC_STUDIO_DB_NAME='semantic_studio_team', SEMANTIC_STUDIO_DB_USER='team_app',
+                SEMANTIC_STUDIO_DB_PASSWORD_FILE=str(secret), SEMANTIC_STUDIO_DB_SUBNET='10.253.53.0/24',
+                SEMANTIC_STUDIO_DB_GATEWAY='10.253.53.1')

@@ -67,6 +67,7 @@ services:
     secrets: [team_db_app, team_db_maintenance, team_db_backup]
     volumes:
       - ./backend:/workspace/backend:ro
+      - ./docs/p2-postgresql-test-inventory.json:/workspace/docs/p2-postgresql-test-inventory.json:ro
 networks:
   db_internal:
     driver: bridge

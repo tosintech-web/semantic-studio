@@ -14,6 +14,10 @@ BASIC IDEA
     module loads and reads it — guarantees every test run gets a clean,
     isolated, disposable data directory.
 
+    PostgreSQL fixtures reset only the explicitly dedicated test schema and
+    retain one writer lease per test. An audit hook rejects SQLite connections,
+    and collection records the exact DB/local partition for coverage checks.
+
     It also carries the network fixtures shared across files: an autouse reset
     of the network broker's policy and log, `loopback_is_public` (lets a pinned
     connection reach a loopback test server under a public-looking name), and
@@ -30,6 +34,17 @@ EXPECTED OUTPUT
 
 import os
 import tempfile
+import sys
+
+
+def _refuse_sqlite_connection(event, arguments):
+    if event == 'sqlite3.connect':
+        raise AssertionError('forbidden_storage_connection')
+
+
+# This applies to every case, including fixtures and maintenance helpers. It
+# observes the standard audit event without importing the rejected engine.
+sys.addaudithook(_refuse_sqlite_connection)
 
 # Isolate the persistent store: tests must never touch the developer's real
 # per-user data directory. This runs before any app module is imported, so
@@ -175,3 +190,24 @@ def http_server():
     for server in started:
         server.shutdown()
         server.server_close()
+
+
+def pytest_addoption(parser):
+    parser.addoption('--team-inventory-output', default=None, help='Write collected case IDs and database partition without running tests')
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(config, items):
+    import json
+    from pathlib import Path
+    # The fixture closure is authoritative: a pure test in a mixed module must
+    # remain in the Windows partition, while indirect DB fixtures cannot escape.
+    for item in items:
+        if 'pg_schema' in item.fixturenames:
+            item.add_marker(pytest.mark.team_db)
+    destination = config.getoption('--team-inventory-output')
+    if destination:
+        Path(destination).write_text(json.dumps({
+            'cases': sorted(item.nodeid for item in items),
+            'team_db': sorted(item.nodeid for item in items if item.get_closest_marker('team_db')),
+        }, indent=2) + '\n')

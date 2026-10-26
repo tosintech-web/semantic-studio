@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-27-p2-postgresql-design.md](../specs/2026-10-27-p2-postgresql-design.md)。SQLite例外撤廃後の設計を正本とする。
 
-作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜6のPG runtime/編集・保守を検証済み、製品Compose・全試験移植は未完了）。
+作成日：2026-10-27。起点：`feat/p2-team-workspace` の `fa99837`。状態：実装中（Task 1〜7の保存・編集・保守・既存試験移植を検証済み、製品Compose・CI・最終受入は未完了）。
 既存SQLite版の完了チェックやPR CIを、このPostgreSQL置換の完了証跡として流用しない。
 本追補は計画のレビュー・修正だけを対象とする。既存の実装コミットと未コミット変更は保持し、実装の続行・commit・pushはこの計画作成作業では行わない。
 
@@ -232,11 +232,11 @@ Create `backend/tests/test_no_sqlite_storage.py`, `test_pg_test_inventory.py`; M
 - `test_no_sqlite_storage`はAST import/alias/dynamic import・接続・専用SQLと配置設定を検出。禁止例は不活性なソース文字列、旧DB拒否fixtureはopaque bytesだけ。
 - runtime検査はsubprocess audit hookで`sqlite3.connect`イベントを拒否する。SQLite moduleをimportしてmonkeypatchする方法は使わない。
 
-- [ ] **Step 1: 残存経路の検出試験を書く。** `assert product_sqlite_uses == []`、`assert test_sqlite_uses == []`、`assert expected_db_test_ids == collected_team_db_ids`。古いconstructor/path、SQLite専用故障注入、backup試験の移植漏れを列挙する。
-- [ ] **Step 2: RED。** `PGTEST tests/test_no_sqlite_storage.py tests/test_pg_test_inventory.py -q` → 未移植経路を実際に検出。
-- [ ] **Step 3: 全caseを移植。** `TeamRepository(Path)`/`AuthStore(Path)`と子processのSQLite初期化をstorage fixtureへ変更。schema破損・unique/index改変・disk backup故障はPG catalog/transaction/世代archive相当へ置換。case ID変更は一対一対応表へ記録し、無言削除・一括skip・SQLite互換fakeをしない。DB credential名/資格入りDSNも公開検査に追加。
-- [ ] **Step 4: GREEN。** `PGTEST tests -m "team_db and not network and not perf" -q`と`PGTEST tests -m "not team_db and not network and not perf" -q`、source guard・script試験 → 全成功。収集した2集合の和集合が全非perf/nonnetwork caseと一致することを確認。
-- [ ] **Step 5: commit。** 全移植と残存guard、case対応表をcommit。歴史文書/禁止文字列/未使用標準moduleの存在とSQLite実行を混同しない。
+- [x] **Step 1: 残存経路の検出試験を書く。** `assert product_sqlite_uses == []`、`assert test_sqlite_uses == []`、`assert expected_db_test_ids == collected_team_db_ids`。古いconstructor/path、SQLite専用故障注入、backup試験の移植漏れを列挙する。
+- [x] **Step 2: RED。** `PGTEST tests/test_no_sqlite_storage.py tests/test_pg_test_inventory.py -q` → 未移植経路を実際に検出。
+- [x] **Step 3: 全caseを移植。** `TeamRepository(Path)`/`AuthStore(Path)`と子processのSQLite初期化をstorage fixtureへ変更。schema破損・unique/index改変・disk backup故障はPG catalog/transaction/世代archive相当へ置換。case ID変更は一対一対応表へ記録し、無言削除・一括skip・SQLite互換fakeをしない。DB credential名/資格入りDSNも公開検査に追加。
+- [x] **Step 4: GREEN。** `PGTEST tests -m "team_db and not network and not perf" -q`と`PGTEST tests -m "not team_db and not network and not perf" -q`、source guard・script試験 → 全成功。収集した2集合の和集合が全非perf/nonnetwork caseと一致することを確認。
+- [x] **Step 5: commit。** 全移植と残存guard、case対応表をcommit。歴史文書/禁止文字列/未使用標準moduleの存在とSQLite実行を混同しない。
 
 ## Task 8: 製品Compose・実browser・CIを内部networkへ接続
 
@@ -328,3 +328,5 @@ Task 5：runtime/共有workspace/UndoをPGへ接続し、blob lockとDB lease、
 - 第4回（前回修正後の再レビュー）：追加要件の実施先と未完了表示を含めて再照合し、追加の修正事項なし。文書の相対リンク、9 Task/45 stepの構造、差分の空白、公開ポリシー検査を確認した。
 
 Task 6：PostgreSQLの世代archive・空DBへの復元・localファイル移行・保守CLIを実装。全PG対象293件、最新CLIを含む再build後の対象103件、補助script42件が成功。型付きliteralの原文ログ、破損sessionの制約検証、未完了marker、DDLのcheckout改行を再現して修正した。稼働元を残す別Compose projectへの復元はTask 8で別途検証する。
+
+Task 7：残るrepository/auth/runtime/access/config試験をPGへ移植し、製品・補助tool・testのSQLite import/専用SQLを除去。全試験に接続監査を適用し、旧2957 caseと現3080 caseの一対一対応・DB263 caseの分類を機械検査する。DB群263件、local/純粋logic群2774件（任意依存skip 1件）、最終変更対象48件、script44件が成功。性能予算は除外せずTask 9で全実行する。製品ComposeとCIはTask 8で切り替える。

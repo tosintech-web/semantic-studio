@@ -128,6 +128,30 @@ class PublicationTests(unittest.TestCase):
                 self.write(path, 'synthetic runtime data')
                 self.assertEqual(self.run_check([path]).returncode, 1)
 
+    def test_database_password_assignments_and_authenticated_dsn_fail_without_echo(self):
+        marker = 'synthetic-' + 'database-secret'
+        for key in ('DB_PASSWORD', 'POSTGRES_PASSWORD', 'SEMANTIC_STUDIO_DB_PASSWORD'):
+            for path, value in [('config.py', key + ' = ' + repr(marker)),
+                                ('config.json', json.dumps({key: marker})),
+                                ('.env.example', key + '=' + marker)]:
+                with self.subTest(key=key, path=path):
+                    self.write(path, value)
+                    result = self.run_check([path])
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertNotIn(marker, result.stdout + result.stderr)
+        for value in ('postgresql' + '://app:' + marker + '@db/service',
+                      'postgres' + '://app@db/service?password=' + marker):
+            self.write('guide.md', value)
+            result = self.run_check(['guide.md'])
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertNotIn(marker, result.stdout + result.stderr)
+
+    def test_database_secret_file_paths_and_environment_references_are_not_values(self):
+        self.write('.env.example', 'TEAM_DB_APP_SECRET_FILE=./secrets/app\n')
+        self.write('config.py', "import os\nSEMANTIC_STUDIO_DB_PASSWORD = os.environ['SEMANTIC_STUDIO_DB_PASSWORD']\n")
+        result = self.run_check(['.env.example', 'config.py'])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_renamed_database_records_fail_and_values_are_not_logged(self):
         secret_name = 'private-' + 'record-marker'
         payload = {'_id': {'$oid': 'a' * 24}, 'originalName': secret_name, 'published': True}
