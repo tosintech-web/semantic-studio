@@ -38,17 +38,17 @@
 
 | ゲート | コマンド／方法 | 結果 |
 | --- | --- | --- |
-| native backend全件・既定性能予算 | `cd backend && .venv/bin/python -m pytest tests -m 'not team_db and not network' -q` | レビュー前2953 passed / 1 skipped、391.02秒。修正後全件を実行中 |
-| PG全件 Python 3.12 | internal-only Compose、`-m 'team_db and not network'` | 285 passed、213.46秒 |
-| PG全件 Python 3.14 | 同上、別の専用project | 285 passed、212.50秒 |
-| frontend全件・既定性能予算 | `npm --prefix frontend run test -- --maxWorkers=1` | 最終headは未実施 |
+| native backend全件・既定性能予算 | `cd backend && .venv/bin/python -m pytest tests -m 'not team_db and not network' -q` | 2973 passed / 1 skipped、385.27秒。既定倍率1、全非DB・非network試験 |
+| PG全件 Python 3.12 | internal-only Compose、`-m 'team_db and not network'` | 285 passed、190.82秒（最新backend） |
+| PG全件 Python 3.14 | 同上、別の専用project | 285 passed、178.90秒（最新backend） |
+| frontend全件・既定性能予算 | `npm --prefix frontend run test -- --maxWorkers=1` | 2611 passed後、最新のフォーム更新修正を全件再確認中 |
 | TypeScript・build | `npm --prefix frontend run build` | レビュー修正後成功 |
 | local government Chrome | `node .claude/skills/run-semantic-viewer/driver.mjs government` | 同名国・組織、固定IRI、stale、メニュー・履歴・Undo・日英・720pxを確認済み |
 | signed HTTPS / PG government Chrome | 同driver `government-team` | 全P2回帰・全政府組織UI・再送・閲覧拒否・国を保持するUndoを確認済み |
 | 既存smoke/P1/P2/P3 | 同driver、P2はgovernment-teamでも全実行 | smoke・P1・P2・P3成功（P1中央値251.98ms） |
 | message contracts | `python scripts/generate_message_contracts.py --check` | 成功 |
 | publication / notices | 既存NUL対象ファイル列挙と配布検査 | source scan成功、publication37件・notices7件成功。commit後再確認予定 |
-| 独立レビューと修正後の再レビュー | 変更指摘がなくなるまで実施 | 初回7点・再レビュー4点を修正。101 backend / 246 frontend関連試験・build成功。3回目のレビュー予定 |
+| 独立レビューと修正後の再レビュー | 変更指摘がなくなるまで実施 | 3回で計13指摘を修正。101 backend / 297 frontend関連試験・build成功。4回目のレビュー予定 |
 | 最新head CI | PR #5のblocking gates | 未実施 |
 
 ## 試験inventoryと保存境界
@@ -64,3 +64,5 @@ localの既存Undoは開いている編集sessionの機能を再利用し、保�
 初回レビューで挙がった7点を修正した。所属関係に説明がある組織を単一登録フォームから書き換えず、履歴編集へ誘導する。統合・分割・その他の制約をAPIとUIで一致させた。基準日の確定所属と編集用の過去参照を分離し、基準日の国解決状態と名称の確度をDTOへ追加した。表示言語はWorkspaceから全専用読取へ伝え、再認証だけでは保持中の国参照tokenを更新しない。国をまたぐ確定した包含は説明なしで拒否する。各指摘は修正前に失敗する回帰試験を追加し、修正後の関連試験で確認した。全件と再レビューは上表に追記する。
 
 再レビューでは、通常組織編集からの包含検証の迂回、存在recordのない組織への二重存在編集、存在期間の出典の取り違え、複数国選択間のsnapshot更新を修正した。全frontend実行で検出したメニューボタンの高さ違反も、既存規則を変えず修正した。IRIを別表示し、長い名称を省略しても識別子とaccessible nameを保持する。修正前の回帰試験でbackend3件・frontend2件の失敗を確認し、修正後の関連101件・246件を確認した。
+
+3回目のレビューでは、未編集の組織フォームがteamの新しいtarget revisionに追随せず旧値で上書きできる点と、国接続のclean metadata更新が架空のdirty選択を作る点を修正した。cleanなフォームを新しいrevisionで再読込し、dirty入力は保持して旧targetでの保存を拒否する。再読込の破棄確認も追加した。接続先は未編集の場合だけ追随し、実際の選択中入力は維持する。新しい回帰試験で修正前3件の失敗、修正後の関連297件成功を確認した。実際のteam pollを使うChrome回帰も追加した。

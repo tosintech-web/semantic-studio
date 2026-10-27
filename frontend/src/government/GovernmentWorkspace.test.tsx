@@ -29,6 +29,28 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); projectStore._reset(); vi.restoreAllMocks(); });
 
+it('synchronizes an untouched country connection with refreshed accepted metadata',async()=>{
+ const first=opened('government-organizations-v1').project;
+ const next={...first,domainProfile:{...first.domainProfile!,countryProjectId:'prj-333333333333'}};
+ const sources=[opened('countries-v1',BASIS.sourceProjectId).project,opened('countries-v1','prj-333333333333').project];
+ const props={projects:sources,language:'en',onProjectsChanged:vi.fn()};
+ const ui=render(<GovernmentWorkspace {...props} project={first}/>);await act(async()=>{});
+ ui.rerender(<GovernmentWorkspace {...props} project={next}/>);await act(async()=>{});
+ expect((screen.getByRole('combobox',{name:'Country group'})as HTMLSelectElement).value).toBe('prj-333333333333');
+ expect(projectStore.hasPendingForms()).toBe(false);
+});
+it('retains an intentional connection selection during accepted metadata refresh',async()=>{
+ const first=opened('government-organizations-v1').project;
+ const next={...first,domainProfile:{...first.domainProfile!,countryProjectId:'prj-333333333333'}};
+ const sources=[BASIS.sourceProjectId,'prj-333333333333','prj-444444444444'].map(id=>opened('countries-v1',id).project);
+ const props={projects:sources,language:'en',onProjectsChanged:vi.fn()};
+ const ui=render(<GovernmentWorkspace {...props} project={first}/>);await act(async()=>{});
+ fireEvent.change(screen.getByRole('combobox',{name:'Country group'}),{target:{value:'prj-444444444444'}});
+ ui.rerender(<GovernmentWorkspace {...props} project={next}/>);await act(async()=>{});
+ expect((screen.getByRole('combobox',{name:'Country group'})as HTMLSelectElement).value).toBe('prj-444444444444');
+ expect(projectStore.hasPendingForms()).toBe(true);
+});
+
 it("opens the country entry form and confirms before discarding input", async () => {
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
   render(<GovernmentWorkspace project={opened().project} projects={[]} language="en" onProjectsChanged={vi.fn()} />);

@@ -48,9 +48,16 @@ function WorkspaceBody({ project, projects, language, onProjectsChanged, onOpenP
   const [at, setAt] = useState(localToday);
   const [editor, setEditor] = useState<{ iri?: string;kind:HistorySelection } | null>(null);
   const [sourceId, setSourceId] = useState(profile.countryProjectId ?? "");
+  const acceptedSource=useRef(profile.countryProjectId??'');
   const [preview, setPreview] = useState<DomainProfilePreview | null>(null);
   const [configBusy, setConfigBusy] = useState(false);
   const [configFailure, setConfigFailure] = useState<unknown>(null);
+  useEffect(()=>{
+    const previous=acceptedSource.current,next=profile.countryProjectId??'';
+    acceptedSource.current=next;
+    // Refresh only a clean setting; an actual selection retains its owner.
+    setSourceId(current=>current===previous?next:current);setPreview(null);setConfigFailure(null);
+  },[profile.countryProjectId]);
   const [result, setResult] = useState<{ owner: string; data: CountryPage } | null>(null);
   const [failure, setFailure] = useState<{ owner: string; cause: unknown } | null>(null);
   const live = useRef(true);

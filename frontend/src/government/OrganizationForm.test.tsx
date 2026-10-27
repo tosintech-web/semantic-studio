@@ -34,6 +34,40 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); projectStore._reset(); });
 
+function organizationDetails(label:string) {
+ return {...VIEW,organizations:{items:[{iri:'urn:organization',names:[{value:label,language:'en'}],kind:'Organization',
+  identifier:'old-id',formCountryIri:COUNTRY_IRI,existencePeriod:UNKNOWN,countryPeriod:UNKNOWN,
+  sources:[{kind:'text',value:label+' decree'}],unsupported:[]}],total:1,offset:0,limit:50}};
+}
+it('rehydrates an untouched organization after an accepted team model refresh',async()=>{
+ mocks.getGovernmentView.mockResolvedValue(organizationDetails('Original name'));
+ render(<OrganizationForm projectId={PID} targetIri="urn:organization" onSaved={vi.fn()} onCancel={vi.fn()}/>);
+ await screen.findByDisplayValue('Original name');
+ const latest=opened('government-organizations-v1');latest.documents[0].revision=4;
+ mocks.openProject.mockResolvedValue(latest);mocks.getGovernmentView.mockResolvedValue(organizationDetails('Teammate name'));
+ await act(async()=>{await projectStore.reloadForTeam(()=>true);});
+ await screen.findByDisplayValue('Teammate name');
+ fireEvent.change(screen.getByLabelText('Organization identifier'),{target:{value:'new-id'}});
+ fireEvent.click(screen.getByRole('button',{name:'Save government organization'}));await act(async()=>{});
+ expect(mocks.runCommand.mock.lastCall?.[3]).toMatchObject({identifier:'new-id',names:[{value:'Teammate name',language:'en'}],sources:[{kind:'text',value:'Teammate name decree'}]});
+});
+it('retains dirty organization input and refuses submission after its target revision changes',async()=>{
+ mocks.getGovernmentView.mockResolvedValue(organizationDetails('Original name'));
+ render(<OrganizationForm projectId={PID} targetIri="urn:organization" onSaved={vi.fn()} onCancel={vi.fn()}/>);
+ await screen.findByDisplayValue('Original name');
+ fireEvent.change(screen.getByLabelText('Preferred name 1'),{target:{value:'My pending name'}});
+ const latest=opened('government-organizations-v1');latest.documents[0].revision=4;
+ mocks.openProject.mockResolvedValue(latest);mocks.getGovernmentView.mockResolvedValue(organizationDetails('Teammate name'));
+ await act(async()=>{await projectStore.reloadForTeam(()=>true);});
+ expect(screen.getByDisplayValue('My pending name')).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Save government organization'}).getAttribute('aria-disabled')).toBe('true');
+ fireEvent.click(screen.getByRole('button',{name:'Save government organization'}));expect(mocks.runCommand).not.toHaveBeenCalled();
+ const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);
+ fireEvent.click(screen.getByRole('button',{name:'Reload entry'}));expect(screen.getByDisplayValue('My pending name')).toBeTruthy();
+ confirm.mockReturnValue(true);fireEvent.click(screen.getByRole('button',{name:'Reload entry'}));await screen.findByDisplayValue('Teammate name');
+ confirm.mockRestore();
+});
+
 it("registers the selected country, shared ORG kind and explicitly unknown periods", async () => {
   const onSaved = vi.fn();
   render(<OrganizationForm projectId={PID} onSaved={onSaved} onCancel={vi.fn()} />);

@@ -5,7 +5,7 @@ SUMMARY
     Real HTTPS/PostgreSQL country and government acceptance with signed sessions.
 BASIC IDEA
     Reuse P2's isolated authenticated browsers and the local UI workflow, then
-    verify exact response replay, viewer refusal and one-step Undo over HTTP.
+    verify replay, viewer refusal, one-step Undo and clean team refresh ownership.
 INPUTS / INPUT SOURCES
     Synthetic P2 identities, disposable internal DB and generated government data.
 EXPECTED OUTPUT
@@ -42,6 +42,27 @@ export async function runGovernmentTeam(options) {
    const metadata={source:'Synthetic government fixture',license:'Synthetic data only'};
    const preview=await api('POST',`/api/projects/${government}/release-preview`,metadata);
    assert.equal(preview.status,422);assert.equal(preview.body.code,'government_release_profile_unsupported');
+   await browser.send('Emulation.setDeviceMetricsOverride',{width:1600,height:1000,deviceScaleFactor:1,mobile:false});
+   await browser.goto(BASE);await browser.waitFor('document.querySelector(".home-screen")');
+   await browser.clickText('.government-group-buttons button','Government organizations');
+   await browser.clickText('.government-group-navigation section li button','Synthetic government');
+   await browser.waitFor('document.querySelector(".government-entry-list")?.textContent.includes("Synthetic Ministry")');
+   await browser.clickText('.government-entry-list button','Synthetic Ministry');
+   await browser.waitFor('document.querySelector("input[data-name-value]")?.value==="Synthetic Ministry"');
+   const current=(await api('GET',`/api/projects/${government}/government/view?at=2030-04-01`)).body;
+   const ministry=current.organizations.items.find(row=>row.label==='Synthetic Ministry');assert.ok(ministry);
+   const external=await api('POST',path,{command:'CreateGovernmentOrganization',args:{iri:ministry.iri,
+    names:[{value:'Externally renamed ministry',language:'en'}],kind:ministry.kind,identifier:ministry.identifier,
+    countryIri:ministry.formCountryIri,countryPeriod:ministry.countryPeriod,existencePeriod:ministry.existencePeriod,
+    sources:ministry.sources,referenceBasis:current.referenceBasis}});assert.equal(external.status,200,JSON.stringify(external.body));
+   // Exercise the real ten-second clean poll, rather than accepting versions in
+   // test code: the still-untouched form must hydrate the new accepted fields.
+   await browser.waitFor('document.querySelector("input[data-name-value]")?.value==="Externally renamed ministry"',30000);
+   await browser.type('.government-form input[id$="-identifier"]','edited-after-refresh');
+   await browser.clickText('.government-form button','Save government organization');await browser.waitFor('document.querySelector(".government-dated-view")');
+   const accepted=(await api('GET',`/api/projects/${government}/government/view?at=2030-04-01`)).body.organizations.items.find(row=>row.iri===ministry.iri);
+   assert.equal(accepted.label,'Externally renamed ministry');assert.equal(accepted.identifier,'edited-after-refresh');
+   options.log('government-team-clean-refresh','real team poll rehydrated the pristine form; an identifier edit preserved the external rename');
   }});
   options.log('government-team','signed HTTPS sessions, real PostgreSQL, full UI workflow, replay, viewer refusal and country-preserving Undo passed');
  }});

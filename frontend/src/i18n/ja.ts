@@ -113,6 +113,7 @@ export const ja: Catalog = {
   "government.noConfirmedCountry": "基準日に確定した所属国はありません",
   "government.nameUnconfirmed": "名称の時点未確認",
   "government.referenceSelectionChanged": "国の参照元が変わりました。国の参照元を再確認し、選択済みの国すべてを確認してください。",
+  "government.organizationChanged": "入力を保持している間に組織が変更されました。保存する前に項目を再読込し、最新の内容を確認してください。",
   "government.entry_stale": "国の項目が変更されました。保存する前に読み込み直してください。",
   "government.reloadEntry": "項目を再読み込み",
   "government.countriesTitle": "国",

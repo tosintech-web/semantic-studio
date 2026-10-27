@@ -113,6 +113,7 @@ export const en: Catalog = {
   "government.noConfirmedCountry": "No confirmed country affiliation on this date",
   "government.nameUnconfirmed": "Name not confirmed for this date",
   "government.referenceSelectionChanged": "The country source changed. Refresh country authority to reconfirm all selected countries.",
+  "government.organizationChanged": "This organization changed while your input was retained. Reload the entry to review its latest fields before saving.",
   "government.entry_stale": "The country entry changed. Reload it before saving.",
   "government.reloadEntry": "Reload entry",
   "government.countriesTitle": "Countries",

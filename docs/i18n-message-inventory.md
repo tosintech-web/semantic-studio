@@ -3490,7 +3490,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.existencePeriod` | — | `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx` |
 | `government.countryPeriod` | — | `frontend/src/government/OrganizationForm.tsx` |
 | `government.refreshCountries` | — | `frontend/src/government/CountryPicker.tsx` |
-| `government.leave.confirm` | — | `frontend/src/App.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryForm.tsx` |
+| `government.leave.confirm` | — | `frontend/src/App.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/OrganizationForm.tsx` |
 | `government.countriesTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GroupNavigation.tsx` |
 | `government.organizationsTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/GroupNavigation.tsx` |
 | `government.countryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
@@ -3515,7 +3515,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.groupEntries` | — | `frontend/src/components/ProjectHeader.tsx` |
 | `government.unsupportedProfile` | — | `frontend/src/components/ProjectHeader.tsx` |
 | `government.entry_stale` | — | `backend/app/government/commands.py` |
-| `government.reloadEntry` | — | `frontend/src/government/CountryForm.tsx` |
+| `government.reloadEntry` | — | `frontend/src/government/CountryForm.tsx`, `frontend/src/government/OrganizationForm.tsx` |
 
 | `government.history_conflict` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
 | `government.history_saved` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
@@ -3554,6 +3554,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.noConfirmedCountry` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.nameUnconfirmed` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.referenceSelectionChanged` | — | `frontend/src/government/RelationForm.tsx`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.organizationChanged` | — | `frontend/src/government/OrganizationForm.tsx` | en/ja |
 | `government.nameHistoryEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.changeEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
 | `government.identityHelp` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
