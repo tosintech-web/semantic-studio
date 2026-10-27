@@ -28,6 +28,8 @@ def authorize_inverse(repository, actor, request_id, changes, resources, role, *
     """
     from .permissions import classify_route, allows
     from ..projects import PROJECT_ID, split_document_id
+    if any(key.startswith("release:") for key in changes):
+        raise RepositoryError("undo_forbidden")
     if role == "admin":
         return
     if role != "editor":

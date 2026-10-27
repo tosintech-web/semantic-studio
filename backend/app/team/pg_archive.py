@@ -89,6 +89,13 @@ def resource_references(key, value):
     if value is None:
         return set()
     payload = _payload(value)
+    if key.startswith('release:'):
+        from ..releases.service import validate_resource
+        from ..releases.profile import ReleaseError
+        try:
+            return {validate_resource(key, payload)}
+        except ReleaseError:
+            raise MaintenanceError('invalid_resource') from None
     if key.startswith('file:'):
         digest = payload.get('blob')
         if not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest):
