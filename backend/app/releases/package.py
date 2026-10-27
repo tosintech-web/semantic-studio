@@ -17,8 +17,9 @@ import hashlib
 import json
 import re
 import stat
+import zlib
 from uuid import UUID
-from zipfile import ZipFile, ZipInfo, BadZipFile, ZIP_DEFLATED
+from zipfile import ZipFile, ZipInfo, BadZipFile, ZIP_DEFLATED, ZIP_STORED
 from rdflib import Graph, URIRef, Literal
 from .profile import Projection, ReleaseError, project_graph, PROFILE_ID, PROFILE_VERSION, ALLOWED
 from ..team.rdf_codec import _decode_term, private_rdf_diagnostics
@@ -130,6 +131,7 @@ def validate_package(data: bytes, *, require_approved: bool = True) -> Validated
             infos=archive.infolist()
             if len(infos)!=5 or {i.filename for i in infos}!=FILES: raise ValueError
             for info in infos:
+                if info.compress_type not in (ZIP_DEFLATED, ZIP_STORED): raise ValueError
                 mode=info.external_attr >> 16
                 if stat.S_ISLNK(mode) or info.is_dir() or info.flag_bits & 1 or info.file_size>MAX_BYTES: raise ValueError
                 value=bytearray()
@@ -140,6 +142,18 @@ def validate_package(data: bytes, *, require_approved: bool = True) -> Validated
                         value.extend(chunk)
                 if len(value)!=info.file_size: raise ValueError
                 files[info.filename]=bytes(value)
+        return validate_files(files, require_approved=require_approved)
+    except ReleaseError: raise
+    except (ValueError,TypeError,KeyError,AttributeError,UnicodeError,BadZipFile,RuntimeError,OverflowError,RecursionError,zlib.error):
+        raise ReleaseError() from None
+
+
+@private_rdf_diagnostics()
+def validate_files(files: dict[str,bytes], *, require_approved: bool = True) -> ValidatedPackage:
+    """Validate downloaded public files without reconstructing a second ZIP."""
+    try:
+        if type(files) is not dict or set(files)!=FILES or any(type(v) is not bytes for v in files.values()): raise ValueError
+        if sum(map(len,files.values()))>MAX_BYTES: raise ReleaseError('too_large',413)
         m=strict_json(files['manifest.json'])
         if type(m) is not dict or set(m)!={'formatVersion','releaseId','approved','createdAt','profileId','profileVersion','source','license','entityCount','statementCount','files'}: raise ValueError
         if type(m['formatVersion']) is not int or m['formatVersion']!=1 or m['profileId']!=PROFILE_ID or type(m['profileVersion']) is not int or m['profileVersion']!=1: raise ValueError
@@ -169,5 +183,5 @@ def validate_package(data: bytes, *, require_approved: bool = True) -> Validated
         if files['NOTICE.txt']!=expected_notice: raise ValueError
         return ValidatedPackage(m,files)
     except ReleaseError: raise
-    except (ValueError,TypeError,KeyError,AttributeError,UnicodeError,BadZipFile,RuntimeError,OverflowError,RecursionError):
+    except (ValueError,TypeError,KeyError,AttributeError,UnicodeError,BadZipFile,RuntimeError,OverflowError,RecursionError,zlib.error):
         raise ReleaseError() from None

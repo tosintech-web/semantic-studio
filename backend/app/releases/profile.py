@@ -11,6 +11,7 @@ EXPECTED OUTPUT
     A detached public graph, counts and explicit exclusion reasons.
 """
 from dataclasses import dataclass
+import re
 from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import RDF, RDFS, SKOS
 
@@ -35,6 +36,13 @@ class Projection:
     excluded_by_reason: dict
 
 
+def valid_iri(value):
+    text=str(value)
+    if not re.match(r'^[A-Za-z][A-Za-z0-9+.-]*:',text) or re.search(r'[<>"{}|^`\\\x00-\x20]',text):
+        raise ReleaseError()
+    return text
+
+
 def project_graph(graph: Graph) -> Projection:
     if len(graph) > MAX_STATEMENTS:
         raise ReleaseError('too_large', 413)
@@ -45,5 +53,8 @@ def project_graph(graph: Graph) -> Projection:
         if reason:
             excluded[reason] = excluded.get(reason, 0) + 1
         else:
+            valid_iri(s)
+            if isinstance(o,URIRef): valid_iri(o)
+            elif o.datatype is not None: valid_iri(o.datatype)
             public.add((s, p, o))
     return Projection(public, len(set(public.subjects())), len(public), excluded)

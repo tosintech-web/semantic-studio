@@ -82,3 +82,27 @@ def test_tampered_and_extra_entries_refused():
             if mode=='extra': z.writestr('../private',b'bad')
             if mode=='duplicate': z.writestr('manifest.json',source['manifest.json'])
         with pytest.raises(ReleaseError): validate_package(out.getvalue())
+
+def test_corrupt_deflate_stream_is_a_finite_refusal():
+    data=bytearray(package())
+    with ZipFile(BytesIO(data)) as z:
+        item=z.infolist()[0]
+        start=item.header_offset+30+len(item.filename.encode())+len(item.extra)
+    data[start]=255
+    with pytest.raises(ReleaseError): validate_package(bytes(data))
+
+@pytest.mark.parametrize('position',['subject','object','datatype'])
+def test_relative_iris_cannot_change_meaning_in_turtle(position):
+    g=Graph()
+    if position=='subject':g.add((URIRef('relative'),SKOS.prefLabel,Literal('name')))
+    elif position=='object':g.add((URIRef('urn:test:a'),SKOS.related,URIRef('relative')))
+    else:g.add((URIRef('urn:test:a'),SKOS.definition,Literal('name',datatype=URIRef('relative'))))
+    with pytest.raises(ReleaseError):
+        build_package(project_graph(g),release_id=RID,created_at='2026-10-27T00:00:00+00:00',metadata=META,approved=True)
+
+@pytest.mark.parametrize('compression',[12,14])
+def test_unreviewed_zip_codecs_are_refused(compression):
+    files=validate_package(package()).files;output=BytesIO()
+    with ZipFile(output,'w',compression=compression) as z:
+        for name,value in files.items():z.writestr(name,value)
+    with pytest.raises(ReleaseError):validate_package(output.getvalue())
