@@ -3714,9 +3714,11 @@ def _draft_paths(document: OpenDocument) -> tuple[Path, Path]:
 
 
 from .government.references import editing_locked
+from .government.commands import HISTORY_COMMANDS, history_basis, cmd_put_government_relation, cmd_put_government_name, cmd_apply_government_change
 from .government.commands import cmd_create_country, cmd_create_government_organization
 
 GOVERNMENT_COMMANDS = {"CreateCountry": cmd_create_country, "CreateGovernmentOrganization": cmd_create_government_organization}
+GOVERNMENT_COMMANDS.update({'PutGovernmentRelation': cmd_put_government_relation, 'PutGovernmentName': cmd_put_government_name, 'ApplyGovernmentChange': cmd_apply_government_change})
 COMMANDS.update(GOVERNMENT_COMMANDS)
 
 
@@ -3960,10 +3962,19 @@ class EditingService:
         model_lock = self._open[pid]["model"].lock if doc != "model" else contextlib.nullcontext()
         with document.lock, model_lock:
             ctx = self._context(document, lang)
-            if name == "CreateGovernmentOrganization" or (name == "CreateCountry" and args.get("iri") is not None and "referenceBasis" in args):
+            if name in HISTORY_COMMANDS or name == "CreateGovernmentOrganization" or (name == "CreateCountry" and args.get("iri") is not None and "referenceBasis" in args):
                 from .government.references import country_reference
                 ctx.country_reference = country_reference(self, pid)
-            if name == "DeleteEntity":
+            if name in HISTORY_COMMANDS:
+                ctx.history_basis = history_basis(ctx, name, args)
+                if not dry_run and args.get('previewBasis') != ctx.history_basis:
+                    from .government.profile import DomainError
+                    raise DomainError('Review this proposal again after its inputs or group changed.', code='government.entry_stale', status=409)
+                change = handler(ctx, args)
+                if dry_run:
+                    return {'dryRun': True, 'basis': ctx.history_basis, 'delta': _delta_json(change), 'warnings': ctx.history_warnings, 'revision': document.ontology.revision}
+                impact = None
+            elif name == "DeleteEntity":
                 change, impact = delete_plan(ctx, args)
                 if dry_run:
                     return {"dryRun": True, "impact": display_values(impact), "revision": document.ontology.revision}

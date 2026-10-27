@@ -888,7 +888,10 @@ export const SERVER_CONTRACTS = {
   "fetch.web_only": {},
   "government.country_missing": {},
   "government.country_saved": {},
+  "government.cross_country": {},
   "government.entry_stale": {},
+  "government.history_conflict": {},
+  "government.history_saved": {},
   "government.invalid_input": {},
   "government.invalid_profile": {},
   "government.name_required": {},
@@ -2463,7 +2466,10 @@ export interface ServerMessageArgs {
   "fetch.web_only": undefined;
   "government.country_missing": undefined;
   "government.country_saved": undefined;
+  "government.cross_country": undefined;
   "government.entry_stale": undefined;
+  "government.history_conflict": undefined;
+  "government.history_saved": undefined;
   "government.invalid_input": undefined;
   "government.invalid_profile": undefined;
   "government.name_required": undefined;

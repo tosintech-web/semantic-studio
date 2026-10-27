@@ -15,6 +15,9 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "government.history_conflict": "The proposed history contains conflicting records. Check overlapping dates, names and containment cycles.",
+  "government.history_saved": "Government history saved.",
+  "government.cross_country": "This containment connects organizations belonging to different countries.",
   "government.entry_stale": "The country entry changed. Reload it before saving.",
   "government.reloadEntry": "Reload entry",
   "government.countriesTitle": "Countries",

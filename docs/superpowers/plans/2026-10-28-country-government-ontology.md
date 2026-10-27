@@ -167,11 +167,11 @@ existenceEdits:{entity:string,period:Period,sources:Source[]}[]、sources、desc
 既存dryRunの結果へ変更一覧とbasisを載せ、確定時に全検査を再実行する。既存command resultは後方互換。
 改編編集で変更済み関係を黙って再適用せず、preview時のtarget revision/CASを必須にする。
 
-- [ ] **Step 1: RED試験。** merge/splitの複数前身後身、吸収統合の存続IRIと吸収側終了の明示変更、別組織グループ端点の拒否、改称/移管の同一IRI、未来の名称、不明期間、包含循環、他国所属の包含警告、監督を包含と誤認しないこと、100件超の拒否と無変更、日付/出典不備時の全拒否を確認。
-- [ ] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_government_changes.py -q`。teamにはpreview後競合、再送、改編一回Undo、国側をUndoしない試験を追加して専用runnerでRED確認。
-- [ ] **Step 3: 実装。** commandは全Changeを検証してから返し、旧関係の終了と新関係の開始を別commandにしない。新組織はTask 3で事前登録し、改編フォームが未登録組織の暗黙作成をしない。日付不明の重なりは警告、確定重複は拒否。
-- [ ] **Step 4: GREEN確認。** localと実DB3.12/3.14で全成功。dryRun前後にgraph hashが変わらず、確定・Undo・Redoの集合が一致することを確認。
-- [ ] **Step 5: commit。** `feat: record atomic government reorganizations and history`。
+- [x] **Step 1: RED試験。** merge/splitの複数前身後身、吸収統合の存続IRIと吸収側終了の明示変更、別組織グループ端点の拒否、改称/移管の同一IRI、未来の名称、不明期間、包含循環、他国所属の包含警告、監督を包含と誤認しないこと、100件超の拒否と無変更、日付/出典不備時の全拒否を確認。
+- [x] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_government_changes.py -q`。teamにはpreview後競合、再送、改編一回Undo、国側をUndoしない試験を追加して専用runnerでRED確認。
+- [x] **Step 3: 実装。** commandは全Changeを検証してから返し、旧関係の終了と新関係の開始を別commandにしない。新組織はTask 3で事前登録し、改編フォームが未登録組織の暗黙作成をしない。日付不明の重なりは警告、確定重複は拒否。
+- [x] **Step 4: GREEN確認。** localと実DB3.12/3.14で全成功。dryRun前後にgraph hashが変わらず、確定・Undo・Redoの集合が一致することを確認。
+- [x] **Step 5: commit。** `feat: record atomic government reorganizations and history`。
 
 ## Task 6: 関係・改編フォームと基準日表示（G2完了）
 

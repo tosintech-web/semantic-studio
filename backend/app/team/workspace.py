@@ -314,6 +314,14 @@ class TeamWorkspace:
             # profile-preview request skips candidate publication and audit.
             if isinstance(preview_body, dict) and preview_body.get("dryRun") is True and "domainProfile" in preview_body:
                 shared = False
+        if shared and scope['method'] == 'POST' and re.fullmatch(r'/api/projects/[^/]+/documents/model/commands', scope['path']):
+            try:
+                preview_body = json.loads(body)
+            except (ValueError, UnicodeError):
+                preview_body = None
+            from ..government.commands import HISTORY_COMMANDS
+            if isinstance(preview_body, dict) and preview_body.get('dryRun') is True and preview_body.get('command') in HISTORY_COMMANDS:
+                shared = False
         expected, request_id, identity = {}, None, None
         if shared:
             try:

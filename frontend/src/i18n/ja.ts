@@ -15,6 +15,9 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "government.history_conflict": "履歴に矛盾があります。期間・名称の重複や包含関係の循環を確認してください。",
+  "government.history_saved": "政府組織の履歴を保存しました。",
+  "government.cross_country": "異なる国に所属する組織の包含関係です。",
   "government.entry_stale": "国の項目が変更されました。保存する前に読み込み直してください。",
   "government.reloadEntry": "項目を再読み込み",
   "government.countriesTitle": "国",

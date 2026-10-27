@@ -29,7 +29,7 @@ RELATION_PREDICATES = frozenset((GOV.inCountry, ORG.unitOf, ORG.subOrganizationO
 ORGANIZATION_TYPES = frozenset((ORG.Organization, ORG.FormalOrganization, ORG.OrganizationalUnit))
 RECORD_TYPES = frozenset((GOV.RelationRecord, GOV.NameRecord, GOV.ExistenceRecord))
 PERIOD_PREDICATES = frozenset((GOV.validFrom, GOV.validUntil, GOV.openStart, GOV.openEnd))
-COMMON_PREDICATES = PERIOD_PREDICATES | {RDF.type, DCTERMS.source, DCTERMS.description, RDFS.label}
+COMMON_PREDICATES = PERIOD_PREDICATES | {RDF.type, DCTERMS.source}
 State = StateLiteral["active", "inactive", "uncertain"]
 
 
@@ -203,7 +203,7 @@ def _common(graph, node, record_type, allowed):
 def read_relations(graph: Graph) -> list[RelationRecord]:
     records = []
     for node in sorted(set(graph.subjects(RDF.type, GOV.RelationRecord)), key=str):
-        problems, sources, period = _common(graph, node, GOV.RelationRecord, {GOV.subject, GOV.predicate, GOV.object})
+        problems, sources, period = _common(graph, node, GOV.RelationRecord, {GOV.subject, GOV.predicate, GOV.object, DCTERMS.description})
         ends = [_one(graph, node, p, problems, required=True, kind=URIRef) for p in (GOV.subject, GOV.predicate, GOV.object)]
         if ends[1] is not None and ends[1] not in RELATION_PREDICATES:
             problems.append("predicate")
@@ -284,13 +284,13 @@ def project_at(graph: Graph, *, at: date) -> Projection:
         if record.unsupported:
             diagnostics.append(Problem("government.record_unsupported", "warning", record.iri))
         elif period_state(record.period, at) == "active":
-            names.setdefault((record.entity, record.language), []).append(record)
+            names.setdefault((record.entity, (record.language or "").casefold()), []).append(record)
     for (entity, language), choices in names.items():
         if len(choices) != 1:
             diagnostics.append(Problem("government.name_overlap", "warning", entity))
             continue
         for value in list(projected.objects(URIRef(entity), SKOS.prefLabel)):
-            if isinstance(value, Literal) and value.language == language:
+            if isinstance(value, Literal) and (value.language or "").casefold() == language:
                 projected.remove((URIRef(entity), SKOS.prefLabel, value))
-        projected.add((URIRef(entity), SKOS.prefLabel, Literal(choices[0].value, lang=language)))
+        projected.add((URIRef(entity), SKOS.prefLabel, Literal(choices[0].value, lang=choices[0].language)))
     return Projection(projected, uncertain, diagnostics)

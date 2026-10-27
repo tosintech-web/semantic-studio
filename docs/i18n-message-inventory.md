@@ -3516,3 +3516,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.unsupportedProfile` | — | `frontend/src/components/ProjectHeader.tsx` |
 | `government.entry_stale` | — | `backend/app/government/commands.py` |
 | `government.reloadEntry` | — | `frontend/src/government/CountryForm.tsx` |
+
+| `government.history_conflict` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
+| `government.history_saved` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
+| `government.cross_country` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |

@@ -113,3 +113,42 @@ def validate_relations(graph: Graph) -> list[Problem]:
     for problem in problems:
         unique[(problem.code, problem.severity, problem.iri, str(problem.args))] = problem
     return list(unique.values())
+
+
+def validate_history(graph: Graph) -> list[Problem]:
+    from .records import read_names
+    from .profile import ORG, GOV
+    problems = validate_relations(graph)
+    checked = 0
+    names = defaultdict(list)
+    for name in read_names(graph):
+        if not name.unsupported:
+            names[(name.entity, (name.language or '').casefold())].append(name)
+    for group in names.values():
+        for index, name in enumerate(group):
+            for other in group[:index]:
+                checked += 1
+                if checked > MAX_VALIDATION_STEPS:
+                    return problems + [Problem('government.validation_limit', 'error', name.iri)]
+                overlap = _intersection(_span(name.period), _span(other.period))
+                if overlap is not None:
+                    problems.append(Problem('government.name_overlap', 'error' if overlap[2] else 'warning', name.iri, {'other': other.iri}))
+    records = [r for r in read_relations(graph) if not r.unsupported]
+    countries = defaultdict(list)
+    for record in records:
+        if record.predicate == str(GOV.inCountry):
+            countries[record.subject].append(record)
+    for record in records:
+        if record.predicate not in {str(ORG.unitOf), str(ORG.subOrganizationOf)}:
+            continue
+        for left in countries[record.subject]:
+            for right in countries[record.object]:
+                checked += 1
+                if checked > MAX_VALIDATION_STEPS:
+                    return problems + [Problem('government.validation_limit', 'error', record.iri)]
+                if left.object == right.object:
+                    continue
+                overlap = _intersection(_span(record.period), _span(left.period))
+                if overlap is not None and _intersection(overlap, _span(right.period)) is not None:
+                    problems.append(Problem('government.cross_country', 'warning', record.iri))
+    return problems

@@ -30,3 +30,7 @@ gov:cooperatesWith a owl:ObjectProperty, owl:SymmetricProperty .
 gov:changeKind a owl:DatatypeProperty ; rdfs:range xsd:string .
 gov:effectiveDate a owl:DatatypeProperty ; rdfs:range xsd:date .
 gov:existenceState a owl:DatatypeProperty ; rdfs:range xsd:string .
+
+gov:relationRecord a owl:ObjectProperty .
+gov:nameRecord a owl:ObjectProperty .
+gov:existenceRecord a owl:ObjectProperty .

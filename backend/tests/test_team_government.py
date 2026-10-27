@@ -137,3 +137,50 @@ def test_source_change_after_evaluation_is_caught_at_commit(team, monkeypatch):
         assert "Synthetic ministry" not in team.request("GET", f"/api/projects/{target}/documents/model/source").json()["text"]
     finally:
         second.client.close()
+
+
+def test_change_preview_is_read_only_then_replay_and_undo_are_atomic(team):
+    source,target,args=setup_groups(team)
+    url=f'/api/projects/{target}/documents/model/commands'
+    registered=team.request('POST',url,request_id='register-for-change',json={'command':'CreateGovernmentOrganization','args':args})
+    assert registered.status_code==200,registered.text
+    iri=registered.json()['created']
+    body={'kind':'rename','effectiveDate':'2030-01-01','originalIris':[iri],'resultingIris':[iri],
+          'relationEdits':[],'nameEdits':[{'entity':iri,'value':'Future','language':'en','period':{'start':{'date':'2030-01-01','open':False},'end':PERIOD['end']},'sources':args['sources']}],
+          'existenceEdits':[],'sources':args['sources'],'description':'Synthetic rename','referenceBasis':args['referenceBasis']}
+    before=team.workspace.repository.snapshot()
+    review=team.request('POST',url,request_id='preview-change',json={'command':'ApplyGovernmentChange','args':body,'dryRun':True})
+    assert review.status_code==200,review.text
+    assert team.workspace.repository.snapshot()==before
+    approved={**body,'previewBasis':review.json()['basis']}
+    versions=dict(team.versions)
+    reply=team.request('POST',url,request_id='apply-change',json={'command':'ApplyGovernmentChange','args':approved})
+    assert reply.status_code==200,reply.text
+    replay=team.request('POST',url,request_id='apply-change',versions=versions,json={'command':'ApplyGovernmentChange','args':approved})
+    assert replay.status_code==200 and replay.json()==reply.json()
+    source_before=team.request('GET',f'/api/projects/{source}/documents/model/source').json()['text']
+    assert team.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()['organizations']['items'][0]['label']=='Future'
+    assert team.request('POST',f'/api/projects/{target}/documents/model/undo',request_id='undo-change').status_code==200
+    assert team.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()['organizations']['items'][0]['label']=='Synthetic ministry'
+    assert team.request('GET',f'/api/projects/{source}/documents/model/source').json()['text']==source_before
+
+
+def test_change_preview_cannot_commit_after_another_editor_changes_target(team):
+    _,target,args=setup_groups(team)
+    url=f'/api/projects/{target}/documents/model/commands'
+    reply=team.request('POST',url,request_id='register-base',json={'command':'CreateGovernmentOrganization','args':args})
+    assert reply.status_code==200,reply.text
+    iri=reply.json()['created']
+    body={'entity':iri,'value':'Future','language':'en','period':PERIOD,'sources':args['sources'],'referenceBasis':args['referenceBasis']}
+    review=team.request('POST',url,request_id='review-name',json={'command':'PutGovernmentName','args':body,'dryRun':True})
+    assert review.status_code==200,review.text
+    second=Harness(team.workspace,'bob')
+    try:
+        second.request('GET','/api/team/versions')
+        changed=second.request('POST',url,request_id='other-editor',json={'command':'CreateGovernmentOrganization','args':{**args,'names':[{'value':'Later','language':'en'}]}})
+        assert changed.status_code==200,changed.text
+        team.request('GET','/api/team/versions')
+        refused=team.request('POST',url,request_id='apply-stale-review',json={'command':'PutGovernmentName','args':{**body,'previewBasis':review.json()['basis']}})
+        assert refused.status_code==409,refused.text
+    finally:
+        second.client.close()

@@ -1724,6 +1724,9 @@
     "government.organization_saved": {},
     "project.command_limit": {},
     "government.projection_limit": {},
-    "government.entry_stale": {}
+    "government.entry_stale": {},
+    "government.history_conflict": {},
+    "government.history_saved": {},
+    "government.cross_country": {}
   }
 }
