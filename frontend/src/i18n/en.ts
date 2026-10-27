@@ -15,6 +15,31 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "release.title": "Reviewed versions",
+  "release.note": "Create reviewed distribution versions. Distribution is a separate operation; this does not publish to the internet.",
+  "release.source": "Source",
+  "release.license": "Data license",
+  "release.preview": "Create preview",
+  "release.approve": "Approve version",
+  "release.review": "I reviewed all output files and their data license.",
+  "release.previewDownload": "Download all output for review",
+  "release.counts": "{entities} entities, {statements} statements",
+  "release.exclusions": "Excluded: {predicate} unsupported predicates, {blankNode} blank-node statements. Imports, shapes, snapshots and inference are excluded.",
+  "release.contentWarning": "Allowed fields can still contain private information. Review every output file.",
+  "release.empty": "No approved versions.",
+  "release.download": "Download package",
+  "release.more": "More versions",
+  "release.refresh": "Refresh versions",
+  "release.success": "Version approved. Download it and import it into the distribution service.",
+  "release.close": "Close",
+  "release.busy": "Working…",
+
+  "release.invalid": "Check the release input or package.",
+  "release.stale": "The dictionary changed. Create a new preview.",
+  "release.too_large": "The release exceeds its size limit. Reduce the input.",
+  "release.not_found": "The project or release was not found.",
+  "release.unavailable": "The release is unavailable. Retry after recovery.",
+
   "team.refresh": "Check sign-in",
   "team.refresh.failed": "Unable to check the team workspace. Try again.",
   "team.poll.changed": "Another member changed the workspace. Load the latest version before editing.",

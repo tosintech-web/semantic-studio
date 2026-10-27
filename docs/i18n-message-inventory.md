@@ -3407,3 +3407,31 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 
 | `about.teamPrivacy` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ | 7 | カタログ登録済み |
 | `about.teamPrivacyDetail` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ | 7 | カタログ登録済み |
+
+## P3 公開版のメッセージ
+
+| メッセージID | 引数 | 使用箇所 |
+| --- | --- | --- |
+| `release.approve` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.busy` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.close` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.contentWarning` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.counts` | entities, statements | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.download` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.empty` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.exclusions` | blankNode, predicate | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.invalid` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
+| `release.license` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.more` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.not_found` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
+| `release.note` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.preview` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.previewDownload` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.refresh` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.review` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.source` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.stale` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
+| `release.success` | — | `frontend/src/releases/ReleasePanel.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.title` | — | `frontend/src/releases/ReleasePanel.tsx`, `frontend/src/components/ProjectHeader.tsx` , `frontend/src/components/RulesBlock.tsx` |
+| `release.too_large` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
+| `release.unavailable` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |

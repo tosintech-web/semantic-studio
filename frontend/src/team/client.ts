@@ -79,7 +79,7 @@ export function isSharedTeamWrite(url: string, init?: RequestInit): boolean {
   if (/^\/api\/auth\//.test(path)) return false;
   if (/^\/api\/team\/users(?:\/[^/]+)?$/.test(path)) return false;
   if (/^\/api\/ontologies\/[^/]+\/(nodes|sparql)$/.test(path)) return false;
-  if (/^\/api\/projects\/[^/]+\/(open|close|validate|reasoning)$/.test(path)) return false;
+  if (/^\/api\/projects\/[^/]+\/(open|close|validate|reasoning|release-preview)$/.test(path)) return false;
   if (/^\/api\/projects\/[^/]+\/data\/(inspect|preview)$/.test(path)) return false;
   if (/^\/api\/ontologies\/loads\/[^/]+\/cancel$/.test(path)) return false;
   return true;
