@@ -32,3 +32,7 @@
 
 **/secrets
 **/team-local-source
+
+# Reviewed release packages and private local distribution state
+**/release-input
+**/release-data

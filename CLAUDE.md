@@ -280,7 +280,8 @@ leaves one behind.
 **Security and network**
 - Team authentication waits for PostgreSQL off the event loop and samples live time after acquiring the common write gate. [Team queued authentication]
 - Approval purposes come from source facts; an unknown redirect descriptor keeps the complete original reason visible. [Approval purposes carry source facts]
-- Only `network_broker.py` connects out; policy is asked before any name resolves. [outbound connection]
+- The independent `examples/release-consumer` demo alone uses a fixed distribution origin with redirects/proxies disabled and bounded reads; it never runs inside the editing app.
+- Only `network_broker.py` in the editing app connects out; policy is asked before any name resolves. [outbound connection]
 - The broker connects to the judged address (`_pinned_url`), the name in `Host` and SNI. [outbound connection]
 - Workers run in `contextvars.copy_context()`, or a just-once grant never reaches them. [outbound connection]
 - The broker's `total_timeout` reads unchunked. [SERVICE]

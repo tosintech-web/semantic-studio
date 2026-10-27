@@ -1,0 +1,48 @@
+# FILE: docker-compose.releases.yml
+# SUMMARY: Independent local release distribution and pinned consumer overlay.
+# BASIC IDEA: Only the operator import job writes the public volume; neither
+#             reader joins the editor's DB network or receives its secrets.
+# INPUTS / INPUT SOURCES: A reviewed package directory and explicit RELEASE_ID.
+# EXPECTED OUTPUT: Loopback-only read services that outlive the editing stack.
+services:
+  release-distribution:
+    build: .
+    image: semantic-studio:team
+    command: [python, -m, app.releases.server, --root, /releases, --host, 0.0.0.0, --port, '8080']
+    networks: [release_internal]
+    ports: ['127.0.0.1:${RELEASE_PORT:-8080}:8080']
+    volumes: [release_public:/releases:ro]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+  release-import:
+    build: .
+    image: semantic-studio:team
+    profiles: [release-maintenance]
+    network_mode: none
+    entrypoint: [python, -m, app.releases.distribution, --root, /releases]
+    command: [status]
+    volumes:
+      - release_public:/releases
+      - ${RELEASE_INPUT_DIR:-./release-input}:/input:ro
+    read_only: true
+    tmpfs: [/tmp]
+  release-consumer:
+    build: .
+    image: semantic-studio:team
+    command: [python, /app/examples/release-consumer/app.py]
+    environment:
+      RELEASE_ORIGIN: http://release-distribution:8080
+      RELEASE_ID: ${RELEASE_ID:-}
+      PYTHONPATH: /app
+    networks: [release_internal]
+    ports: ['127.0.0.1:${RELEASE_CONSUMER_PORT:-8081}:8081']
+    depends_on: [release-distribution]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+networks:
+  release_internal:
+    internal: true
+volumes:
+  release_public:
