@@ -15,7 +15,7 @@ EXPECTED OUTPUT
 import pytest
 import json
 from rdflib import Literal, Namespace
-from rdflib.namespace import OWL, RDF, SKOS
+from rdflib.namespace import DCTERMS, OWL, RDF, SKOS
 
 from app.editing import editing_service, project_store
 from test_government_commands import client, create_group, country, setup_organization, command
@@ -82,6 +82,62 @@ def test_dated_view_requires_date_and_projection_has_explicit_basis():
     assert projection.status_code == 200, projection.text
     assert projection.headers["X-Semantic-Studio-As-Of"] == "2020-04-01"
     assert projection.headers["X-Semantic-Studio-Basis"]
+
+
+@pytest.mark.parametrize('ranges,language,confirmed',[
+    ([], 'en', False),
+    ([('2010-01-01','2020-01-01')], 'en', False),
+    ([(None,None)], 'en', False),
+    ([('2030-01-01',None)], 'en', False),
+    ([('2010-01-01',None),('2015-01-01',None)], 'en', False),
+    ([('2010-01-01',None)], 'en', True),
+    ([('2010-01-01',None)], 'ja', False),
+])
+def test_dated_name_certainty_matches_the_selected_language_and_unique_applicable_record(ranges,language,confirmed):
+    from rdflib import URIRef
+    from app.government.records import parse_period,period_statements
+    _,pid,_,args=setup_organization()
+    entity=command(pid,'CreateGovernmentOrganization',{**args,'names':[
+        {'value':'Current English name','language':'en'},{'value':'現在の日本語名','language':'ja'}]}).json()['created']
+    own=editing_service.document(pid,'model').graph
+    for index,(start,end) in enumerate(ranges):
+        record=URIRef(f'urn:synthetic:name:{index}')
+        for statement in [(record,RDF.type,GOV.NameRecord),(record,GOV.entity,URIRef(entity)),
+                          (record,GOV.nameValue,Literal(f'Historical English name {index}',lang='en')),
+                          (record,DCTERMS.source,Literal('Synthetic name gazette'))]:
+            own.add(statement)
+        period={'start':{'date':start,'open':False},'end':{'date':end,'open':bool(start and not end)}}
+        for statement in period_statements(record,parse_period(period)):
+            own.add(statement)
+    response=client.get(f'/api/projects/{pid}/government/view',params={'at':'2025-01-01','displayLanguage':language})
+    assert response.status_code==200,response.text
+    row=response.json()['organizations']['items'][0]
+    assert row['nameConfirmed'] is confirmed
+    assert row['label']==('Historical English name 0' if confirmed else '現在の日本語名' if language=='ja' else 'Current English name')
+
+
+def test_active_country_resolution_is_independent_of_single_record_edit_fields():
+    from rdflib import URIRef
+    from app.government.records import parse_period,period_statements
+    _,pid,country_iri,args=setup_organization()
+    entity=command(pid,'CreateGovernmentOrganization',args).json()['created']
+    own=editing_service.document(pid,'model').graph
+    initial=next(own.subjects(GOV.subject,URIRef(entity)))
+    for predicate in (GOV.validFrom,GOV.validUntil,GOV.openStart,GOV.openEnd):
+        own.remove((initial,predicate,None))
+    for statement in period_statements(initial,parse_period({'start':{'date':None,'open':True},'end':{'date':'2020-01-01','open':False}})):
+        own.add(statement)
+    record=URIRef('urn:synthetic:later-affiliation')
+    for statement in [(record,RDF.type,GOV.RelationRecord),(record,GOV.subject,URIRef(entity)),
+                      (record,GOV.predicate,GOV.inCountry),(record,GOV.object,URIRef(country_iri)),
+                      (record,DCTERMS.source,Literal('Synthetic affiliation gazette'))]:
+        own.add(statement)
+    for statement in period_statements(record,parse_period({'start':{'date':'2020-01-01','open':False},'end':{'date':None,'open':True}})):
+        own.add(statement)
+    row=client.get(f'/api/projects/{pid}/government/view',params={'at':'2025-01-01'}).json()['organizations']['items'][0]
+    assert row['formCountryIri'] is None
+    assert row['countryIri']==country_iri
+    assert row['activeCountryResolved'] is True
 
 
 def test_country_lookup_matches_explicit_team_read_policy():
@@ -180,3 +236,91 @@ def test_organization_detail_contains_original_unknown_period_and_shared_kind_la
     assert search["organizations"]["total"] == 1
     assert search["organizations"]["items"][0]["label"] == "Second"
     assert client.get(f"/api/projects/{target}/government/view", params={"at": "2020-04-01", "q": "x" * 201}).status_code == 422
+
+
+def test_all_history_zip_includes_accepted_unsaved_records_without_saving():
+    from io import BytesIO
+    from zipfile import ZipFile
+    from rdflib.compare import isomorphic
+    from app.editing import parse_turtle
+    from test_government_changes import setup, event, preview
+    source,pid,args,entities=setup()
+    approved,_=preview(pid,'ApplyGovernmentChange',event(args,entities))
+    assert command(pid,'ApplyGovernmentChange',approved).status_code==200
+    document=editing_service.document(pid,'model')
+    saved=project_store.document_path(pid,'model').read_bytes()
+    before=set(document.graph)
+    response=client.get(f'/api/projects/{pid}/export')
+    assert response.status_code==200,response.text
+    with ZipFile(BytesIO(response.content)) as archive:
+        manifest=json.loads(archive.read('project.json'))
+        exported=parse_turtle(archive.read('model.ttl').decode(),None,manifest['baseIri'])
+        assert isomorphic(exported,document.graph)
+        assert manifest['domainProfile']['countryProjectId']==source
+        assert any(name.endswith('/model.ttl') for name in archive.namelist())
+    assert set(document.graph)==before and document.dirty
+    assert project_store.document_path(pid,'model').read_bytes()==saved
+
+
+def test_duplicate_preserves_unsaved_history_iris_profile_and_original_country_authority():
+    from rdflib.compare import isomorphic
+    from test_government_changes import setup,event,preview
+    source,pid,args,entities=setup()
+    approved,_=preview(pid,'ApplyGovernmentChange',event(args,entities))
+    assert command(pid,'ApplyGovernmentChange',approved).status_code==200
+    original=editing_service.document(pid,'model').graph
+    reply=client.post(f'/api/projects/{pid}/duplicate')
+    assert reply.status_code==200,reply.text
+    duplicate=reply.json()['id']
+    assert client.post(f'/api/projects/{duplicate}/open').status_code==200
+    assert isomorphic(editing_service.document(duplicate,'model').graph,original)
+    assert project_store.manifest(duplicate)['domainProfile']['countryProjectId']==source
+    assert project_store.manifest(duplicate)['baseIri']==project_store.manifest(pid)['baseIri']
+
+
+def test_saved_history_and_reference_basis_survive_new_local_services(tmp_path):
+    from app.projects import ProjectStore
+    from app.store import OntologyStore
+    from app.editing import EditingService
+    from app.government.views import view
+    from test_government_changes import setup,event,preview
+    source,pid,args,entities=setup()
+    approved,_=preview(pid,'ApplyGovernmentChange',event(args,entities))
+    change=command(pid,'ApplyGovernmentChange',approved).json()['created']
+    before=client.get(f'/api/projects/{pid}/government/view?at=2030-01-01').json()
+    for project in (source,pid):
+        assert client.post(f'/api/projects/{project}/documents/model/save',json={'confirmRewrite':True}).status_code==200
+    root=project_store.dir.parent
+    editing_service.close_all()
+    fresh=EditingService(ProjectStore(root),OntologyStore(root))
+    try:
+        after=view(fresh,pid,'2030-01-01')
+        assert after['referenceBasis']==before['referenceBasis']
+        assert {row['iri'] for row in after['organizations']['items']}==set(entities)
+        assert after['changes']['items'][0]['iri']==change
+    finally:
+        fresh.close_all()
+
+
+def test_restored_target_without_country_group_keeps_unresolved_iri_and_history(tmp_path):
+    from io import BytesIO
+    from zipfile import ZipFile
+    from app.projects import ProjectStore
+    from app.store import OntologyStore
+    from app.editing import EditingService
+    from app.government.views import view
+    source,pid,country,args=setup_organization()
+    created=command(pid,'CreateGovernmentOrganization',args).json()['created']
+    data=client.get(f'/api/projects/{pid}/export').content
+    root=tmp_path/'restored-library';folder=root/'projects'/pid;folder.mkdir(parents=True)
+    with ZipFile(BytesIO(data)) as archive:
+        archive.extractall(folder)
+    fresh=EditingService(ProjectStore(root),OntologyStore(root))
+    try:
+        result=view(fresh,pid,'2020-01-01')
+        assert result['referenceBasis'] is None
+        row=result['organizations']['items'][0]
+        assert row['iri']==created and row['formCountryIri']==country and not row['countryResolved']
+        assert fresh.projects.manifest(pid)['domainProfile']['countryProjectId']==source
+    finally:
+        fresh.close_all()

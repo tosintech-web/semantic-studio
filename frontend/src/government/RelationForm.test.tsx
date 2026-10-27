@@ -78,3 +78,32 @@ it('invalidates old review across reauthentication while retaining raw input',as
  expect(screen.getByDisplayValue('Reauthentication draft')).toBeTruthy();
  configureTeam({mode:'local',authenticated:false,user:null,csrf:null});
 });
+
+it('keeps a retained country selection basis across reauthentication until explicit reconfirmation',async()=>{
+ const {configureTeam}=await import('../team/client');
+ const props={projectId:PID,onSaved:vi.fn(),onCancel:vi.fn()};
+ const ui=render(<RelationForm {...props}/>);
+ await screen.findAllByRole('option',{name:/Ministry A/});
+ fireEvent.change(screen.getByRole('combobox',{name:'Subject organization'}),{target:{value:A}});
+ fireEvent.change(screen.getByLabelText('Relationship'),{target:{value:'urn:semantic-studio:government:v1#inCountry'}});
+ await screen.findByRole('option',{name:/Synthetic country/});
+ fireEvent.change(screen.getByRole('combobox',{name:'Choose country'}),{target:{value:PAGE.items[0].iri}});
+ fireEvent.change(screen.getByLabelText('Source 1'),{target:{value:'Retained affiliation source'}});
+ const newer={...BASIS,sourceToken:'source-after-reauth'};
+ mocks.getGovernmentView.mockResolvedValue({...VIEW,referenceBasis:newer});
+ configureTeam({mode:'team',authenticated:false,user:null,csrf:null});ui.rerender(<RelationForm {...props}/>);
+ await act(async()=>{});
+ fireEvent.click(screen.getByRole('button',{name:'Review changes'}));await screen.findByRole('checkbox',{name:'I reviewed all changes'});
+ expect(mocks.previewGovernmentCommand.mock.lastCall?.[2]).toMatchObject({referenceBasis:BASIS,object:PAGE.items[0].iri});
+ fireEvent.click(screen.getByRole('button',{name:'Refresh country authority'}));await act(async()=>{});
+ fireEvent.click(screen.getByRole('button',{name:'Review changes'}));await act(async()=>{});
+ expect(mocks.previewGovernmentCommand.mock.lastCall?.[2]).toMatchObject({referenceBasis:newer,object:PAGE.items[0].iri});
+ configureTeam({mode:'local',authenticated:false,user:null,csrf:null});
+});
+
+it('lets a viewer leave a read-only relationship form without sending commands',async()=>{
+ const {TeamContext}=await import('../team/TeamProvider');const cancel=vi.fn();
+ render(<TeamContext.Provider value={{mode:'team',canEdit:false,canAdmin:false,suspended:false}}><RelationForm projectId={PID} targetIri="urn:existing:record" onSaved={vi.fn()} onCancel={cancel}/></TeamContext.Provider>);
+ await act(async()=>{});fireEvent.click(screen.getByRole('button',{name:'Cancel'}));
+ expect(cancel).toHaveBeenCalledTimes(1);expect(mocks.runCommand).not.toHaveBeenCalled();
+});

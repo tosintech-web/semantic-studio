@@ -199,3 +199,90 @@ def test_malformed_history_preview_never_commits_or_audits(team,flag):
     assert response.status_code==422,response.text
     assert team.workspace.repository.snapshot()==before
     assert team.workspace.repository.history('workspace',0,100)==history
+
+
+def changed_team(team):
+    source,target,args=setup_groups(team)
+    url=f'/api/projects/{target}/documents/model/commands'
+    registered=team.request('POST',url,request_id='registered-history-base',json={'command':'CreateGovernmentOrganization','args':args})
+    assert registered.status_code==200,registered.text
+    iri=registered.json()['created']
+    body={'kind':'rename','effectiveDate':'2030-01-01','originalIris':[iri],'resultingIris':[iri],
+          'relationEdits':[],'nameEdits':[{'entity':iri,'value':'Future ministry','language':'en','period':{'start':{'date':'2030-01-01','open':False},'end':PERIOD['end']},'sources':args['sources']}],
+          'existenceEdits':[],'sources':args['sources'],'description':'Synthetic history','referenceBasis':args['referenceBasis']}
+    review=team.request('POST',url,request_id='review-persistent-history',json={'command':'ApplyGovernmentChange','args':body,'dryRun':True})
+    assert review.status_code==200,review.text
+    response=team.request('POST',url,request_id='apply-persistent-history',json={'command':'ApplyGovernmentChange','args':{**body,'previewBasis':review.json()['basis']}})
+    assert response.status_code==200,response.text
+    return source,target,args,iri,response.json()['created']
+
+
+def test_government_history_and_one_step_undo_survive_real_writer_restart(team):
+    from app.routers.government import router
+    source,target,args,iri,change=changed_team(team)
+    before=team.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()
+    source_text=team.request('GET',f'/api/projects/{source}/documents/model/source').json()['text']
+    restarted=team.restarted();restarted.app.include_router(router)
+    try:
+        after=restarted.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()
+        assert after['basis']==before['basis'] and after['referenceBasis']==before['referenceBasis']
+        assert after['changes']['items'][0]['iri']==change and after['organizations']['items'][0]['iri']==iri
+        assert after['organizations']['items'][0]['label']=='Future ministry'
+        undone=restarted.request('POST',f'/api/projects/{target}/documents/model/undo',request_id='undo-after-restart')
+        assert undone.status_code==200,undone.text
+        final=restarted.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()
+        assert final['changes']['total']==0 and final['names']['total']==0
+        assert final['organizations']['items'][0]['label']=='Synthetic ministry'
+        assert restarted.request('GET',f'/api/projects/{source}/documents/model/source').json()['text']==source_text
+    finally:
+        restarted.client.close()
+
+
+def test_government_backup_restore_retains_profiles_rdf_and_recomputes_country_basis(team,tmp_path):
+    from app.team.pg_archive import backup,restore
+    from app.team.pg_storage import PgStorage
+    from app.team.pg_schema import ensure_schema
+    from app.team.repository import TeamRepository
+    from app.routers.government import router
+    from pg_support import role_config,reset_test_schema
+    source,target,args,iri,change=changed_team(team)
+    before=team.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()
+    snapshot=team.workspace.repository.snapshot()
+    archive=tmp_path/'private-generation'
+    backup_storage=PgStorage(role_config('backup'),on_fatal=lambda kind:None)
+    try:
+        backup(backup_storage,team.workspace.blobs.root,archive)
+    finally:
+        backup_storage.close()
+    team.workspace.close();team.workspace.repository.storage.close();reset_test_schema()
+    maintenance=PgStorage(role_config('maintenance'),on_fatal=lambda kind:None)
+    destination=tmp_path/'restored-government'
+    try:
+        ensure_schema(maintenance);restore(maintenance,archive,destination)
+    finally:
+        maintenance.close()
+    storage=PgStorage(role_config(),on_fatal=lambda kind:None)
+    recovered=None
+    try:
+        storage.start_writer();workspace=TeamWorkspace(TeamRepository(storage),destination)
+        assert workspace.repository.snapshot()==snapshot
+        recovered=Harness(workspace);recovered.app.include_router(router)
+        after=recovered.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()
+        assert after['basis']==before['basis'] and after['referenceBasis']==before['referenceBasis']
+        assert after['changes']['items'][0]['iri']==change and after['organizations']['items'][0]['iri']==iri
+        profiles={p['id']:p['domainProfile'] for p in recovered.request('GET','/api/projects').json()}
+        assert profiles[target]['countryProjectId']==source and profiles[source]['id']=='countries-v1'
+        undone=recovered.request('POST',f'/api/projects/{target}/documents/model/undo',request_id='undo-restored-history')
+        assert undone.status_code==200,undone.text
+        assert recovered.request('GET',f'/api/projects/{target}/government/view?at=2030-01-01').json()['changes']['total']==0
+        changed=recovered.request('POST',f'/api/projects/{source}/documents/model/commands',request_id='country-after-restore',json={'command':'CreateCountry','args':{'names':[{'value':'Later country','language':'en'}]}})
+        assert changed.status_code==200,changed.text
+        refreshed=recovered.request('GET',f'/api/projects/{target}/government/countries').json()
+        assert refreshed['basis']!=before['referenceBasis']
+        refused=recovered.request('POST',f'/api/projects/{target}/documents/model/commands',request_id='stale-after-restore',json={'command':'CreateGovernmentOrganization','args':args})
+        assert refused.status_code==409,refused.text
+        assert recovered.request('GET',f'/api/projects/{target}/government/countries').json()['total']==2
+    finally:
+        if recovered:
+            recovered.client.close();recovered.workspace.close()
+        storage.close()

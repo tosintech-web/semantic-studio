@@ -22,6 +22,7 @@ from rdflib import Graph, Namespace, URIRef
 
 GOV = Namespace("urn:semantic-studio:government:v1#")
 ORG = Namespace("http://www.w3.org/ns/org#")
+RELEASE_UNSUPPORTED = "government_release_profile_unsupported"
 PROFILE_TEMPLATES = {"countries": "countries-v1", "government-organizations": "government-organizations-v1"}
 
 

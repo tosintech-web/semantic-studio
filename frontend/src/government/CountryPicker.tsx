@@ -18,6 +18,7 @@ import { getCountryChoices } from "../api";
 import { useI18n } from "../i18n/I18nProvider";
 import { renderServerError } from "../i18n/serverMessage";
 import type { CountryPage, ReferenceBasis } from "./types";
+import {useGovernmentLanguage} from './DisplayLanguage';
 
 interface Props {
   projectId: string;
@@ -28,12 +29,14 @@ interface Props {
 }
 
 export default function CountryPicker({ projectId, value, onChange, busy, language }: Props) {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
+  const selectedLanguage=useGovernmentLanguage();
+  const displayLanguage=language??selectedLanguage;
   const id = useId();
   const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
   const [retry, setRetry] = useState(0);
-  const owner = JSON.stringify([projectId, query, offset, language ?? locale, retry]);
+  const owner = JSON.stringify([projectId, query, offset, displayLanguage, retry]);
   const [result, setResult] = useState<{ owner: string; page: CountryPage } | null>(null);
   const [failure, setFailure] = useState<{ owner: string; cause: unknown } | null>(null);
   const page = result?.owner === owner ? result.page : null;
@@ -41,11 +44,11 @@ export default function CountryPicker({ projectId, value, onChange, busy, langua
   useEffect(() => {
     let live = true;
     const controller = new AbortController();
-    getCountryChoices(projectId, { query, offset, limit: 50, displayLanguage: language ?? locale, signal: controller.signal })
+    getCountryChoices(projectId, { query, offset, limit: 50, displayLanguage, signal: controller.signal })
       .then(found => { if (live) setResult({ owner, page: found }); })
       .catch(cause => { if (live) setFailure({ owner, cause }); });
     return () => { live = false; controller.abort(); };
-  }, [projectId, query, offset, language, locale, retry, owner]);
+  }, [projectId, query, offset, displayLanguage, retry, owner]);
   return <fieldset className="government-country-picker">
     <legend>{t("government.country")}</legend>
     {value && <p>{t("government.selectedCountry", { iri: value })}</p>}

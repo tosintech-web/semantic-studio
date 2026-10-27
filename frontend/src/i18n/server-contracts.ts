@@ -904,6 +904,7 @@ export const SERVER_CONTRACTS = {
   "government.reference_stale": {},
   "government.source_required": {},
   "government.target_missing": {},
+  "government_release_profile_unsupported": {},
   "imports.bundled_changed": {
     "title": "string"
   },
@@ -2482,6 +2483,7 @@ export interface ServerMessageArgs {
   "government.reference_stale": undefined;
   "government.source_required": undefined;
   "government.target_missing": undefined;
+  "government_release_profile_unsupported": undefined;
   "imports.bundled_changed": { "title": string };
   "imports.bytes_limit": { "limit": number | string };
   "imports.bytes_refused": { "limit": number | string };

@@ -164,3 +164,34 @@ def profile_reference_snapshots(service, pid: str, proposed: dict | None) -> tup
         if new and new.country_project_id == source_id:
             available = {str(node) for node in graph.subjects(RDF.type, GOV.Country) if isinstance(node, URIRef)}
     return bases, available
+
+
+def organization_field_problems(graph: Graph, node: URIRef, *, life_records=None, country_records=None) -> list[str]:
+    """One support boundary for the single-entry read form and its write command."""
+    from ..projects import valid_lang
+    from .profile import ORG
+    from .records import ORGANIZATION_TYPES, read_existence, read_relations
+    problems = []
+    if len(set(graph.objects(node, RDF.type)) & ORGANIZATION_TYPES) != 1:
+        problems.append('kind')
+    names = list(graph.objects(node, SKOS.prefLabel))
+    if any(not isinstance(value, Literal) or not value.language or not valid_lang(value.language) for value in names):
+        problems.append('names')
+    languages = [value.language.casefold() for value in names if isinstance(value, Literal) and value.language]
+    if len(set(languages)) != len(languages):
+        problems.append('names')
+    identifiers = list(graph.objects(node, ORG.identifier))
+    if len(identifiers) > 1 or any(not isinstance(value, Literal) or value.language or value.datatype not in (None, XSD.string) for value in identifiers):
+        problems.append('identifier')
+    if life_records is None:
+        life_records = [record for record in read_existence(graph) if record.entity == str(node)]
+    if country_records is None:
+        country_records = [record for record in read_relations(graph) if record.subject == str(node) and record.predicate == str(GOV.inCountry)]
+    raw_country = {record for record in graph.subjects(GOV.subject, node) if (record, GOV.predicate, GOV.inCountry) in graph}
+    if len(life_records) > 1 or len(country_records) > 1 or any(record.unsupported for record in [*life_records, *country_records]) or raw_country != {URIRef(record.iri) for record in country_records}:
+        problems.append('dated-records')
+    if len(life_records) == len(country_records) == 1 and life_records[0].sources != country_records[0].sources:
+        problems.append('distinct-sources')
+    if any(record.description for record in country_records):
+        problems.append('affiliation-description')
+    return sorted(set(problems))

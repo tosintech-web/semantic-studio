@@ -43,6 +43,7 @@ import { runP1 } from './p1.mjs';
 import { runP2 } from './p2.mjs';
 import { runP3 } from './p3.mjs';
 import { runGovernment } from './government.mjs';
+import { runGovernmentTeam } from './government-team.mjs';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -614,10 +615,12 @@ async function cmdSmoke() {
 // ---------------------------------------------------------------------------
 
 const [cmd, ...rest] = process.argv.slice(2);
-const commands = { government: () => runGovernment({BASE,Browser,api,startServer,stopServer,waitForHealth,log}), serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke, p1: () => runP1({ ROOT, DATA_DIR, BASE, Browser, api, uploadOntology, startServer, stopServer, waitForHealth, pythonExe, log, sleep }), p3: () => runP3({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }), p2: () => runP2({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }) };
+const commands = { "government-team": () => runGovernmentTeam({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,sleep}), government: () => runGovernment({BASE,Browser,api,startServer,stopServer,waitForHealth,log}), serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke, p1: () => runP1({ ROOT, DATA_DIR, BASE, Browser, api, uploadOntology, startServer, stopServer, waitForHealth, pythonExe, log, sleep }), p3: () => runP3({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }), p2: () => runP2({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }) };
 if (!commands[cmd]) {
-  console.error(`usage: node driver.mjs <smoke|p1|serve|api|ui>
+  console.error(`usage: node driver.mjs <smoke|p1|p2|p3|government|government-team|serve|api|ui>
 
+  government                   synthetic country/government local UI acceptance
+  government-team              signed HTTPS / internal PostgreSQL government acceptance
   p1                           synthetic Japanese dictionary + editing/browser acceptance
   smoke                        start server, exercise API + UI, screenshot, exit
   serve                        start the server and hold it (Ctrl-C to stop)

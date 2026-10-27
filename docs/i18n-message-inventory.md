@@ -3551,6 +3551,8 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.relationEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/RelationForm.tsx` | en/ja |
 | `government.historyInputRequired` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/RelationForm.tsx` | en/ja |
 | `government.refreshAuthority` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/RelationForm.tsx` | en/ja |
+| `government.noConfirmedCountry` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.nameUnconfirmed` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.nameHistoryEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.changeEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
 | `government.identityHelp` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
@@ -3616,3 +3618,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.noGroups` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
 
 | `government.noGroupsReadOnly` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+
+| `government_release_profile_unsupported` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
+
+| `government.searchRecords` | — | `frontend/src/government/HistoryParts.tsx` | en/ja |

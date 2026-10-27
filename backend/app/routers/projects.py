@@ -280,7 +280,7 @@ def patch_project(pid: str, body: PatchProject) -> dict:
 @metadata_locked
 def duplicate_project(pid: str) -> dict:
     with _errors():
-        return project_store.duplicate(pid)
+        return editing_service.duplicate_project(pid)
 
 
 @router.delete("/{pid}")
@@ -297,7 +297,7 @@ def delete_project(pid: str) -> dict:
 @router.get("/{pid}/export")
 def export_project(pid: str) -> Response:
     with _errors():
-        data = project_store.export_zip(pid)
+        data = editing_service.export_zip(pid)
         name = re.sub(r"[^A-Za-z0-9._-]+", "-", project_store.manifest(pid)["name"]).strip("-.")
     return Response(
         content=data,
@@ -344,10 +344,8 @@ async def run_command(pid: str, doc: str, request: Request, lang: Optional[str] 
         if any(error["type"] == "json_invalid" for error in exc.errors()):
             raise UiHTTPException(status_code=422, detail="The body must be JSON.", ui_message=make_message("request.body_json")) from exc
         raise RequestValidationError([{**error, "loc": ("body", *error["loc"])} for error in exc.errors()]) from exc
-    def work():
-        with _errors():
-            return editing_service.command(pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
-    return await run_in_threadpool(work)
+    with _errors():
+        return await run_in_threadpool(editing_service.command, pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
 
 
 @router.get("/{pid}/documents/{doc}/source")

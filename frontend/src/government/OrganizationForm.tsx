@@ -85,7 +85,7 @@ function OrganizationFormBody({ projectId, targetIri, onSaved, onCancel }: Props
     <label htmlFor={`${id}-kind`}>{t("government.organizationType")}</label>
     <select id={`${id}-kind`} value={kind} aria-disabled={busy} onChange={event => mark(setKind)(event.target.value as OrganizationView["kind"])}>{options.map(option => <option key={option.iri} value={option.value}>{option.label}</option>)}</select>
     <label htmlFor={`${id}-identifier`}>{t("government.identifier")}</label><input id={`${id}-identifier`} value={identifier} maxLength={4096} aria-disabled={busy} onChange={event => mark(setIdentifier)(event.target.value)} />
-    <CountryPicker projectId={projectId} value={country} busy={busy} language={primary} onChange={selection => { if (!busy) { setCountry(selection.iri); setBasis(selection.basis); setDirty(true); } }} />
+    <CountryPicker projectId={projectId} value={country} busy={busy} onChange={selection => { if (!busy) { setCountry(selection.iri); setBasis(selection.basis); setDirty(true); } }} />
     <PeriodEditor label={t("government.existencePeriod")} period={existence} onChange={mark(setExistence)} busy={busy} />
     <PeriodEditor label={t("government.countryPeriod")} period={affiliation} onChange={mark(setAffiliation)} busy={busy} />
     <SourcesEditor sources={sources} onChange={mark(setSources)} busy={busy} />

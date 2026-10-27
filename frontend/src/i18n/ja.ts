@@ -15,6 +15,8 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "government_release_profile_unsupported": "国・政府組織グループは辞書向けの公開形式では承認できません。全履歴はプロジェクトZIP、基準日での表示は投影Turtleで出力してください。",
+  "government.searchRecords": "記録を検索",
   "government.noGroupsReadOnly": "該当するグループがありません。編集者または管理者がグループを作成できます。",
   "government.groupNavigation": "国と政府組織のグループ",
   "government.countryGroups": "国グループ",
@@ -107,7 +109,9 @@ export const ja: Catalog = {
   "government.newName": "名称履歴を追加",
   "government.history_conflict": "履歴に矛盾があります。期間・名称の重複や包含関係の循環を確認してください。",
   "government.history_saved": "政府組織の履歴を保存しました。",
-  "government.cross_country": "異なる国に所属する組織の包含関係です。",
+  "government.cross_country": "異なる国に所属する組織の包含関係です。説明に例外の理由を記載してください。",
+  "government.noConfirmedCountry": "基準日に確定した所属国はありません",
+  "government.nameUnconfirmed": "名称の時点未確認",
   "government.entry_stale": "国の項目が変更されました。保存する前に読み込み直してください。",
   "government.reloadEntry": "項目を再読み込み",
   "government.countriesTitle": "国",

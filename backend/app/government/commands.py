@@ -137,6 +137,10 @@ def cmd_create_government_organization(ctx, args):
     if kind not in ("Organization", "FormalOrganization", "OrganizationalUnit"):
         raise DomainError("Choose an organization type.")
     node, created = _target(ctx, args.get("iri"), ORGANIZATION_TYPES)
+    if not created:
+        from .references import organization_field_problems
+        if organization_field_problems(ctx.graph, node):
+            raise DomainError('This organization contains managed RDF that the single-entry form cannot represent.')
     names, sources = _names(args.get("names")), _sources(args.get("sources"))
     existence, affiliation = _period(args.get("existencePeriod")), _period(args.get("countryPeriod"))
     identifier = _text(args.get("identifier", ""))
@@ -308,6 +312,15 @@ def cmd_apply_government_change(ctx, args):
     # neither an event kind nor its date implies an organization's closure.
     if kind in {'transfer', 'rename'} and (len(ends[0]) != 1 or ends[0] != ends[1]):
         raise DomainError('A rename or transfer retains the selected organization identity.')
+    if kind == 'merge' and len(ends[0]) < 2:
+        raise DomainError('A merger requires at least two original organizations.')
+    if kind == 'split' and len(ends[1]) < 2:
+        raise DomainError('A split requires at least two resulting organizations.')
+    if kind in {'merge', 'split'} and set(ends[0]) == set(ends[1]):
+        raise DomainError('A merger or split must change the set of organizations.')
+    description = _text(args.get('description', ''))
+    if kind == 'other' and not description.strip():
+        raise DomainError('Explain an otherwise classified reorganization.')
     existing = args.get('iri')
     if existing is not None:
         if not isinstance(existing, str) or (URIRef(existing), RDF.type, ORG.ChangeEvent) not in ctx.graph:
@@ -324,7 +337,6 @@ def cmd_apply_government_change(ctx, args):
     adds.update(t for t in removes if t[1] in {GOV.relationRecord, GOV.nameRecord, GOV.existenceRecord})
     adds.update((node, predicate, entity) for predicate, entities in zip((ORG.originalOrganization, ORG.resultingOrganization), ends) for entity in entities)
     adds.update((node, DCTERMS.source, source) for source in _sources(args.get('sources')))
-    description = _text(args.get('description', ''))
     if description:
         adds.add((node, DCTERMS.description, Literal(description)))
     touched = set()

@@ -3746,6 +3746,35 @@ class EditingService:
         self.store = store
         self.snapshots.configure(projects)
 
+    @editing_locked
+    def export_zip(self, pid: str) -> bytes:
+        # Team stores already export accepted document authority for every
+        # project. Local legacy projects keep their existing saved-file export.
+        if getattr(self.projects, 'authoritative_document_views', False) or self.projects.manifest(pid).get('domainProfile') is None:
+            return self.projects.export_zip(pid)
+        from .project_exports import current_project_zip
+        return current_project_zip(self.projects, pid, self._open.get(pid, {}).values())
+
+    @editing_locked
+    def duplicate_project(self, pid: str) -> dict:
+        if getattr(self.projects, 'authoritative_document_views', False) or self.projects.manifest(pid).get('domainProfile') is None:
+            return self.projects.duplicate(pid)
+        from .project_exports import current_project_files
+        source = self.projects.folder(pid)
+        files = current_project_files(self.projects, pid, self._open.get(pid, {}).values())
+        summary = self.projects.duplicate(pid)
+        target = self.projects.folder(summary['id'])
+        for name, content in files.items():
+            # Keep the new manifest and rekeyed queries from the existing
+            # duplicate service. Only accepted RDF and its new originals differ.
+            if isinstance(content, bytes) or not (source / name).exists():
+                path = target / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content if isinstance(content, bytes) else content.read_bytes())
+        if self.is_open(pid):
+            self.projects.update_manifest(summary['id'], counts=graph_counts(self.document(pid, 'model').graph))
+        return self.projects.summary(self.projects.manifest(summary['id']))
+
     # --- opening and closing --------------------------------------------------
 
     def _load(self, pid: str, doc: str, manifest: dict) -> OpenDocument:

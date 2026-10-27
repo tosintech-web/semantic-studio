@@ -111,6 +111,64 @@ def test_invalid_change_is_atomic(patch):
     assert graph(pid)==before
 
 
+@pytest.mark.parametrize('kind,originals,results,description',[
+    ('merge',[0],[1],'Synthetic change'),
+    ('split',[0],[1],'Synthetic change'),
+    ('merge',[0,1],[1,0],'Synthetic change'),
+    ('split',[0,1],[1,0],'Synthetic change'),
+    ('other',[0],[1],''),
+    ('other',[0],[1],'   '),
+])
+def test_change_kind_requires_meaningful_participants_and_description(kind,originals,results,description):
+    _,pid,args,entities=setup()
+    before=graph(pid)
+    body=event(args,entities,kind,originalIris=[entities[i] for i in originals],
+               resultingIris=[entities[i] for i in results],description=description)
+    response=command(pid,'ApplyGovernmentChange',body,dryRun=True)
+    assert response.status_code==422,response.text
+    assert graph(pid)==before
+
+
+def test_organization_form_cannot_erase_a_dated_country_relationship_description():
+    from rdflib import Literal
+    from rdflib.namespace import DCTERMS
+    _,pid,args,entities=setup()
+    own=editing_service.document(pid,'model').graph
+    record=next(r for r in own.subjects(GOV.subject,URIRef(entities[0])) if (r,GOV.predicate,GOV.inCountry) in own)
+    body={**relation(entities[0],str(next(own.objects(record,GOV.object))),str(GOV.inCountry)),
+          'iri':str(record),'description':'Affiliation established by the synthetic treaty',
+          'referenceBasis':args['referenceBasis']}
+    approved,_=preview(pid,'PutGovernmentRelation',body)
+    assert command(pid,'PutGovernmentRelation',approved).status_code==200
+    detail=client.get(f'/api/projects/{pid}/government/view',params={'at':'2020-04-01','iri':entities[0]}).json()
+    assert detail['organizations']['items'][0]['unsupported']
+    before=graph(pid)
+    response=command(pid,'CreateGovernmentOrganization',{**args,'iri':entities[0],
+                     'names':[{'value':'Updated ministry name','language':'en'}]})
+    assert response.status_code==422,response.text
+    assert graph(pid)==before
+    assert (record,DCTERMS.description,Literal(body['description'])) in own
+
+
+@pytest.mark.parametrize('predicate',[str(ORG.unitOf),str(ORG.subOrganizationOf)])
+def test_cross_country_containment_requires_an_explained_exception(predicate):
+    from test_government_commands import country
+    source,pid,args,entities=setup()
+    other_country=country(source,name='Other country',code='OTHER')
+    basis=client.get(f'/api/projects/{pid}/government/countries').json()['basis']
+    other=command(pid,'CreateGovernmentOrganization',{**args,'countryIri':other_country,
+                  'referenceBasis':basis}).json()['created']
+    body={**relation(entities[0],other,predicate),'referenceBasis':basis}
+    before=graph(pid)
+    for description in ('','   '):
+        response=command(pid,'PutGovernmentRelation',{**body,'description':description},dryRun=True)
+        assert response.status_code==422,response.text
+        assert graph(pid)==before
+    approved,review=preview(pid,'PutGovernmentRelation',{**body,'description':'Treaty-established joint administration'})
+    assert any(p['code']=='government.cross_country' for p in review['warnings'])
+    assert command(pid,'PutGovernmentRelation',approved).status_code==200
+
+
 def test_missing_or_stale_preview_refused_without_partial_write():
     _,pid,args,e=setup(); body=event(args,e)
     assert command(pid,'ApplyGovernmentChange',body).status_code==409
@@ -149,7 +207,7 @@ def test_containment_across_countries_warns_and_foreign_group_endpoint_is_reject
     other=country(source,'Another country','OTH')
     basis=client.get(f'/api/projects/{pid}/government/countries').json()['basis']
     second=command(pid,'CreateGovernmentOrganization',{**args,'countryIri':other,'referenceBasis':basis}).json()['created']
-    _,review=preview(pid,'PutGovernmentRelation',{**relation(e[0],second),'referenceBasis':basis})
+    _,review=preview(pid,'PutGovernmentRelation',{**relation(e[0],second,description='Treaty-established exception'),'referenceBasis':basis})
     assert any(w['code']=='government.cross_country' for w in review['warnings'])
     before=graph(pid)
     r=command(pid,'PutGovernmentRelation',{**relation(e[0],'urn:another-project:org'),'referenceBasis':basis},dryRun=True)
@@ -223,3 +281,25 @@ def test_history_dry_run_requires_a_json_boolean(dry_run):
     reply=command(pid,'ApplyGovernmentChange',event(args,e),dryRun=dry_run)
     assert reply.status_code==422,reply.text
     assert graph(pid)==before
+
+
+def test_search_covers_relationships_future_names_and_change_events():
+    _,pid,args,e=setup()
+    future={'start':{'date':'2030-01-01','open':False},'end':PERIOD['end']}
+    body=event(args,e,description='Unique event marker',relationEdits=[relation(e[0],e[1],description='Unique relationship marker')],nameEdits=[{'entity':e[0],'value':'Future name marker','language':'en','period':future,'sources':SOURCES}])
+    approved,_=preview(pid,'ApplyGovernmentChange',body)
+    event_iri=command(pid,'ApplyGovernmentChange',approved).json()['created']
+    def search(query):
+        response=client.get(f'/api/projects/{pid}/government/view',params={'at':'2020-01-01','q':query})
+        assert response.status_code==200,response.text
+        return response.json()
+    rels=search('Unique relationship marker')
+    assert rels['relations']['total']==1 and rels['relations']['items'][0]['description']=='Unique relationship marker'
+    assert rels['names']['total']==0 and rels['changes']['total']==0
+    names=search('Future name marker')
+    assert names['names']['total']==1 and names['names']['items'][0]['state']=='inactive'
+    assert names['organizations']['items'][0]['label']=='0'
+    changes=search('Unique event marker')
+    assert changes['changes']['total']==1 and changes['changes']['items'][0]['iri']==event_iri
+    exact=search(event_iri)
+    assert exact['changes']['total']==1

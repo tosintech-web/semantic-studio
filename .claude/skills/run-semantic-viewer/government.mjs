@@ -14,16 +14,23 @@ EXPECTED OUTPUT
 */
 import assert from 'node:assert/strict';
 export async function runGovernment({BASE,Browser,api,startServer,stopServer,waitForHealth,log}) {
-  const server=startServer(); let b;
-  try {
-    assert.ok(await waitForHealth());
+ const server=startServer();let b;
+ try {
+  assert.ok(await waitForHealth());b=await Browser.launch();
+  await runGovernmentWorkflow({BASE,b,api,log});
+  } catch(error) {if(b){log('government-inputs',await b.eval(`Array.from(document.querySelectorAll('.government-form input,.government-form select')).map(e=>({id:e.id,type:e.type,value:e.value,disabled:e.getAttribute('aria-disabled')}))`));log('government-failure',await b.shot('government-failure'));}throw error;} finally {if(b)await b.close();stopServer(server);}
+}
+
+export async function runGovernmentWorkflow({BASE,b,api,log,replayRegistration}) {
+ let removeNetwork=()=>{},removeDialog=()=>{};
+ try {
     let countries,government;
-    b=await Browser.launch(); await b.goto(BASE);
+    await b.goto(BASE);
     await b.waitFor('document.querySelector(".home-screen")');
     await b.select('.ui-language-select select','en');
     await b.send('Network.enable');let graphReads=0,acceptNavigation=false,confirmations=0;
-    b.on('Network.requestWillBeSent',event=>{if(new URL(event.request.url).pathname.endsWith('/graph'))graphReads++;});
-    b.on('Page.javascriptDialogOpening',()=>{confirmations++;void b.send('Page.handleJavaScriptDialog',{accept:acceptNavigation});});
+    removeNetwork=b.on('Network.requestWillBeSent',event=>{if(new URL(event.request.url).pathname.endsWith('/graph'))graphReads++;});
+    removeDialog=b.on('Page.javascriptDialogOpening',()=>{confirmations++;void b.send('Page.handleJavaScriptDialog',{accept:acceptNavigation});});
     const enter=async()=>{await b.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});await b.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});};
     const createFromMenu=async(template,name,cancelFirst=false)=>{
       const before=graphReads;await b.clickText('.government-group-buttons button',template==='countries'?'Countries':'Government organizations');
@@ -44,6 +51,7 @@ export async function runGovernment({BASE,Browser,api,startServer,stopServer,wai
     await b.click(`#government-new-${countries}`);
     await b.waitFor('document.querySelector(".government-form input[data-name-value]")');
     await b.type('.government-form input[data-name-value]','Synthetic Republic');
+    await b.type('.government-form input[id$="-code"]','SYN-A');
     await b.select('.ui-language-select select','ja');
     assert.equal(await b.eval('document.querySelector("input[data-name-value]").value'),'Synthetic Republic');
     await b.select('.ui-language-select select','en');
@@ -56,6 +64,9 @@ export async function runGovernment({BASE,Browser,api,startServer,stopServer,wai
     await b.click('.government-form button[type=submit]');
     await b.waitFor('document.querySelector(".government-entry-list")?.textContent.includes("Synthetic Republic")');
     assert.equal(await b.eval('document.activeElement.id'),`government-new-${countries}`);
+    await b.click(`#government-new-${countries}`);await b.waitFor('document.querySelector("input[data-name-value]")');
+    await b.type('input[data-name-value]','Synthetic Republic');await b.type('.government-form input[id$="-code"]','SYN-B');await b.click('.government-form button[type=submit]');
+    await b.waitFor('document.querySelectorAll(".government-entry-list li").length===2');
     log('government-country',await b.shot('government-country'));
     await b.clickText('.project-header button','Save');
     await b.waitFor("document.querySelector('[role=dialog]')");
@@ -74,6 +85,8 @@ export async function runGovernment({BASE,Browser,api,startServer,stopServer,wai
     await b.waitFor('document.querySelector(".government-country-picker select option:nth-child(2)")');
     await b.type('.government-form input[data-name-value]','Synthetic Ministry');
     const country=await b.eval('document.querySelector(".government-country-picker select option:nth-child(2)").value');
+    const candidates=await api('GET',`/api/projects/${government}/government/countries`);assert.ok(candidates.ok);assert.equal(candidates.body.total,2);
+    const otherCountry=candidates.body.items.find(c=>c.iri!==country).iri;assert.notEqual(otherCountry,country);
     await b.select('.government-country-picker select',country);
     await b.type('.government-form fieldset:last-of-type input','Synthetic gazette');
     await b.click('.government-form button[type=submit]');
@@ -107,8 +120,16 @@ export async function runGovernment({BASE,Browser,api,startServer,stopServer,wai
     const view=async at=>{const r=await api('GET',`/api/projects/${government}/government/view?at=${at}`);assert.ok(r.ok);return r.body;};
     let data=await view('2029-03-31');const ministry=data.organizations.items[0].iri;
     const openPeriod={start:{date:null,open:true},end:{date:null,open:true}};
-    const add=async name=>{const r=await api('POST',`/api/projects/${government}/documents/model/commands`,{command:'CreateGovernmentOrganization',args:{names:[{value:name,language:'en'}],kind:'Organization',countryIri:country,countryPeriod:openPeriod,existencePeriod:openPeriod,sources:[{kind:'text',value:'Synthetic gazette'}],referenceBasis:data.referenceBasis}});assert.ok(r.ok,JSON.stringify(r.body));return r.body.created;};
-    const parentA=await add('Synthetic Agency A'),parentB=await add('Synthetic Agency B');
+    const add=async(name,countryIri=country)=>{const r=await api('POST',`/api/projects/${government}/documents/model/commands`,{command:'CreateGovernmentOrganization',args:{names:[{value:name,language:'en'}],kind:'Organization',countryIri,countryPeriod:openPeriod,existencePeriod:openPeriod,sources:[{kind:'text',value:'Synthetic gazette'}],referenceBasis:data.referenceBasis}});assert.ok(r.ok,JSON.stringify(r.body));return r.body.created;};
+    const parentA=await add('Same agency'),parentB=await add('Same agency',otherCountry);
+    const sameName=(await view('2030-01-01')).organizations.items.filter(r=>r.label==='Same agency');assert.equal(sameName.length,2);assert.notEqual(sameName[0].formCountryIri,sameName[1].formCountryIri);
+    // Fixture commands run outside the app's client version registry. Reopen
+    // the clean view before drafting, as a user would after external edits;
+    // otherwise the team poll correctly suspends the newly entered input.
+    await b.goto(BASE);await b.waitFor('document.querySelector(".home-screen")');
+    await b.clickText('.government-group-buttons button','Government organizations');
+    await b.clickText('.government-group-navigation section li button','Synthetic government');
+    await b.waitFor('document.querySelector(".government-dated-view .government-entry-list")?.textContent.includes("Same agency")');
     await b.clickText('.government-workspace button','New relationship');
     await b.waitFor('document.querySelectorAll(".government-form select option").length>5');
     await choose('Subject organization',ministry);await choose('Related organization',parentA);
@@ -154,6 +175,13 @@ export async function runGovernment({BASE,Browser,api,startServer,stopServer,wai
     await b.clickText('.project-header button','Save');await b.waitFor('document.querySelector("[role=dialog]")');await b.clickText('[role=dialog] button','Save and keep a backup');await b.waitFor("!document.querySelector('.project-header')?.textContent.includes('Unsaved changes')");
     await b.clickNav('Home');await b.waitFor('document.querySelector(".home-screen")');await b.clickText('.government-group-buttons button','Government organizations');
     assert.ok(await b.eval('document.documentElement.scrollWidth<=window.innerWidth'));log('government-menu',await b.shot('government-menu-narrow'));
-    log('government','G1/G2/G3 menu creation, draft guard, AX/Tab/Enter, transfer, dates, absorption, Undo, Japanese and narrow view passed');
-  } catch(error) {if(b){log('government-inputs',await b.eval(`Array.from(document.querySelectorAll('.government-form input,.government-form select')).map(e=>({id:e.id,type:e.type,value:e.value,disabled:e.getAttribute('aria-disabled')}))`));log('government-failure',await b.shot('government-failure'));}throw error;} finally {if(b)await b.close();stopServer(server);}
+    const previousBasis=(await view('2030-04-01')).referenceBasis;
+    assert.ok((await api('POST',`/api/projects/${countries}/open`)).ok);
+    const renamed=await api('POST',`/api/projects/${countries}/documents/model/commands`,{command:'CreateCountry',args:{iri:country,names:[{value:'Renamed synthetic republic',language:'en'}],code:candidates.body.items.find(c=>c.iri===country).code,sources:[{kind:'text',value:'Synthetic rename gazette'}],description:''}});assert.ok(renamed.ok);
+    const registration={names:[{value:'Replay agency',language:'en'}],kind:'Organization',identifier:'',countryIri:country,countryPeriod:openPeriod,existencePeriod:openPeriod,sources:[{kind:'text',value:'Synthetic gazette'}],referenceBasis:previousBasis};
+    const stale=await api('POST',`/api/projects/${government}/documents/model/commands`,{command:'CreateGovernmentOrganization',args:registration});assert.equal(stale.status,409);
+    data=await view('2030-04-01');assert.equal(data.organizations.items.find(row=>row.iri===ministry).formCountryIri,country);assert.equal(data.organizations.items.find(row=>row.iri===ministry).formCountryLabel,'Renamed synthetic republic');
+    if(replayRegistration)await replayRegistration({government,countries,registration:{...registration,referenceBasis:data.referenceBasis}});
+    log('government','G1/G2/G3 menu creation, two same-name countries/organizations, country rename/stale, draft guard, AX/Tab/Enter, transfer, dates, absorption, Undo, Japanese and narrow view passed');
+ } finally {removeNetwork();removeDialog();}
 }

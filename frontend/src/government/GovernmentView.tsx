@@ -23,18 +23,19 @@ import {teamAuthEpoch} from '../team/client';
 import {useTeam} from '../team/TeamProvider';
 import ProblemText from './ProblemText';
 import {RELATION_OPTIONS} from './history';
+import {useGovernmentLanguage} from './DisplayLanguage';
 import type {GovernmentViewResult,Period,Page} from './types';
 export type HistorySelection='organization'|'relation'|'change'|'name';
 interface Props {projectId:string;at:string;onDateChange:(date:string)=>void;onSelect:(iri:string,kind?:HistorySelection)=>void}
 export default function GovernmentView(props:Props){return <Body key={props.projectId} {...props}/>;}
 function Body({projectId,at,onDateChange,onSelect}:Props) {
- const {t,locale}=useI18n(),team=useTeam(),id=useId();const revision=useProjectSelector(s=>s.documents.find(d=>d.doc==='model')?.revision??0);
+ const {t}=useI18n(),team=useTeam(),id=useId(),language=useGovernmentLanguage();const revision=useProjectSelector(s=>s.documents.find(d=>d.doc==='model')?.revision??0);
  const [includeInactive,setIncludeInactive]=useState(false),[offset,setOffset]=useState(0),[retry,setRetry]=useState(0),[query,setQuery]=useState('');
  const [result,setResult]=useState<{owner:string;data:GovernmentViewResult}|null>(null),[failure,setFailure]=useState<{owner:string;cause:unknown}|null>(null),[downloading,setDownloading]=useState(false);
- const owner=JSON.stringify([projectId,at,revision,locale,teamAuthEpoch(),includeInactive,offset,retry,query]);const current=useRef(owner);current.current=owner;const mounted=useRef(true);
+ const owner=JSON.stringify([projectId,at,revision,language,teamAuthEpoch(),includeInactive,offset,retry,query]);const current=useRef(owner);current.current=owner;const mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  useEffect(()=>{const refresh=()=>setRetry(r=>r+1);window.addEventListener('semantic-studio-team-refresh',refresh);return()=>window.removeEventListener('semantic-studio-team-refresh',refresh);},[]);
- useEffect(()=>{if(!at)return;let live=true;const c=new AbortController();getGovernmentView(projectId,at,{offset,includeInactive,displayLanguage:locale,query,signal:c.signal}).then(data=>{if(live)setResult({owner,data});}).catch(cause=>{if(live)setFailure({owner,cause});});return()=>{live=false;c.abort();};},[owner,projectId,at,offset,includeInactive,locale,query]);
+ useEffect(()=>{if(!at)return;let live=true;const c=new AbortController();getGovernmentView(projectId,at,{offset,includeInactive,displayLanguage:language,query,signal:c.signal}).then(data=>{if(live)setResult({owner,data});}).catch(cause=>{if(live)setFailure({owner,cause});});return()=>{live=false;c.abort();};},[owner,projectId,at,offset,includeInactive,language,query]);
  const data=result?.owner===owner?result.data:null,error=failure?.owner===owner?failure.cause:null;
  const period=(p:Period)=>`${p.start.date??t(p.start.open?'government.boundOpen':'government.boundUnknown')} → ${p.end.date??t(p.end.open?'government.boundOpen':'government.boundUnknown')}`;
  const download=async(projection:boolean)=>{if(downloading||team.suspended)return;setDownloading(true);const basis=owner,epoch=teamAuthEpoch();try{const file=await(projection?downloadGovernmentProjection(projectId,at):exportProject(projectId));if(mounted.current&&current.current===basis&&teamAuthEpoch()===epoch)triggerDownload(file.blob,file.filename);}catch(cause){if(mounted.current&&current.current===basis)setFailure({owner:basis,cause});}finally{if(mounted.current)setDownloading(false);}};
@@ -58,7 +59,9 @@ function Body({projectId,at,onDateChange,onSelect}:Props) {
  {!data.referenceBasis&&<p role="status">{t('government.connectCountryGroup')}</p>}
  <h2>{t('government.organizationsTitle')}</h2>{count(data.organizations)}
  <ul className="government-entry-list">{data.organizations.items.map(row=><li key={row.iri}><button type="button" onClick={()=>onSelect(row.iri,'organization')}>{row.label}</button><code>{row.iri}</code>
- <p>{t(`government.existence.${row.existenceState}`)} · {row.countryLabel||row.formCountryLabel||row.formCountryIri}</p>{!row.countryResolved&&row.formCountryIri&&<p>{t('government.unresolvedReference',{iri:row.formCountryIri})}</p>}</li>)}</ul>
+ {!row.nameConfirmed&&<p>{t('government.nameUnconfirmed')}</p>}
+ <p>{t(`government.existence.${row.existenceState}`)}</p>
+ {row.countryIri?<p>{row.activeCountryResolved?row.countryLabel:t('government.unresolvedReference',{iri:row.countryIri})}</p>:<p>{t('government.noConfirmedCountry')}</p>}</li>)}</ul>
  <h2>{t('government.activeRelations')}</h2>{count(data.activeRelations)}<ul>{data.activeRelations.items.map(relation)}</ul>
  <h2>{t('government.uncertainRelations')}</h2>{count(data.uncertain)}<ul>{data.uncertain.items.map(relation)}</ul>
  <h2>{t('government.allHistory')}</h2>

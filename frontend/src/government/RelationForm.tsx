@@ -26,18 +26,18 @@ export default function RelationForm(props:HistoryFormProps){return <Body key={`
 function Body({projectId,targetIri,onSaved,onCancel}:HistoryFormProps) {
  const {t}=useI18n(),team=useTeam(),authority=useHistoryAuthority(projectId,targetIri);
  const [value,setValue]=useState<RelationInput>(emptyRelation),[dirty,setDirty]=useState(false),[unsupported,setUnsupported]=useState(false);const hydrated=useRef(false);
- useEffect(()=>{if(!authority.entry||hydrated.current)return;hydrated.current=true;if(targetIri){const row=authority.entry.relations.items.find(r=>r.iri===targetIri);if(!row||row.unsupported.length)setUnsupported(true);else setValue(row);}},[authority.entry,targetIri]);
+ useEffect(()=>{if(!authority.entry||hydrated.current)return;hydrated.current=true;if(targetIri){const row=authority.entry.relations.items.find(r=>r.iri===targetIri);if(!row||row.unsupported.length||!row.subject||!row.predicate||!row.object)setUnsupported(true);else setValue({...row,subject:row.subject,predicate:row.predicate,object:row.object});}},[authority.entry,targetIri]);
  usePendingEntry(projectId,dirty);
  const valid=validRelation(value)&&Boolean(authority.basis)&&!unsupported&&!authority.loading&&!authority.error;
  const review=useHistoryReview(projectId,'PutGovernmentRelation',{...value,referenceBasis:authority.basis},valid,iri=>{setDirty(false);onSaved(iri);});
  const busy=review.busy||authority.loading||unsupported||authority.error!==null;
- return <form className="government-form" data-team-draft-complete={!dirty} aria-label={t('government.relationEntry')} onSubmit={e=>{e.preventDefault();void review.read();}} onKeyDown={e=>{if(e.key==='Escape'&&!review.busy){e.preventDefault();e.stopPropagation();onCancel();}}}>
+ return <form className="government-form" data-team-draft-complete={!dirty} aria-label={t('government.relationEntry')} onSubmit={e=>{e.preventDefault();void review.read();}} onKeyDown={e=>{if(e.key==='Escape'&&!review.mutating&&!review.suspended){e.preventDefault();e.stopPropagation();onCancel();}}}>
  <h2>{t('government.relationEntry')}</h2>{unsupported&&<p role="status">{t('government.unsupportedEntry')}</p>}
  {authority.error!==null&&<OperationError failure={{cause:authority.error,message:makeUiMessage('government.detailsUnavailable')}}/>}
  <RelationFields projectId={projectId} value={value} busy={busy} onChange={v=>{if(!busy){setValue(v);setDirty(true);}}} onBasis={authority.setBasis}/>
  {!valid&&<p>{t('government.historyInputRequired')}</p>}
  <HistoryReviewPanel review={review}/>
  <button type="button" aria-disabled={review.busy||team.suspended} onClick={()=>{if(!review.busy&&!team.suspended)authority.refresh();}}>{t('government.refreshAuthority')}</button>
- <button type="button" aria-disabled={review.busy} onClick={()=>{if(!review.busy)onCancel();}}>{t('common.cancel')}</button>
+ <button type="button" aria-disabled={review.mutating||review.suspended} onClick={()=>{if(!review.mutating&&!review.suspended)onCancel();}}>{t('common.cancel')}</button>
  </form>;
 }

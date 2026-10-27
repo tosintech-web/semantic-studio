@@ -39,3 +39,9 @@ backend/app/examples/questions/*.rq binary
 # Preserve CRLF where an upstream license used it; never rewrite its notice.
 licenses/texts/* binary
 licenses/*.html binary
+
+# Application-owned government RDF is registered by exact publication hashes.
+# Keep these editable sources as LF text on every checkout.
+backend/app/domain_vocab/*.ttl text eol=lf
+backend/app/templates/countries*.ttl text eol=lf
+backend/app/templates/government-organizations*.ttl text eol=lf

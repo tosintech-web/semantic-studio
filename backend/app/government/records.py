@@ -208,6 +208,8 @@ def read_relations(graph: Graph) -> list[RelationRecord]:
         if ends[1] is not None and ends[1] not in RELATION_PREDICATES:
             problems.append("predicate")
         description = _one(graph, node, DCTERMS.description, problems, kind=Literal)
+        if description is not None and (description.language or description.datatype not in (None, XSD.string)):
+            problems.append('description')
         records.append(RelationRecord(str(node), *(str(e) if e is not None else None for e in ends),
                                       period, sources, str(description) if description is not None else "", tuple(sorted(set(problems)))))
     return records
@@ -219,7 +221,8 @@ def read_names(graph: Graph) -> list[NameRecord]:
         problems, sources, period = _common(graph, node, GOV.NameRecord, {GOV.entity, GOV.nameValue})
         entity = _one(graph, node, GOV.entity, problems, required=True, kind=URIRef)
         value = _one(graph, node, GOV.nameValue, problems, required=True, kind=Literal)
-        if value is not None and value.datatype not in (None, RDF.langString, XSD.string):
+        from ..projects import valid_lang
+        if value is not None and (value.datatype not in (None, RDF.langString, XSD.string) or not value.language or not valid_lang(value.language)):
             problems.append("name-value")
         records.append(NameRecord(str(node), str(entity) if entity is not None else None,
                                   str(value) if value is not None else None, value.language if value is not None else None,
@@ -303,6 +306,8 @@ def read_changes(graph: Graph) -> list[dict]:
                GOV.relationRecord, GOV.nameRecord, GOV.existenceRecord, DCTERMS.description}
     for node in sorted(set(graph.subjects(RDF.type, ORG.ChangeEvent)), key=str):
         problems, sources, _ = _common(graph, node, ORG.ChangeEvent, allowed)
+        if set(graph.predicates(node)) & PERIOD_PREDICATES:
+            problems.append('event-period')
         kind = _one(graph, node, GOV.changeKind, problems, required=True, kind=Literal)
         when = _one(graph, node, GOV.effectiveDate, problems, required=True, kind=Literal)
         if kind is None or kind.language or kind.datatype not in (None, XSD.string) or str(kind) not in {'merge', 'split', 'transfer', 'rename', 'other'}:

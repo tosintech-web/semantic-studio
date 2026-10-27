@@ -184,3 +184,24 @@ def test_reviewed_country_edit_rejects_a_changed_country_snapshot():
     response = command(pid, "CreateCountry", {"iri": iri, "referenceBasis": basis, "names": [{"value": "Must not overwrite", "language": "en"}]})
     assert response.status_code == 409, response.text
     assert str(next(editing_service.document(pid, "model").graph.objects(URIRef(iri), SKOS.prefLabel))) == "Synthetic country"
+
+
+@pytest.mark.parametrize('unsupported',['typed_identifier','multiple_org_kinds','nonliteral_name'])
+def test_organization_edit_refuses_managed_rdf_that_the_form_cannot_represent(unsupported):
+    from rdflib.namespace import XSD
+    from app.government.profile import ORG
+    _,pid,_,args=setup_organization()
+    node=URIRef(command(pid,'CreateGovernmentOrganization',args).json()['created'])
+    graph=editing_service.document(pid,'model').graph
+    if unsupported=='typed_identifier':
+        graph.set((node,ORG.identifier,Literal('001',datatype=XSD.integer,normalize=False)))
+    elif unsupported=='multiple_org_kinds':
+        graph.add((node,RDF.type,ORG.OrganizationalUnit))
+    else:
+        graph.add((node,SKOS.prefLabel,URIRef('urn:unrepresented-name')))
+    before=set(graph)
+    detail=client.get(f'/api/projects/{pid}/government/view',params={'at':'2020-01-01','iri':str(node)}).json()['organizations']['items'][0]
+    assert detail['unsupported']
+    reply=command(pid,'CreateGovernmentOrganization',{**args,'iri':str(node)})
+    assert reply.status_code==422,reply.text
+    assert set(graph)==before

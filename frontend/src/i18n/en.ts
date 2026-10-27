@@ -15,6 +15,8 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "government_release_profile_unsupported": "Country and government groups cannot be approved using dictionary-v1. Export all history as a project ZIP, or download an explicitly dated projection.",
+  "government.searchRecords": "Search records",
   "government.noGroupsReadOnly": "No matching groups. An editor or administrator can create a group.",
   "government.groupNavigation": "Country and government groups",
   "government.countryGroups": "Country groups",
@@ -107,7 +109,9 @@ export const en: Catalog = {
   "government.newName": "New name history",
   "government.history_conflict": "The proposed history contains conflicting records. Check overlapping dates, names and containment cycles.",
   "government.history_saved": "Government history saved.",
-  "government.cross_country": "This containment connects organizations belonging to different countries.",
+  "government.cross_country": "This containment connects organizations belonging to different countries. Explain the exception in its description.",
+  "government.noConfirmedCountry": "No confirmed country affiliation on this date",
+  "government.nameUnconfirmed": "Name not confirmed for this date",
   "government.entry_stale": "The country entry changed. Reload it before saving.",
   "government.reloadEntry": "Reload entry",
   "government.countriesTitle": "Countries",

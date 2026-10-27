@@ -701,7 +701,7 @@ class ProjectStore:
                 languages = fields["languages"]
                 for tag in languages:
                     if not valid_lang(tag):
-                        raise ProjectError("Choose valid language tags.", ui_message=make_message("projects.language", language=str(tag)))
+                        raise ProjectError(f'{tag!r} is not a well-formed language tag (for example fr or es).', ui_message=make_message("projects.language", language=str(tag)))
                 manifest["languages"] = list(dict.fromkeys(tag for tag in languages if tag.lower() != manifest.get("primaryLanguage", "en").lower()))
             if "domainProfile" in fields:
                 raw = fields["domainProfile"]

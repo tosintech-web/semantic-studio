@@ -24,14 +24,21 @@ import {teamAuthEpoch} from '../team/client';
 import {localToday} from './form';
 import ProblemText from './ProblemText';
 import {proposalKey} from './history';
+import {useGovernmentLanguage} from './DisplayLanguage';
 import type {GovernmentViewResult,HistoryPreview,ReferenceBasis} from './types';
 
 export function useHistoryAuthority(projectId:string,targetIri?:string) {
  const [entry,setEntry]=useState<GovernmentViewResult|null>(null),[basis,setBasis]=useState<ReferenceBasis|null>(null),[error,setError]=useState<unknown>(null),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
- const hydrated=useRef(false),epoch=teamAuthEpoch();
+ const hydrated=useRef(false),appliedRetry=useRef(0),epoch=teamAuthEpoch(),language=useGovernmentLanguage();
  useEffect(()=>{let live=true;const c=new AbortController();setLoading(true);setError(null);
- getGovernmentView(projectId,localToday(),{recordIri:targetIri,signal:c.signal}).then(view=>{if(live&&teamAuthEpoch()===epoch){if(!hydrated.current){setEntry(view);hydrated.current=true;}setBasis(view.referenceBasis);setLoading(false);}}).catch(e=>{if(live){setError(e);setLoading(false);}});
- return()=>{live=false;c.abort();};},[projectId,targetIri,retry,epoch]);
+ getGovernmentView(projectId,localToday(),{recordIri:targetIri,displayLanguage:language,signal:c.signal}).then(view=>{if(live&&teamAuthEpoch()===epoch){
+  // Authentication and label refreshes retain the chosen reference token.
+  // Only initial hydration or explicit authority refresh accepts a new one.
+  if(!hydrated.current||appliedRetry.current!==retry)setBasis(view.referenceBasis);
+  if(!hydrated.current){setEntry(view);hydrated.current=true;}
+  appliedRetry.current=retry;setLoading(false);
+ }}).catch(e=>{if(live){appliedRetry.current=retry;setError(e);setLoading(false);}});
+ return()=>{live=false;c.abort();};},[projectId,targetIri,retry,epoch,language]);
  return {entry,basis,setBasis,error,loading,refresh:()=>setRetry(r=>r+1)};
 }
 
@@ -57,7 +64,7 @@ export function useHistoryReview(projectId:string,command:string,args:Record<str
   setReview(null);setAck(null);
   if(result&&runner.alive())onSaved(result.created??String(args.iri??''));
  };
- return {busy,valid,read,apply,preview,error,runner,ack:ack===key,setAck:(v:boolean)=>setAck(v?key:null)};
+ return {busy,mutating:runner.busy,suspended:team.suspended,valid,read,apply,preview,error,runner,ack:ack===key,setAck:(v:boolean)=>setAck(v?key:null)};
 }
 export type HistoryReviewState=ReturnType<typeof useHistoryReview>;
 export function HistoryReviewPanel({review}:{review:HistoryReviewState}) {

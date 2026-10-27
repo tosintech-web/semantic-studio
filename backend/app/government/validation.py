@@ -36,13 +36,13 @@ def _intersection(left, right):
     return start, end, left[2] and right[2]
 
 
-def validate_relations(graph: Graph) -> list[Problem]:
+def validate_relations(graph: Graph, *, _budget: list[int] | None = None) -> list[Problem]:
     records = [r for r in read_relations(graph) if not r.unsupported]
     problems = []
     groups = defaultdict(list)
     country_groups = defaultdict(list)
     containment = []
-    checked = 0
+    budget = [0] if _budget is None else _budget
     for record in records:
         if record.predicate in (str(ORG.unitOf), str(ORG.subOrganizationOf)):
             containment.append(record)
@@ -58,8 +58,8 @@ def validate_relations(graph: Graph) -> list[Problem]:
         for group in buckets.values():
             for index, record in enumerate(group):
                 for other in group[:index]:
-                    checked += 1
-                    if checked > MAX_VALIDATION_STEPS:
+                    budget[0] += 1
+                    if budget[0] > MAX_VALIDATION_STEPS:
                         return problems + [Problem("government.validation_limit", "error", record.iri)]
                     overlap = _intersection(_span(record.period), _span(other.period))
                     if overlap is not None:
@@ -97,10 +97,10 @@ def validate_relations(graph: Graph) -> list[Problem]:
                 continue
             seen.add(key)
             for edge in adjacency[node]:
-                checked += 1
+                budget[0] += 1
                 # Bound hostile interval combinations; refuse the proposed
                 # edit rather than reporting an unchecked graph as valid.
-                if checked > MAX_VALIDATION_STEPS:
+                if budget[0] > MAX_VALIDATION_STEPS:
                     return problems + [Problem("government.validation_limit", "error", start)]
                 overlap = _intersection(span, _span(edge.period))
                 if overlap is None:
@@ -118,8 +118,10 @@ def validate_relations(graph: Graph) -> list[Problem]:
 def validate_history(graph: Graph) -> list[Problem]:
     from .records import read_names
     from .profile import ORG, GOV
-    problems = validate_relations(graph)
-    checked = 0
+    budget = [0]
+    problems = validate_relations(graph, _budget=budget)
+    if any(problem.code == 'government.validation_limit' for problem in problems):
+        return problems
     names = defaultdict(list)
     for name in read_names(graph):
         if not name.unsupported:
@@ -127,8 +129,8 @@ def validate_history(graph: Graph) -> list[Problem]:
     for group in names.values():
         for index, name in enumerate(group):
             for other in group[:index]:
-                checked += 1
-                if checked > MAX_VALIDATION_STEPS:
+                budget[0] += 1
+                if budget[0] > MAX_VALIDATION_STEPS:
                     return problems + [Problem('government.validation_limit', 'error', name.iri)]
                 overlap = _intersection(_span(name.period), _span(other.period))
                 if overlap is not None:
@@ -143,12 +145,14 @@ def validate_history(graph: Graph) -> list[Problem]:
             continue
         for left in countries[record.subject]:
             for right in countries[record.object]:
-                checked += 1
-                if checked > MAX_VALIDATION_STEPS:
+                budget[0] += 1
+                if budget[0] > MAX_VALIDATION_STEPS:
                     return problems + [Problem('government.validation_limit', 'error', record.iri)]
                 if left.object == right.object:
                     continue
                 overlap = _intersection(_span(record.period), _span(left.period))
-                if overlap is not None and _intersection(overlap, _span(right.period)) is not None:
-                    problems.append(Problem('government.cross_country', 'warning', record.iri))
+                shared = _intersection(overlap, _span(right.period)) if overlap is not None else None
+                if shared is not None:
+                    severity = 'error' if shared[2] and not record.description.strip() else 'warning'
+                    problems.append(Problem('government.cross_country', severity, record.iri))
     return problems

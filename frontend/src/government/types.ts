@@ -61,10 +61,12 @@ export type TemporalState = "active" | "inactive" | "uncertain";
 export interface OrganizationView {
   iri: string;
   label: string;
+  nameConfirmed: boolean;
   kind: "Organization" | "FormalOrganization" | "OrganizationalUnit";
   countryIri: string | null;
   countryLabel: string;
   countryResolved: boolean;
+  activeCountryResolved: boolean;
   formCountryIri: string | null;
   formCountryLabel: string;
   countryPeriod: Period | null;
@@ -75,11 +77,11 @@ export interface OrganizationView {
   existencePeriod: Period | null;
   names: { value: string; language: string }[];
 }
-export interface RelationView extends RelationInput {
+export interface RelationView extends Omit<RelationInput,"iri"|"subject"|"predicate"|"object"> {
   iri: string;
-  subject: string;
-  predicate: string;
-  object: string;
+  subject: string|null;
+  predicate: string|null;
+  object: string|null;
   subjectLabel: string;
   objectLabel: string;
   state: TemporalState;
@@ -102,7 +104,7 @@ export interface ChangeInput {
  iri?:string;kind:'merge'|'split'|'transfer'|'rename'|'other';effectiveDate:string;
  originalIris:string[];resultingIris:string[];relationEdits:RelationInput[];nameEdits:NameInput[];existenceEdits:ExistenceInput[];sources:Source[];description:string;
 }
-export interface NameView extends NameInput {iri:string;entityLabel:string;state:TemporalState;unsupported:string[]}
-export interface ExistenceView extends ExistenceInput {iri:string;entityLabel:string;state:TemporalState;unsupported:string[]}
+export interface NameView extends Omit<NameInput,"iri"|"entity"|"value"|"language"> {iri:string;entity:string|null;value:string|null;language:string|null;entityLabel:string;state:TemporalState;unsupported:string[]}
+export interface ExistenceView extends Omit<ExistenceInput,"entity"> {iri:string;entity:string|null;entityLabel:string;state:TemporalState;unsupported:string[]}
 export interface ChangeView extends Omit<ChangeInput,'relationEdits'|'nameEdits'|'existenceEdits'> {iri:string;relationIris:string[];nameIris:string[];existenceIris:string[];unsupported:string[]}
 export interface HistoryPreview {dryRun:true;basis:string;revision:number;delta:{added:string[];removed:string[];addedTotal:number;removedTotal:number};warnings:GovernmentViewResult['diagnostics']}

@@ -72,3 +72,22 @@ it("keeps the current group open when its referenced country group is unavailabl
   fireEvent.click(button);
   expect(open).not.toHaveBeenCalled();
 });
+
+it("owns government label responses by dictionary language independently of English UI", async () => {
+  const project=opened("government-organizations-v1").project;
+  let finishOld!:(value:unknown)=>void;
+  mocks.getGovernmentView.mockReturnValueOnce(new Promise(resolve=>{finishOld=resolve;}));
+  const row=(label:string)=>({...VIEW,organizations:{items:[{iri:'urn:org',label,existenceState:'active',nameConfirmed:true}],total:1,offset:0,limit:50}});
+  mocks.getGovernmentView.mockResolvedValue(row('日本語組織'));
+  const props={project,projects:[],onProjectsChanged:vi.fn()};
+  const ui=render(<GovernmentWorkspace {...props} language="en"/>);
+  await act(async()=>{});
+  ui.rerender(<GovernmentWorkspace {...props} language="ja"/>);
+  await screen.findByRole('button',{name:'日本語組織'});
+  expect(mocks.getGovernmentView.mock.lastCall?.[2]).toMatchObject({displayLanguage:'ja'});
+  await act(async()=>{finishOld(row('Old English name'));});
+  expect(screen.queryByRole('button',{name:'Old English name'})).toBeNull();
+  expect(screen.getByRole('button',{name:'New relationship'})).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'New relationship'}));await act(async()=>{});
+  expect(mocks.getGovernmentView.mock.lastCall?.[2]).toMatchObject({displayLanguage:'ja'});
+});

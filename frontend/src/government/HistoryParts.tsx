@@ -20,18 +20,19 @@ import {useI18n} from '../i18n/I18nProvider';
 import OperationError from '../components/OperationError';
 import {makeUiMessage} from '../i18n/uiMessage';
 import CountryPicker from './CountryPicker';
+import {useGovernmentLanguage} from './DisplayLanguage';
 import {PeriodEditor,SourcesEditor} from './EntryParts';
 import {localToday} from './form';
 import {RELATION_OPTIONS} from './history';
 import type {GovernmentViewResult,OrganizationView,RelationInput,NameInput,ExistenceInput,ReferenceBasis} from './types';
 
 export function OrganizationPicker({projectId,label,value,onChange,busy}:{projectId:string;label:string;value:string;onChange:(iri:string,row:OrganizationView)=>void;busy:boolean}) {
- const {t,locale}=useI18n();const id=useId();const [query,setQuery]=useState(''),[offset,setOffset]=useState(0),[retry,setRetry]=useState(0);
+ const {t}=useI18n();const language=useGovernmentLanguage();const id=useId();const [query,setQuery]=useState(''),[offset,setOffset]=useState(0),[retry,setRetry]=useState(0);
  const revision=useProjectSelector(s=>s.documents.find(d=>d.doc==='model')?.revision??0);
- const owner=JSON.stringify([projectId,query,offset,locale,retry,revision,teamAuthEpoch()]);
+ const owner=JSON.stringify([projectId,query,offset,language,retry,revision,teamAuthEpoch()]);
  const [result,setResult]=useState<{owner:string;view:GovernmentViewResult}|null>(null),[error,setError]=useState<{owner:string;cause:unknown}|null>(null);
- useEffect(()=>{let live=true;const c=new AbortController();getGovernmentView(projectId,localToday(),{query,offset,includeInactive:true,displayLanguage:locale,signal:c.signal})
- .then(view=>{if(live)setResult({owner,view});}).catch(cause=>{if(live)setError({owner,cause});});return()=>{live=false;c.abort();};},[owner,projectId,query,offset,locale]);
+ useEffect(()=>{let live=true;const c=new AbortController();getGovernmentView(projectId,localToday(),{query,offset,includeInactive:true,displayLanguage:language,signal:c.signal})
+ .then(view=>{if(live)setResult({owner,view});}).catch(cause=>{if(live)setError({owner,cause});});return()=>{live=false;c.abort();};},[owner,projectId,query,offset,language]);
  const page=result?.owner===owner?result.view.organizations:null;
  return <fieldset><legend>{label}</legend>{value&&<p>{value}</p>}
  <label htmlFor={`${id}-search`}>{t('government.searchIdentity',{role:label})}</label><input id={`${id}-search`} type="search" value={query} maxLength={200} aria-disabled={busy} onChange={e=>{if(!busy){setQuery(e.target.value);setOffset(0);}}}/>
@@ -44,13 +45,14 @@ export function OrganizationPicker({projectId,label,value,onChange,busy}:{projec
 }
 
 export function RecordPicker({projectId,kind,onChange,busy}:{projectId:string;kind:'relations'|'names';onChange:(value:RelationInput|NameInput)=>void;busy:boolean}) {
- const {t,locale}=useI18n();const id=useId();const [offset,setOffset]=useState(0),[retry,setRetry]=useState(0);
+ const {t}=useI18n();const language=useGovernmentLanguage();const id=useId();const [offset,setOffset]=useState(0),[retry,setRetry]=useState(0),[query,setQuery]=useState('');
  const epoch=teamAuthEpoch(),revision=useProjectSelector(s=>s.documents.find(d=>d.doc==='model')?.revision??0);
- const [data,setData]=useState<GovernmentViewResult|null>(null),[error,setError]=useState<unknown>(null);
- useEffect(()=>{let live=true;const c=new AbortController();setData(null);setError(null);getGovernmentView(projectId,localToday(),{offset,displayLanguage:locale,signal:c.signal}).then(view=>{if(live)setData(view);}).catch(e=>{if(live)setError(e);});return()=>{live=false;c.abort();};},[projectId,kind,offset,locale,retry,epoch,revision]);
- const page=data?.[kind];
- return <fieldset><legend>{t('government.existingRecord')}</legend><label htmlFor={id}>{t('government.chooseRecord')}</label>
- <select id={id} value="" aria-disabled={busy||!page} onChange={e=>{const row=page?.items.find(r=>r.iri===e.target.value);if(!busy&&row&&!row.unsupported.length)onChange(row);}}><option value="">{t('government.newRecordHelp')}</option>{page?.items.map(row=><option key={row.iri} value={row.iri} disabled={row.unsupported.length>0}>{'subjectLabel'in row?`${row.subjectLabel} → ${row.objectLabel}`:`${row.entityLabel}: ${row.value}`} · {row.iri}</option>)}</select>
+ const owner=JSON.stringify([projectId,kind,offset,language,retry,query,epoch,revision]);
+ const [data,setData]=useState<{owner:string;view:GovernmentViewResult}|null>(null),[failure,setFailure]=useState<{owner:string;cause:unknown}|null>(null);
+ useEffect(()=>{let live=true;const c=new AbortController();getGovernmentView(projectId,localToday(),{offset,query,displayLanguage:language,signal:c.signal}).then(view=>{if(live)setData({owner,view});}).catch(e=>{if(live)setFailure({owner,cause:e});});return()=>{live=false;c.abort();};},[owner,projectId,kind,offset,language,retry,epoch,revision,query]);
+ const page=data?.owner===owner?data.view[kind]:null,error=failure?.owner===owner?failure.cause:null;
+ return <fieldset><legend>{t('government.existingRecord')}</legend><label htmlFor={`${id}-search`}>{t('government.searchRecords')}</label><input id={`${id}-search`} type="search" value={query} maxLength={200} aria-disabled={busy} onChange={e=>{if(!busy){setQuery(e.target.value);setOffset(0);}}}/><label htmlFor={id}>{t('government.chooseRecord')}</label>
+ <select id={id} value="" aria-disabled={busy||!page} onChange={e=>{const row=page?.items.find(r=>r.iri===e.target.value);if(!busy&&row&&!row.unsupported.length){if('subject'in row&&row.subject&&row.predicate&&row.object)onChange({...row,subject:row.subject,predicate:row.predicate,object:row.object});else if('entity'in row&&row.entity&&row.value&&row.language)onChange({...row,entity:row.entity,value:row.value,language:row.language});}}}><option value="">{t('government.newRecordHelp')}</option>{page?.items.map(row=><option key={row.iri} value={row.iri} disabled={row.unsupported.length>0}>{'subjectLabel'in row?`${row.subjectLabel} → ${row.objectLabel}`:`${row.entityLabel}: ${row.value}`} · {row.iri}</option>)}</select>
  {page&&<p>{t('government.entryCounts',{shown:page.items.length,total:page.total})}</p>}{error!==null&&<OperationError failure={{cause:error,message:makeUiMessage('government.detailsUnavailable')}}/>}
  <button type="button" aria-disabled={busy||offset===0} onClick={()=>{if(!busy&&offset>0)setOffset(Math.max(0,offset-50));}}>{t('government.previousPage')}</button>
  <button type="button" aria-disabled={busy||!page||offset+50>=page.total} onClick={()=>{if(!busy&&page&&offset+50<page.total)setOffset(offset+50);}}>{t('government.nextPage')}</button>

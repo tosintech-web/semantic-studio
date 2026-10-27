@@ -217,3 +217,18 @@ across 401/409/real PostgreSQL 503, same-owner reauthentication and abrupt app
 recreation. A runtime audit hook rejects any SQLite connection during acceptance.
 `TEAM_PORT` defaults to 8011. Generated keys, data and screenshots stay outside Git.
 This does not confirm a production Google client or deploy an application.
+
+## Country and government acceptance
+
+After building, run `node .claude/skills/run-semantic-viewer/driver.mjs government`
+for generated local country/government groups. The workflow creates both groups
+from Home menus, tests two same-name countries and organizations, country IRI
+stability, stale reference refusal, reviewed transfer/absorption and one Undo,
+Japanese/English drafts, native Tab/Enter/Escape, AX names and narrow layouts.
+
+Build the latest `semantic-studio:team` image, then run the same driver with
+`government-team`. It runs the complete P2 signed-HTTPS/internal-PostgreSQL
+acceptance and reuses the government UI workflow, then checks replay, viewer
+refusal, country-preserving Undo and the explicit release-profile refusal.
+Use separate scratch directories and free PORT/CDP_PORT/TEAM_PORT values; no DB
+port is published. Keep the existing smoke, P1 and P3 acceptance as regressions.

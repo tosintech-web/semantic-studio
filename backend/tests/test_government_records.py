@@ -199,3 +199,28 @@ def test_validation_refuses_excessive_combinations_instead_of_silently_skipping(
         gov:object ex:c{i} ; gov:openStart true ; gov:openEnd true ; dct:source "S" .''' for i in range(4)))
     assert any(p.code == "government.validation_limit" and p.severity == "error"
                for p in validation.validate_relations(original))
+
+
+def test_name_without_language_and_translated_description_remain_read_only():
+    original=graph('''ex:n a gov:NameRecord ; gov:entity ex:unit ; gov:nameValue "No language" ; dct:source "Synthetic" .
+ex:r a gov:RelationRecord ; gov:subject ex:unit ; gov:predicate org:unitOf ; gov:object ex:a ; dct:description "説明"@ja ; dct:source "Synthetic" .''')
+    from app.government.records import read_names, read_relations
+    assert read_names(original)[0].unsupported
+    assert read_relations(original)[0].unsupported
+
+
+def test_change_event_with_unrepresented_period_remains_read_only():
+    from app.government.records import read_changes
+    original=graph('''ex:c a org:ChangeEvent ; gov:changeKind "merge" ; gov:effectiveDate "2020-01-01"^^xsd:date ; gov:openStart true ; org:originalOrganization ex:a ; org:resultingOrganization ex:b ; dct:source "Synthetic" .''')
+    assert read_changes(original)[0]['unsupported']
+
+
+def test_history_validation_uses_one_shared_work_limit(monkeypatch):
+    from app.government import validation
+    original=graph('''ex:r1 a gov:RelationRecord ; gov:subject ex:unit ; gov:predicate org:unitOf ; gov:object ex:a ; gov:openStart true ; gov:openEnd true ; dct:source "Synthetic" .
+ex:r2 a gov:RelationRecord ; gov:subject ex:unit ; gov:predicate org:unitOf ; gov:object ex:a ; gov:openStart true ; gov:openEnd true ; dct:source "Synthetic" .
+ex:n1 a gov:NameRecord ; gov:entity ex:unit ; gov:nameValue "One"@en ; gov:openStart true ; gov:openEnd true ; dct:source "Synthetic" .
+ex:n2 a gov:NameRecord ; gov:entity ex:unit ; gov:nameValue "Two"@en ; gov:openStart true ; gov:openEnd true ; dct:source "Synthetic" .
+ex:n3 a gov:NameRecord ; gov:entity ex:unit ; gov:nameValue "Three"@en ; gov:openStart true ; gov:openEnd true ; dct:source "Synthetic" .''')
+    monkeypatch.setattr(validation,'MAX_VALIDATION_STEPS',3)
+    assert any(p.code=='government.validation_limit' for p in validation.validate_history(original))

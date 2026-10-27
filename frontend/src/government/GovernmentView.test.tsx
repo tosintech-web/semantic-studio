@@ -42,6 +42,27 @@ it('ignores an old date response and distinguishes whole history from projection
  expect(mocks.getGovernmentView.mock.lastCall?.[2]).toMatchObject({includeInactive:true});
 });
 
+it.each(['before start','at end','unknown boundary','period gap'])('does not present historical country values as affiliation on a date with %s',async()=>{
+ const row={iri:'urn:org',label:'Ministry',existenceState:'active',countryIri:null,countryLabel:'',
+  formCountryIri:'urn:historical-country',formCountryLabel:'Historical country',countryResolved:true,nameConfirmed:false};
+ mocks.getGovernmentView.mockResolvedValue({...VIEW,organizations:{items:[row],total:1,offset:0,limit:50}});
+ render(<GovernmentView projectId={PID} at="2030-01-01" onDateChange={vi.fn()} onSelect={vi.fn()}/>);
+ await screen.findByRole('button',{name:'Ministry'});
+ expect(screen.queryByText(/Historical country/)).toBeNull();
+ expect(screen.getByText('No confirmed country affiliation on this date')).toBeTruthy();
+ expect(screen.getByText('Name not confirmed for this date')).toBeTruthy();
+});
+
+it('identifies a missing active country even when multiple historical affiliations prevent single-record editing',async()=>{
+ const row={iri:'urn:org',label:'Ministry',existenceState:'active',countryIri:'urn:missing-country',countryLabel:'missing-country',
+  formCountryIri:null,formCountryLabel:'',countryResolved:false,nameConfirmed:true};
+ mocks.getGovernmentView.mockResolvedValue({...VIEW,organizations:{items:[row],total:1,offset:0,limit:50}});
+ render(<GovernmentView projectId={PID} at="2030-01-01" onDateChange={vi.fn()} onSelect={vi.fn()}/>);
+ await screen.findByRole('button',{name:'Ministry'});
+ expect(screen.getByText(/Unresolved country reference.*urn:missing-country/)).toBeTruthy();
+ expect(screen.queryByText('Name not confirmed for this date')).toBeNull();
+});
+
 it('distinguishes active relationships from an endpoint with unknown existence',async()=>{
  const empty={items:[],total:0,offset:0,limit:50};
  const unknown={start:{date:null,open:false},end:{date:null,open:false}};

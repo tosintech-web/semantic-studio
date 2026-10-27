@@ -21,7 +21,7 @@ export const RELATION_OPTIONS = [
  {iri:'urn:semantic-studio:government:v1#cooperatesWith',key:'government.relation.cooperatesWith'},
 ] as const;
 export function emptyRelation():RelationInput {return {subject:'',predicate:RELATION_OPTIONS[1].iri,object:'',period:unknownPeriod(),sources:[{kind:'text',value:''}],description:''};}
-export function emptyName():NameInput {return {entity:'',value:'',language:'en',period:unknownPeriod(),sources:[{kind:'text',value:''}]};}
+export function emptyName(language="en"):NameInput {return {entity:'',value:'',language,period:unknownPeriod(),sources:[{kind:'text',value:''}]};}
 export function emptyExistence():ExistenceInput {return {entity:'',period:unknownPeriod(),sources:[{kind:'text',value:''}]};}
 export function emptyChange():ChangeInput {return {kind:'merge',effectiveDate:localToday(),originalIris:[],resultingIris:[],relationEdits:[],nameEdits:[],existenceEdits:[],sources:[{kind:'text',value:''}],description:''};}
 export function proposalKey(value:unknown):string {return JSON.stringify(value);}
@@ -32,5 +32,9 @@ export function validChange(value:ChangeInput):boolean {
  const datePeriod={start:{date:value.effectiveDate,open:false},end:{date:null,open:true}};
  return validPeriod(datePeriod)&&value.originalIris.length>0&&value.resultingIris.length>0&&value.originalIris.length<=100&&value.resultingIris.length<=100&&
   (value.kind!=='rename'&&value.kind!=='transfer'||value.originalIris.length===1&&value.resultingIris.length===1&&value.originalIris[0]===value.resultingIris[0])&&
+  (value.kind!=='merge'||value.originalIris.length>=2)&&
+  (value.kind!=='split'||value.resultingIris.length>=2)&&
+  (!['merge','split'].includes(value.kind)||value.originalIris.length!==value.resultingIris.length||value.originalIris.some(iri=>!value.resultingIris.includes(iri)))&&
+  (value.kind!=='other'||Boolean(value.description.trim()))&&
   validSources(value.sources)&&value.relationEdits.every(validRelation)&&value.nameEdits.every(validName)&&value.existenceEdits.every(validExistence);
 }

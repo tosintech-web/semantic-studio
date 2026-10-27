@@ -124,3 +124,31 @@ def test_release_backup_restore_keeps_history_blobs(harness,tmp_path):
         app.start_writer();service=ReleaseService(TeamRepository(app),BlobStore(target/'blobs'))
         assert service.read_package(project_id=pid,release_id=rid)==before
     finally:app.close()
+
+
+@pytest.mark.parametrize('template',['countries','government-organizations'])
+def test_government_profiles_refuse_preview_and_new_approval(harness,template):
+    reply=harness.request('POST','/api/projects',request_id='domain-group',json={'name':'Synthetic domain','template':template})
+    assert reply.status_code==200,reply.text
+    pid=reply.json()['id'];service=ReleaseService(harness.workspace.repository,harness.workspace.blobs)
+    before=harness.workspace.repository.snapshot()
+    with pytest.raises(ReleaseError,match='government_release_profile_unsupported'):
+        service.preview(project_id=pid,metadata=META)
+    with pytest.raises(ReleaseError,match='government_release_profile_unsupported'):
+        approve(harness,service,pid,preview={'previewDigest':'0'*64},rid='unsupported-domain')
+    assert harness.workspace.repository.snapshot()==before
+
+
+def test_profile_refusal_has_same_explicit_http_code_for_preview_and_approval(harness):
+    from types import SimpleNamespace
+    import base64
+    from app.releases.http import dispatch_release_request
+    response=harness.request('POST','/api/projects',request_id='domain-http',json={'name':'Synthetic countries','template':'countries'})
+    pid=response.json()['id'];service=ReleaseService(harness.workspace.repository,harness.workspace.blobs)
+    for route,body in [('release-preview',META),('releases',{**META,'previewDigest':'0'*64})]:
+        scope={'method':'POST','state':{'team_path_params':{'pid':pid},'principal':SimpleNamespace(sub=harness.actor),'team_route_template':f'/api/projects/{{pid}}/{route}'}}
+        output=dispatch_release_request(service,scope=scope,body=json.dumps(body).encode(),expected=harness.versions,request_id='deny-'+route,identity={'request':route},authorize=harness.authorize)
+        assert output['status']==422
+        payload=json.loads(base64.b64decode(output['body']))
+        assert payload['code']=='government_release_profile_unsupported'
+        assert payload['uiMessage']['code']=='government_release_profile_unsupported'
