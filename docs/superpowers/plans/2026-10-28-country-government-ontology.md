@@ -10,7 +10,7 @@
 
 **Spec:** [開発方針・設計案](../specs/2026-10-28-country-government-ontology-design.md)。
 
-状態：2026-10-28のユーザー指示により実装承認。Task 1〜7完了、Task 8のローカル受け入れ・4回の反復レビュー完了、最新PR head CIを確認予定。
+状態：2026-10-28のユーザー指示により実装承認。Task 1〜8完了。全試験・4回の独立レビュー・a6129b0の全CI成功を確認。[検証記録](../../government-verification.md)と[最新PR Checks](https://github.com/tosintech-web/semantic-studio/pull/5/checks)を参照。
 実装後に独立レビューと修正を指摘がなくなるまで反復し、GitHubへpushしてPRコメントを追加する。
 基点：P3統合済みmain `0251e89`。G1=Task 1〜4、G2=Task 5〜6、G3=Task 7〜8。
 
@@ -225,10 +225,10 @@ download responseの基準日ヘッダーは `X-Semantic-Studio-As-Of`、basis�
 - [x] **Step 4: 全frontend/build検証。** `cd frontend && npm run test`、`npx tsc -b`、`npm run build`。通常倍率1の全性能予算を維持する。
 - [x] **Step 5: 実browser受け入れ。** run-semantic-viewer skillを読み、合成データだけでlocal/team双方の国2件、部署移管、組織統合、同名、未知日付、stale、再送、Undo、日英、Tab/focusを確認。既存smoke/P1/P2/P3のregressionも確認する。
 - [x] **Step 6: 配布検査。** `python scripts/generate_message_contracts.py --check` を実行。`git ls-files -z --cached --others --exclude-standard > /tmp/semantic-studio-publication-files.txt` でNUL区切りの検査対象を列挙し、`python scripts/check_publication.py --root . --files-from /tmp/semantic-studio-publication-files.txt` と既存通知検査を実施。今回追加した語彙の権利表示とimage同梱を確認する。
-- [ ] **Step 7: 記録・commit・PR。** 設計9節の10受け入れ条件と試験証拠を対応付け、未実施は未実施と記録。`feat: verify country and government ontology workflows` をcommitして機能PRを更新し、最新head CIの成功を確認する。今回の設計PRを機能実装完了と表示しない。
+- [x] **Step 7: 記録・commit・PR。** 設計9節の10受け入れ条件と試験証拠を対応付け、未実施は未実施と記録。`feat: verify country and government ontology workflows` をcommitして機能PRを更新し、最新head CIの成功を確認する。設計段階の記録を実装完了の証拠へ流用しない。
 
 ## 実行前の確認と分割
 
 本計画は一つの機能をG1/G2/G3に分けたもの。G1を先に機能PRとしてレビューできるが、全目標の完了はG3の受け入れ後。
 別環境の国公開版を直接参照する機能、複数国所属、国家の分裂・統合、詳細Excel一括入力、公開profile追加はこの計画へ黙って混ぜない。
-設計PRの確認後に実装開始を判断する。実装担当は既存CLAUDE.mdと設計・本計画を合わせて読み、必要な型・上限変更をPRに明記する。
+ユーザーの実装承認に基づいて実行済み。既存CLAUDE.mdと設計・本計画に従い、型・上限変更と検証結果をPRに明記した。

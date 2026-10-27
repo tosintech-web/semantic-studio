@@ -2,7 +2,7 @@
 
 対象ブランチ：`feat/country-government-ontology`。設計は[国・政府組織オントロジー設計](superpowers/specs/2026-10-28-country-government-ontology-design.md)、実行順は[実装計画](superpowers/plans/2026-10-28-country-government-ontology.md)。合成データだけで検証する。
 
-実装・全ローカル検証・4回の独立レビューは完了。Task 8の残りは最新PR headのCI確認であり、CIが終わるまで開発目標全体の完了とは扱わない。
+実装・全ローカル検証・4回の独立レビュー・CI検証を完了した。機能ソースは `5686efd`、その後の記録を含む `a6129b0` のCIは性能予算を含む全11ジョブで成功した。この文書を含む記録commitは機能ソースを変更しない。最新headの状態は[PR #5 Checks](https://github.com/tosintech-web/semantic-studio/pull/5/checks)で確認できる。
 
 ## 受け入れ条件との対応
 
@@ -28,13 +28,13 @@
 - Task 5：履歴関連backend112件。PGの改編・再送・Undo・preview競合7件を両Pythonで確認。
 - Task 6：関連backend104件、PG9件を両Pythonで確認。frontend全145ファイル・2589件を既定倍率1の順次実行で確認。Chromeで移管前後・吸収・一回Undo・日本語・720px・確認の実Tab/Enterと可視focusを確認。
 - Task 7：Appを含む関連268件、最終のメニュー・Home・dialog・順序・i18n83件。実Chromeでメニューから両グループを作成し、キャンセル時のfocus復帰と未確定入力の移動拒否／破棄確認を実施。
-- Task 8途中：ローカルのZIP・複製・復元・再起動と既存project83件。PGの政府組織／公開境界22件（Python 3.12）。inventory照合2件。
+- Task 8の機能別試験：ローカルのZIP・複製・復元・再起動と既存project83件。PGの政府組織／公開境界22件（Python 3.12）。inventory照合2件。
 
-並列frontend実行で、既存ReasoningPanelの5000ms timeoutと、既存NextSteps/ExploreStartの時間予算が失敗した実行を保持した。制限値・倍率・検証項目を変更せず、関連の再確認と全件順次実行を行った。全件の最終実行結果は以下へ追記する。
+並列frontend実行で、既存ReasoningPanelの5000ms timeoutと、既存NextSteps/ExploreStartの時間予算が失敗した実行を保持した。制限値・倍率・検証項目を変更せず、関連の再確認と全件順次実行を行った。全件の最終実行結果は以下の通り。
 
 ## 最終検証
 
-未実施・実行中の項目を成功と表示しない。
+以下は実行して成功を確認した結果。
 
 | ゲート | コマンド／方法 | 結果 |
 | --- | --- | --- |
@@ -49,7 +49,7 @@
 | message contracts | `python scripts/generate_message_contracts.py --check` | 成功 |
 | publication / notices | 既存NUL対象ファイル列挙と配布検査 | source/commit scan成功、publication37件・notices7件成功 |
 | 独立レビューと修正後の再レビュー | 変更指摘がなくなるまで実施 | 4回実施。計13指摘を修正し、4回目は重大・重要・軽微とも指摘なし |
-| 最新head CI | PR #5のblocking gates | 未実施 |
+| CI | PR #5の全ジョブ | [a6129b0 の実行](https://github.com/tosintech-web/semantic-studio/actions/runs/40577801556)で全11ジョブ成功。以後の記録commitは[最新Checks](https://github.com/tosintech-web/semantic-studio/pull/5/checks)参照 |
 
 ## 試験inventoryと保存境界
 
@@ -61,7 +61,7 @@ localの既存Undoは開いている編集sessionの機能を再利用し、保�
 
 ## 独立レビューの修正
 
-初回レビューで挙がった7点を修正した。所属関係に説明がある組織を単一登録フォームから書き換えず、履歴編集へ誘導する。統合・分割・その他の制約をAPIとUIで一致させた。基準日の確定所属と編集用の過去参照を分離し、基準日の国解決状態と名称の確度をDTOへ追加した。表示言語はWorkspaceから全専用読取へ伝え、再認証だけでは保持中の国参照tokenを更新しない。国をまたぐ確定した包含は説明なしで拒否する。各指摘は修正前に失敗する回帰試験を追加し、修正後の関連試験で確認した。全件と再レビューは上表に追記する。
+初回レビューで挙がった7点を修正した。所属関係に説明がある組織を単一登録フォームから書き換えず、履歴編集へ誘導する。統合・分割・その他の制約をAPIとUIで一致させた。基準日の確定所属と編集用の過去参照を分離し、基準日の国解決状態と名称の確度をDTOへ追加した。表示言語はWorkspaceから全専用読取へ伝え、再認証だけでは保持中の国参照tokenを更新しない。国をまたぐ確定した包含は説明なしで拒否する。各指摘は修正前に失敗する回帰試験を追加し、修正後の関連試験で確認した。全件と再レビューの成功は上表に記録した。
 
 再レビューでは、通常組織編集からの包含検証の迂回、存在recordのない組織への二重存在編集、存在期間の出典の取り違え、複数国選択間のsnapshot更新を修正した。全frontend実行で検出したメニューボタンの高さ違反も、既存規則を変えず修正した。IRIを別表示し、長い名称を省略しても識別子とaccessible nameを保持する。修正前の回帰試験でbackend3件・frontend2件の失敗を確認し、修正後の関連101件・246件を確認した。
 
@@ -99,3 +99,5 @@ localの既存Undoは開いている編集sessionの機能を再利用し、保�
 | 別政府グループ横断・複数国同時所属・Excel・公開profileは設計通り後続 | これらの操作には追加開発が必要 |
 | 無関係の未追跡spreadsheet設計は変更・公開しない | 後続設計との整合は別途確認が必要 |
 | 独立した大入力benchmarkは行わず既存全性能予算と明示capを検証 | 専用の大規模データで追加測定が必要になり得る |
+
+| 完了記録は、レビュー済みソースとの一致・全ローカル結果・最新headの全CI成功をまとめて確認する | 証拠の対応付けが誤れば再検証が必要。ソース固定と実CIで照合する |
