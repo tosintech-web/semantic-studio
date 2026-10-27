@@ -85,11 +85,11 @@ Modify `backend/app/projects.py`, `backend/app/routers/projects.py`, `frontend/s
 既存の未知profile読取は保持し、専用編集不可とする。profile解除・参照元切替のdryRunは影響一覧とbasisを返す。
 テンプレート作成直後のmodel/shapesを返す既存project契約を維持する。
 
-- [ ] **Step 1: RED試験を追加。** `test_templates_use_org_and_shared_domain_vocabulary`、`test_old_projects_have_no_implicit_profile`、`test_country_and_org_iri_survive_rename_and_duplicate`、`test_unknown_profile_is_preserved_read_only`、`test_profile_kind_change_requires_explicit_detach`。テンプレートをrdflibでparseし、国・組織の標準名がskos:prefLabelを使いORGを独自語彙で置換していないこともassert。
-- [ ] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_government_profiles.py -q`。profile/テンプレート未実装による失敗を確認。
-- [ ] **Step 3: 実装。** profile型・語彙・任意メタデータ保存・二つのテンプレート・create/patchの許可項目を追加。definitionsを各プロジェクトへ手作業コピーせず共通の同梱語彙として読む。実在国はseedしない。
-- [ ] **Step 4: GREEN確認。** 上記試験と既存project/template試験を実行。新旧projectのcreate/list/open/duplicate/exportとprofile解除previewを確認。
-- [ ] **Step 5: commit。** `feat: add country and government project profiles`。
+- [x] **Step 1: RED試験を追加。** `test_templates_use_org_and_shared_domain_vocabulary`、`test_old_projects_have_no_implicit_profile`、`test_country_and_org_iri_survive_rename_and_duplicate`、`test_unknown_profile_is_preserved_read_only`、`test_profile_kind_change_requires_explicit_detach`。テンプレートをrdflibでparseし、国・組織の標準名がskos:prefLabelを使いORGを独自語彙で置換していないこともassert。
+- [x] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_government_profiles.py -q`。profile/テンプレート未実装による失敗を確認。
+- [x] **Step 3: 実装。** profile型・語彙・任意メタデータ保存・二つのテンプレート・create/patchの許可項目を追加。definitionsを各プロジェクトへ手作業コピーせず共通の同梱語彙として読む。実在国はseedしない。
+- [x] **Step 4: GREEN確認。** 上記試験と既存project/template試験を実行。新旧projectのcreate/list/open/duplicate/exportとprofile解除previewを確認。
+- [x] **Step 5: commit。** `feat: add country and government project profiles`。
 
 ## Task 2: 期間・名称・関係記録の読取と基準日投影（G1の基盤）
 
