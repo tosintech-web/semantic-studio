@@ -1502,6 +1502,11 @@ export const SERVER_CONTRACTS = {
     "count": "number",
     "limit": "number"
   },
+  "release.invalid": {},
+  "release.not_found": {},
+  "release.stale": {},
+  "release.too_large": {},
+  "release.unavailable": {},
   "request.body_json": {},
   "request.body_object": {},
   "request.field_json": {
@@ -2637,6 +2642,11 @@ export interface ServerMessageArgs {
   "reasoning.stopped": undefined;
   "reasoning.timeout": { "seconds": number };
   "reasoning.too_large": { "count": number; "limit": number };
+  "release.invalid": undefined;
+  "release.not_found": undefined;
+  "release.stale": undefined;
+  "release.too_large": undefined;
+  "release.unavailable": undefined;
   "request.body_json": undefined;
   "request.body_object": undefined;
   "request.field_json": { "field": string };

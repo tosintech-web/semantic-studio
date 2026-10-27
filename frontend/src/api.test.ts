@@ -224,6 +224,10 @@ const CALLS: Record<string, () => Promise<unknown>> = {
   getReasoningPage: () => api.getReasoningPage("prj-1", "memberships", 200, false),
   getReasoningAbout: () => api.getReasoningAbout("prj-1", "http://example.org/A", false),
   getWhy: () => api.getWhy("prj-1", { s: "http://example.org/a", p: "http://example.org/p", o: "http://example.org/b" }),
+  previewRelease: () => api.previewRelease("prj-1", {source:"Synthetic",license:"CC0"}),
+  approveRelease: () => api.approveRelease("prj-1", {source:"Synthetic",license:"CC0"}, {previewDigest:"review",basis:{resourceVersions:{workspace:1}},entityCount:1,statementCount:1,excludedByReason:{},excludedViews:[],package:""}),
+  listReleases: () => api.listReleases("prj-1"),
+  downloadRelease: () => api.downloadRelease("prj-1","12345678-1234-4234-8234-123456789012"),
   // Not requests: the approval plumbing and the display language. Listed so
   // the export check holds.
   setApprovalHandler: async () => api.setApprovalHandler(null),
@@ -256,13 +260,14 @@ describe("api client header (S-6)", () => {
     // a POST (Reason) and a DELETE (Stop); the examples one POST (restore);
     // a load's cancel one POST (load-progress 5.3); the reuse plan one POST
     // (ShareDomain's dry run, attribute-reuse 5.2); a query's hidden results
-    // one POST (/nodes, query-page-rework 5.2).
+    // one POST (/nodes, query-page-rework 5.2); P3 adds two POSTs
+    // (release preview and approval).
     const expected = [
       ...Array(6).fill("DELETE"),
       "PATCH",
       "PATCH",
       "PATCH",
-      ...Array(33).fill("POST"),
+      ...Array(35).fill("POST"),
       "PUT",
       "PUT",
       "PUT",

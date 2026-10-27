@@ -15,6 +15,31 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "release.title": "公開版",
+  "release.note": "承認済みの配布版を作成します。配布は別操作です。一般公開は行いません。",
+  "release.source": "出典",
+  "release.license": "データの利用条件",
+  "release.preview": "プレビューを作成",
+  "release.approve": "版を承認",
+  "release.review": "全出力ファイルとデータの利用条件を確認しました。",
+  "release.previewDownload": "全出力をダウンロードして確認",
+  "release.counts": "{entities}項目、{statements}ステートメント",
+  "release.exclusions": "除外：未知の述語 {predicate}、空白ノード {blankNode}。インポート・検証ルール・データ・推論結果は対象外です。",
+  "release.contentWarning": "許可された項目の値にも内部情報が含まれる場合があります。全ファイルを確認してください。",
+  "release.empty": "承認済みの版はありません。",
+  "release.download": "パッケージをダウンロード",
+  "release.more": "さらに表示",
+  "release.refresh": "一覧を更新",
+  "release.success": "版を承認しました。ダウンロードして配布先へ取り込んでください。",
+  "release.close": "閉じる",
+  "release.busy": "処理中…",
+
+  "release.invalid": "公開版の入力またはファイルを確認してください。",
+  "release.stale": "辞書が変更されています。プレビューを作り直してください。",
+  "release.too_large": "公開版の上限を超えています。対象を小さくしてください。",
+  "release.not_found": "プロジェクトまたは公開版が見つかりません。",
+  "release.unavailable": "公開版を読み込めません。復旧後に再試行してください。",
+
   "team.refresh": "ログイン状態を確認",
   "team.refresh.failed": "チームのワークスペースを確認できません。再試行してください。",
   "team.poll.changed": "他のメンバーがワークスペースを変更しました。編集前に最新版を読み込んでください。",

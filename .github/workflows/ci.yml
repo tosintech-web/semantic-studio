@@ -163,13 +163,13 @@ jobs:
         working-directory: frontend
       - run: docker build -t semantic-studio:team .
       - name: Actual network, ownership, changed DNS and two-project restore
-        run: python -m unittest scripts.test_pg_compose_network scripts.test_pg_compose_lifecycle
+        run: python -m unittest scripts.test_pg_compose_network scripts.test_pg_compose_lifecycle scripts.test_release_compose
       - run: node .claude/skills/run-semantic-viewer/driver.mjs smoke
       - run: node .claude/skills/run-semantic-viewer/driver.mjs p1
         env:
           BUDGET_REPORT_ONLY: "1"
       - name: Real HTTPS, signed identities and two browser contexts against PostgreSQL
-        run: node .claude/skills/run-semantic-viewer/driver.mjs p2
+        run: node .claude/skills/run-semantic-viewer/driver.mjs p3
 
   # Preserve the existing branch-protection check names. These gates cannot
   # succeed unless every newly named coverage job above has actually passed.

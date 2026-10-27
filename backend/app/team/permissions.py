@@ -24,12 +24,12 @@ class RoutePolicy:
 
     @property
     def minimum_role(self):
-        return {'public':None,'read':'viewer','compute':'viewer','edit':'editor','admin':'admin'}[self.operation]
+        return {'public':None,'read':'viewer','compute':'viewer','edit':'editor','admin':'admin','preview_release':'editor'}[self.operation]
 
 
 def allows(role, operation):
-    return role in {'viewer','editor','admin'} and operation in {'read','compute','edit','admin'} and (
-        operation in {'read','compute'} or role == 'admin' or role == 'editor' and operation == 'edit')
+    return role in {'viewer','editor','admin'} and operation in {'read','compute','edit','admin','preview_release'} and (
+        operation in {'read','compute'} or role == 'admin' or role == 'editor' and operation in {'edit','preview_release'})
 
 
 # Independent of router objects: deriving privileges from verbs or prefixes
@@ -110,6 +110,10 @@ _ROUTE_ROWS = (
     ('PATCH','/api/projects/{pid}/data/{sid}','edit'),
     ('DELETE','/api/projects/{pid}/data/{sid}','admin'),
     ('POST','/api/examples/restore','admin'),
+    ('POST','/api/projects/{pid}/release-preview','preview_release'),
+    ('POST','/api/projects/{pid}/releases','admin'),
+    ('GET','/api/projects/{pid}/releases','read'),
+    ('GET','/api/projects/{pid}/releases/{rid}/package','read'),
     ('GET','/api/team/versions','read'),
     ('GET','/api/team/history','read'),
     ('GET','/api/team/users','admin'),

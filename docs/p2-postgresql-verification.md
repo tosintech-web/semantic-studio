@@ -1,5 +1,13 @@
 # P2 PostgreSQL置換の実装・検証記録
 
+## 最終状態の追記（2026-10-27）
+
+[PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)はmain `e45e2a7`へ統合済み。
+最終head `fad9c12`に対応する[CI run 40416830078](https://github.com/tosintech-web/semantic-studio/actions/runs/40416830078)の全11 job・全step成功を確認した。
+PG 3.12/3.14、Linux/Windows local、Compose/browser、frontend、Docker、publication、参考budgetsを含む。
+これによりP2実装の最終CI gateを確認済み。Windows native team DB、本番Google設定・実データ移行・本番配備の成功を意味しない。
+以下は各検証時点の記録を保持する。P3の方針・完了条件は[新設計](superpowers/specs/2026-10-27-p3-local-releases-design.md)を参照する。
+
 2026-10-27。対象はmain派生の`feat/p2-team-workspace`、置換実装の起点は`d112965`です。
 実装・手元の全試験集合・独立レビュー修正と再レビュー・指定branchへのpush・日本語PR更新を実施しました。
 最新CIの状態は[PR #3のchecks](https://github.com/tosintech-web/semantic-studio/pull/3/checks)を正本とし、実際に全gateを確認するまで完了としません。

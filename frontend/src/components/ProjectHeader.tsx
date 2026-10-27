@@ -58,6 +58,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import ReleasePanel from "../releases/ReleasePanel";
 import {useTeam} from "../team/TeamProvider";
 import { useI18n } from "../i18n/I18nProvider";
 import { historyLabel, renderProjectAnnouncement } from "../modeling/projectNotices";
@@ -122,6 +123,7 @@ export default function ProjectHeader({
   }, [state.resultReadError]);
   const current = activeDocument(state);
   const status = saveStatus(state);
+  const [releaseOpen, setReleaseOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [report, setReport] = useState<LanguageReport | null>(null);
   const [newLang, setNewLang] = useState("");
@@ -151,6 +153,7 @@ export default function ProjectHeader({
   keys.current = { undo, redo, save };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest?.("[data-release-panel]")) return;
       if (!(e.ctrlKey || e.metaKey) || e.altKey || inTextField(e.target)) return;
       const key = e.key.toLowerCase();
       if (key === "s") {
@@ -305,6 +308,9 @@ export default function ProjectHeader({
       >{t("projectHeader.save")}</button>
 
       <span className="spacer" />
+      {team.mode === "team" && <button type="button" className="ghost" aria-disabled={team.suspended} onClick={()=>{if(!team.suspended)setReleaseOpen(true);}}>{t("release.title")}</button>}
+      {releaseOpen && <ReleasePanel projectId={project.id} role={team.canAdmin?"admin":team.canEdit?"editor":"viewer"} suspended={team.suspended} onClose={()=>setReleaseOpen(false)}/>}
+
       {onTurtle && (
         <button className="ghost" onClick={onTurtle} title={t("projectHeader.turtleHelp")}>
           Turtle

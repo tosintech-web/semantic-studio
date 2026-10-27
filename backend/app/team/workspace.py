@@ -323,6 +323,17 @@ class TeamWorkspace:
         resources, versions = await run_in_threadpool(self.repository.snapshot)
         versions.setdefault("workspace", None)
         path = scope["path"]
+        if scope['state'].get('team_route_template') in {
+            '/api/projects/{pid}/release-preview','/api/projects/{pid}/releases',
+            '/api/projects/{pid}/releases/{rid}/package'}:
+            from ..releases.service import ReleaseService
+            from ..releases.http import dispatch_release_request
+            output = await run_in_threadpool(dispatch_release_request,
+                ReleaseService(self.repository, self.blobs), scope=scope, body=body,
+                expected=expected, request_id=request_id, identity=identity, authorize=authorize)
+            if shared and output['status'] < 400:
+                self._invalidate_views()
+            return await self._send(output, send)
         if path == "/api/team/versions" and scope["method"] == "GET":
             return await JSONResponse({"resourceVersions": versions}, headers={"X-Semantic-Studio-Versions": json.dumps(versions)})(scope, receive, send)
         if path == "/api/team/users" or path.startswith("/api/team/users/"):

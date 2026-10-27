@@ -2,6 +2,10 @@
 
 作成日：2026-10-25（日本時間）
 
+**現在の状態（2026-10-27）：P2実装・main統合済み。** [PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)の最終head `fad9c12`は[全11 CI job成功](https://github.com/tosintech-web/semantic-studio/actions/runs/40416830078)、main `e45e2a7`へmerge済み。
+現行保存方式は次のPostgreSQL置換設計。本書のSQLite・6 job成功等は過去の段階の記録であり、現行構成と混同しない。
+P3は[ローカルDockerでの公開版開発](2026-10-27-p3-local-releases-design.md)。本番Google・実データ移行・配備は引き続き別工程。
+
 **2026-10-27 DB設計変更：** SQLiteを廃止する[PostgreSQL置換設計](2026-10-27-p2-postgresql-design.md)を追加した。
 以後のDB・Compose network・復旧方式は新設計を優先する。現行コード・ComposeはPostgreSQLへ置換済みで、
 以下のBuilt・試験結果はSQLite版の記録であって、PostgreSQL実装の完了を意味しない。

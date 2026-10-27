@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- FILE: examples/release-consumer/index.html
+SUMMARY: Inspect a verified dictionary version through the independent sample.
+BASIC IDEA: Render RDF values with textContent; browser calls only this sample.
+INPUTS / INPUT SOURCES: Public verified entities and explicit local search input.
+EXPECTED OUTPUT: Accessible pinned-version search with honest result counts. -->
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>公開版 / Reviewed dictionary</title>
+<style>body{font:1rem system-ui;max-width:60rem;margin:2rem auto;padding:1rem}button,input,select{font:inherit}li{margin-block:1rem}code{overflow-wrap:anywhere}:focus-visible{outline:3px solid #296be1;outline-offset:3px}</style>
+<h1>公開版 / Reviewed dictionary</h1>
+<label>言語 / Language <select id="language"><option value="ja">日本語</option><option value="en">English</option></select></label>
+<form id="form"><label id="search-label" for="q">名称を検索</label> <input id="q" maxlength="500"><button id="submit">検索</button></form>
+<p id="status" role="status" aria-live="polite"></p><ul id="results"></ul><button id="more" hidden>さらに表示</button>
+<script>
+const words={ja:{search:'名称を検索',submit:'検索',more:'さらに表示',error:'公開版を読み込めません。',version:'固定版',count:'件'},en:{search:'Search names',submit:'Search',more:'More',error:'The release is unavailable.',version:'Pinned version',count:'results'}};
+let offset=0,total=0,query='',generation=0;
+const byId=id=>document.getElementById(id);
+async function load(start){const run=++generation;const lang=byId('language').value;const w=words[lang];byId('more').disabled=true;
+ try{const response=await fetch('/api/search?q='+encodeURIComponent(query)+'&offset='+start);if(!response.ok)throw Error();const page=await response.json();if(run!==generation)return;
+ if(start===0)byId('results').replaceChildren();for(const entity of page.items){const li=document.createElement('li');const name=entity.statements.find(s=>s.predicate.endsWith('#prefLabel')||s.predicate.endsWith('#label'));const title=document.createElement('strong');title.textContent=name?.object.value??entity.iri;const iri=document.createElement('code');iri.textContent=entity.iri;const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='詳細 / Details';const pre=document.createElement('pre');pre.textContent=JSON.stringify(entity.statements,null,2);details.append(summary,pre);li.append(title,document.createElement('br'),iri,details);byId('results').append(li);}
+ offset=start+page.items.length;total=page.total;byId('status').textContent=w.version+': '+page.releaseId+' / '+total+' '+w.count;byId('more').hidden=offset>=total;
+ }catch{if(run===generation)byId('status').textContent=w.error;}finally{if(run===generation)byId('more').disabled=false;}}
+byId('form').addEventListener('submit',e=>{e.preventDefault();query=byId('q').value;load(0);});byId('more').addEventListener('click',()=>load(offset));
+byId('language').addEventListener('change',()=>{const lang=byId('language').value;document.documentElement.lang=lang;const w=words[lang];byId('search-label').textContent=w.search;byId('submit').textContent=w.submit;byId('more').textContent=w.more;load(0);});load(0);
+</script></html>

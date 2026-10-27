@@ -1250,3 +1250,13 @@ export const teamVersions = () => send("/api/team/versions").then(handle<{resour
 export const teamHistory = (key:string, offset=0, limit=50) => send(`/api/team/history?key=${encodeURIComponent(key)}&offset=${offset}&limit=${limit}`).then(handle<{history:HistoryEntry[];total?:number}>);
 export const teamUsers = () => send("/api/team/users").then(handle<{users:TeamUser[]}>);
 export const updateTeamUser = (user:TeamUser, role:Role, disabled:boolean) => send("/api/team/users", {method:"PATCH",headers:{...CLIENT_HEADER,"Content-Type":"application/json","X-Semantic-Studio-Versions":encodeTeamVersions({["user:"+user.sub]:user.version})},body:JSON.stringify({sub:user.sub,role,disabled,expectedVersion:user.version})}).then(handle<{user:TeamUser}>);
+
+
+export interface ReleaseMetadata { source: string; license: string }
+export interface ReleasePreview { previewDigest: string; basis: {resourceVersions: ResourceVersions}; entityCount: number; statementCount: number; excludedByReason: Record<string,number>; excludedViews: string[]; package: string }
+export interface ReleaseSummary { releaseId: string; approvedAt: string; packageBytes?: number }
+export interface ReleasePage { items: ReleaseSummary[]; total: number; offset: number; limit: number }
+export const previewRelease = (pid:string, metadata:ReleaseMetadata) => send(projectUrl(pid,"/release-preview"),{method:"POST",headers:{...JSON_WRITE},body:JSON.stringify(metadata)}).then(handle<ReleasePreview>);
+export const approveRelease = (pid:string, metadata:ReleaseMetadata, preview:ReleasePreview) => send(projectUrl(pid,"/releases"),{method:"POST",headers:{...JSON_WRITE,"X-Semantic-Studio-Versions":encodeTeamVersions(preview.basis.resourceVersions)},body:JSON.stringify({...metadata,previewDigest:preview.previewDigest})}).then(handle<ReleaseSummary>);
+export const listReleases = (pid:string,offset=0,limit=50) => send(projectUrl(pid,`/releases?offset=${offset}&limit=${limit}`)).then(handle<ReleasePage>);
+export const downloadRelease = (pid:string,rid:string) => bytes(projectUrl(pid,`/releases/${encodeURIComponent(rid)}/package`));

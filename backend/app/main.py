@@ -198,7 +198,10 @@ def request_body_limit(method: str, path: str) -> tuple[int, dict] | None:
     Multipart requests include the historical framing allowance. JSON limits
     stay exact; the source-body cap retains its existing upload allowance.
     """
+    from .messages import make_message
     limit, detail = None, None
+    if method == "POST" and re.fullmatch(r"/api/projects/[^/]+/(release-preview|releases)", path):
+        return 65536, {"code": "release.too_large", "uiMessage": make_message("release.too_large")}
     if method == "PUT":
         if _SOURCE_PATH.match(path):
             limit = ontologies.MAX_UPLOAD_BYTES + ontologies.CHUNK_BYTES
