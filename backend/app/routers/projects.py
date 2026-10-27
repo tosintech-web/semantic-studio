@@ -62,9 +62,10 @@ from contextlib import contextmanager, nullcontext
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from ..messages import MessageText, integer_arg, make_message
 from ..messages import UiHTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictBool, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from .. import reasoning
@@ -82,8 +83,11 @@ from ..editing import (
 from ..projects import LAYOUT_MAX_BYTES, ProjectError, UnknownDocument, UnknownProject
 from ..store import ParseError, ParseTimeout, store
 from . import ontologies
+from ..government.profile import DomainError
+from ..government.references import metadata_locked
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+COMMAND_MAX_BYTES = 256 * 1024
 
 
 class CreateProject(BaseModel):
@@ -98,7 +102,7 @@ class CreateProject(BaseModel):
 
 class PatchProject(BaseModel):
     domainProfile: Optional[dict] = None
-    dryRun: bool = False
+    dryRun: StrictBool = False
     profileBasis: Optional[str] = None
     name: Optional[str] = None
     languages: Optional[list[str]] = None
@@ -168,6 +172,8 @@ def _errors():
                 else make_message('parse.syntax_without_line', format='Turtle')
             ),
         ) from exc
+    except DomainError as exc:
+        raise UiHTTPException(status_code=exc.status, detail=str(exc), ui_message=exc.ui_message) from exc
     except AlreadyDefined as exc:
         # A property of that name and kind is there already (attribute-reuse
         # 5.1): the form offers to use it, so the property goes with the words.
@@ -203,6 +209,7 @@ def list_projects() -> list[dict]:
 
 
 @router.post("")
+@metadata_locked
 def create_project(body: CreateProject) -> dict:
     with _errors():
         if body.fromOntologyId is not None and body.domainProfile is not None:
@@ -238,16 +245,21 @@ def create_project(body: CreateProject) -> dict:
 
 
 @router.patch("/{pid}")
+@metadata_locked
 def patch_project(pid: str, body: PatchProject) -> dict:
     with _errors():
         from ..government.profile import ProfileConflict
         fields = body.model_dump(exclude_unset=True, exclude={"dryRun", "profileBasis"})
         document = None
+        reference_bases, available_countries = {}, set()
+        if "domainProfile" in fields:
+            from ..government.references import profile_reference_snapshots
+            reference_bases, available_countries = profile_reference_snapshots(editing_service, pid, fields["domainProfile"])
         if "domainProfile" in fields and editing_service.is_open(pid):
             document = editing_service.document(pid, "model")
         with document.lock if document is not None else nullcontext():
             try:
-                summary = project_store.patch(pid, fields, dry_run=body.dryRun, basis=body.profileBasis, graph=document.graph if document else None)
+                summary = project_store.patch(pid, fields, dry_run=body.dryRun, basis=body.profileBasis, graph=document.graph if document else None, reference_bases=reference_bases, available_countries=available_countries)
             except ProfileConflict as exc:
                 raise UiHTTPException(status_code=409, detail="Review the changed profile settings again.", ui_message=make_message("government.profile_stale")) from exc
         if body.dryRun:
@@ -257,12 +269,14 @@ def patch_project(pid: str, body: PatchProject) -> dict:
 
 
 @router.post("/{pid}/duplicate")
+@metadata_locked
 def duplicate_project(pid: str) -> dict:
     with _errors():
         return project_store.duplicate(pid)
 
 
 @router.delete("/{pid}")
+@metadata_locked
 def delete_project(pid: str) -> dict:
     """Move the folder to projects/.trash/, and say where it went."""
     with _errors():
@@ -302,13 +316,30 @@ def add_document(pid: str, body: NewDocument) -> dict:
         return editing_service.add_document(pid, body.role)
 
 
-@router.post("/{pid}/documents/{doc}/commands")
-def run_command(pid: str, doc: str, body: RunCommand, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
+@router.post("/{pid}/documents/{doc}/commands", openapi_extra={"requestBody": {"required": True, "content": {"application/json": {"schema": RunCommand.model_json_schema()}}}})
+async def run_command(pid: str, doc: str, request: Request, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """One of the commands the canvas will use (5.4). A dry run is offered for
     DeleteEntity, returning the impact summary, and for ShareDomain, returning
     the reuse plan (attribute-reuse 5.2), with nothing changed either way."""
     with _errors():
-        return editing_service.command(pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
+        project_store.folder(pid)
+        project_store.document_file(doc)
+    chunks, total = [], 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > COMMAND_MAX_BYTES:
+            raise UiHTTPException(status_code=413, detail="One change is at most 256 KiB.", ui_message=make_message("project.command_limit"))
+        chunks.append(chunk)
+    try:
+        body = RunCommand.model_validate_json(b"".join(chunks))
+    except ValidationError as exc:
+        if any(error["type"] == "json_invalid" for error in exc.errors()):
+            raise UiHTTPException(status_code=422, detail="The body must be JSON.", ui_message=make_message("request.body_json")) from exc
+        raise RequestValidationError([{**error, "loc": ("body", *error["loc"])} for error in exc.errors()]) from exc
+    def work():
+        with _errors():
+            return editing_service.command(pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
+    return await run_in_threadpool(work)
 
 
 @router.get("/{pid}/documents/{doc}/source")

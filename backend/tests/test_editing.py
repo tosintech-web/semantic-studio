@@ -314,7 +314,9 @@ def test_every_command_produces_its_triples_label_and_a_new_revision(pid):
         assert result["delta"]["removedTotal"] == len(set(before) - set(graph))
     # The shape commands act on shapes.ttl and have their own cases below
     # (shacl-authoring Stage A).
-    assert seen == set(editing.COMMANDS) - set(editing.SHAPE_COMMANDS), "a command in 5.4 has no case"
+    # Domain commands need separate country/organization project authority;
+    # test_government_commands covers their complete changes and inverse.
+    assert seen == set(editing.COMMANDS) - set(editing.SHAPE_COMMANDS) - set(editing.GOVERNMENT_COMMANDS), "a command in 5.4 has no case"
 
 
 @pytest.mark.parametrize(

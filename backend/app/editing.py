@@ -4,6 +4,7 @@ FILE: backend/app/editing.py
 ================================================================================
 
 SUMMARY
+    A shared reference gate orders local project edits and cross-group snapshots.
     Command read-name facts project a display language while lexical/RDF names stay original.
     Project view names accept an explicit read language without changing RDF languages.
     Unnamed-shape history/refusals preserve source ownership beside legacy names.
@@ -3712,6 +3713,13 @@ def _draft_paths(document: OpenDocument) -> tuple[Path, Path]:
     return folder / f"{document.doc}.ttl", folder / f"{document.doc}.json"
 
 
+from .government.references import editing_locked
+from .government.commands import cmd_create_country, cmd_create_government_organization
+
+GOVERNMENT_COMMANDS = {"CreateCountry": cmd_create_country, "CreateGovernmentOrganization": cmd_create_government_organization}
+COMMANDS.update(GOVERNMENT_COMMANDS)
+
+
 class EditingService:
     """Every open project and its documents."""
 
@@ -3722,6 +3730,7 @@ class EditingService:
         self._validation_runs: dict[str, object] = {}
         self._validation_readings: dict[str, tuple[dict, shacl.ResultReading]] = {}
         self._lock = threading.Lock()
+        self.reference_lock = threading.RLock()
         # How many drafts the timer has written; the autosave tests read it.
         self.drafts_written = 0
         # The open projects' data snapshots (csv-data-import 5.6): not
@@ -3766,6 +3775,7 @@ class EditingService:
         ontology.lock = document.lock
         return document
 
+    @editing_locked
     def open(self, pid: str) -> dict:
         manifest = self.projects.manifest(pid)
         with self._lock:
@@ -3819,6 +3829,7 @@ class EditingService:
             raise UnknownDocument(doc)
         return documents[doc]
 
+    @editing_locked
     def close(self, pid: str, discard: bool = False) -> dict:
         documents = self._open.get(pid)
         if documents is None:
@@ -3927,6 +3938,7 @@ class EditingService:
             document.visual_since_save = True
         self._arm(document)
 
+    @editing_locked
     def command(self, pid: str, doc: str, name: str, args: dict, dry_run: bool = False, *, lang: Optional[str] = None) -> dict:
         handler = COMMANDS.get(name)
         if handler is None:
@@ -3948,6 +3960,9 @@ class EditingService:
         model_lock = self._open[pid]["model"].lock if doc != "model" else contextlib.nullcontext()
         with document.lock, model_lock:
             ctx = self._context(document, lang)
+            if name == "CreateGovernmentOrganization":
+                from .government.references import country_reference
+                ctx.country_reference = country_reference(self, pid)
             if name == "DeleteEntity":
                 change, impact = delete_plan(ctx, args)
                 if dry_run:
@@ -4012,6 +4027,7 @@ class EditingService:
             self._open[pid]["shapes"] = document
         self.store.register_document(document.ontology)
 
+    @editing_locked
     def apply_text(self, pid: str, doc: str, text: str, timeout: Optional[float]) -> dict:
         document = self.document(pid, doc)
         base = self.projects.manifest(pid)["baseIri"]
@@ -4072,6 +4088,7 @@ class EditingService:
         self._cancel(document)
         self._remove_draft(document)
 
+    @editing_locked
     def undo(self, pid: str, doc: str) -> dict:
         document = self.document(pid, doc)
         with document.lock:
@@ -4092,6 +4109,7 @@ class EditingService:
                 **({"uiMessage": step.ui_message} if step.ui_message is not None else {}),
             }
 
+    @editing_locked
     def redo(self, pid: str, doc: str) -> dict:
         document = self.document(pid, doc)
         with document.lock:
@@ -4123,6 +4141,7 @@ class EditingService:
 
     # --- saving -------------------------------------------------------------------
 
+    @editing_locked
     def save(self, pid: str, doc: str, confirm_rewrite: bool = False) -> dict:
         document = self.document(pid, doc)
         with document.lock:
@@ -4218,6 +4237,7 @@ class EditingService:
         for path in _draft_paths(document):
             path.unlink(missing_ok=True)
 
+    @editing_locked
     def recover(self, pid: str, action: str, timeout: Optional[float]) -> dict:
         documents = self._open.get(pid)
         if documents is None:

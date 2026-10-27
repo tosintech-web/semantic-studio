@@ -15,6 +15,17 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "government.projection_limit": "基準日ビューは100,000件以内の記述に対応します。",
+  "project.command_limit": "1回の変更は256 KiB以内にしてください。",
+  "government.invalid_input": "入力内容を確認してください。",
+  "government.name_required": "各言語の正式名称を1件ずつ入力してください。",
+  "government.period_invalid": "正しい日付、日付不明、または期間の境界なしを選択してください。",
+  "government.source_required": "出典のリンクまたは書誌情報を入力してください。",
+  "government.target_missing": "選択した項目はこのグループにありません。",
+  "government.reference_stale": "国グループが変更されました。国を選択し直してください。",
+  "government.country_missing": "接続した国グループから国を選択してください。",
+  "government.country_saved": "国を保存",
+  "government.organization_saved": "政府組織を保存",
   "government.invalid_profile": "元のプロジェクト種別に対応するプロファイルを選択してください。",
   "government.profile_kind": "プロジェクト種別を変更する前に、専用プロファイルを解除してください。",
   "government.profile_source": "利用可能な国グループを選択してください。",

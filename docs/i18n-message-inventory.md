@@ -3172,7 +3172,7 @@ TypeScript ASTでテスト以外の全TSXを読み、JSX本文とtitle/aria-labe
 | `query.node_not_queryable` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
 | `ontology.choose_other` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
 | `export.too_frequent` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
-| `request.body_json` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/data.py`<br>`backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
+| `request.body_json` | — | `frontend/src/components/RulesBlock.tsx`<br>`backend/app/routers/data.py`<br>`backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 , `backend/app/routers/projects.py` |
 | `load.empty_file` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
 | `ontology.source_missing` | — | `backend/app/routers/ontologies.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
 | `network.invalid_host` | — | `backend/app/routers/network.py` | HTTP拒否・原文詳細 | 12 | 既存のstatus・detailを維持する生成元情報 |
@@ -3435,9 +3435,20 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `release.title` | — | `frontend/src/releases/ReleasePanel.tsx`, `frontend/src/components/ProjectHeader.tsx` , `frontend/src/components/RulesBlock.tsx` |
 | `release.too_large` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
 | `release.unavailable` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
-| `government.invalid_profile` | — | `backend/app/projects.py`, `backend/app/routers/projects.py` |
+| `government.invalid_profile` | — | `backend/app/projects.py`, `backend/app/routers/projects.py` , `backend/app/government/views.py` |
 | `government.profile_kind` | — | `backend/app/projects.py` |
 | `government.profile_source` | — | `backend/app/projects.py` |
 | `government.profile_stale` | — | `backend/app/routers/projects.py` |
 | `project.template.countries` | — | `frontend/src/projects/form.ts` |
 | `project.template.government-organizations` | — | `frontend/src/projects/form.ts` |
+| `government.invalid_input` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `government.name_required` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `government.period_invalid` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` , `backend/app/government/views.py` |
+| `government.source_required` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `government.target_missing` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `government.reference_stale` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `government.country_missing` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `government.country_saved` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `government.organization_saved` | — | `backend/app/government/commands.py`, `backend/app/government/references.py`, `backend/app/government/profile.py`, `backend/app/routers/government.py` |
+| `project.command_limit` | — | `backend/app/routers/projects.py`, `backend/app/main.py` |
+| `government.projection_limit` | — | `backend/app/government/views.py` |

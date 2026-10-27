@@ -15,6 +15,17 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "government.projection_limit": "A dated view supports at most 100,000 statements.",
+  "project.command_limit": "One change is at most 256 KiB.",
+  "government.invalid_input": "Check the input values.",
+  "government.name_required": "Give one preferred name per language.",
+  "government.period_invalid": "Choose valid dates, unknown bounds, or open bounds.",
+  "government.source_required": "Give a source link or bibliographic reference.",
+  "government.target_missing": "The selected entry is not in this group.",
+  "government.reference_stale": "The country group changed. Select the country again.",
+  "government.country_missing": "Choose a country from the connected country group.",
+  "government.country_saved": "Save country",
+  "government.organization_saved": "Save government organization",
   "government.invalid_profile": "Choose a supported profile matching the original project type.",
   "government.profile_kind": "Detach the domain profile before changing the project kind.",
   "government.profile_source": "Choose an available country group.",

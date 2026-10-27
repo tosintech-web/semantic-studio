@@ -680,7 +680,7 @@ class ProjectStore:
         if profile is None or profile.id != "countries-v1":
             raise ProjectError("Choose an available country group.", ui_message=make_message("government.profile_source"))
 
-    def patch(self, pid: str, fields: dict, *, dry_run: bool = False, basis: Optional[str] = None, graph: Optional[Graph] = None) -> dict:
+    def patch(self, pid: str, fields: dict, *, dry_run: bool = False, basis: Optional[str] = None, graph: Optional[Graph] = None, reference_bases: Optional[dict] = None, available_countries: Optional[set[str]] = None) -> dict:
         """Validate the complete metadata change before writing any field.
 
         Profile changes require review against the exact original manifest
@@ -726,10 +726,10 @@ class ProjectStore:
                 raise ProjectError("Detach the domain profile before changing the project kind.", ui_message=make_message("government.profile_kind"))
             if "domainProfile" in fields:
                 accepted = graph if graph is not None else Graph().parse(self.document_path(pid, "model"), format="turtle")
-                token = hashlib.sha256((json.dumps(original, sort_keys=True, ensure_ascii=False) + str(to_isomorphic(accepted).graph_digest())).encode()).hexdigest()
+                token = hashlib.sha256((json.dumps(original, sort_keys=True, ensure_ascii=False) + str(to_isomorphic(accepted).graph_digest()) + json.dumps(reference_bases or {}, sort_keys=True)).encode()).hexdigest()
                 linked = sorted({str(obj) for record in accepted.subjects(GOV.predicate, GOV.inCountry) for obj in accepted.objects(record, GOV.object)})
                 if dry_run:
-                    return {"dryRun": True, "basis": token, "impact": {"countryIris": linked}, "project": self.summary(manifest)}
+                    return {"dryRun": True, "basis": token, "impact": {"countryIris": linked, "unresolvedCountryIris": sorted(set(linked) - (available_countries or set()))}, "project": self.summary(manifest)}
                 if basis != token:
                     from .government.profile import ProfileConflict
                     raise ProfileConflict()

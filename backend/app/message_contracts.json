@@ -1712,6 +1712,17 @@
     "government.invalid_profile": {},
     "government.profile_kind": {},
     "government.profile_source": {},
-    "government.profile_stale": {}
+    "government.profile_stale": {},
+    "government.invalid_input": {},
+    "government.name_required": {},
+    "government.period_invalid": {},
+    "government.source_required": {},
+    "government.target_missing": {},
+    "government.reference_stale": {},
+    "government.country_missing": {},
+    "government.country_saved": {},
+    "government.organization_saved": {},
+    "project.command_limit": {},
+    "government.projection_limit": {}
   }
 }

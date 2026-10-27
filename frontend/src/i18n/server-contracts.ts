@@ -886,10 +886,20 @@ export const SERVER_CONTRACTS = {
     "url": "string"
   },
   "fetch.web_only": {},
+  "government.country_missing": {},
+  "government.country_saved": {},
+  "government.invalid_input": {},
   "government.invalid_profile": {},
+  "government.name_required": {},
+  "government.organization_saved": {},
+  "government.period_invalid": {},
   "government.profile_kind": {},
   "government.profile_source": {},
   "government.profile_stale": {},
+  "government.projection_limit": {},
+  "government.reference_stale": {},
+  "government.source_required": {},
+  "government.target_missing": {},
   "imports.bundled_changed": {
     "title": "string"
   },
@@ -1180,6 +1190,7 @@ export const SERVER_CONTRACTS = {
     "format": "string",
     "line": "number"
   },
+  "project.command_limit": {},
   "project.document_not_found": {},
   "project.not_found": {},
   "project.not_open": {},
@@ -2449,10 +2460,20 @@ export interface ServerMessageArgs {
   "fetch.response_limit": { "limit": number | string; "url": string };
   "fetch.time_limit": { "url": string };
   "fetch.web_only": undefined;
+  "government.country_missing": undefined;
+  "government.country_saved": undefined;
+  "government.invalid_input": undefined;
   "government.invalid_profile": undefined;
+  "government.name_required": undefined;
+  "government.organization_saved": undefined;
+  "government.period_invalid": undefined;
   "government.profile_kind": undefined;
   "government.profile_source": undefined;
   "government.profile_stale": undefined;
+  "government.projection_limit": undefined;
+  "government.reference_stale": undefined;
+  "government.source_required": undefined;
+  "government.target_missing": undefined;
   "imports.bundled_changed": { "title": string };
   "imports.bytes_limit": { "limit": number | string };
   "imports.bytes_refused": { "limit": number | string };
@@ -2550,6 +2571,7 @@ export interface ServerMessageArgs {
   "parse.unfinished_file": undefined;
   "parse.unreadable": { "format": string };
   "parse.unreadable_line": { "format": string; "line": number };
+  "project.command_limit": undefined;
   "project.document_not_found": undefined;
   "project.not_found": undefined;
   "project.not_open": undefined;

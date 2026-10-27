@@ -49,3 +49,36 @@ export interface NameInput {
   sources: Source[];
 }
 
+export interface CountryPage extends Page<CountryChoice> { basis: ReferenceBasis }
+export type TemporalState = "active" | "inactive" | "uncertain";
+export interface OrganizationView {
+  iri: string;
+  label: string;
+  kind: "Organization" | "FormalOrganization" | "OrganizationalUnit";
+  countryIri: string | null;
+  countryLabel: string;
+  countryResolved: boolean;
+  existenceState: TemporalState;
+  existencePeriod: Period | null;
+  names: { value: string; language: string }[];
+}
+export interface RelationView extends RelationInput {
+  iri: string;
+  subject: string;
+  predicate: string;
+  object: string;
+  subjectLabel: string;
+  objectLabel: string;
+  state: TemporalState;
+  unsupported: string[];
+}
+export interface GovernmentViewResult {
+  at: string;
+  basis: string;
+  organizations: Page<OrganizationView>;
+  relations: Page<RelationView>;
+  uncertain: Page<RelationView>;
+  diagnostics: { code: string; severity: string; iri: string; args: Record<string, unknown> }[];
+  referenceBasis: ReferenceBasis | null;
+}
+

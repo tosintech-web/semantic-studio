@@ -29,6 +29,16 @@ class ProfileConflict(ValueError):
     """A profile confirmation no longer refers to the reviewed graph/settings."""
 
 
+class DomainError(ValueError):
+    """A domain refusal retaining HTTP status and translatable source facts."""
+    def __init__(self, detail: str, *, code: str = "government.invalid_input", status: int = 422):
+        from ..messages import make_message
+        super().__init__(detail)
+        self.status = status
+        self.code = code
+        self.ui_message = make_message(code)
+
+
 @dataclass(frozen=True)
 class DomainProfile:
     id: str

@@ -107,15 +107,15 @@ ExistenceRecordも三値判定し、存在期間外へのactiveな関係は投�
 存在不明の端点でも関係自体は期間で判定し、投影graphの各組織に `gov:existenceState` の文字列注記を付ける。
 未対応recordはreadonly理由付きで返し、専用フォームは書き直さない。
 
-- [ ] **Step 1: RED試験。** `test_transfer_switches_on_effective_date`、`test_unknown_bound_is_not_unbounded`、`test_explicit_open_bound_projects`、`test_future_name_does_not_replace_current_name`、`test_gap_and_uncertainty_stay_visible`、`test_source_graph_unchanged`、`test_cycle_is_checked_per_overlapping_period`、`test_inactive_endpoint_is_excluded_with_diagnostic`、`test_unknown_existence_is_annotated`。2020-03-31/2020-04-01の切替と日付不明を具体値でassert。
-- [ ] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_government_records.py -q`。
-- [ ] **Step 3: 実装。** 日付のstrict parse、半開区間、三値判定、同時点の包含循環・重複、名称投影を純粋処理にする。unknownをdatetime.min/maxへ置換しない。循環検査は包含2述語を合わせ、監督・連携は含めない。
-- [ ] **Step 4: GREEN確認。** 上記試験を成功させ、serialize/parse往復で期間・言語・出典が同一であることも確認。
-- [ ] **Step 5: commit。** `feat: model dated government relations and projections`。
+- [x] **Step 1: RED試験。** `test_transfer_switches_on_effective_date`、`test_unknown_bound_is_not_unbounded`、`test_explicit_open_bound_projects`、`test_future_name_does_not_replace_current_name`、`test_gap_and_uncertainty_stay_visible`、`test_source_graph_unchanged`、`test_cycle_is_checked_per_overlapping_period`、`test_inactive_endpoint_is_excluded_with_diagnostic`、`test_unknown_existence_is_annotated`。2020-03-31/2020-04-01の切替と日付不明を具体値でassert。
+- [x] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_government_records.py -q`。
+- [x] **Step 3: 実装。** 日付のstrict parse、半開区間、三値判定、同時点の包含循環・重複、名称投影を純粋処理にする。unknownをdatetime.min/maxへ置換しない。循環検査は包含2述語を合わせ、監督・連携は含めない。
+- [x] **Step 4: GREEN確認。** 上記試験を成功させ、serialize/parse往復で期間・言語・出典が同一であることも確認。
+- [x] **Step 5: commit。** `feat: model dated government relations and projections`。
 
 ## Task 3: 国参照と原子的な国・組織登録（G1）
 
-**Files:** Create `backend/app/government/{references,commands}.py`, `backend/app/routers/government.py`,
+**Files:** Create `backend/app/government/{references,commands,views}.py`, `backend/app/routers/government.py`,
 `backend/tests/test_government_commands.py`, `backend/tests/test_government_http.py`, `backend/tests/test_team_government.py`。
 Modify `backend/app/editing.py`, `backend/app/main.py`, `backend/app/team/{workspace,commands,permissions}.py`,
 `backend/app/messages.py`, `frontend/src/api.ts`。必要な型付きmessage契約を既存generatorで更新。
@@ -128,11 +128,11 @@ Organization argsは任意対象iri、names、kind、identifier、existencePerio
 iriなしはUUID新規、ありは同profileの既存対象だけを編集。編集でもIRIは不変。
 組織作成ではExistenceRecordと所属国RelationRecordも同じChangeに含め、一回Undoでまとめて戻す。
 
-- [ ] **Step 1: RED試験。** 251件の国から251番目を検索・ページ選択できtotal=251、同名の別IRIが別候補、国名変更後も参照IRI不変、国以外IRI拒否、参照元削除/profile変更後は409、countryProjectId切替で名前による再対応なし。
-- [ ] **Step 2: team RED試験。** 同一snapshotの参照元を別editorが変えたときのCAS拒否、応答喪失後の再送で組織・関係・監査が一つ、viewer拒否、降格後の再送拒否を `test_team_government.py` に追加。専用Compose runnerで実行し、接続不能をREDの代わりにしない。
-- [ ] **Step 3: 実装。** 国読取を参照元を開かずに行い、tokenと現在型を検査。localは共通lockを設定変更／graph更新にも適用し、teamはsource graph・manifestのexpectedをcommitへ追加。lookupだけの二段階書込みを作らない。新routeをteamのread分類へ明示登録し未保護routeを残さない。
-- [ ] **Step 4: GREEN確認。** local HTTP/command試験とteam試験を3.12/3.14で成功させ、既存権限・再送・Undoの関連群も実行。検索200文字・page100・本文256KiBの境界と413/422を確認。
-- [ ] **Step 5: commit。** `feat: link government organizations to country project authority`。
+- [x] **Step 1: RED試験。** 251件の国から251番目を検索・ページ選択できtotal=251、同名の別IRIが別候補、国名変更後も参照IRI不変、国以外IRI拒否、参照元削除/profile変更後は409、countryProjectId切替で名前による再対応なし。
+- [x] **Step 2: team RED試験。** 同一snapshotの参照元を別editorが変えたときのCAS拒否、応答喪失後の再送で組織・関係・監査が一つ、viewer拒否、降格後の再送拒否を `test_team_government.py` に追加。専用Compose runnerで実行し、接続不能をREDの代わりにしない。
+- [x] **Step 3: 実装。** 国読取を参照元を開かずに行い、tokenと現在型を検査。localは共通lockを設定変更／graph更新にも適用し、teamはsource graph・manifestのexpectedをcommitへ追加。lookupだけの二段階書込みを作らない。新routeをteamのread分類へ明示登録し未保護routeを残さない。
+- [x] **Step 4: GREEN確認。** local HTTP/command試験とteam試験を3.12/3.14で成功させ、既存権限・再送・Undoの関連群も実行。検索200文字・page100・本文256KiBの境界と413/422を確認。
+- [x] **Step 5: commit。** `feat: link government organizations to country project authority`。
 
 ## Task 4: 国・組織の専用入力フォーム（G1完了）
 

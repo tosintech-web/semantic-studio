@@ -178,6 +178,11 @@ const CALLS: Record<string, () => Promise<unknown>> = {
   // home-and-examples: the examples added back.
   restoreExamples: () => api.restoreExamples(),
   listProjects: () => api.listProjects(),
+  getCountryChoices: () => api.getCountryChoices("prj-1", { query: "Synthetic" }),
+  getGovernmentView: () => api.getGovernmentView("prj-1", "2020-04-01"),
+  downloadGovernmentProjection: () => api.downloadGovernmentProjection("prj-1", "2020-04-01"),
+  previewDomainProfileChange: () => api.previewDomainProfileChange("prj-1", null),
+
   createProject: () => api.createProject({ name: "p", template: "small" }),
   updateProject: () => api.updateProject("prj-1", { name: "q" }),
   duplicateProject: () => api.duplicateProject("prj-1"),
@@ -264,6 +269,7 @@ describe("api client header (S-6)", () => {
     // (release preview and approval).
     const expected = [
       ...Array(6).fill("DELETE"),
+      "PATCH",
       "PATCH",
       "PATCH",
       "PATCH",

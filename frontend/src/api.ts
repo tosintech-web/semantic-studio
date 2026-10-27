@@ -1262,3 +1262,24 @@ export const previewRelease = (pid:string, metadata:ReleaseMetadata) => send(pro
 export const approveRelease = (pid:string, metadata:ReleaseMetadata, preview:ReleasePreview) => send(projectUrl(pid,"/releases"),{method:"POST",headers:{...JSON_WRITE,"X-Semantic-Studio-Versions":encodeTeamVersions(preview.basis.resourceVersions)},body:JSON.stringify({...metadata,previewDigest:preview.previewDigest})}).then(handle<ReleaseSummary>);
 export const listReleases = (pid:string,offset=0,limit=50) => send(projectUrl(pid,`/releases?offset=${offset}&limit=${limit}`)).then(handle<ReleasePage>);
 export const downloadRelease = (pid:string,rid:string) => bytes(projectUrl(pid,`/releases/${encodeURIComponent(rid)}/package`));
+
+// Country authority is read explicitly; a different display language changes
+// candidate labels without changing the reference basis or saved RDF identity.
+export function getCountryChoices(pid: string, options: { query?: string; offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal } = {}): Promise<import("./government/types").CountryPage> {
+  const query = new URLSearchParams({ q: options.query ?? "", offset: String(options.offset ?? 0), limit: String(options.limit ?? 50), displayLanguage: options.displayLanguage ?? "" });
+  return send(projectUrl(pid, `/government/countries?${query}`), { signal: options.signal }).then(handle<import("./government/types").CountryPage>);
+}
+
+export function getGovernmentView(pid: string, at: string, options: { offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal } = {}): Promise<import("./government/types").GovernmentViewResult> {
+  const query = new URLSearchParams({ at, offset: String(options.offset ?? 0), limit: String(options.limit ?? 50), displayLanguage: options.displayLanguage ?? "" });
+  return send(projectUrl(pid, `/government/view?${query}`), { signal: options.signal }).then(handle<import("./government/types").GovernmentViewResult>);
+}
+
+export function downloadGovernmentProjection(pid: string, at: string): Promise<{ blob: Blob; filename: string }> {
+  return bytes(projectUrl(pid, `/government/projection?at=${encodeURIComponent(at)}`));
+}
+
+export interface DomainProfilePreview { dryRun: true; basis: string; impact: { countryIris: string[]; unresolvedCountryIris: string[] }; project: ProjectSummary }
+export function previewDomainProfileChange(pid: string, domainProfile: import("./government/types").DomainProfile | null): Promise<DomainProfilePreview> {
+  return send(projectUrl(pid), { method: "PATCH", headers: JSON_WRITE, body: JSON.stringify({ domainProfile, dryRun: true }) }).then(handle<DomainProfilePreview>);
+}
