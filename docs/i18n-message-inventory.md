@@ -464,7 +464,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `home.docsInclude.many_many` | individuals, assertions | `frontend/src/components/HomeScreen.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.more` | name | `frontend/src/components/OntologyCard.tsx`<br>`frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.newName` | name | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `home.openName` | name | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `home.openName` | name | `frontend/src/components/ProjectsSection.tsx`, `frontend/src/government/GroupNavigation.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.added` | date | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.changed` | date | `frontend/src/components/ProjectsSection.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `home.action.explore` | name | `frontend/src/components/OntologyCard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -3458,8 +3458,8 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.selectedCountry` | iri | `frontend/src/government/CountryPicker.tsx` |
 | `government.countryCounts` | shown, total | `frontend/src/government/CountryPicker.tsx` |
 | `government.countryEmpty` | — | `frontend/src/government/CountryPicker.tsx` |
-| `government.previousPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx` |
-| `government.nextPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx` |
+| `government.previousPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx`, `frontend/src/government/GroupNavigation.tsx` |
+| `government.nextPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx`, `frontend/src/government/GroupNavigation.tsx` |
 | `government.aliases` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.preferredNames` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.aliasNumber` | number | `frontend/src/government/EntryParts.tsx` |
@@ -3491,8 +3491,8 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.countryPeriod` | — | `frontend/src/government/OrganizationForm.tsx` |
 | `government.refreshCountries` | — | `frontend/src/government/CountryPicker.tsx` |
 | `government.leave.confirm` | — | `frontend/src/App.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryForm.tsx` |
-| `government.countriesTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.organizationsTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
+| `government.countriesTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GroupNavigation.tsx` |
+| `government.organizationsTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/GroupNavigation.tsx` |
 | `government.countryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.chooseCountryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.reviewCountryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
@@ -3604,3 +3604,15 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.nameState.active` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.nameState.inactive` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.nameState.uncertain` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+
+| `government.groupNavigation` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.countryGroups` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.organizationGroups` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.createCountryGroup` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.createOrganizationGroup` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.groupsReadOnly` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.searchGroups` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.groupCounts` | shown, total | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `government.noGroups` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |
+
+| `government.noGroupsReadOnly` | — | `frontend/src/government/GroupNavigation.tsx` | en/ja |

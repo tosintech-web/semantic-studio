@@ -16,6 +16,17 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "government.noGroupsReadOnly": undefined;
+  "government.groupNavigation": undefined;
+  "government.countryGroups": undefined;
+  "government.organizationGroups": undefined;
+  "government.createCountryGroup": undefined;
+  "government.createOrganizationGroup": undefined;
+  "government.groupsReadOnly": undefined;
+  "government.searchGroups": undefined;
+  "government.groupCounts": {shown:number;total:number};
+  "government.noGroups": undefined;
+
   "government.relationState.active": undefined;
   "government.relationState.inactive": undefined;
   "government.relationState.uncertain": undefined;

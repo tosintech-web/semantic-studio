@@ -15,6 +15,16 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "government.noGroupsReadOnly": "該当するグループがありません。編集者または管理者がグループを作成できます。",
+  "government.groupNavigation": "国と政府組織のグループ",
+  "government.countryGroups": "国グループ",
+  "government.organizationGroups": "政府組織グループ",
+  "government.createCountryGroup": "国グループを作成",
+  "government.createOrganizationGroup": "政府組織グループを作成",
+  "government.groupsReadOnly": "閲覧者はグループを開けます。作成には編集者または管理者の権限が必要です。",
+  "government.searchGroups": "グループを検索",
+  "government.groupCounts": "{total}グループ中{shown}件を表示",
+  "government.noGroups": "該当するグループがありません。グループを作成すると登録を始められます。",
   "government.relationState.active": "基準日に有効な関係",
   "government.relationState.inactive": "関係の有効期間外",
   "government.relationState.uncertain": "関係の日付は不明",

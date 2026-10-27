@@ -257,6 +257,7 @@ import type {
   OntologySummary,
   ProjectDocName,
   ProjectSummary,
+  ProjectTemplate,
   Theme,
   VizGraph,
   VizNeighborhood,
@@ -792,7 +793,7 @@ export default function App() {
   const [projectsError, setProjectsError] = useState<unknown>(null);
   const [projectBusyId, setProjectBusyId] = useState<string | null>(null);
   // The New project form, and the library ontology it starts from, if any.
-  const [newProject, setNewProject] = useState<{ source?: string } | null>(null);
+  const [newProject, setNewProject] = useState<{ source?: string;template?:ProjectTemplate } | null>(null);
   // The two questions an exit can need, each holding what to do on the way
   // out once it is answered.
   const [leaveEditor, setLeaveEditor] = useState<(() => void) | null>(null);
@@ -2225,7 +2226,7 @@ export default function App() {
             loading: projectsLoading,
             error: projectsError,
             busyId: projectBusyId,
-            onNew: () => setNewProject({}),
+            onNew: (template) => setNewProject({template}),
             onOpen: openProjectById,
             onRename: onRenameProject,
             onChangeKind: (pid) => setChangingKind(projects.find((p) => p.id === pid) ?? null),
@@ -2600,6 +2601,7 @@ export default function App() {
         <NewProjectDialog
           library={ontologies.map((o) => ({ id: o.id, name: o.name }))}
           initialSource={newProject.source}
+          initialTemplate={newProject.template}
           onCreate={onCreateProject}
           onClose={() => setNewProject(null)}
         />

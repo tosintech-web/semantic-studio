@@ -199,11 +199,11 @@ Modify `frontend/src/components/{HomeScreen,NewProjectDialog,ProjectHeader}.tsx`
 onCreateへtemplate IDを渡して既存作成ダイアログを開く。project summaryへdomainProfileを含め、Homeはgraph読取をしない。
 未保存入力のあるprojectからの移動は既存guardを使用する。
 
-- [ ] **Step 1: RED試験。** 国/政府組織の入口、role別一覧、空状態からの作成、viewer閲覧可/作成不可、既存プロジェクト表示順維持、Homeがgraph requestを出さないこと、group移動でdraftの破棄確認とfocus復帰をassert。
-- [ ] **Step 2: RED確認。** `cd frontend && npm run test -- src/government/GroupNavigation.test.tsx src/components/HomeScreen.test.tsx src/components/NewProjectDialog.test.tsx src/components/ProjectHeader.test.tsx`。
-- [ ] **Step 3: 実装。** 「国 / Countries」「政府組織 / Government organizations」をHome共通navigationへ追加し、作成処理を二重化しない。個体の種類を開発者向け語彙名だけで説明しない。
-- [ ] **Step 4: GREEN確認。** 上記試験とApp関連試験、実Chromeでメニュー→作成→入力→一覧の導線、幅の狭い画面とTab順を確認。
-- [ ] **Step 5: commit。** `feat: expose country and government groups in system navigation`。
+- [x] **Step 1: RED試験。** 国/政府組織の入口、role別一覧、空状態からの作成、viewer閲覧可/作成不可、既存プロジェクト表示順維持、Homeがgraph requestを出さないこと、group移動でdraftの破棄確認とfocus復帰をassert。
+- [x] **Step 2: RED確認。** `cd frontend && npm run test -- src/government/GroupNavigation.test.tsx src/components/HomeScreen.test.tsx src/components/NewProjectDialog.test.tsx src/components/ProjectHeader.test.tsx`。
+- [x] **Step 3: 実装。** 「国 / Countries」「政府組織 / Government organizations」をHome共通navigationへ追加し、作成処理を二重化しない。個体の種類を開発者向け語彙名だけで説明しない。
+- [x] **Step 4: GREEN確認。** 上記試験とApp関連試験、実Chromeでメニュー→作成→入力→一覧の導線、幅の狭い画面とTab順を確認。
+- [x] **Step 5: commit。** `feat: expose country and government groups in system navigation`。
 
 ## Task 8: 永続化・配布境界・全体受け入れ（G3完了）
 

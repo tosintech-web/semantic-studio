@@ -15,6 +15,16 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "government.noGroupsReadOnly": "No matching groups. An editor or administrator can create a group.",
+  "government.groupNavigation": "Country and government groups",
+  "government.countryGroups": "Country groups",
+  "government.organizationGroups": "Government organization groups",
+  "government.createCountryGroup": "Create country group",
+  "government.createOrganizationGroup": "Create government organization group",
+  "government.groupsReadOnly": "Viewers can open groups. Creating a group requires an editor or administrator.",
+  "government.searchGroups": "Search groups",
+  "government.groupCounts": "{shown} shown of {total} groups",
+  "government.noGroups": "No matching groups. Create a group to start registering entries.",
   "government.relationState.active": "Relationship active on this date",
   "government.relationState.inactive": "Outside relationship period",
   "government.relationState.uncertain": "Relationship dates unknown",

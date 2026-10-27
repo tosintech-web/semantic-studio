@@ -254,3 +254,11 @@ it("translates an existing field refusal when UI language changes without changi
   expect(screen.getByText(/The base IRI must/)).toBeTruthy();
   expect((screen.getByLabelText("Base IRI") as HTMLInputElement).value).toBe("invalid");
 });
+
+it('preselects the country template when launched by the system menu',async()=>{
+ const {onCreate}=renderDialog({initialTemplate:'countries'});
+ expect((screen.getByRole('radio',{name:/^Ontology/})as HTMLInputElement).checked).toBe(true);
+ fireEvent.change(field('Name'),{target:{value:'Synthetic countries'}});
+ await act(async()=>{fireEvent.click(create());});
+ expect(onCreate).toHaveBeenCalledTimes(1);expect(onCreate.mock.calls[0][0]).toMatchObject({template:'countries'});
+});

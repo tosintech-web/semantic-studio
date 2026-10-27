@@ -4,6 +4,8 @@ FILE: frontend/src/home/libraryOrder.ts
 ================================================================================
 
 SUMMARY
+    Profile-specific navigation filters the supplied manifest summaries without
+    changing the order of the ordinary library or loading project graphs.
     The order of Home's one library (home-and-examples 5.5): the person's
     projects and loaded files first, most recent first, then the three
     bundled examples in their fixed order.
@@ -30,6 +32,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 
+import {supportedProfile} from '../government/form';
 import type { OntologySummary, ProjectSummary } from "../types";
 
 /** The examples' keys in their order on Home: backend/app/examples/manifest.json's. */
@@ -83,4 +86,9 @@ export function libraryEntries(
     .sort((a, b) => exampleRank(a) - exampleRank(b))
     .map((ontology): LibraryEntry => ({ kind: "ontology", id: ontology.id, name: ontology.name, ontology }));
   return [...own.map((o) => o.entry), ...examples];
+}
+
+/** Dedicated group lists preserve the library's supplied project order. */
+export function domainGroups(projects:import('../types').ProjectSummary[],profile:'countries-v1'|'government-organizations-v1') {
+ return projects.filter(project=>supportedProfile(project.domainProfile)?.id===profile);
 }
