@@ -1,5 +1,11 @@
 # P2 PostgreSQL Replacement Implementation Plan
 
+**最終状態の追記（2026-10-27）：P2実装・main統合済み。**
+PR #3の最終head `fad9c12`の[CI run 40416830078](https://github.com/tosintech-web/semantic-studio/actions/runs/40416830078)は全11 job成功を確認し、main `e45e2a7`へmerge済み。
+Task 9の最終head CI gateは確認済み。以下の各作業時点の「mergeしない」「未確認」は履歴として保持する。
+本番Google・実データ移行・配備は別工程。次段階は[P3ローカルDocker計画](2026-10-27-p3-local-releases.md)。
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans or superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** SQLite利用を製品・保守・テストから廃止し、Compose内限定の専用PostgreSQLへP2を置換する。
