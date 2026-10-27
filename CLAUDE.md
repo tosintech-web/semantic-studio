@@ -265,6 +265,9 @@ in a module.
 
 ## Load-bearing rules
 
+- Approved `release:` resources and their archive blob references survive ordinary edits and project deletion; approval is never editor Undo. [Reviewed releases retain a separate authority]
+- A release preview owns its exact graph basis and auth epoch; reauthentication retains metadata and invalidates the old review. [Reviewed releases retain a separate authority]
+
 - Team handlers use request-bound detached services; the database commits resources, audit and replay before any successful response. Local fallback services never initialize in team mode. [Team commits publish only accepted candidates]
 - Team polling never renews idle sessions. Retained forms suspend their document key handlers, and input-capture bookkeeping publishes in a later task, after the target reads native input. [Team input survives the browser]
 

@@ -8,17 +8,17 @@
 
 **Tech Stack:** 既存React 18 / TypeScript / FastAPI / rdflib / psycopg / Docker Compose、Python標準zipfile/hashlib。新runtime依存なし。
 
-**Spec:** [P3ローカル公開版設計](../specs/2026-10-27-p3-local-releases-design.md)（レビュー用具体案、未実装）。
+**Spec:** [P3ローカル公開版設計](../specs/2026-10-27-p3-local-releases-design.md)（ユーザーの実装指示により承認、実装・手元検証済み）。
 
 状態：2026-10-27、方針変更を受けて新規作成。既存のP3詳細計画は存在しなかったため、上位仕様を具体化したもの。
-P1/P2はmain統合済み。P2の本番配備は本計画の依存にしない。全checkboxは未実施。
-実装開始前に設計案のprofile・承認権限・配布契約を確認する。本書作成は製品実装の開始を意味しない。
+P1/P2はmain統合済み。P2の本番配備は本計画の依存にしない。P3の実装・手元検証・反復レビュー修正を実施した。
+ユーザーが本計画による実装・反復レビュー・PRへのpushを指示した。未確認の最新head CIを手元の成功で代用しない。
 
 ## Global Constraints
 
 - ローカルDockerで開発・受け入れ。本番サーバー、クラウド契約、実Google/実データは不要。
 - team版のP2認証・session・Origin/CSRF・CAS・監査・再送・commit内の現在権限検査を維持。localへfallbackしない。
-- DB port非公開、配布/利用側をDB networkから隔離。配布にprivate volume・secretを渡さない。
+- DB port非公開、配布/利用側をDB networkから隔離。内部参照用release_internalとlocalhost公開用release_hostを分離。配布にprivate volume・secretを渡さない。
 - 初期対象はProjectのmodel正本だけ。imports/shapes/snapshot/推論/Libraryは対象外。
 - `dictionary-v1` の許可述語・RDF値保持・ZIP 5 entry・JSON型・API status・サイズ上限は設計4〜6節を契約とする。
 - editor/adminがpreview、adminだけがapprove、viewer以上が承認済みdownload。previewに承認を偽装しない。
@@ -54,11 +54,11 @@ P1/P2はmain統合済み。P2の本番配備は本計画の依存にしない。
 - `preview_digest(projection: Projection, *, metadata: dict, basis: dict) -> str`。profile版を含む安定表現からSHA-256。
 - package内のbytes/hashはmanifest以外の4 entryに対し計算し、manifest自身の循環hashを設けない。
 
-- [ ] **Step 1: RED用試験を書く。** `test_only_allowed_own_model_statements`、`test_literal_lexical_language_datatype_roundtrip`、`test_same_label_different_iri`、`test_private_metadata_absent_from_all_entries`、`test_preview_cannot_be_imported`、`test_limits_refuse_without_partial_package`。未知述語、内部comment/raw JSON、blank-node、参照先IRI、長い日本語/HTML風literalを合成する。
-- [ ] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_release_package.py -q`。未実装のimport/契約が原因で失敗することを確認。
-- [ ] **Step 3: 実装。** profileは設計4節の一つの定数、graphをcloneして抽出。JSONはIRI順・statement安定順。URI/literalの別とlexicalを保持する。上限を事前・生成中とも強制し、preview digestとpackage bytesを再計算可能にする。
-- [ ] **Step 4: GREEN確認。** 同じcommandで全成功。出力を再parseし、公開graphの集合とJSONのstatement集合が一致することを確認。
-- [ ] **Step 5: commit。** 本Taskの新規fileだけをstageし、`feat: define reviewed dictionary release packages`。
+- [x] **Step 1: RED用試験を書く。** `test_only_allowed_own_model_statements`、`test_literal_lexical_language_datatype_roundtrip`、`test_same_label_different_iri`、`test_private_metadata_absent_from_all_entries`、`test_preview_cannot_be_imported`、`test_limits_refuse_without_partial_package`。未知述語、内部comment/raw JSON、blank-node、参照先IRI、長い日本語/HTML風literalを合成する。
+- [x] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_release_package.py -q`。未実装のimport/契約が原因で失敗することを確認。
+- [x] **Step 3: 実装。** profileは設計4節の一つの定数、graphをcloneして抽出。JSONはIRI順・statement安定順。URI/literalの別とlexicalを保持する。上限を事前・生成中とも強制し、preview digestとpackage bytesを再計算可能にする。
+- [x] **Step 4: GREEN確認。** 同じcommandで全成功。出力を再parseし、公開graphの集合とJSONのstatement集合が一致することを確認。
+- [x] **Step 5: commit。** 本Taskの新規fileだけをstageし、`feat: define reviewed dictionary release packages`。
 
 ## Task 2: P2 transactionへの不変release保存・復旧・Undo境界
 
@@ -75,11 +75,11 @@ Test `backend/tests/test_team_maintenance.py`, `backend/tests/test_pg_archive.py
 - response_factoryはsummaryとcommit後の予測versionsから既存 `TeamWorkspace._response` 形式（status/headers/base64 body）を作る。commitへこのenvelopeを保存し、approveは `commit_result["response"]` を返す。初回も再送も同じenvelopeを既存 `_send` で送信する。API summaryだけやStarlette Responseをrequestsへ保存しない。
 - 保存型は設計6節の `release:{rid}` payload。`packageBlob`参照抽出・型検証をarchiveへ明示追加する。
 
-- [ ] **Step 1: RED用実DB試験。** `test_approve_uses_committed_unsaved_model`、`test_stale_preview_conflicts`、`test_replay_after_lost_response_has_one_release_and_audit`、`test_demoted_admin_cannot_replay`、`test_ordinary_edit_and_undo_preserve_release`、`test_approval_cannot_be_undone_even_by_admin`、`test_project_deletion_keeps_release_downloadable`、`test_release_backup_restore_keeps_history_blobs`。失敗commit後の孤立blobは配布・一覧へ出ないことも確認。
-- [ ] **Step 2: RED確認。** 専用internal Compose runnerで `python -m pytest tests/test_team_releases.py -m 'team_db and not network' -q`。接続不能をREDの代わりにしない。
-- [ ] **Step 3: 実装。** snapshotから候補を復元し、既存 `TeamRepository.commit` の `authorize` とexpected mapでbasisを確定。blob先行、release/監査/再送を原子commit。既存IDの上書き・削除を拒否する。通常workspace差分のfile:/graph:/state:フィルターを維持し、Candidate.captureからreleaseを更新・削除しない。承認操作に対するUndoはadminも含め拒否し、UIのcanUndoにも反映する。承認以前の履歴を遡る新しいUndoは作らない。archiveは現在とaudit双方のpayloadを型検証しblob参照へ加える。
-- [ ] **Step 4: GREEN確認。** 上記実DB試験を3.12/3.14で成功させ、既存Undo/再送/backup/restoreの関連集合も成功。旧archive・新releaseありarchiveの別DB復元後にpackage bytesと監査を照合する。
-- [ ] **Step 5: commit。** `feat: persist immutable dictionary releases with team transactions`。
+- [x] **Step 1: RED用実DB試験。** `test_approve_uses_committed_unsaved_model`、`test_stale_preview_conflicts`、`test_replay_after_lost_response_has_one_release_and_audit`、`test_demoted_admin_cannot_replay`、`test_ordinary_edit_and_undo_preserve_release`、`test_approval_cannot_be_undone_even_by_admin`、`test_project_deletion_keeps_release_downloadable`、`test_release_backup_restore_keeps_history_blobs`。失敗commit後の孤立blobは配布・一覧へ出ないことも確認。
+- [x] **Step 2: RED確認。** 専用internal Compose runnerで `python -m pytest tests/test_team_releases.py -m 'team_db and not network' -q`。接続不能をREDの代わりにしない。
+- [x] **Step 3: 実装。** snapshotから候補を復元し、既存 `TeamRepository.commit` の `authorize` とexpected mapでbasisを確定。blob先行、release/監査/再送を原子commit。既存IDの上書き・削除を拒否する。通常workspace差分のfile:/graph:/state:フィルターを維持し、Candidate.captureからreleaseを更新・削除しない。承認操作に対するUndoはadminも含め拒否し、UIのcanUndoにも反映する。承認以前の履歴を遡る新しいUndoは作らない。archiveは現在とaudit双方のpayloadを型検証しblob参照へ加える。
+- [x] **Step 4: GREEN確認。** 上記実DB試験を3.12/3.14で成功させ、既存Undo/再送/backup/restoreの関連集合も成功。旧archive・新releaseありarchiveの別DB復元後にpackage bytesと監査を照合する。
+- [x] **Step 5: commit。** `feat: persist immutable dictionary releases with team transactions`。
 
 ## Task 3: team専用HTTP・権限・容量・再送契約
 
@@ -93,11 +93,11 @@ Modify `backend/app/team/{permissions,workspace}.py`, `backend/app/main.py`, `ba
   `allows`、`RoutePolicy.minimum_role`、`AuthStore.require_current_principal`とのoperation連携も検査する。
 - 設計5節の4 API。preview JSON応答はpackage download用のbase64 fieldを含め、browserでblob化する。50 MiB ZIPに対するbase64膨張も含めメモリ計測する。
 
-- [ ] **Step 1: RED用HTTP試験。** role matrix、viewer preview拒否、local 404、未知path、HEAD、他projectのrid、CSRF/Origin、欠落version/request-id、不正body/64 KiB超過、401/409/413/422/428/503、再送の同じ応答と降格拒否を作る。
-- [ ] **Step 2: RED確認。** 専用Compose runnerで `python -m pytest tests/test_release_http.py -m 'team_db and not network' -q`。local/pureのケースにはteam_dbを付けずnativeでも実行。
-- [ ] **Step 3: 実装。** 薄いHTTP adapterをworkspaceへ接続、Task 2へ委譲。preview/readも現在権限を検査。既存compute/readの意味を変えず、例外は有限code/uiMessageへ変換。preview/approveだけは現存projectを確認する。一覧/downloadは削除後もreleaseのprojectIdで照合する。package responseはattachment/no-store。
-- [ ] **Step 4: GREEN確認。** role matrixと既存のroute inventory/default-deny試験が成功。preview/downloadが辞書resources・release・業務auditを変更しないことを比較する。既存認証のsession touchは許容する。
-- [ ] **Step 5: commit。** `feat: expose authorized release review and downloads`。
+- [x] **Step 1: RED用HTTP試験。** role matrix、viewer preview拒否、local 404、未知path、HEAD、他projectのrid、CSRF/Origin、欠落version/request-id、不正body/64 KiB超過、401/409/413/422/428/503、再送の同じ応答と降格拒否を作る。
+- [x] **Step 2: RED確認。** 専用Compose runnerで `python -m pytest tests/test_release_http.py -m 'team_db and not network' -q`。local/pureのケースにはteam_dbを付けずnativeでも実行。
+- [x] **Step 3: 実装。** 薄いHTTP adapterをworkspaceへ接続、Task 2へ委譲。preview/readも現在権限を検査。既存compute/readの意味を変えず、例外は有限code/uiMessageへ変換。preview/approveだけは現存projectを確認する。一覧/downloadは削除後もreleaseのprojectIdで照合する。package responseはattachment/no-store。
+- [x] **Step 4: GREEN確認。** role matrixと既存のroute inventory/default-deny試験が成功。preview/downloadが辞書resources・release・業務auditを変更しないことを比較する。既存認証のsession touchは許容する。
+- [x] **Step 5: commit。** `feat: expose authorized release review and downloads`。
 
 ## Task 4: 日英レビューUI・承認済み版一覧
 
@@ -110,11 +110,11 @@ Modify `frontend/src/App.tsx`, `frontend/src/api.ts`、`frontend/src/components/
 - `ReleasePanel({ projectId, role, onClose })`。metadata入力、preview digest/basis、全出力download、承認、一覧、package downloadを保持。
 - preview/approveはUI owner（project/session）を固定し、metadata変更時は旧digestを無効にする。配布currentを推測しない。
 
-- [ ] **Step 1: RED用UI試験。** role別操作、全出力確認、metadata変更後の承認不可、401/409/503入力保持、旧project/sessionの遅延応答破棄、日英切替で再承認しない、一覧失敗時にoffsetを進めないことをvi.mock apiで再現する。
-- [ ] **Step 2: RED確認。** `cd frontend && npx vitest run src/releases/ReleasePanel.test.tsx`。既存jsdom patternを使う。
-- [ ] **Step 3: 実装。** Project header入口と通常dialog/table/button。P1カタログ・通知・原文詳細を再利用。承認済みと配布済みを分け、成功だけを表示する。
-- [ ] **Step 4: GREEN確認。** 上記component試験とi18n key/arg/contract check、本番build成功。browserでTab/Enter・focus復帰・AX・日英を確認するためのシナリオをTask 7 driverへ追加。
-- [ ] **Step 5: commit。** `feat: add bilingual dictionary release review`。
+- [x] **Step 1: RED用UI試験。** role別操作、全出力確認、metadata変更後の承認不可、401/409/503入力保持、旧project/sessionの遅延応答破棄、日英切替で再承認しない、一覧失敗時にoffsetを進めないことをvi.mock apiで再現する。
+- [x] **Step 2: RED確認。** `cd frontend && npx vitest run src/releases/ReleasePanel.test.tsx`。既存jsdom patternを使う。
+- [x] **Step 3: 実装。** Project header入口と通常dialog/table/button。P1カタログ・通知・原文詳細を再利用。承認済みと配布済みを分け、成功だけを表示する。
+- [x] **Step 4: GREEN確認。** 上記component試験とi18n key/arg/contract check、本番build成功。browserでTab/Enter・focus復帰・AX・日英を確認するためのシナリオをTask 7 driverへ追加。
+- [x] **Step 5: commit。** `feat: add bilingual dictionary release review`。
 
 ## Task 5: ローカルpackage import・atomic activate・読取HTTP
 
@@ -127,11 +127,11 @@ Modify `frontend/src/App.tsx`, `frontend/src/api.ts`、`frontend/src/components/
 - `create_distribution_app(root: Path) -> FastAPI`：設計6節の固定read pathだけ。FastAPI既存runtimeを使う。
 - `server.main(argv: list[str] | None = None) -> int` は `--root` 必須、`--host`/`--port`を受け、uvicornで上記appを起動する。Composeは `python -m app.releases.server --root /releases --host 0.0.0.0 --port 8080` を使う。
 
-- [ ] **Step 1: RED用試験。** 正常import→activate、import単体でcurrent不変、同ID異bytes、preview、ZIP traversal/symlink/重複/余分entry、hash偽装、圧縮爆弾、容量不足・fsync/rename失敗・途中停止、競合activate、receipt記録失敗、v1→v2→v1、再起動を試験する。
-- [ ] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_release_distribution.py -m 'not team_db and not network' -q`。
-- [ ] **Step 3: 実装。** stage検証後に不変directoryを確定。配布rootで単一writer lockを取得してimport/activateを直列化する。private receiptとcurrentを照合可能にし、commit成功の推定をしない。HTTPはGET/HEAD固定、path安全性・ETag・current no-store・405を実装する。
-- [ ] **Step 4: GREEN確認。** 同command全成功。公開HTTPにreceipt/stage/private manifest/pathが出ないこと、壊れたpackageを拒否して旧currentを返すことを確認。
-- [ ] **Step 5: commit。** `feat: import and serve independent release generations`。
+- [x] **Step 1: RED用試験。** 正常import→activate、import単体でcurrent不変、同ID異bytes、preview、ZIP traversal/symlink/重複/余分entry、hash偽装、圧縮爆弾、容量不足・fsync/rename失敗・途中停止、競合activate、receipt記録失敗、v1→v2→v1、再起動を試験する。
+- [x] **Step 2: RED確認。** `cd backend && python -m pytest tests/test_release_distribution.py -m 'not team_db and not network' -q`。
+- [x] **Step 3: 実装。** stage検証後に不変directoryを確定。配布rootで単一writer lockを取得してimport/activateを直列化する。private receiptとcurrentを照合可能にし、commit成功の推定をしない。HTTPはGET/HEAD固定、path安全性・ETag・current no-store・405を実装する。
+- [x] **Step 4: GREEN確認。** 同command全成功。公開HTTPにreceipt/stage/private manifest/pathが出ないこと、壊れたpackageを拒否して旧currentを返すことを確認。
+- [x] **Step 5: commit。** `feat: import and serve independent release generations`。
 
 ## Task 6: Docker分離と版を固定する利用側サンプル
 
@@ -143,16 +143,16 @@ Modify `.dockerignore` と `scripts/check_publication.py` は新しい出力・r
 **Interfaces:**
 - Composeは既存team構成へのoverlay。distribution/consumer/import jobを追加し、DB接続やsecretを継承させない。
 - distributionはTask 5のserver.main、CLIは `python -m app.releases.distribution`。
-- 既存Dockerfileの `COPY examples ./examples` を再利用する。consumerは `python /app/examples/release-consumer/app.py` をcommandにし、同fileのmainでuvicornを0.0.0.0:8081へ起動する。アプリ製品のapp.mainやGoogle設定を初期化しない。
-- consumer設定 `RELEASE_ORIGIN`（Composeで固定する配布HTTP origin）、`RELEASE_ID`（必須UUID）。任意URL入力は受け付けない。
+- 既存Dockerfileの `COPY examples ./examples` を再利用する。consumerは `python -P /app/examples/release-consumer/app.py` をcommandにし、同fileのmainでuvicornを0.0.0.0:8081へ起動する。アプリ製品のapp.mainやGoogle設定を初期化しない。
+- consumer設定 `RELEASE_ORIGIN`（release_internal専用alias `http://release-files:8080`）、`RELEASE_ID`（必須UUID）。任意URL入力は受け付けない。
 - `load_release(origin: str, release_id: str) -> dict` はtimeout・サイズ上限・hash検証後に一版を採用する。
   標準urllibでredirect禁止、環境proxyを使わず固定originの固定pathだけを取得。これは独立demo専用で製品brokerを迂回させない。
 
-- [ ] **Step 1: RED用試験。** 同名IRI別件、名称の日本語部分一致、manifest/data hash不一致、新版取得失敗で旧版維持、初回失敗、指定版固定、意図しないredirect拒否をconsumerで再現。ComposeでDB port/volume/network分離をassertする。
-- [ ] **Step 2: RED確認。** nativeのconsumer試験と `python -m unittest discover -s scripts -p 'test_release_compose.py'`。Docker実動作は専用projectのみを使うopt-in試験として失敗を確認。
-- [ ] **Step 3: 実装。** 新規依存なしの最小検索/詳細UI。配布volume永続化、HTTPはread-only mount、import jobだけwrite、host portはloopback。receipt/package入力はGit/build contextから除外する。
-- [ ] **Step 4: GREEN確認。** dedicated Composeで起動・import/activate・新規consumer読取・再起動を実行。編集app/DBを停止してconsumerを再作成し、manifest/dataのnetwork取得と検索を確認する。volume/mount/network/imageの実物にsecretがないことを検査。
-- [ ] **Step 5: commit。** `feat: demonstrate pinned releases in isolated local containers`。
+- [x] **Step 1: RED用試験。** 同名IRI別件、名称の日本語部分一致、manifest/data hash不一致、新版取得失敗で旧版維持、初回失敗、指定版固定、意図しないredirect拒否をconsumerで再現。ComposeでDB port/volume/network分離をassertする。
+- [x] **Step 2: RED確認。** nativeのconsumer試験と `python -m unittest discover -s scripts -p 'test_release_compose.py'`。Docker実動作は専用projectのみを使うopt-in試験として失敗を確認。
+- [x] **Step 3: 実装。** 新規依存なしの最小検索/詳細UI。配布volume永続化、HTTPはread-only mount、import jobだけwrite、host portはloopback。receipt/package入力はGit/build contextから除外する。
+- [x] **Step 4: GREEN確認。** dedicated Composeで起動・import/activate・新規consumer読取・再起動を実行。編集app/DBを停止してconsumerを再作成し、manifest/dataのnetwork取得と検索を確認する。volume/mount/network/imageの実物にsecretがないことを検査。
+- [x] **Step 5: commit。** `feat: demonstrate pinned releases in isolated local containers`。
 
 ## Task 7: 全体受け入れ・レビュー・運用文書・CI
 
@@ -162,10 +162,10 @@ Modify `.claude/skills/run-semantic-viewer/driver.mjs`, `.github/workflows/ci.ym
 
 **Interfaces:** `node .claude/skills/run-semantic-viewer/driver.mjs p3` が合成HTTPS認証の3権限、実DB、配布containerと利用側を検証し、private成果物は一時領域へ書く。
 
-- [ ] **Step 1: E2E試験を接続。** 設計8節の10条件を番号で追跡。v1承認・download・import・activate、model変更後v1不変、stale preview拒否、v2承認、配布切り替え・切り戻し、編集系停止後の新規consumer読取、401/409/503とAX/keyboardを実行する。
-- [ ] **Step 2: 全試験集合を確認。** backend nativeで `python -m pytest tests -m 'not team_db and not network' -q`、専用内部Composeで全 `team_db and not network` をPython3.12/3.14、frontendで `npm run test` / `npm run build`。既存inventoryと新規case分類を照合し全case/全予算を維持する。
-- [ ] **Step 3: 実物・既存browserを確認。** `smoke` / `p1` / `p2` / `p3`、distribution通知、公開検査、Compose isolation/restore、契約生成checkを実行。計測条件と失敗は検証書へ記録し、通常倍率1の未解決予算を参考CI成功で代用しない。
-- [ ] **Step 4: 全差分レビュー。** 認可・public/private抽出・RDF/ZIP・path・CAS/監査/replay・archive・分離と障害時をレビュー。指摘は再現→修正→再確認。実施していないhosted scanや本番認証成功を主張しない。
+- [x] **Step 1: E2E試験を接続。** 設計8節の10条件を番号で追跡。v1承認・download・import・activate、model変更後v1不変、stale preview拒否、v2承認、配布切り替え・切り戻し、編集系停止後の新規consumer読取、401/409/503とAX/keyboardを実行する。
+- [x] **Step 2: 全試験集合を確認。** backend nativeで `python -m pytest tests -m 'not team_db and not network' -q`、専用内部Composeで全 `team_db and not network` をPython3.12/3.14、frontendで `npm run test` / `npm run build`。既存inventoryと新規case分類を照合し全case/全予算を維持する。
+- [x] **Step 3: 実物・既存browserを確認。** `smoke` / `p1` / `p2` / `p3`、distribution通知、公開検査、Compose isolation/restore、契約生成checkを実行。計測条件と失敗は検証書へ記録し、通常倍率1の未解決予算を参考CI成功で代用しない。
+- [x] **Step 4: 全差分レビュー。** 認可・public/private抽出・RDF/ZIP・path・CAS/監査/replay・archive・分離と障害時をレビュー。指摘は再現→修正→再確認。実施していないhosted scanや本番認証成功を主張しない。
 - [ ] **Step 5: 文書とPRを仕上げる。** 起動・停止・保管・import/activate・照合・切り戻し、公開と内部backupの違い、上限、データ条件を日英UI説明と整合させる。実装時のユーザーのGit/push方針に従いPRを用意し、最新headの必須CI（Linux/Windows local、PG3.12/3.14、Compose/browser、frontend、Docker、publication）と参考budgetsを確認してから完了を記録する。
 
 ## 見積もり・実装順・レビュー記録
@@ -189,3 +189,10 @@ release namespaceのcapture/Undo/archive落ち、viewerによるpreview、cache�
 型・API・保存・archive・分離の自己照合と文書リンク検査は文書確認であり、製品試験の成功を意味しない。
 
 再確認では、初回/再送のresponse envelopeとworkspace markerの同時commit、配布serverのCLI入口、既存image内のconsumer実行pathを追記した。
+
+実Docker確認でinternal-only containerのhost portが到達不能だったため、Task 6へrelease_host bridgeと実ingress試験を追加。内部参照はrelease_internal専用aliasへ固定し、DB network・secret・private mountの分離は維持する。
+
+### 実装・レビュー結果
+
+Task 1〜6とTask 7の手元検証・反復レビュー修正を実施。詳細・失敗記録・最終実測は[P3検証記録](../../p3-verification.md)。
+最新headのCIとPR公開工程はStep 5の最終gateとして別に確認する。

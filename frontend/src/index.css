@@ -6675,7 +6675,7 @@ kbd {
 .shape-permissions { border: 0; margin: 0; padding: 0; min-width: 0; }
 
 /* Release review shares the existing modal focus and typography rules. */
-.release-panel { max-height: 85vh; overflow: auto; }
+.release-panel { max-height: 85vh; overflow: auto; white-space: normal; }
 .release-panel label { display: block; margin-block: 0.75rem; }
 .release-panel input:not([type="checkbox"]), .release-panel textarea { display: block; width: 100%; }
 .release-panel code { overflow-wrap: anywhere; }

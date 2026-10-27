@@ -80,7 +80,7 @@ def generation(root,rid):
     return checked
 
 
-def import_package(package_path:Path,root:Path):
+def _import_package(package_path:Path,root:Path):
     data=read_bounded(Path(package_path));checked=validate_package(data);rid=checked.manifest['releaseId']
     with writer(root) as root:
         directory=root/'releases'
@@ -90,6 +90,7 @@ def import_package(package_path:Path,root:Path):
         if target.exists():
             generation(root,rid)
             if read_bounded(target/'package.zip')!=data: raise ReleaseError('invalid',409)
+            receipt(root,{'operation':'import','releaseId':rid,'sha256':digest(data),'state':'completed','at':datetime.now(timezone.utc).isoformat()})
             return checked.manifest
         stage=Path(tempfile.mkdtemp(prefix='.stage-',dir=root))
         try:
@@ -99,6 +100,7 @@ def import_package(package_path:Path,root:Path):
             fsync_directory(stage)
             receipt(root,{'operation':'import','releaseId':rid,'sha256':digest(data),'state':'prepared','at':datetime.now(timezone.utc).isoformat()})
             os.rename(stage,target);fsync_directory(directory);fsync_directory(root)
+            receipt(root,{'operation':'import','releaseId':rid,'sha256':digest(data),'state':'completed','at':datetime.now(timezone.utc).isoformat()})
         finally:
             if stage.exists(): shutil.rmtree(stage)
     return checked.manifest
@@ -116,7 +118,7 @@ def status(root):
     except (ValueError,KeyError,TypeError): raise ReleaseError() from None
 
 
-def activate_release(root:Path,release_id:str):
+def _activate_release(root:Path,release_id:str):
     with writer(root) as root:
         checked=generation(root,release_id)
         pointer={'releaseId':release_id,'manifestSha256':digest(checked.files['manifest.json'])}
@@ -130,6 +132,42 @@ def activate_release(root:Path,release_id:str):
             Path(name).unlink(missing_ok=True)
         receipt(root,{'operation':'activate','state':'completed',**pointer,'at':datetime.now(timezone.utc).isoformat()})
         return pointer
+
+
+def record_failure(root,operation,rid=None,sha256=None):
+    # A failed return does not prove the pointer was unchanged: reconcile the
+    # prepared receipt with current after post-replace errors. Never include
+    # untrusted paths, metadata or exception strings in the operational journal.
+    try:
+        with writer(root) as root:
+            receipt(root,{'operation':operation,'releaseId':rid,'sha256':sha256,
+                'state':'failed','outcome':'unknown','at':datetime.now(timezone.utc).isoformat()})
+    except (ReleaseError,OSError):
+        pass  # An unwritable journal cannot record its own failure; caller fails.
+
+
+def import_package(package_path:Path,root:Path):
+    try:return _import_package(package_path,root)
+    except (ReleaseError,OSError,ValueError):
+        rid=sha=None
+        try:
+            data=read_bounded(Path(package_path));sha=digest(data)
+            rid=validate_package(data,require_approved=False).manifest['releaseId']
+        except (ReleaseError,OSError,ValueError):pass
+        record_failure(root,'import',rid,sha)
+        raise
+
+
+def activate_release(root:Path,release_id:str):
+    try:return _activate_release(root,release_id)
+    except (ReleaseError,OSError,ValueError):
+        rid=None
+        try:
+            from .package import release_id as checked_id
+            rid=checked_id(release_id)
+        except ReleaseError:pass
+        record_failure(root,'activate',rid)
+        raise
 
 
 def main(argv=None):

@@ -1,8 +1,8 @@
 # P3 公開版・外部参照：ローカルDocker開発設計
 
-作成日：2026-10-27（日本時間）。状態：レビュー用設計案、製品は未実装。
+作成日：2026-10-27（日本時間）。状態：2026-10-27のユーザー指示で実装を承認。実装・反復レビュー修正済み、最終受け入れ・CIを確認中。
 ユーザーが指定した方針は「P1・P2実装済みを反映し、P3をローカルDockerで進め、本番配備を分ける」。
-本書のAPI・権限配分・形式・上限は、その方針を具体化する実装側の提案であり、個別の承認済み指定とは区別する。
+本書のAPI・権限配分・形式・上限は実装側が具体化した案であり、本設計と計画によるP3実装をユーザーが承認した。
 上位契約：[全体仕様](2026-10-24-semantic-studio-customization-design.md)。
 作業順：[P3実装計画](../plans/2026-10-27-p3-local-releases.md)。
 
@@ -36,7 +36,9 @@ P3をlocalモードだけで通してteam版の公開操作検証の代わりに
 - 編集系：既存のteam app、専用PostgreSQL、private blob volume。DBの5432はhostへ公開しない。
 - 配布系：新しい独立したread-only HTTPサービス。承認済みパッケージを取り込んだ専用volumeだけを読む。
 - 利用側：版IDを指定してmanifest・JSON/Turtleを取得し、検索・詳細参照する最小サンプル。編集API・DBへ接続しない。
-- 配布系と利用側は専用internal networkを使い、DB networkへ参加しない。UI確認用portは127.0.0.1だけにbindする。
+- 配布系と利用側は専用release_internal networkで接続する。内部参照originは同networkだけのalias `release-files` に固定する。
+- Dockerでhost portを公開するため、両readerへrelease_host bridgeも追加する。host側portは127.0.0.1だけにbindし、DB networkへは参加しない。
+  release_hostには外向き経路があるが、サーバーは読取専用で外部取得を持たず、consumerは固定内部origin以外へ通信しない。
 - 配布サービスはprivate data、DB secret、Google secret、backupをmountしない。
 - 一回限りのimport CLIだけが配布volumeへ書く。配布HTTPはGET/HEADのみ、アップロード・proxy・任意URL取得は持たない。
 - 編集appから配布appへHTTP転送しない。既存brokerのprivate宛て拒否を維持する。
@@ -122,11 +124,12 @@ backup/restoreは新namespaceの厳密な型とblob参照を検査し、現在�
 上限超過時は部分版を作らず拒否する。P4で件数とメモリを実測して見直す。
 
 配布CLI：`import-package --package PATH`、`activate --release-id UUID`、`status`。
-importはsymlink・path traversal・重複/余分entry・宣言と実測のサイズ差・hash不一致を拒否し、展開合計50 MiBを読みながら強制する。
+ZIPの許可圧縮方式はDEFLATE/STOREDのみ。importはsymlink・path traversal・重複/余分entry・宣言と実測のサイズ差・hash不一致を拒否し、展開合計50 MiBを読みながら強制する。
 manifestのapprovedは暗号学的署名ではない。CLIへpackageを渡せるローカル運用者を信頼境界とする。一般公開APIからの受信は行わない。
 一時directoryで全検証→fsync→不変版directoryの確定。既存IDへ異なるbytesを入れない。
 activateは対象版を再検証し、`current.json`をatomic replace。旧版は保持する。importだけではcurrentを変えない。
-配布操作のrelease ID・時刻・hash・成功/失敗をprivateなローカルreceiptへ残す。receipt記録不能なら切り替え前に拒否する。
+配布操作のrelease ID・時刻・hash・prepared/completed/failedをprivateなローカルreceiptへ残す。未検証のID/hashはnullとし、raw pathやエラー原文を記録しない。
+失敗receiptのoutcomeはunknownとし、処理失敗をpointer未反映と同一視しない。journal自体が書けない場合は失敗記録も不可能なため、操作を失敗として返しstatusとの照合を要求する。receipt記録不能なら切り替え前に拒否する。
 切り替え後のreceipt更新で停止してもcurrentと不変manifestから結果を照合でき、成功を捏造しない。
 途中停止・容量不足・破損では既存currentを維持する。切り戻しは既存版への明示activateで、app/DBなしでも動く。
 
@@ -145,7 +148,8 @@ Project headerから「公開版」を開く。新規画面はプレビュー、
 利用サンプルはJS/HTMLと既存Python/FastAPIを使い、新runtime依存を追加しない。
 server側が固定の配布originから取得し、browserのCORS緩和や編集appのネットワーク例外は不要。
 CLAUDEの外向き通信規則は製品編集appへ維持する。独立した実証サンプルだけは固定originへの専用transportを使い、
-redirect・環境proxy・任意URL入力を禁止し、timeoutとサイズを制限する。この適用範囲は実装時にCLAUDEへ明記する。
+redirect・環境proxy・任意URL入力を禁止し、timeoutとサイズを制限する。
+総取得時間15秒を独立した待機期限で強制し、未完了のdaemon workerは最大1件。timeout後の結果は採用せず、worker残留中の次の取得は503とする。この適用範囲は実装時にCLAUDEへ明記する。
 起動設定でrelease IDを必須指定する。current追従は明示操作だけ。manifestとdataのhash検証が済んだ一版を検索・詳細表示する。
 検索はJSONの名称のNFKC/casefold相当の部分一致、同名IRIを別件表示。P1の検索機能全体を再実装しない。
 新しい版の取得失敗では採用済み版を維持し、初回失敗ではエラーとする。メモリcacheを永続配布の代わりにしない。
@@ -181,6 +185,13 @@ P2本番確認2〜3人日は別工程へ移し、ローカルP3開始を待た�
 ## 11. 文書の更新対象と判断の状態
 
 全体仕様、P2設計冒頭と検証の最終状態を更新し、履歴の実測値・失敗記録は保存する。
-新設計と計画はレビュー対象。製品実装、依存追加、Compose起動、commit/push、外部公開はこの文書更新では行わない。
+新設計と計画の文書更新後、ユーザーが製品実装・反復レビュー・PRへのpushを指示した。公開データの一般公開・本番配備・mainへのmergeは行わない。
 ローカルDockerという方針はユーザー指定。初期profile、admin承認、package手渡し、API案・上限・UIは実装側の具体案。
-実装前レビューでこれらを確認し、変更時は本書と計画を一緒に更新する。
+実装前レビューとユーザーの実装指示を受けて具体化した。後続の変更時も本書と計画を一緒に更新する。
+
+### 実Docker確認による接続方針の補足
+
+internal-only containerはHostConfig.PortBindingsがあってもNetworkSettings.Portsがnullとなり、hostのlocalhost公開portへ到達しなかった。
+コンテナ内部の検索は200だったため、データ・認証ではなくingressの問題と特定した。
+専用の実Docker到達試験でREDを確認し、上記のhost ingress bridgeを追加する。DB/secret/private mountの境界と内部参照aliasを維持する。
+consumerのscript名app.pyが製品package appをshadowする問題は、Pythonのsafe-path指定 `python -P` と `PYTHONPATH=/app` で解消する。

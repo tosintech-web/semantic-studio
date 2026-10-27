@@ -3214,3 +3214,21 @@ recreation, live-source/two-project recovery and runtime SQLite audit are tested
 The database partition runs in Linux 3.12/3.14; Windows remains local/pure/file
 compatibility. Dated historical checkpoints are not replacement verification;
 use the PostgreSQL verification record.
+
+## Reviewed releases retain a separate authority (P3, 2026-10-27)
+
+The approved release is a `release:` resource and an immutable package blob,
+committed with workspace/audit/replay. Read the accepted typed own-model graph;
+never substitute an older formatting Save or a merged import/snapshot view.
+Ordinary file/graph/state diffs leave release resources alone. Approval is not
+editor Undo, even for administrators. Archive references explicitly include
+release blobs in both current resources and audit history.
+
+Preview is bound to the exact resource basis and auth owner. A new auth epoch
+retains metadata but invalidates review and pending request generations.
+The independently mounted distribution volume contains only checked public
+files; its pointer and private prepared/completed/failed receipts describe
+separate operations. A failed return after replace has an unknown outcome.
+The consumer alone has a fixed-origin demo transport, bounded by a total
+deadline and a single outstanding daemon worker. The editor broker remains
+the sole outbound transport in the editing application.

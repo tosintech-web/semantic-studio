@@ -19,7 +19,7 @@ import {request} from 'node:https';
 import {join} from 'node:path';
 import {mkdirSync} from 'node:fs';
 
-export async function runP2({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,sleep}) {
+export async function runP2({ROOT,DATA_DIR,Browser,stopServer,pythonExe,log,sleep,acceptRelease}) {
   const port=Number(process.env.TEAM_PORT||8011), base=`https://127.0.0.1:${port}`;
   const directory=join(DATA_DIR,'team-acceptance');mkdirSync(directory,{recursive:true});
   const prepared=spawnSync(pythonExe(),['scripts/pg_compose_support.py','prepare-browser',directory,String(port)],{
@@ -324,6 +324,7 @@ with psycopg.connect(host='db',port=5432,dbname=c.dbname,user=c.user,password=c.
     const retained=(await inApi(browser,'GET',`/api/projects/${pid}/documents/model/source`)).body;
     assert.ok(JSON.stringify(retained).includes('合成の犬'));
     log('p2-restart','persisted sessions, RDF and audit survived process restart');
+    if(acceptRelease)await acceptRelease({browser,other,inApi,docker,stopEditor:()=>stopFixture(server,true)});
     log('p2','ALL STEPS PASSED (synthetic Google provider; real Google login remains an operations check)');
   }catch(error){
     for(const [index,page] of [browser,other].entries()){

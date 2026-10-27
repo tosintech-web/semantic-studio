@@ -72,3 +72,19 @@ def test_first_install_fsyncs_public_root(tmp_path,monkeypatch):
     monkeypatch.setattr(module,'fsync_directory',record)
     root=tmp_path/'public';import_package(source(tmp_path),root)
     assert root in seen
+
+def test_receipts_record_completed_import_and_failed_activation(tmp_path):
+    root=tmp_path/'public';import_package(source(tmp_path),root)
+    rows=[json.loads(line) for line in (root/'receipts.jsonl').read_text().splitlines()]
+    assert [(r['operation'],r['state']) for r in rows]==[('import','prepared'),('import','completed')]
+    with pytest.raises(ReleaseError):activate_release(root,RID2)
+    rows=[json.loads(line) for line in (root/'receipts.jsonl').read_text().splitlines()]
+    assert rows[-1]['operation']=='activate' and rows[-1]['state']=='failed'
+    assert rows[-1]['releaseId']==RID2
+
+def test_rejected_import_records_finite_failure(tmp_path):
+    root=tmp_path/'public'
+    with pytest.raises(ReleaseError):import_package(source(tmp_path,approved=False),root)
+    row=json.loads((root/'receipts.jsonl').read_text().splitlines()[-1])
+    assert row['state']=='failed' and row['operation']=='import'
+    assert 'Source' not in json.dumps(row) and 'Synthetic' not in json.dumps(row)
