@@ -16,6 +16,8 @@ import type { ServerMessageArgs } from "./server-contracts";
 export type UiLocale = "ja" | "en";
 export type Primitive = string | number | boolean | null;
 export interface MessageArgs extends ServerMessageArgs {
+  "project.template.countries": undefined;
+  "project.template.government-organizations": undefined;
   "release.title": undefined;
   "release.note": undefined;
   "release.source": undefined;

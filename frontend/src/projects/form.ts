@@ -4,6 +4,7 @@ FILE: frontend/src/projects/form.ts
 ================================================================================
 
 SUMMARY
+    Country and government domain templates use the existing ontology kind.
     The New project form's rules, kept out of the component so they can be
     tested without rendering: the two kinds of project and the templates each
     offers (relationships 5.1, D-089), the defaults a name implies (base IRI
@@ -50,6 +51,8 @@ export function kindChoices(t: Translator = englishTranslator): KindChoice[] { r
     templates: [
       { value: "empty", label: t("project.template.empty") },
       { value: "small", label: t("project.template.small") },
+      { value: "countries", label: t("project.template.countries") },
+      { value: "government-organizations", label: t("project.template.government-organizations") },
     ],
   },
   {

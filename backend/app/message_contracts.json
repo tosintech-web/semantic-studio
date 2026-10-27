@@ -1708,6 +1708,10 @@
     "release.stale": {},
     "release.too_large": {},
     "release.not_found": {},
-    "release.unavailable": {}
+    "release.unavailable": {},
+    "government.invalid_profile": {},
+    "government.profile_kind": {},
+    "government.profile_source": {},
+    "government.profile_stale": {}
   }
 }

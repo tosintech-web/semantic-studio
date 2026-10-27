@@ -4,6 +4,7 @@ FILE: frontend/src/components/NewProjectDialog.tsx
 ================================================================================
 
 SUMMARY
+    Country and government groups share the existing ontology creation flow.
     The New project form (authoring-foundations 5.1, relationships 5.1):
     first the kind, Ontology or Taxonomy, each with its sentence; then a
     name, a starting point (the chosen kind's two templates, or an ontology
@@ -56,6 +57,7 @@ import type { ProjectKind, ProjectTemplate } from "../types";
 import { useDialogTrap } from "./useDialogTrap";
 
 export interface NewProjectRequest {
+  domainProfile?: import("../government/types").DomainProfile;
   name: string;
   template?: ProjectTemplate;
   fromOntologyId?: string;

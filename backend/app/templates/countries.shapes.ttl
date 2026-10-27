@@ -1,0 +1,13 @@
+# FILE: backend/app/templates/countries.shapes.ttl
+# SUMMARY: Country profile name requirements.
+# BASIC IDEA: Profile constraints are separate from W3C vocabulary semantics.
+# INPUTS / INPUT SOURCES: Country instances in the project model.
+# EXPECTED OUTPUT: Named countries with literal names.
+@prefix {{prefix}}: <{{base}}> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix gov: <urn:semantic-studio:government:v1#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+{{prefix}}:CountryShape a sh:NodeShape ; sh:targetClass gov:Country ;
+    rdfs:label "Country names"@en, "国の名称"@ja ;
+    sh:property [ sh:path skos:prefLabel ; sh:minCount 1 ; sh:nodeKind sh:Literal ; sh:uniqueLang true ] .

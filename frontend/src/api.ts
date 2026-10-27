@@ -4,6 +4,7 @@ FILE: frontend/src/api.ts
 ================================================================================
 
 SUMMARY
+    Project metadata can retain explicit country/government domain profiles.
     Command/preview requests accept a read language independent of RDF arguments.
     Explicit label-language reads reuse recorded validation and reasoning results.
     Declined approvals retain host facts beside their original failure text.
@@ -824,6 +825,7 @@ export function listProjects(): Promise<ProjectSummary[]> {
 
 // A new project from a template, or from a library ontology (fromOntologyId).
 export function createProject(payload: {
+  domainProfile?: import("./government/types").DomainProfile;
   name: string;
   template?: ProjectTemplate;
   fromOntologyId?: string;
@@ -842,7 +844,7 @@ export function createProject(payload: {
 // manifest only: changing the kind rewrites nothing in the model.
 export function updateProject(
   pid: string,
-  changes: { name?: string; languages?: string[]; kind?: ProjectKind },
+  changes: { name?: string; languages?: string[]; kind?: ProjectKind; domainProfile?: import("./government/types").DomainProfile | null; profileBasis?: string },
 ): Promise<ProjectSummary> {
   return send(projectUrl(pid), {
     method: "PATCH",

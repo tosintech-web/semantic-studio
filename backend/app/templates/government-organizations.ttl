@@ -1,0 +1,12 @@
+# FILE: backend/app/templates/government-organizations.ttl
+# SUMMARY: Empty government organization group using W3C ORG identities.
+# BASIC IDEA: Store dated records, without making historical links timeless.
+# INPUTS / INPUT SOURCES: Validated project name, base, prefix and language.
+# EXPECTED OUTPUT: An ontology, with no seeded government organizations.
+@prefix {{prefix}}: <{{base}}> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix gov: <urn:semantic-studio:government:v1#> .
+
+<{{ontology}}> a owl:Ontology ; skos:prefLabel "{{name}}"@{{lang}} .

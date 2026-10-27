@@ -15,6 +15,12 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const en: Catalog = {
+  "government.invalid_profile": "Choose a supported profile matching the original project type.",
+  "government.profile_kind": "Detach the domain profile before changing the project kind.",
+  "government.profile_source": "Choose an available country group.",
+  "government.profile_stale": "The reviewed settings or data changed. Review the profile change again.",
+  "project.template.countries": "Country group",
+  "project.template.government-organizations": "Government organization group",
   "release.title": "Reviewed versions",
   "release.note": "Create reviewed distribution versions. Distribution is a separate operation; this does not publish to the internet.",
   "release.source": "Source",

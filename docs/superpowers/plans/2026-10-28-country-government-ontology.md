@@ -1,6 +1,6 @@
 # 国・政府組織グループ Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task after design approval. Steps use checkbox (`- [ ]`) syntax for tracking. Delegation is not selected by this plan.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task under the user-approved design. Steps use checkbox (`- [ ]`) syntax for tracking. Delegation is not selected by this plan.
 
 **Goal:** 国と政府組織を別グループで管理し、メニューから専用入力テンプレートを開き、国への参照・期間付き組織関係・改編履歴を登録できるようにする。
 
@@ -10,8 +10,8 @@
 
 **Spec:** [開発方針・設計案](../specs/2026-10-28-country-government-ontology-design.md)。
 
-状態：2026-10-28、レビュー用ドラフト。今回のPRは計画だけで、以下の実装は未着手。
-開発目標の合意と、本文の詳細設計・機能実装の承認を区別する。設計確認後にTask 1から進める。
+状態：2026-10-28のユーザー指示により実装承認、Task 1から実行中。
+実装後に独立レビューと修正を指摘がなくなるまで反復し、GitHubへpushしてPRコメントを追加する。
 基点：P3統合済みmain `0251e89`。G1=Task 1〜4、G2=Task 5〜6、G3=Task 7〜8。
 
 ## Global Constraints

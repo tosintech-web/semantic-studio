@@ -886,6 +886,10 @@ export const SERVER_CONTRACTS = {
     "url": "string"
   },
   "fetch.web_only": {},
+  "government.invalid_profile": {},
+  "government.profile_kind": {},
+  "government.profile_source": {},
+  "government.profile_stale": {},
   "imports.bundled_changed": {
     "title": "string"
   },
@@ -2445,6 +2449,10 @@ export interface ServerMessageArgs {
   "fetch.response_limit": { "limit": number | string; "url": string };
   "fetch.time_limit": { "url": string };
   "fetch.web_only": undefined;
+  "government.invalid_profile": undefined;
+  "government.profile_kind": undefined;
+  "government.profile_source": undefined;
+  "government.profile_stale": undefined;
   "imports.bundled_changed": { "title": string };
   "imports.bytes_limit": { "limit": number | string };
   "imports.bytes_refused": { "limit": number | string };

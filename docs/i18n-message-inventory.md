@@ -3435,3 +3435,9 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `release.title` | — | `frontend/src/releases/ReleasePanel.tsx`, `frontend/src/components/ProjectHeader.tsx` , `frontend/src/components/RulesBlock.tsx` |
 | `release.too_large` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
 | `release.unavailable` | — | `backend/app/releases/http.py` , `frontend/src/components/RulesBlock.tsx` |
+| `government.invalid_profile` | — | `backend/app/projects.py`, `backend/app/routers/projects.py` |
+| `government.profile_kind` | — | `backend/app/projects.py` |
+| `government.profile_source` | — | `backend/app/projects.py` |
+| `government.profile_stale` | — | `backend/app/routers/projects.py` |
+| `project.template.countries` | — | `frontend/src/projects/form.ts` |
+| `project.template.government-organizations` | — | `frontend/src/projects/form.ts` |

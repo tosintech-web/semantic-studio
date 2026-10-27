@@ -1,0 +1,32 @@
+# FILE: backend/app/domain_vocab/government-v1.ttl
+# SUMMARY: Application-owned extensions for countries and dated government records.
+# BASIC IDEA: Keep temporal statements distinct from their dated ORG projection.
+# INPUTS / INPUT SOURCES: The government authoring v1 design; no external datasets.
+# EXPECTED OUTPUT: Shared definitions, never seeded country or organization data.
+@prefix gov: <urn:semantic-studio:government:v1#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<urn:semantic-studio:government:v1> a owl:Ontology ;
+    rdfs:label "Government authoring extensions"@en, "政府組織入力用の拡張語彙"@ja .
+gov:Country a owl:Class ; rdfs:label "Country"@en, "国"@ja .
+gov:RelationRecord a owl:Class ; rdfs:label "Dated relationship"@en, "期間付き関係"@ja .
+gov:NameRecord a owl:Class ; rdfs:label "Name history"@en, "名称履歴"@ja .
+gov:ExistenceRecord a owl:Class ; rdfs:label "Existence period"@en, "存在期間"@ja .
+gov:countryCode a owl:DatatypeProperty ; rdfs:domain gov:Country ; rdfs:range xsd:string .
+gov:subject a owl:ObjectProperty ; rdfs:domain gov:RelationRecord .
+gov:predicate a owl:ObjectProperty ; rdfs:domain gov:RelationRecord .
+gov:object a owl:ObjectProperty ; rdfs:domain gov:RelationRecord .
+gov:entity a owl:ObjectProperty .
+gov:nameValue a owl:DatatypeProperty .
+gov:validFrom a owl:DatatypeProperty ; rdfs:range xsd:date .
+gov:validUntil a owl:DatatypeProperty ; rdfs:range xsd:date .
+gov:openStart a owl:DatatypeProperty ; rdfs:range xsd:boolean .
+gov:openEnd a owl:DatatypeProperty ; rdfs:range xsd:boolean .
+gov:inCountry a owl:ObjectProperty ; rdfs:range gov:Country .
+gov:supervisedBy a owl:ObjectProperty .
+gov:cooperatesWith a owl:ObjectProperty, owl:SymmetricProperty .
+gov:changeKind a owl:DatatypeProperty ; rdfs:range xsd:string .
+gov:effectiveDate a owl:DatatypeProperty ; rdfs:range xsd:date .
+gov:existenceState a owl:DatatypeProperty ; rdfs:range xsd:string .

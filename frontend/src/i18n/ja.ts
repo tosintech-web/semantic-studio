@@ -15,6 +15,12 @@ EXPECTED OUTPUT
 import type { Catalog } from "./types";
 
 export const ja: Catalog = {
+  "government.invalid_profile": "元のプロジェクト種別に対応するプロファイルを選択してください。",
+  "government.profile_kind": "プロジェクト種別を変更する前に、専用プロファイルを解除してください。",
+  "government.profile_source": "利用可能な国グループを選択してください。",
+  "government.profile_stale": "確認した設定またはデータが変更されました。プロファイル変更をもう一度確認してください。",
+  "project.template.countries": "国グループ",
+  "project.template.government-organizations": "政府組織グループ",
   "release.title": "公開版",
   "release.note": "承認済みの配布版を作成します。配布は別操作です。一般公開は行いません。",
   "release.source": "出典",

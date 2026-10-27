@@ -4,6 +4,7 @@ FILE: backend/app/projects.py
 ================================================================================
 
 SUMMARY
+    Optional domain profiles select country/government tools without changing RDF.
     The user's own work: one folder per project under <data dir>/projects,
     each with a project.json manifest (D-080). Create from a template or from a
     library ontology, list at startup, rename, duplicate, move to a recoverable
@@ -114,6 +115,8 @@ DOCUMENT_ROLES = {"model": "model", "shapes": "shapes"}
 # Each template and the kind of project it starts. "vocabulary" is the E-6
 # name for a small SKOS scheme, kept so a request naming it still works.
 TEMPLATE_KINDS = {
+    "countries": "ontology",
+    "government-organizations": "ontology",
     "empty": "ontology",
     "small": "ontology",
     "taxonomy-empty": "taxonomy",
@@ -373,7 +376,7 @@ class ProjectStore:
         self.dir = Path(data_dir) / "projects"
         self.dir.mkdir(parents=True, exist_ok=True)
         self.trash = self.dir / TRASH_DIR
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         # Each layout as last read or written, by file. Opening a file just
         # replaced costs about 130 ms on Windows while a scanner looks at it
         # (measured when every write began reading the old generation), so
@@ -478,6 +481,7 @@ class ProjectStore:
             # The data snapshots, for the card's line (csv-data-import 5.7);
             # written by snapshots.py whenever one changes.
             "data": manifest.get("data", []),
+            **({"domainProfile": copy.deepcopy(manifest["domainProfile"])} if "domainProfile" in manifest else {}),
         }
 
     def list(self) -> list[dict]:
@@ -511,6 +515,7 @@ class ProjectStore:
         source_graph: Optional[Graph] = None,
         source_text: Optional[str] = None,
         source_name: Optional[str] = None,
+        domain_profile: Optional[dict] = None,
     ) -> dict:
         """A new project with model.ttl written, from a template or a library copy.
 
@@ -546,6 +551,16 @@ class ProjectStore:
                 f'{primary_language!r} is not a well-formed language tag (for example en or en-US).',
                 ui_message=make_message('projects.language', language=str(primary_language)),
             )
+
+        from .government.profile import PROFILE_TEMPLATES, parse_profile
+        expected_profile = PROFILE_TEMPLATES.get(template)
+        if domain_profile is not None:
+            parsed_profile = parse_profile(domain_profile)
+            if parsed_profile is None or parsed_profile.id != expected_profile or source_text is not None or source_graph is not None:
+                raise ProjectError("Choose a supported profile matching the template.", ui_message=make_message("government.invalid_profile"))
+            self.validate_country_source(parsed_profile.country_project_id)
+        elif expected_profile is not None:
+            domain_profile = {"id": expected_profile, "version": 1}
 
         if source_text is not None:
             text = source_text
@@ -592,6 +607,7 @@ class ProjectStore:
             "kind": kind,
             "commentsWarned": False,
             "startedFrom": source_name or template or "empty",
+            **({"domainProfile": copy.deepcopy(domain_profile)} if domain_profile is not None else {}),
         }
         (folder / MANIFEST).write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -648,7 +664,80 @@ class ProjectStore:
                 'A project is an ontology or a taxonomy.',
                 ui_message=make_message('projects.kind'),
             )
+        if kind != "ontology" and self.manifest(pid).get("domainProfile") is not None:
+            raise ProjectError("Detach the domain profile before changing the project kind.", ui_message=make_message("government.profile_kind"))
         return self.summary(self.update_manifest(pid, kind=kind))
+
+    def validate_country_source(self, source: Optional[str]) -> None:
+        """Only issued country projects in this workspace can be a source."""
+        from .government.profile import parse_profile
+        if source is None:
+            return
+        try:
+            profile = parse_profile(self.manifest(source).get("domainProfile"))
+        except UnknownProject:
+            profile = None
+        if profile is None or profile.id != "countries-v1":
+            raise ProjectError("Choose an available country group.", ui_message=make_message("government.profile_source"))
+
+    def patch(self, pid: str, fields: dict, *, dry_run: bool = False, basis: Optional[str] = None, graph: Optional[Graph] = None) -> dict:
+        """Validate the complete metadata change before writing any field.
+
+        Profile changes require review against the exact original manifest
+        and accepted model. Renames/language changes preserve legacy callers.
+        """
+        import hashlib
+        from rdflib.compare import to_isomorphic
+        from .government.profile import GOV, parse_profile
+        with self._lock:
+            original = self.manifest(pid)
+            manifest = copy.deepcopy(original)
+            if "name" in fields and fields["name"] is not None:
+                name = fields["name"].strip()
+                if not name or len(name) > NAME_MAX:
+                    raise ProjectError("Choose a project name of at most 120 characters.", ui_message=make_message("projects.name_limit", limit=NAME_MAX))
+                manifest.update(name=name, updatedAt=_now())
+            if fields.get("languages") is not None:
+                languages = fields["languages"]
+                for tag in languages:
+                    if not valid_lang(tag):
+                        raise ProjectError("Choose valid language tags.", ui_message=make_message("projects.language", language=str(tag)))
+                manifest["languages"] = list(dict.fromkeys(tag for tag in languages if tag.lower() != manifest.get("primaryLanguage", "en").lower()))
+            if "domainProfile" in fields:
+                raw = fields["domainProfile"]
+                parsed = parse_profile(raw)
+                if raw is not None and parsed is None:
+                    raise ProjectError("Choose a supported domain profile.", ui_message=make_message("government.invalid_profile"))
+                if parsed is not None:
+                    old = parse_profile(original.get("domainProfile"))
+                    # Conversion between domain families requires an explicit
+                    # detach first: metadata is not an RDF migration.
+                    if old is None or old.id != parsed.id:
+                        raise ProjectError("Choose the profile's original project type.", ui_message=make_message("government.invalid_profile"))
+                    self.validate_country_source(parsed.country_project_id)
+                    manifest["domainProfile"] = parsed.as_dict()
+                else:
+                    manifest.pop("domainProfile", None)
+            if fields.get("kind") is not None:
+                if fields["kind"] not in KINDS:
+                    raise ProjectError("A project is an ontology or a taxonomy.", ui_message=make_message("projects.kind"))
+                manifest["kind"] = fields["kind"]
+            if manifest.get("domainProfile") is not None and manifest.get("kind") != "ontology":
+                raise ProjectError("Detach the domain profile before changing the project kind.", ui_message=make_message("government.profile_kind"))
+            if "domainProfile" in fields:
+                accepted = graph if graph is not None else Graph().parse(self.document_path(pid, "model"), format="turtle")
+                token = hashlib.sha256((json.dumps(original, sort_keys=True, ensure_ascii=False) + str(to_isomorphic(accepted).graph_digest())).encode()).hexdigest()
+                linked = sorted({str(obj) for record in accepted.subjects(GOV.predicate, GOV.inCountry) for obj in accepted.objects(record, GOV.object)})
+                if dry_run:
+                    return {"dryRun": True, "basis": token, "impact": {"countryIris": linked}, "project": self.summary(manifest)}
+                if basis != token:
+                    from .government.profile import ProfileConflict
+                    raise ProfileConflict()
+            elif dry_run:
+                raise ProjectError("A profile preview needs a domain profile change.", ui_message=make_message("government.invalid_profile"))
+            if manifest != original:
+                self.write_manifest(pid, manifest)
+            return self.summary(manifest)
 
     def ensure_kind(self, pid: str, graph: Graph) -> None:
         """A project made before kinds gets one the first time it is opened,

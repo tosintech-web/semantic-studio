@@ -90,13 +90,13 @@ describe("NewProjectDialog", () => {
     );
   });
 
-  it("offers each kind's two templates, and switches with the kind", () => {
+  it("offers domain templates for ontologies and switches with the kind", () => {
     renderDialog();
     const select = field("Start from") as unknown as HTMLSelectElement;
     const templates = () => [...select.querySelectorAll('optgroup[label="Templates"] option')].map((o) => o.textContent);
     expect(templates()).toEqual([]);
     kind("Ontology");
-    expect(templates()).toEqual(["Empty ontology", "Small ontology (two classes, one relationship)"]);
+    expect(templates()).toEqual(["Empty ontology", "Small ontology (two classes, one relationship)", "Country group", "Government organization group"]);
     expect(select.value).toBe("template:small");
     kind("Taxonomy");
     expect(templates()).toEqual(["Empty taxonomy (one concept scheme)", "Small taxonomy (a scheme with a few concepts)"]);
