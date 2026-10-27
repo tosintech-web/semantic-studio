@@ -4,6 +4,7 @@ FILE: frontend/src/state/projectStore.ts
 ================================================================================
 
 SUMMARY
+    Pending domain forms are registered by owner without publishing keystrokes.
     Project sessions fence old edit/save responses; model changes refresh data names.
     Name-only result and snapshot reads are scoped to their owner, language and request.
     The open project and its documents, as a small external store read through
@@ -285,6 +286,7 @@ let reasoningRun = 0;
 const listeners = new Set<() => void>();
 // Pending writes to wait for before the project closes (the canvas layout).
 const flushes = new Set<() => Promise<void>>();
+const pendingForms = new Map<symbol, { projectId: string; dirty: () => boolean }>();
 // The control a creation began from, for Cancel to give focus back to. Not
 // in the snapshot: an element is not state anything renders from.
 let creatingFrom: HTMLElement | null = null;
@@ -1032,11 +1034,24 @@ export const projectStore = {
     };
   },
 
+  /** Unsent forms use the current project identity, never display language or
+   *  a DOM node that a retained team view may temporarily hide. */
+  registerPendingForm(projectId: string, dirty: () => boolean): () => void {
+    const token = Symbol();
+    pendingForms.set(token, { projectId, dirty });
+    return () => { pendingForms.delete(token); };
+  },
+
+  hasPendingForms(): boolean {
+    return [...pendingForms.values()].some(owner => owner.projectId === snapshot.project?.id && owner.dirty());
+  },
+
   /** Wait for every registered flush, as close() does. */
   flushAll,
 
   /** For tests: back to nothing open. */
   _reset(): void {
+    pendingForms.clear();
     projectSession++;
     validationRun++;
     reasoningRun++;

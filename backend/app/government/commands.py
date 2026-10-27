@@ -29,16 +29,16 @@ def _profile(ctx, expected):
     return profile
 
 
-def _names(raw):
+def _names(raw, *, required=True, unique=True):
     from ..projects import valid_lang
-    if not isinstance(raw, list) or not raw or len(raw) > 100:
+    if not isinstance(raw, list) or (required and not raw) or len(raw) > 100:
         raise DomainError("Give at least one name.", code="government.name_required")
     result, languages = [], set()
     for item in raw:
         if not isinstance(item, dict) or set(item) != {"value", "language"}:
             raise DomainError("Each name needs its value and language.", code="government.name_required")
         value, language = item["value"], item["language"]
-        if not isinstance(value, str) or not value.strip() or len(value) > 4096 or not isinstance(language, str) or not valid_lang(language) or language.casefold() in languages:
+        if not isinstance(value, str) or not value.strip() or len(value) > 4096 or not isinstance(language, str) or not valid_lang(language) or (unique and language.casefold() in languages):
             raise DomainError("Give one preferred name per language.", code="government.name_required")
         result.append(Literal(value.strip(), lang=language))
         languages.add(language.casefold())
@@ -93,6 +93,14 @@ def cmd_create_country(ctx, args):
     from ..editing import _change, _created
     _profile(ctx, "countries-v1")
     node, created = _target(ctx, args.get("iri"), {GOV.Country})
+    if not created and "referenceBasis" in args:
+        reference = getattr(ctx, "country_reference", None)
+        if reference is None or args["referenceBasis"] != reference.basis:
+            raise DomainError("The country group changed after this entry was opened.", code="government.entry_stale", status=409)
+    if not created:
+        from .references import country_detail
+        if country_detail(ctx.graph, node)["unsupported"]:
+            raise DomainError("This country has unsupported values and remains read-only.")
     names = _names(args.get("names"))
     sources = _sources(args.get("sources", []), required=False)
     code, description = _text(args.get("code", "")), _text(args.get("description", ""))
@@ -104,6 +112,9 @@ def cmd_create_country(ctx, args):
     if description:
         adds.add((node, DCTERMS.description, Literal(description)))
     removes = _replace(ctx.graph, node, {SKOS.prefLabel, GOV.countryCode, DCTERMS.source, DCTERMS.description})
+    if "aliases" in args:
+        adds.update((node, SKOS.altLabel, alias) for alias in _names(args["aliases"], required=False, unique=False))
+        removes.update(_replace(ctx.graph, node, {SKOS.altLabel}))
     change = _change(ctx.graph, "Register country", adds, removes, ui_message=_command_message("government.country_saved"))
     return _created(change, node) if created else change
 

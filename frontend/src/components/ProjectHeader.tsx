@@ -4,6 +4,7 @@ FILE: frontend/src/components/ProjectHeader.tsx
 ================================================================================
 
 SUMMARY
+    Domain groups can switch between specialized entries and the ordinary model.
     Failed name-only result reads report once and can retry the selected language.
     The header's context row while a project is open (authoring-foundations
     5.2, 5.4.2; edit-page-rework 5.2): one row, never wrapped -- the
@@ -60,6 +61,7 @@ EXPECTED OUTPUT
 
 import ReleasePanel from "../releases/ReleasePanel";
 import {useTeam} from "../team/TeamProvider";
+import { supportedProfile } from "../government/form";
 import { useI18n } from "../i18n/I18nProvider";
 import { historyLabel, renderProjectAnnouncement } from "../modeling/projectNotices";
 import { useEffect, useId, useRef, useState } from "react";
@@ -84,6 +86,7 @@ interface Props {
   onSaveCopy: () => void;
   onTurtle?: () => void;
   canvas?: { on: boolean; onToggle: () => void } | null;
+  domainEditor?: { on: boolean; onToggle: () => void } | null;
 }
 
 type MenuAction = "language" | "shapes" | "copy" | "canvas" | "close";
@@ -111,6 +114,7 @@ export default function ProjectHeader({
   onSaveCopy,
   onTurtle,
   canvas = null,
+  domainEditor = null,
 }: Props) {
   const { t, locale } = useI18n();
   const team = useTeam();
@@ -316,6 +320,8 @@ export default function ProjectHeader({
           Turtle
         </button>
       )}
+      {domainEditor && <button type="button" className="ghost" onClick={domainEditor.onToggle}>{t(domainEditor.on ? "government.standardModel" : "government.groupEntries")}</button>}
+      {project.domainProfile && !supportedProfile(project.domainProfile) && <span role="status" className="detail-note">{t("government.unsupportedProfile")}</span>}
       <div className="onto-menu-wrap project-lang-wrap">
         <button
           ref={langButton}

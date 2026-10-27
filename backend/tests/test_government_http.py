@@ -132,3 +132,51 @@ def test_country_name_change_updates_read_view_without_rewriting_reference():
     assert after["organizations"]["items"][0]["countryLabel"] == "Renamed country"
     assert after["organizations"]["items"][0]["countryIri"] == iri
     assert after["basis"] != before["basis"]
+
+
+def test_exact_country_detail_preserves_multilingual_names_aliases_and_sources():
+    pid = create_group()
+    iri = country(pid)
+    country(pid, name="Other country")
+    model = editing_service.document(pid, "model").graph
+    from rdflib import URIRef
+    from rdflib.namespace import DCTERMS
+    node = URIRef(iri)
+    model.add((node, SKOS.prefLabel, Literal("合成国", lang="ja")))
+    model.add((node, SKOS.altLabel, Literal("Synthetic alternative", lang="en")))
+    model.add((node, DCTERMS.description, Literal("Synthetic description")))
+    response = client.get(f"/api/projects/{pid}/government/countries", params={"iri": iri})
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    detail = response.json()["items"][0]
+    assert {name["language"] for name in detail["names"]} == {"en", "ja"}
+    assert detail["aliases"] == [{"value": "Synthetic alternative", "language": "en"}]
+    assert detail["description"] == "Synthetic description"
+    assert detail["sources"] == [{"kind": "text", "value": "Synthetic reference"}]
+    assert detail["unsupported"] == []
+
+
+def test_organization_detail_contains_original_unknown_period_and_shared_kind_labels():
+    source, target, iri, args = setup_organization()
+    unknown = {"start": {"date": None, "open": False}, "end": {"date": None, "open": False}}
+    args["countryPeriod"] = unknown
+    made = command(target, "CreateGovernmentOrganization", args).json()["created"]
+    command(target, "CreateGovernmentOrganization", {**args, "names": [{"value": "Second", "language": "en"}]})
+    response = client.get(f"/api/projects/{target}/government/view", params={"at": "2020-04-01", "iri": made})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["organizations"]["total"] == 1
+    detail = result["organizations"]["items"][0]
+    assert detail["formCountryIri"] == iri
+    assert detail["countryResolved"] is True
+    assert detail["formCountryLabel"] == "Synthetic country"
+    assert detail["countryPeriod"] == unknown
+    assert detail["identifier"] == "M-1"
+    assert detail["sources"] == [{"kind": "text", "value": "Synthetic reference"}]
+    assert detail["unsupported"] == []
+    assert {kind["value"] for kind in result["kindOptions"]} == {"Organization", "FormalOrganization", "OrganizationalUnit"}
+    assert next(kind for kind in result["kindOptions"] if kind["value"] == "Organization")["iri"] == "http://www.w3.org/ns/org#Organization"
+    search = client.get(f"/api/projects/{target}/government/view", params={"at": "2020-04-01", "q": "Second"}).json()
+    assert search["organizations"]["total"] == 1
+    assert search["organizations"]["items"][0]["label"] == "Second"
+    assert client.get(f"/api/projects/{target}/government/view", params={"at": "2020-04-01", "q": "x" * 201}).status_code == 422

@@ -28,15 +28,15 @@ router = APIRouter(prefix="/api/projects/{pid}/government", tags=["government"],
 
 
 @router.get("/countries")
-def countries(pid: str, q: str = Query("", max_length=200), offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100), displayLanguage: str | None = Query(None, max_length=100)):
+def countries(pid: str, q: str = Query("", max_length=200), offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100), displayLanguage: str | None = Query(None, max_length=100), iri: str | None = Query(None, max_length=4096)):
     with _errors():
-        return views.countries(editing_service, pid, q, offset, limit, displayLanguage)
+        return views.countries(editing_service, pid, q, offset, limit, displayLanguage, iri)
 
 
 @router.get("/view")
-def view(pid: str, at: str, offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100), displayLanguage: str | None = Query(None, max_length=100)):
+def view(pid: str, at: str, offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100), displayLanguage: str | None = Query(None, max_length=100), iri: str | None = Query(None, max_length=4096), q: str = Query("", max_length=200)):
     with _errors():
-        return views.view(editing_service, pid, at, offset, limit, displayLanguage)
+        return views.view(editing_service, pid, at, offset, limit, displayLanguage, iri, q)
 
 
 @router.get("/projection")

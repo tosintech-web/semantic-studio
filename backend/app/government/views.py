@@ -18,7 +18,7 @@ from rdflib import Literal, URIRef
 from rdflib.compare import to_isomorphic
 from rdflib.namespace import RDF, SKOS
 from ..graph_builder import pick_label_in
-from .profile import GOV, DomainError, parse_profile
+from .profile import GOV, ORG, DomainError, load_domain_vocabulary, parse_profile
 from .records import existence_states, organizations, parse_date, period_json, period_state, project_at, read_existence, read_relations
 from .references import country_choices, country_reference, project_snapshot
 
@@ -44,14 +44,14 @@ def _snapshot(service, pid, at):
     return manifest, graph, day, basis
 
 
-def countries(service, pid: str, q: str = "", offset: int = 0, limit: int = 50, displayLanguage: str | None = None):
+def countries(service, pid: str, q: str = "", offset: int = 0, limit: int = 50, displayLanguage: str | None = None, iri: str | None = None):
     with service.reference_lock:
         manifest = service.projects.manifest(pid)
         reference = country_reference(service, pid)
-        return {**country_choices(reference.graph, query=q, offset=offset, limit=limit, languages=_languages(manifest, displayLanguage)), "basis": reference.basis}
+        return {**country_choices(reference.graph, query=q, offset=offset, limit=limit, languages=_languages(manifest, displayLanguage), exact_iri=iri), "basis": reference.basis}
 
 
-def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLanguage: str | None = None):
+def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLanguage: str | None = None, iri: str | None = None, q: str = ""):
     with service.reference_lock:
         manifest, graph, day, basis = _snapshot(service, pid, at)
         projection = project_at(graph, at=day)
@@ -71,13 +71,33 @@ def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLa
                 return pick_label_in(reference.graph, URIRef(iri), languages)[0]
             return pick_label_in(projection.graph, URIRef(iri), languages)[0]
         for node in organizations(graph):
-            iri = str(node)
-            membership = [r for r in relations if not r.unsupported and r.subject == iri and r.predicate == str(GOV.inCountry) and period_state(r.period, day) == "active"]
+            if iri is not None and str(node) != iri:
+                continue
+            entity_iri = str(node)
+            if q and not any(q.casefold() in value.casefold() for value in [entity_iri, name(entity_iri), *(str(value) for predicate in (SKOS.prefLabel, SKOS.altLabel, ORG.identifier) for value in graph.objects(node, predicate))]):
+                continue
+            membership = [r for r in relations if not r.unsupported and r.subject == entity_iri and r.predicate == str(GOV.inCountry) and period_state(r.period, day) == "active"]
             country = membership[0].object if len(membership) == 1 else None
-            life_records = [r for r in life if r.entity == iri]
-            items.append({"iri": iri, "label": name(iri), "kind": next(str(t).split("#")[-1] for t in sorted(graph.objects(node, RDF.type), key=str) if t in {URIRef("http://www.w3.org/ns/org#Organization"), URIRef("http://www.w3.org/ns/org#FormalOrganization"), URIRef("http://www.w3.org/ns/org#OrganizationalUnit")}),
-                          "countryIri": country, "countryLabel": name(country) if country else "", "countryResolved": bool(reference and country and (URIRef(country), RDF.type, GOV.Country) in reference.graph),
-                          "existenceState": states[iri], "existencePeriod": period_json(life_records[0].period) if len(life_records) == 1 else None,
+            life_records = [r for r in life if r.entity == entity_iri]
+            all_country = [r for r in relations if r.subject == entity_iri and r.predicate == str(GOV.inCountry)]
+            identifiers = list(graph.objects(node, ORG.identifier))
+            unsupported = []
+            if len(life_records) > 1 or len(all_country) > 1 or any(r.unsupported for r in [*life_records, *all_country]):
+                unsupported.append("dated-records")
+            if len(identifiers) > 1 or any(not isinstance(v, Literal) for v in identifiers):
+                unsupported.append("identifier")
+            if life_records and all_country and life_records[0].sources != all_country[0].sources:
+                unsupported.append("distinct-sources")
+            source_records = all_country or life_records
+            recorded_country = all_country[0].object if len(all_country) == 1 else None
+            items.append({"iri": entity_iri, "label": name(entity_iri), "kind": next(str(t).split("#")[-1] for t in sorted(graph.objects(node, RDF.type), key=str) if t in {ORG.Organization, ORG.FormalOrganization, ORG.OrganizationalUnit}),
+                          "countryIri": country, "countryLabel": name(country) if country else "", "countryResolved": bool(reference and recorded_country and (URIRef(recorded_country), RDF.type, GOV.Country) in reference.graph),
+                          "existenceState": states[entity_iri], "existencePeriod": period_json(life_records[0].period) if len(life_records) == 1 else None,
+                          "formCountryIri": recorded_country, "formCountryLabel": name(recorded_country) if recorded_country else "",
+                          "countryPeriod": period_json(all_country[0].period) if len(all_country) == 1 else None,
+                          "identifier": str(identifiers[0]) if identifiers else "",
+                          "sources": [{"kind": s.kind, "value": s.value} for s in source_records[0].sources] if source_records else [],
+                          "unsupported": unsupported,
                           "names": [{"value": str(value), "language": value.language or ""} for value in graph.objects(node, SKOS.prefLabel) if isinstance(value, Literal)]})
         items.sort(key=lambda row: (row["label"].casefold(), row["iri"]))
         def page(rows):
@@ -85,11 +105,14 @@ def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLa
         relation_rows = [{"iri": r.iri, "subject": r.subject, "predicate": r.predicate, "object": r.object,
                           "period": period_json(r.period), "sources": [{"kind": s.kind, "value": s.value} for s in r.sources],
                           "description": r.description, "state": period_state(r.period, day), "unsupported": list(r.unsupported),
-                          "subjectLabel": name(r.subject) if r.subject else "", "objectLabel": name(r.object) if r.object else ""} for r in relations]
+                          "subjectLabel": name(r.subject) if r.subject else "", "objectLabel": name(r.object) if r.object else ""} for r in relations if iri is None or iri in (r.subject, r.object)]
+        vocabulary = load_domain_vocabulary()
+        kind_options = [{"value": str(kind).split("#")[-1], "iri": str(kind), "label": pick_label_in(vocabulary, kind, languages)[0]}
+                        for kind in (ORG.Organization, ORG.FormalOrganization, ORG.OrganizationalUnit)]
         return {"at": at, "basis": basis, "organizations": page(items), "relations": page(relation_rows),
                 "uncertain": page([r for r in relation_rows if r["state"] == "uncertain"]),
                 "diagnostics": [{"code": p.code, "severity": p.severity, "iri": p.iri, "args": p.args} for p in projection.diagnostics],
-                "referenceBasis": reference.basis if reference else None}
+                "referenceBasis": reference.basis if reference else None, "kindOptions": kind_options}
 
 
 def projection(service, pid: str, at: str):

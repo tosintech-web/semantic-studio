@@ -29,7 +29,14 @@ export interface Bound { date: string | null; open: boolean }
 export interface Period { start: Bound; end: Bound }
 export interface Source { kind: "iri" | "text"; value: string }
 export interface ReferenceBasis { sourceProjectId: string; sourceToken: string }
-export interface CountryChoice { iri: string; label: string; code: string | null }
+export interface CountryChoice {
+  iri: string; label: string; code: string | null;
+  names?: { value: string; language: string }[];
+  aliases?: { value: string; language: string }[];
+  sources?: Source[];
+  description?: string;
+  unsupported?: string[];
+}
 export interface Page<T> { items: T[]; total: number; offset: number; limit: number }
 export interface RelationInput {
   iri?: string;
@@ -58,6 +65,12 @@ export interface OrganizationView {
   countryIri: string | null;
   countryLabel: string;
   countryResolved: boolean;
+  formCountryIri: string | null;
+  formCountryLabel: string;
+  countryPeriod: Period | null;
+  identifier: string;
+  sources: Source[];
+  unsupported: string[];
   existenceState: TemporalState;
   existencePeriod: Period | null;
   names: { value: string; language: string }[];
@@ -80,5 +93,6 @@ export interface GovernmentViewResult {
   uncertain: Page<RelationView>;
   diagnostics: { code: string; severity: string; iri: string; args: Record<string, unknown> }[];
   referenceBasis: ReferenceBasis | null;
+  kindOptions: { value: OrganizationView["kind"]; iri: string; label: string }[];
 }
 

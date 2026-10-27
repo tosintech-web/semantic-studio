@@ -42,6 +42,7 @@ import { spawn } from 'node:child_process';
 import { runP1 } from './p1.mjs';
 import { runP2 } from './p2.mjs';
 import { runP3 } from './p3.mjs';
+import { runGovernment } from './government.mjs';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -613,7 +614,7 @@ async function cmdSmoke() {
 // ---------------------------------------------------------------------------
 
 const [cmd, ...rest] = process.argv.slice(2);
-const commands = { serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke, p1: () => runP1({ ROOT, DATA_DIR, BASE, Browser, api, uploadOntology, startServer, stopServer, waitForHealth, pythonExe, log, sleep }), p3: () => runP3({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }), p2: () => runP2({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }) };
+const commands = { government: () => runGovernment({BASE,Browser,api,startServer,stopServer,waitForHealth,log}), serve: cmdServe, api: () => cmdApi(rest), ui: () => cmdUi(rest), smoke: cmdSmoke, p1: () => runP1({ ROOT, DATA_DIR, BASE, Browser, api, uploadOntology, startServer, stopServer, waitForHealth, pythonExe, log, sleep }), p3: () => runP3({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }), p2: () => runP2({ ROOT, DATA_DIR, Browser, stopServer, pythonExe, log, sleep }) };
 if (!commands[cmd]) {
   console.error(`usage: node driver.mjs <smoke|p1|serve|api|ui>
 

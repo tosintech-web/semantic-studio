@@ -20,7 +20,7 @@ import json
 
 from rdflib import Graph, Literal, URIRef
 from rdflib.compare import to_isomorphic
-from rdflib.namespace import RDF, SKOS
+from rdflib.namespace import DCTERMS, RDF, SKOS, XSD
 
 from ..graph_builder import pick_label_in
 from .profile import GOV, DomainError, DomainProfile, parse_profile
@@ -91,7 +91,7 @@ def reference_basis(*, source_project_id: str, graph: Graph, profile: DomainProf
     return {"sourceProjectId": source_project_id, "sourceToken": hashlib.sha256(content.encode()).hexdigest()}
 
 
-def country_choices(source: Graph, *, query: str, offset: int, limit: int, languages: list[str]) -> dict:
+def country_choices(source: Graph, *, query: str, offset: int, limit: int, languages: list[str], exact_iri: str | None = None) -> dict:
     if len(query) > 200 or offset < 0 or not 1 <= limit <= 100:
         raise DomainError("Country search supports 200 characters and pages of at most 100.")
     needle = query.casefold().strip()
@@ -99,13 +99,48 @@ def country_choices(source: Graph, *, query: str, offset: int, limit: int, langu
     for iri in set(source.subjects(RDF.type, GOV.Country)):
         if not isinstance(iri, URIRef):
             continue
+        if exact_iri is not None and str(iri) != exact_iri:
+            continue
         labels = [str(v) for p in (SKOS.prefLabel, SKOS.altLabel, GOV.countryCode) for v in source.objects(iri, p)]
         if needle and not any(needle in value.casefold() for value in [str(iri), *labels]):
             continue
         code = sorted(str(v) for v in source.objects(iri, GOV.countryCode) if isinstance(v, Literal))
-        found.append({"iri": str(iri), "label": pick_label_in(source, iri, languages)[0], "code": code[0] if code else None})
+        item = {"iri": str(iri), "label": pick_label_in(source, iri, languages)[0], "code": code[0] if code else None}
+        if exact_iri is not None:
+            item.update(country_detail(source, iri))
+        found.append(item)
     found.sort(key=lambda row: (row["label"].casefold(), row["iri"]))
     return {"items": found[offset:offset + limit], "total": len(found), "offset": offset, "limit": limit}
+
+
+def country_detail(graph: Graph, node: URIRef) -> dict:
+    """Only managed, round-trippable values can be edited by the country form."""
+    from ..projects import valid_lang
+    unsupported = []
+    names, aliases = [], []
+    for predicate, target in ((SKOS.prefLabel, names), (SKOS.altLabel, aliases)):
+        for value in sorted(graph.objects(node, predicate), key=lambda v: v.n3()):
+            if not isinstance(value, Literal) or not value.language or not valid_lang(value.language):
+                unsupported.append(str(predicate))
+                continue
+            target.append({"value": str(value), "language": value.language})
+    if len({item["language"].casefold() for item in names}) != len(names):
+        unsupported.append("names")
+    sources = []
+    for value in sorted(graph.objects(node, DCTERMS.source), key=lambda v: v.n3()):
+        if isinstance(value, URIRef):
+            sources.append({"kind": "iri", "value": str(value)})
+        elif isinstance(value, Literal) and value.language is None and value.datatype in (None, XSD.string):
+            sources.append({"kind": "text", "value": str(value)})
+        else:
+            unsupported.append("sources")
+    scalars = {}
+    for predicate, field in ((GOV.countryCode, "code"), (DCTERMS.description, "description")):
+        values = list(graph.objects(node, predicate))
+        if len(values) > 1 or any(not isinstance(value, Literal) or value.language or value.datatype not in (None, XSD.string) for value in values):
+            unsupported.append(field)
+        scalars[field] = str(values[0]) if values else ""
+    return {**scalars, "names": names, "aliases": aliases, "sources": sources, "unsupported": sorted(set(unsupported))}
 
 
 def profile_reference_snapshots(service, pid: str, proposed: dict | None) -> tuple[dict, set[str]]:

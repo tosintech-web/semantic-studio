@@ -3960,7 +3960,7 @@ class EditingService:
         model_lock = self._open[pid]["model"].lock if doc != "model" else contextlib.nullcontext()
         with document.lock, model_lock:
             ctx = self._context(document, lang)
-            if name == "CreateGovernmentOrganization":
+            if name == "CreateGovernmentOrganization" or (name == "CreateCountry" and args.get("iri") is not None and "referenceBasis" in args):
                 from .government.references import country_reference
                 ctx.country_reference = country_reference(self, pid)
             if name == "DeleteEntity":

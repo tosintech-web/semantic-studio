@@ -160,3 +160,27 @@ def test_reference_group_switch_preview_owns_source_basis_and_unresolved_iris():
     reply = client.patch(url, json={"domainProfile": profile, "profileBasis": preview.json()["basis"]})
     assert reply.status_code == 409, reply.text
     assert project_store.manifest(target)["domainProfile"]["countryProjectId"] == source
+
+
+def test_country_aliases_are_explicitly_edited_without_losing_other_languages():
+    pid = create_group()
+    response = command(pid, "CreateCountry", {"names": [{"value": "Name", "language": "en"}, {"value": "名称", "language": "ja"}],
+                       "aliases": [{"value": "Alias", "language": "en"}, {"value": "Another alias", "language": "en"}]})
+    assert response.status_code == 200, response.text
+    iri = response.json()["created"]
+    model = editing_service.document(pid, "model").graph
+    assert set(model.objects(URIRef(iri), SKOS.altLabel)) == {Literal("Alias", lang="en"), Literal("Another alias", lang="en")}
+    # A legacy name-only caller must not implicitly delete independently entered aliases.
+    edited = command(pid, "CreateCountry", {"iri": iri, "names": [{"value": "New name", "language": "en"}, {"value": "名称", "language": "ja"}]})
+    assert edited.status_code == 200
+    assert len(list(model.objects(URIRef(iri), SKOS.altLabel))) == 2
+
+
+def test_reviewed_country_edit_rejects_a_changed_country_snapshot():
+    pid = create_group()
+    iri = country(pid)
+    basis = client.get(f"/api/projects/{pid}/government/countries", params={"iri": iri}).json()["basis"]
+    country(pid, name="Added after opening form")
+    response = command(pid, "CreateCountry", {"iri": iri, "referenceBasis": basis, "names": [{"value": "Must not overwrite", "language": "en"}]})
+    assert response.status_code == 409, response.text
+    assert str(next(editing_service.document(pid, "model").graph.objects(URIRef(iri), SKOS.prefLabel))) == "Synthetic country"

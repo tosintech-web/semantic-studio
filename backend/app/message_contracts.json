@@ -1723,6 +1723,7 @@
     "government.country_saved": {},
     "government.organization_saved": {},
     "project.command_limit": {},
-    "government.projection_limit": {}
+    "government.projection_limit": {},
+    "government.entry_stale": {}
   }
 }

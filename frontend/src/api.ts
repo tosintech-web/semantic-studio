@@ -1265,13 +1265,16 @@ export const downloadRelease = (pid:string,rid:string) => bytes(projectUrl(pid,`
 
 // Country authority is read explicitly; a different display language changes
 // candidate labels without changing the reference basis or saved RDF identity.
-export function getCountryChoices(pid: string, options: { query?: string; offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal } = {}): Promise<import("./government/types").CountryPage> {
+export function getCountryChoices(pid: string, options: { query?: string; offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal; iri?: string } = {}): Promise<import("./government/types").CountryPage> {
   const query = new URLSearchParams({ q: options.query ?? "", offset: String(options.offset ?? 0), limit: String(options.limit ?? 50), displayLanguage: options.displayLanguage ?? "" });
+  if (options.iri) query.set("iri", options.iri);
   return send(projectUrl(pid, `/government/countries?${query}`), { signal: options.signal }).then(handle<import("./government/types").CountryPage>);
 }
 
-export function getGovernmentView(pid: string, at: string, options: { offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal } = {}): Promise<import("./government/types").GovernmentViewResult> {
+export function getGovernmentView(pid: string, at: string, options: { offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal; iri?: string; query?: string } = {}): Promise<import("./government/types").GovernmentViewResult> {
   const query = new URLSearchParams({ at, offset: String(options.offset ?? 0), limit: String(options.limit ?? 50), displayLanguage: options.displayLanguage ?? "" });
+  if (options.iri) query.set("iri", options.iri);
+  if (options.query) query.set("q", options.query);
   return send(projectUrl(pid, `/government/view?${query}`), { signal: options.signal }).then(handle<import("./government/types").GovernmentViewResult>);
 }
 

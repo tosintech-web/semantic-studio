@@ -146,11 +146,11 @@ onChangeへ `{iri,basis}` を返す。フォームは `projectId,targetIri?,onSa
 既存projectStoreのcommand実行・draft owner・離脱確認を利用する。
 国候補なし、参照元未接続、未解決IRI、stale409を別の状態として表示する。
 
-- [ ] **Step 1: RED試験。** コード/名称/IRI検索、同名候補識別、末尾ページ、国未登録で組織確定不可、日英切替で原値保持、stale後に入力保持、遅い旧projectの候補応答破棄、Tab/Escape/復帰focusをassert。
-- [ ] **Step 2: RED確認。** `cd frontend && npm run test -- src/government/CountryForm.test.tsx src/government/OrganizationForm.test.tsx src/government/CountryPicker.test.tsx src/government/form.test.ts`。
-- [ ] **Step 3: 実装。** 型・言語・期間入力の純粋処理をform.tsへ分離。候補を丸ごとselectへ詰めず検索とpageを持つpickerにする。名前の変更でIRIを再生成しない。
-- [ ] **Step 4: GREEN確認。** 上記試験とprojectStore関連試験を実行。a11y-check skillを読み、実Chromeで国作成→組織登録と入力保持を確認する。
-- [ ] **Step 5: commit。** `feat: add country and government organization entry forms`。
+- [x] **Step 1: RED試験。** コード/名称/IRI検索、同名候補識別、末尾ページ、国未登録で組織確定不可、日英切替で原値保持、stale後に入力保持、遅い旧projectの候補応答破棄、Tab/Escape/復帰focusをassert。
+- [x] **Step 2: RED確認。** `cd frontend && npm run test -- src/government/CountryForm.test.tsx src/government/OrganizationForm.test.tsx src/government/CountryPicker.test.tsx src/government/form.test.ts`。
+- [x] **Step 3: 実装。** 型・言語・期間入力の純粋処理をform.tsへ分離。候補を丸ごとselectへ詰めず検索とpageを持つpickerにする。名前の変更でIRIを再生成しない。
+- [x] **Step 4: GREEN確認。** 上記試験とprojectStore関連試験を実行。a11y-check skillを読み、実Chromeで国作成→組織登録と入力保持を確認する。
+- [x] **Step 5: commit。** `feat: add country and government organization entry forms`。
 
 ## Task 5: 関係・改編・名称履歴のcommand（G2）
 
