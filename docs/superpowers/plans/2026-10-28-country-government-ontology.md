@@ -183,11 +183,11 @@ Modify `frontend/src/api.ts`, `frontend/src/government/types.ts`, `frontend/src/
 読取APIは設計7節のview/projection、Task 1のGovernmentView型。cacheと応答ownerはproject/document/basis/at/languageを含める。
 参照した国の名称は表示だけに使い、編集原値を変えない。
 
-- [ ] **Step 1: RED試験。** 関係5種の方向表示、統合/分割の複数選択、preview全変更の確認、施行日前後の切替、存在不明と期間外組織の表示切替、存在期間の矛盾表示、未来改称、別基準日の遅延応答、再認証時のdraft保持、全履歴とprojectionのラベル区別をassert。
-- [ ] **Step 2: RED確認。** `cd frontend && npm run test -- src/government/RelationForm.test.tsx src/government/ChangeForm.test.tsx src/government/GovernmentView.test.tsx src/government/history.test.ts`。
-- [ ] **Step 3: 実装。** 一覧・詳細・基準日入力を優先し専用グラフを作らない。日付APIは必須、初期画面は利用者の今日を明示して送る。不明の記録を見えなくせず別一覧へ出す。
-- [ ] **Step 4: GREEN確認。** 上記試験成功後、a11y-checkと実Chromeで移管前後・統合・Undo・日英の一連操作を確認する。
-- [ ] **Step 5: commit。** `feat: add dated government relations and change entry UI`。
+- [x] **Step 1: RED試験。** 関係5種の方向表示、統合/分割の複数選択、preview全変更の確認、施行日前後の切替、存在不明と期間外組織の表示切替、存在期間の矛盾表示、未来改称、別基準日の遅延応答、再認証時のdraft保持、全履歴とprojectionのラベル区別をassert。
+- [x] **Step 2: RED確認。** `cd frontend && npm run test -- src/government/RelationForm.test.tsx src/government/ChangeForm.test.tsx src/government/GovernmentView.test.tsx src/government/history.test.ts`。
+- [x] **Step 3: 実装。** 一覧・詳細・基準日入力を優先し専用グラフを作らない。日付APIは必須、初期画面は利用者の今日を明示して送る。不明の記録を見えなくせず別一覧へ出す。
+- [x] **Step 4: GREEN確認。** 上記試験成功後、a11y-checkと実Chromeで移管前後・統合・Undo・日英の一連操作を確認する。
+- [x] **Step 5: commit。** `feat: add dated government relations and change entry UI`。
 
 ## Task 7: システムメニューとprofile別一覧（G3）
 

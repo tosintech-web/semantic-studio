@@ -34,9 +34,9 @@ def countries(pid: str, q: str = Query("", max_length=200), offset: int = Query(
 
 
 @router.get("/view")
-def view(pid: str, at: str, offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100), displayLanguage: str | None = Query(None, max_length=100), iri: str | None = Query(None, max_length=4096), q: str = Query("", max_length=200)):
+def view(pid: str, at: str, offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100), displayLanguage: str | None = Query(None, max_length=100), iri: str | None = Query(None, max_length=4096), q: str = Query("", max_length=200), recordIri: str | None = Query(None, max_length=4096), includeInactive: bool = True):
     with _errors():
-        return views.view(editing_service, pid, at, offset, limit, displayLanguage, iri, q)
+        return views.view(editing_service, pid, at, offset, limit, displayLanguage, iri, q, recordIri, includeInactive)
 
 
 @router.get("/projection")

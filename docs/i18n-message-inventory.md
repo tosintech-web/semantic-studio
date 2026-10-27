@@ -659,7 +659,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `kind.individual` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `kind.ontology` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `kind.other` | — | `frontend/src/i18n/kindLabel.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.retry` | — | `frontend/src/components/EntityList.tsx`, `frontend/src/team/TeamProvider.tsx`, `frontend/src/government/CountryPicker.tsx`, `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.retry` | — | `frontend/src/components/EntityList.tsx`, `frontend/src/team/TeamProvider.tsx`, `frontend/src/government/CountryPicker.tsx`, `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.filter` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.kind` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `entities.sort` | — | `frontend/src/components/EntityList.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -691,7 +691,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `dictionary.dirty` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saving` | — | `frontend/src/components/DictionaryContext.tsx`<br>`frontend/src/components/ProjectHeader.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `dictionary.saveError` | — | `frontend/src/components/DictionaryContext.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DeleteDialog.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/QueryPanel.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.cancel` | — | `frontend/src/App.tsx`<br>`frontend/src/components/AnnotationAdder.tsx`<br>`frontend/src/components/AttributeForm.tsx`<br>`frontend/src/components/ConceptRelations.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DeleteDialog.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/EditSection.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NewEntityForm.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/QueryPanel.tsx`<br>`frontend/src/components/ReferenceOnlyPanel.tsx`<br>`frontend/src/components/RelationshipForm.tsx`<br>`frontend/src/components/ResultsTable.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/SnapshotList.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/RelationForm.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.prompt` | — | `frontend/src/App.tsx`<br>`frontend/src/components/EntityPicker.tsx`<br>`frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.queryPrompt` | — | `frontend/src/App.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `search.results` | — | `frontend/src/components/SearchBox.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1047,7 +1047,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `glossary.xsd.time` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.gYear` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.anyURI` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
-| `common.loading` | — | `frontend/src/team/ConflictPanel.tsx`, `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/ExploreStart.tsx`, `frontend/src/team/TeamProvider.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryPicker.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `common.loading` | — | `frontend/src/team/ConflictPanel.tsx`, `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/ExploreStart.tsx`, `frontend/src/team/TeamProvider.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryPicker.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.start` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.pickHelp` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.data` | label | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
@@ -3458,8 +3458,8 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.selectedCountry` | iri | `frontend/src/government/CountryPicker.tsx` |
 | `government.countryCounts` | shown, total | `frontend/src/government/CountryPicker.tsx` |
 | `government.countryEmpty` | — | `frontend/src/government/CountryPicker.tsx` |
-| `government.previousPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.nextPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx` |
+| `government.previousPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx` |
+| `government.nextPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx` |
 | `government.aliases` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.preferredNames` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.aliasNumber` | number | `frontend/src/government/EntryParts.tsx` |
@@ -3477,40 +3477,40 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.addSource` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.periodStart` | period | `frontend/src/government/EntryParts.tsx` |
 | `government.periodEnd` | period | `frontend/src/government/EntryParts.tsx` |
-| `government.boundUnknown` | — | `frontend/src/government/EntryParts.tsx` |
-| `government.boundOpen` | — | `frontend/src/government/EntryParts.tsx` |
+| `government.boundUnknown` | — | `frontend/src/government/EntryParts.tsx`, `frontend/src/government/GovernmentView.tsx` |
+| `government.boundOpen` | — | `frontend/src/government/EntryParts.tsx`, `frontend/src/government/GovernmentView.tsx` |
 | `government.boundDate` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.boundValue` | bound | `frontend/src/government/EntryParts.tsx` |
 | `government.periodHelp` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.countryCode` | — | `frontend/src/government/CountryForm.tsx` |
-| `government.description` | — | `frontend/src/government/CountryForm.tsx` |
-| `government.unsupportedEntry` | — | `frontend/src/government/CountryForm.tsx`, `frontend/src/government/OrganizationForm.tsx` |
+| `government.description` | — | `frontend/src/government/CountryForm.tsx`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/HistoryParts.tsx` |
+| `government.unsupportedEntry` | — | `frontend/src/government/CountryForm.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/RelationForm.tsx` |
 | `government.organizationType` | — | `frontend/src/government/OrganizationForm.tsx` |
 | `government.identifier` | — | `frontend/src/government/OrganizationForm.tsx` |
-| `government.existencePeriod` | — | `frontend/src/government/OrganizationForm.tsx` |
+| `government.existencePeriod` | — | `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx` |
 | `government.countryPeriod` | — | `frontend/src/government/OrganizationForm.tsx` |
 | `government.refreshCountries` | — | `frontend/src/government/CountryPicker.tsx` |
 | `government.leave.confirm` | — | `frontend/src/App.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryForm.tsx` |
 | `government.countriesTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.organizationsTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
+| `government.organizationsTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
 | `government.countryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.chooseCountryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.reviewCountryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.connectCountryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
+| `government.connectCountryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
 | `government.openCountryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.unresolvedCountries` | count | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.applyConnection` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.connectionFailed` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.newCountry` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
 | `government.newOrganization` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.searchEntries` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.asOf` | date | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.detailsUnavailable` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx` |
-| `government.entryCounts` | shown, total | `frontend/src/government/GovernmentWorkspace.tsx` |
+| `government.searchEntries` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
+| `government.asOf` | date | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
+| `government.detailsUnavailable` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/RelationForm.tsx` |
+| `government.entryCounts` | shown, total | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx` |
 | `government.editEntry` | name | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.existence.active` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.existence.inactive` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
-| `government.existence.uncertain` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
+| `government.existence.active` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
+| `government.existence.inactive` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
+| `government.existence.uncertain` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx` |
 | `government.standardModel` | — | `frontend/src/components/ProjectHeader.tsx` |
 | `government.groupEntries` | — | `frontend/src/components/ProjectHeader.tsx` |
 | `government.unsupportedProfile` | — | `frontend/src/components/ProjectHeader.tsx` |
@@ -3519,4 +3519,88 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 
 | `government.history_conflict` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
 | `government.history_saved` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
-| `government.cross_country` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
+| `government.cross_country` | — | `frontend/src/i18n/server-contracts.ts`, `frontend/src/government/ProblemText.tsx` | en/ja |
+
+| `government.searchIdentity` | role | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.chooseOrganization` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.existingRecord` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.chooseRecord` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.newRecordHelp` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.subjectOrganization` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.relatedOrganization` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.relationship` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.relation.inCountry` | — | `frontend/src/government/history.ts` | en/ja |
+| `government.relation.unitOf` | — | `frontend/src/government/history.ts` | en/ja |
+| `government.relation.subOrganizationOf` | — | `frontend/src/government/history.ts` | en/ja |
+| `government.relation.supervisedBy` | — | `frontend/src/government/history.ts` | en/ja |
+| `government.relation.cooperatesWith` | — | `frontend/src/government/history.ts` | en/ja |
+| `government.relationPeriod` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.namedOrganization` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.historicalName` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.historicalLanguage` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.namePeriod` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.existingOrganization` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryParts.tsx` | en/ja |
+| `government.reviewFailed` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryReview.tsx` | en/ja |
+| `government.reviewChanges` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryReview.tsx` | en/ja |
+| `government.deltaCounts` | added, removed | `frontend/src/government/history.ts`, `frontend/src/government/HistoryReview.tsx` | en/ja |
+| `government.addedStatement` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryReview.tsx` | en/ja |
+| `government.removedStatement` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryReview.tsx` | en/ja |
+| `government.historyWarning` | code, iri | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryReview.tsx`, `frontend/src/government/ProblemText.tsx` | en/ja |
+| `government.reviewAcknowledgement` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryReview.tsx` | en/ja |
+| `government.applyReviewedChanges` | — | `frontend/src/government/history.ts`, `frontend/src/government/HistoryReview.tsx` | en/ja |
+| `government.relationEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/RelationForm.tsx` | en/ja |
+| `government.historyInputRequired` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/RelationForm.tsx` | en/ja |
+| `government.refreshAuthority` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/RelationForm.tsx` | en/ja |
+| `government.nameHistoryEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.changeEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.identityHelp` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.changeKind` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.changeKind.merge` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.changeKind.split` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.changeKind.transfer` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.changeKind.rename` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.changeKind.other` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.effectiveDate` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.originalOrganizations` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.resultingOrganizations` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.removeIdentity` | iri | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.eventEditHelp` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.relationEditNumber` | number | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.nameEditNumber` | number | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.existenceEditNumber` | number | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.removeEdit` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.addRelationEdit` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.addNameEdit` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.addExistenceEdit` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
+| `government.datedView` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.viewDate` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.includeInactive` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.downloadAllHistory` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.downloadProjection` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.activeRelations` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.uncertainRelations` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.allHistory` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.relationships` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.changes` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.diagnostics` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.pageOffset` | offset | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.unresolvedReference` | iri | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.newRelation` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentWorkspace.tsx` | en/ja |
+| `government.newChange` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentWorkspace.tsx` | en/ja |
+| `government.newName` | — | `frontend/src/government/history.ts`, `frontend/src/government/GovernmentWorkspace.tsx` | en/ja |
+
+| `government.removeSelection` | — | `frontend/src/government/ChangeForm.tsx` | en/ja |
+
+| `government.problem.cycle` | — | `frontend/src/government/ProblemText.tsx` | en/ja |
+| `government.problem.relationOverlap` | — | `frontend/src/government/ProblemText.tsx` | en/ja |
+| `government.problem.countryOverlap` | — | `frontend/src/government/ProblemText.tsx` | en/ja |
+| `government.problem.nameOverlap` | — | `frontend/src/government/ProblemText.tsx` | en/ja |
+| `government.problem.inactiveEndpoint` | — | `frontend/src/government/ProblemText.tsx` | en/ja |
+| `government.problem.unsupported` | — | `frontend/src/government/ProblemText.tsx` | en/ja |
+
+| `government.relationState.active` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.relationState.inactive` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.relationState.uncertain` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.nameState.active` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.nameState.inactive` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.nameState.uncertain` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |

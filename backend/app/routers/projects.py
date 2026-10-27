@@ -65,7 +65,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from ..messages import MessageText, integer_arg, make_message
 from ..messages import UiHTTPException
-from pydantic import BaseModel, StrictBool, ValidationError
+from pydantic import BaseModel, StrictBool, ValidationError, model_validator
 from starlette.concurrency import run_in_threadpool
 
 from .. import reasoning
@@ -122,6 +122,14 @@ class RunCommand(BaseModel):
     command: str
     args: dict = {}
     dryRun: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def history_preview_boolean(cls, value):
+        from ..government.commands import HISTORY_COMMANDS
+        if isinstance(value, dict) and value.get('command') in HISTORY_COMMANDS and 'dryRun' in value and type(value['dryRun']) is not bool:
+            raise ValueError('A history preview uses a JSON boolean.')
+        return value
 
 
 class SaveDocument(BaseModel):

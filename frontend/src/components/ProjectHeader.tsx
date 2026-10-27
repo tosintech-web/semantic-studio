@@ -4,6 +4,8 @@ FILE: frontend/src/components/ProjectHeader.tsx
 ================================================================================
 
 SUMMARY
+    Country/government entry tools can be switched from this bar or its
+    keyboard menu; the menu keeps the action reachable on narrow viewports.
     Domain groups can switch between specialized entries and the ordinary model.
     Failed name-only result reads report once and can retry the selected language.
     The header's context row while a project is open (authoring-foundations
@@ -89,7 +91,7 @@ interface Props {
   domainEditor?: { on: boolean; onToggle: () => void } | null;
 }
 
-type MenuAction = "language" | "shapes" | "copy" | "canvas" | "close";
+type MenuAction = "domain" | "language" | "shapes" | "copy" | "canvas" | "close";
 
 /** A text field owns its own undo (Section 6). */
 function inTextField(target: EventTarget | null): boolean {
@@ -236,6 +238,7 @@ export default function ProjectHeader({
       });
     } else if (action === "copy") onSaveCopy();
     else if (action === "canvas") canvas?.onToggle();
+    else if (action === "domain") domainEditor?.onToggle();
     else onClose();
   };
 
@@ -320,7 +323,7 @@ export default function ProjectHeader({
           Turtle
         </button>
       )}
-      {domainEditor && <button type="button" className="ghost" onClick={domainEditor.onToggle}>{t(domainEditor.on ? "government.standardModel" : "government.groupEntries")}</button>}
+      {domainEditor && <button type="button" className="ghost domain-editor-toggle" onClick={domainEditor.onToggle}>{t(domainEditor.on ? "government.standardModel" : "government.groupEntries")}</button>}
       {project.domainProfile && !supportedProfile(project.domainProfile) && <span role="status" className="detail-note">{t("government.unsupportedProfile")}</span>}
       <div className="onto-menu-wrap project-lang-wrap">
         <button
@@ -386,6 +389,7 @@ export default function ProjectHeader({
                 </span>{t("projectHeader.canvas")}</button>
             </li>
           )}
+          {domainEditor && <li role="none"><button type="button" role="menuitem" tabIndex={-1} onClick={()=>chooseMenu('domain')}>{t(domainEditor.on?'government.standardModel':'government.groupEntries')}</button></li>}
           <li role="none">
             <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("close")}>{t("projectHeader.close")}</button>
           </li>

@@ -184,3 +184,18 @@ def test_change_preview_cannot_commit_after_another_editor_changes_target(team):
         assert refused.status_code==409,refused.text
     finally:
         second.client.close()
+
+
+@pytest.mark.parametrize('flag',['true',1])
+def test_malformed_history_preview_never_commits_or_audits(team,flag):
+    _,target,args=setup_groups(team)
+    url=f'/api/projects/{target}/documents/model/commands'
+    reply=team.request('POST',url,request_id='register-boolean',json={'command':'CreateGovernmentOrganization','args':args})
+    assert reply.status_code==200,reply.text
+    body={'entity':reply.json()['created'],'value':'Name','language':'en','period':PERIOD,'sources':args['sources'],'referenceBasis':args['referenceBasis']}
+    before=team.workspace.repository.snapshot()
+    history=team.workspace.repository.history('workspace',0,100)
+    response=team.request('POST',url,request_id='malformed-preview',json={'command':'PutGovernmentName','args':body,'dryRun':flag})
+    assert response.status_code==422,response.text
+    assert team.workspace.repository.snapshot()==before
+    assert team.workspace.repository.history('workspace',0,100)==history

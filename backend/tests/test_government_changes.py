@@ -179,3 +179,47 @@ def test_name_projection_replaces_matching_language_tag_case_insensitively():
     from rdflib import Graph
     projected=Graph().parse(data=client.get(f'/api/projects/{pid}/government/projection?at=2020-01-01').text,format='turtle')
     assert list(map(str,projected.objects(URIRef(e[0]),SKOS.prefLabel)))==['Replacement']
+
+
+def test_history_view_returns_names_events_existence_and_record_exact_lookup():
+    _,pid,args,e=setup()
+    approved,_=preview(pid,'ApplyGovernmentChange',event(args,e,nameEdits=[{'entity':e[0],'value':'New name','language':'en','period':PERIOD,'sources':SOURCES}]))
+    change=command(pid,'ApplyGovernmentChange',approved).json()['created']
+    view=client.get(f'/api/projects/{pid}/government/view?at=2020-01-01').json()
+    assert view['changes']['total']==1 and view['names']['total']==1 and view['existences']['total']==3
+    assert view['changes']['items'][0]['iri']==change
+    assert set(view['changes']['items'][0]['originalIris'])==set(e[:2])
+    exact=client.get(f'/api/projects/{pid}/government/view',params={'at':'2020-01-01','recordIri':change}).json()
+    assert exact['changes']['total']==1 and exact['names']['total']==0
+
+
+def test_history_view_filters_inactive_organizations_with_honest_total():
+    _,pid,args,e=setup()
+    end={'start':PERIOD['start'],'end':{'date':'2020-01-01','open':False}}
+    approved,_=preview(pid,'ApplyGovernmentChange',event(args,e,existenceEdits=[{'entity':e[0],'period':end,'sources':SOURCES}]))
+    assert command(pid,'ApplyGovernmentChange',approved).status_code==200
+    view=client.get(f'/api/projects/{pid}/government/view?at=2020-01-01&includeInactive=false').json()
+    assert view['organizations']['total']==2
+    assert e[0] not in {r['iri'] for r in view['organizations']['items']}
+    assert view['activeRelations']['total']==2
+
+
+def test_metadata_edit_preserves_event_record_links_without_reapplying_history():
+    _,pid,args,e=setup()
+    body=event(args,e,nameEdits=[{'entity':e[0],'value':'Future','language':'en','period':PERIOD,'sources':SOURCES}])
+    approved,_=preview(pid,'ApplyGovernmentChange',body)
+    iri=command(pid,'ApplyGovernmentChange',approved).json()['created']
+    before=graph(pid)
+    approved,_=preview(pid,'ApplyGovernmentChange',event(args,e,iri=iri,description='Edited event metadata'))
+    assert command(pid,'ApplyGovernmentChange',approved).status_code==200
+    model=editing_service.document(pid,'model').graph
+    assert set(model.objects(URIRef(iri),GOV.nameRecord))=={o for s,p,o in before if s==URIRef(iri) and p==GOV.nameRecord}
+    assert set(model.subjects(RDF.type,GOV.NameRecord))=={s for s,p,o in before if p==RDF.type and o==GOV.NameRecord}
+
+
+@pytest.mark.parametrize('dry_run',['true',1])
+def test_history_dry_run_requires_a_json_boolean(dry_run):
+    _,pid,args,e=setup();before=graph(pid)
+    reply=command(pid,'ApplyGovernmentChange',event(args,e),dryRun=dry_run)
+    assert reply.status_code==422,reply.text
+    assert graph(pid)==before

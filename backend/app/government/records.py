@@ -294,3 +294,36 @@ def project_at(graph: Graph, *, at: date) -> Projection:
                 projected.remove((URIRef(entity), SKOS.prefLabel, value))
         projected.add((URIRef(entity), SKOS.prefLabel, Literal(choices[0].value, lang=choices[0].language)))
     return Projection(projected, uncertain, diagnostics)
+
+
+def read_changes(graph: Graph) -> list[dict]:
+    """Read the supported ChangeEvent subset without silently dropping RDF."""
+    rows = []
+    allowed = {GOV.changeKind, GOV.effectiveDate, ORG.originalOrganization, ORG.resultingOrganization,
+               GOV.relationRecord, GOV.nameRecord, GOV.existenceRecord, DCTERMS.description}
+    for node in sorted(set(graph.subjects(RDF.type, ORG.ChangeEvent)), key=str):
+        problems, sources, _ = _common(graph, node, ORG.ChangeEvent, allowed)
+        kind = _one(graph, node, GOV.changeKind, problems, required=True, kind=Literal)
+        when = _one(graph, node, GOV.effectiveDate, problems, required=True, kind=Literal)
+        if kind is None or kind.language or kind.datatype not in (None, XSD.string) or str(kind) not in {'merge', 'split', 'transfer', 'rename', 'other'}:
+            problems.append('change-kind')
+        try:
+            if when is None or when.datatype != XSD.date:
+                raise ValueError('date')
+            parse_date(str(when))
+        except ValueError:
+            problems.append('effective-date')
+        description = _one(graph, node, DCTERMS.description, problems, kind=Literal)
+        if description is not None and (description.language or description.datatype not in (None, XSD.string)):
+            problems.append('description')
+        row = {'iri': str(node), 'kind': str(kind) if kind is not None else '', 'effectiveDate': str(when) if when is not None else '',
+               'sources': [{'kind': s.kind, 'value': s.value} for s in sources], 'description': str(description) if description is not None else ''}
+        for key, predicate in [('originalIris', ORG.originalOrganization), ('resultingIris', ORG.resultingOrganization),
+                               ('relationIris', GOV.relationRecord), ('nameIris', GOV.nameRecord), ('existenceIris', GOV.existenceRecord)]:
+            values = list(graph.objects(node, predicate))
+            if any(not isinstance(v, URIRef) for v in values) or (key in {'originalIris', 'resultingIris'} and not values):
+                problems.append(key)
+            row[key] = sorted(str(v) for v in values)
+        row['unsupported'] = sorted(set(problems))
+        rows.append(row)
+    return rows

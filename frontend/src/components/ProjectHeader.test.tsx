@@ -699,3 +699,11 @@ it('team multi-document undo replaces the complete document listing and selects 
   expect(projectStore.getSnapshot().documents.map(d=>d.doc)).toEqual(['model']);
   expect(projectStore.getSnapshot().activeDoc).toBe('model');
 });
+
+it('offers the country/group editor switch inside the keyboard project menu',async()=>{
+ openProject.mockResolvedValue({project:PROJECT,documents:[doc()],recovery:{available:false,draftTime:null}});
+ await projectStore.open(PROJECT.id);const toggle=vi.fn();
+ render(<ProjectHeader onSwitchDocument={vi.fn()} onClose={vi.fn()} onError={vi.fn()} onSaveCopy={vi.fn()} domainEditor={{on:true,onToggle:toggle}}/>);
+ await fromMenu('Model editor');expect(toggle).toHaveBeenCalledTimes(1);
+ expect(screen.getByRole('button',{name:'More project actions'})).toBe(document.activeElement);
+});

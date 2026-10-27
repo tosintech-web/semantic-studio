@@ -6702,7 +6702,7 @@ kbd {
 .government-form fieldset { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--border); border-radius: 8px; }
 .government-form legend { font-size: var(--fs-lg); padding-inline: 8px; }
 .government-form input, .government-form select, .government-form textarea { box-sizing: border-box; min-width: 0; width: 100%; }
-.government-form textarea { min-height: 80px; resize: vertical; }
+.government-form textarea { min-height: 80px; resize: vertical; font: inherit; color: var(--text); background: var(--bg-raised); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
 .government-form button { align-self: flex-start; }
 .government-form label { display: block; margin-block: 6px; }
 .government-form .detail-note { overflow-wrap: anywhere; }
@@ -6715,4 +6715,18 @@ kbd {
 @media (max-width: 760px) {
   .government-workspace { padding: 16px; }
   .government-entry-list li { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Government history uses native controls and the shared focus rule. */
+.government-dated-view { display: grid; gap: 12px; min-width: 0; }
+.government-dated-view ul, .government-review ol { padding-inline-start: 24px; }
+.government-dated-view li, .government-review li { margin-block: 8px; overflow-wrap: anywhere; }
+.government-dated-view code, .government-review code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.government-form > fieldset { min-width: 0; }
+.government-review { border: 1px solid var(--border); padding: 16px; }
+
+@media (max-width: 900px) {
+  .project-header .domain-editor-toggle { display: none; }
+  .project-header .context-label { display: none; }
+  .project-header #project-doc-select { max-width: 160px; }
 }

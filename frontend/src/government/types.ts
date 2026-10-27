@@ -88,6 +88,7 @@ export interface RelationView extends RelationInput {
 export interface GovernmentViewResult {
   at: string;
   basis: string;
+  names:Page<NameView>;changes:Page<ChangeView>;existences:Page<ExistenceView>;activeRelations:Page<RelationView>;
   organizations: Page<OrganizationView>;
   relations: Page<RelationView>;
   uncertain: Page<RelationView>;
@@ -96,3 +97,12 @@ export interface GovernmentViewResult {
   kindOptions: { value: OrganizationView["kind"]; iri: string; label: string }[];
 }
 
+export interface ExistenceInput { entity:string;period:Period;sources:Source[] }
+export interface ChangeInput {
+ iri?:string;kind:'merge'|'split'|'transfer'|'rename'|'other';effectiveDate:string;
+ originalIris:string[];resultingIris:string[];relationEdits:RelationInput[];nameEdits:NameInput[];existenceEdits:ExistenceInput[];sources:Source[];description:string;
+}
+export interface NameView extends NameInput {iri:string;entityLabel:string;state:TemporalState;unsupported:string[]}
+export interface ExistenceView extends ExistenceInput {iri:string;entityLabel:string;state:TemporalState;unsupported:string[]}
+export interface ChangeView extends Omit<ChangeInput,'relationEdits'|'nameEdits'|'existenceEdits'> {iri:string;relationIris:string[];nameIris:string[];existenceIris:string[];unsupported:string[]}
+export interface HistoryPreview {dryRun:true;basis:string;revision:number;delta:{added:string[];removed:string[];addedTotal:number;removedTotal:number};warnings:GovernmentViewResult['diagnostics']}

@@ -18,8 +18,9 @@ export const COUNTRY_IRI = "http://example.org/countries#synthetic";
 export const BASIS = { sourceProjectId: "prj-111111111111", sourceToken: "source-a" };
 export const UNKNOWN = { start: { date: null, open: false }, end: { date: null, open: false } };
 export const PAGE = { items: [{ iri: COUNTRY_IRI, label: "Synthetic country", code: "SYN" }], total: 1, offset: 0, limit: 50, basis: BASIS };
-export const DETAIL_PAGE = { ...PAGE, items: [{ ...PAGE.items[0], names: [{ value: "Synthetic country", language: "en" }, { value: "合成国", language: "ja" }], aliases: [{ value: "Alternative", language: "en" }], sources: [{ kind: "text", value: "Synthetic source" }], description: "Description", unsupported: [] }] };
+export const DETAIL_PAGE = { ...PAGE, basis:{...BASIS,sourceProjectId:PID}, items: [{ ...PAGE.items[0], names: [{ value: "Synthetic country", language: "en" }, { value: "合成国", language: "ja" }], aliases: [{ value: "Alternative", language: "en" }], sources: [{ kind: "text", value: "Synthetic source" }], description: "Description", unsupported: [] }] };
 export const VIEW = {
+  names:{items:[],total:0,offset:0,limit:50},changes:{items:[],total:0,offset:0,limit:50},existences:{items:[],total:0,offset:0,limit:50},activeRelations:{items:[],total:0,offset:0,limit:50},
   at: "2020-04-01", basis: "view-a", organizations: { items: [], total: 0, offset: 0, limit: 50 },
   relations: { items: [], total: 0, offset: 0, limit: 50 }, uncertain: { items: [], total: 0, offset: 0, limit: 50 }, diagnostics: [], referenceBasis: BASIS,
   kindOptions: [{ value: "Organization", iri: "http://www.w3.org/ns/org#Organization", label: "Organization" },

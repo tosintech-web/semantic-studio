@@ -51,7 +51,7 @@ def countries(service, pid: str, q: str = "", offset: int = 0, limit: int = 50, 
         return {**country_choices(reference.graph, query=q, offset=offset, limit=limit, languages=_languages(manifest, displayLanguage), exact_iri=iri), "basis": reference.basis}
 
 
-def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLanguage: str | None = None, iri: str | None = None, q: str = ""):
+def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLanguage: str | None = None, iri: str | None = None, q: str = "", recordIri: str | None = None, includeInactive: bool = True):
     with service.reference_lock:
         manifest, graph, day, basis = _snapshot(service, pid, at)
         projection = project_at(graph, at=day)
@@ -72,6 +72,8 @@ def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLa
             return pick_label_in(projection.graph, URIRef(iri), languages)[0]
         for node in organizations(graph):
             if iri is not None and str(node) != iri:
+                continue
+            if not includeInactive and states[str(node)] == "inactive":
                 continue
             entity_iri = str(node)
             if q and not any(q.casefold() in value.casefold() for value in [entity_iri, name(entity_iri), *(str(value) for predicate in (SKOS.prefLabel, SKOS.altLabel, ORG.identifier) for value in graph.objects(node, predicate))]):
@@ -105,12 +107,23 @@ def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLa
         relation_rows = [{"iri": r.iri, "subject": r.subject, "predicate": r.predicate, "object": r.object,
                           "period": period_json(r.period), "sources": [{"kind": s.kind, "value": s.value} for s in r.sources],
                           "description": r.description, "state": period_state(r.period, day), "unsupported": list(r.unsupported),
-                          "subjectLabel": name(r.subject) if r.subject else "", "objectLabel": name(r.object) if r.object else ""} for r in relations if iri is None or iri in (r.subject, r.object)]
+                          "subjectLabel": name(r.subject) if r.subject else "", "objectLabel": name(r.object) if r.object else ""} for r in relations if (iri is None or iri in (r.subject, r.object)) and (recordIri is None or r.iri == recordIri)]
+        from .records import read_names, read_changes
+        name_rows = [{"iri": r.iri, "entity": r.entity, "entityLabel": name(r.entity) if r.entity else "", "value": r.value, "language": r.language,
+                      "period": period_json(r.period), "sources": [{"kind": s.kind, "value": s.value} for s in r.sources],
+                      "state": period_state(r.period, day), "unsupported": list(r.unsupported)}
+                     for r in read_names(graph) if (recordIri is None or r.iri == recordIri) and (iri is None or r.entity == iri)]
+        change_rows = [r for r in read_changes(graph) if (recordIri is None or r['iri'] == recordIri) and (iri is None or iri in r['originalIris'] + r['resultingIris'])]
+        existence_rows = [{"iri": r.iri, "entity": r.entity, "entityLabel": name(r.entity) if r.entity else "", "period": period_json(r.period),
+                           "sources": [{"kind": s.kind, "value": s.value} for s in r.sources], "unsupported": list(r.unsupported), "state": period_state(r.period, day)}
+                          for r in life if (recordIri is None or r.iri == recordIri) and (iri is None or r.entity == iri)]
         vocabulary = load_domain_vocabulary()
         kind_options = [{"value": str(kind).split("#")[-1], "iri": str(kind), "label": pick_label_in(vocabulary, kind, languages)[0]}
                         for kind in (ORG.Organization, ORG.FormalOrganization, ORG.OrganizationalUnit)]
         return {"at": at, "basis": basis, "organizations": page(items), "relations": page(relation_rows),
                 "uncertain": page([r for r in relation_rows if r["state"] == "uncertain"]),
+                "activeRelations": page([r for r in relation_rows if r["state"] == "active" and not r['unsupported'] and states.get(r['subject']) != 'inactive' and states.get(r['object']) != 'inactive']),
+                "names": page(name_rows), "changes": page(change_rows), "existences": page(existence_rows),
                 "diagnostics": [{"code": p.code, "severity": p.severity, "iri": p.iri, "args": p.args} for p in projection.diagnostics],
                 "referenceBasis": reference.basis if reference else None, "kindOptions": kind_options}
 

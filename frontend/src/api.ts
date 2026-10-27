@@ -1271,10 +1271,12 @@ export function getCountryChoices(pid: string, options: { query?: string; offset
   return send(projectUrl(pid, `/government/countries?${query}`), { signal: options.signal }).then(handle<import("./government/types").CountryPage>);
 }
 
-export function getGovernmentView(pid: string, at: string, options: { offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal; iri?: string; query?: string } = {}): Promise<import("./government/types").GovernmentViewResult> {
+export function getGovernmentView(pid: string, at: string, options: { offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal; iri?: string; query?: string; recordIri?:string; includeInactive?:boolean } = {}): Promise<import("./government/types").GovernmentViewResult> {
   const query = new URLSearchParams({ at, offset: String(options.offset ?? 0), limit: String(options.limit ?? 50), displayLanguage: options.displayLanguage ?? "" });
   if (options.iri) query.set("iri", options.iri);
   if (options.query) query.set("q", options.query);
+  if (options.recordIri) query.set("recordIri",options.recordIri);
+  if (options.includeInactive !== undefined) query.set("includeInactive",String(options.includeInactive));
   return send(projectUrl(pid, `/government/view?${query}`), { signal: options.signal }).then(handle<import("./government/types").GovernmentViewResult>);
 }
 
@@ -1285,4 +1287,9 @@ export function downloadGovernmentProjection(pid: string, at: string): Promise<{
 export interface DomainProfilePreview { dryRun: true; basis: string; impact: { countryIris: string[]; unresolvedCountryIris: string[] }; project: ProjectSummary }
 export function previewDomainProfileChange(pid: string, domainProfile: import("./government/types").DomainProfile | null): Promise<DomainProfilePreview> {
   return send(projectUrl(pid), { method: "PATCH", headers: JSON_WRITE, body: JSON.stringify({ domainProfile, dryRun: true }) }).then(handle<DomainProfilePreview>);
+}
+
+/** Review a complete history command without publishing a candidate mutation. */
+export function previewGovernmentCommand(pid:string,command:string,args:Record<string,unknown>):Promise<import('./government/types').HistoryPreview> {
+ return send(documentUrl(pid,'model','/commands'),{method:'POST',headers:JSON_WRITE,body:JSON.stringify({command,args,dryRun:true})}).then(r=>handle<import('./government/types').HistoryPreview>(r));
 }

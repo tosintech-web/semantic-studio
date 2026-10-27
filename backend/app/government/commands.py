@@ -312,14 +312,16 @@ def cmd_apply_government_change(ctx, args):
     if existing is not None:
         if not isinstance(existing, str) or (URIRef(existing), RDF.type, ORG.ChangeEvent) not in ctx.graph:
             raise DomainError('Choose an existing change event.')
-        allowed = {RDF.type, GOV.changeKind, GOV.effectiveDate, ORG.originalOrganization, ORG.resultingOrganization, DCTERMS.source, DCTERMS.description, GOV.relationRecord, GOV.nameRecord, GOV.existenceRecord}
-        if set(ctx.graph.predicates(URIRef(existing))) - allowed:
+        from .records import read_changes
+        record = next((r for r in read_changes(ctx.graph) if r['iri'] == existing), None)
+        if record is None or record['unsupported']:
             raise DomainError('This change contains unsupported RDF and remains read-only.')
         node = URIRef(existing)
     else:
         node = _record_node(ctx, None, ORG.ChangeEvent, [], 'change')
     adds = {(node, RDF.type, ORG.ChangeEvent), (node, GOV.changeKind, Literal(kind)), (node, GOV.effectiveDate, Literal(when.isoformat(), datatype=XSD.date))}
     removes = set(ctx.graph.triples((node, None, None)))
+    adds.update(t for t in removes if t[1] in {GOV.relationRecord, GOV.nameRecord, GOV.existenceRecord})
     adds.update((node, predicate, entity) for predicate, entities in zip((ORG.originalOrganization, ORG.resultingOrganization), ends) for entity in entities)
     adds.update((node, DCTERMS.source, source) for source in _sources(args.get('sources')))
     description = _text(args.get('description', ''))

@@ -3972,7 +3972,7 @@ class EditingService:
                     raise DomainError('Review this proposal again after its inputs or group changed.', code='government.entry_stale', status=409)
                 change = handler(ctx, args)
                 if dry_run:
-                    return {'dryRun': True, 'basis': ctx.history_basis, 'delta': _delta_json(change), 'warnings': ctx.history_warnings, 'revision': document.ontology.revision}
+                    return {'dryRun': True, 'basis': ctx.history_basis, 'delta': _delta_json(change, cap=max(len(change.added), len(change.removed))), 'warnings': ctx.history_warnings, 'revision': document.ontology.revision}
                 impact = None
             elif name == "DeleteEntity":
                 change, impact = delete_plan(ctx, args)
