@@ -10,7 +10,7 @@
 
 **Spec:** [開発方針・設計案](../specs/2026-10-28-country-government-ontology-design.md)。
 
-状態：2026-10-28のユーザー指示により実装承認。Task 1〜7完了、Task 8の最終受け入れ・反復レビューを実行中。
+状態：2026-10-28のユーザー指示により実装承認。Task 1〜7完了、Task 8のローカル受け入れ・4回の反復レビュー完了、最新PR head CIを確認予定。
 実装後に独立レビューと修正を指摘がなくなるまで反復し、GitHubへpushしてPRコメントを追加する。
 基点：P3統合済みmain `0251e89`。G1=Task 1〜4、G2=Task 5〜6、G3=Task 7〜8。
 
@@ -219,12 +219,12 @@ Modify `.claude/skills/run-semantic-viewer/driver.mjs` と同driverの既存補�
 project ZIPは記録用RDF/profileを保持し、projection GETは基準日・basis付きの派生Turtleだけを返す。
 download responseの基準日ヘッダーは `X-Semantic-Studio-As-Of`、basisヘッダーは `X-Semantic-Studio-Basis`。
 
-- [ ] **Step 1: RED試験。** local再起動、国参照元削除後の未解決表示、複製で参照元不変、別環境復元の未接続表示、team backup/restoreのgraph/profile/basis再評価、改編後Undoの再起動、専用release拒否と通常release維持を確認。
-- [ ] **Step 2: GREEN実装。** 不足するcapture/復元/filterを既存形式に追加。新SQL schemaを作らず、旧バックアップにprofileがないことを許容。ユーザーガイドへ範囲、単一国、不明期間、IRI固定、公開未対応を記載。
-- [ ] **Step 3: 全backend検証。** `cd backend && python -m pytest tests -m "not team_db and not network"`。内部Composeで全 `team_db and not network` 群をPython3.12/3.14で実行。専用runnerの起動方法は `docs/p2-team-operations.md` と現行 `.github/workflows/ci.yml` に従いDB portを公開しない。新caseをinventoryへ追加し旧case集合を保持する。
-- [ ] **Step 4: 全frontend/build検証。** `cd frontend && npm run test`、`npx tsc -b`、`npm run build`。通常倍率1の全性能予算を維持する。
-- [ ] **Step 5: 実browser受け入れ。** run-semantic-viewer skillを読み、合成データだけでlocal/team双方の国2件、部署移管、組織統合、同名、未知日付、stale、再送、Undo、日英、Tab/focusを確認。既存smoke/P1/P2/P3のregressionも確認する。
-- [ ] **Step 6: 配布検査。** `python scripts/generate_message_contracts.py --check` を実行。`git ls-files -z --cached --others --exclude-standard > /tmp/semantic-studio-publication-files.txt` でNUL区切りの検査対象を列挙し、`python scripts/check_publication.py --root . --files-from /tmp/semantic-studio-publication-files.txt` と既存通知検査を実施。今回追加した語彙の権利表示とimage同梱を確認する。
+- [x] **Step 1: RED試験。** local再起動、国参照元削除後の未解決表示、複製で参照元不変、別環境復元の未接続表示、team backup/restoreのgraph/profile/basis再評価、改編後Undoの再起動、専用release拒否と通常release維持を確認。
+- [x] **Step 2: GREEN実装。** 不足するcapture/復元/filterを既存形式に追加。新SQL schemaを作らず、旧バックアップにprofileがないことを許容。ユーザーガイドへ範囲、単一国、不明期間、IRI固定、公開未対応を記載。
+- [x] **Step 3: 全backend検証。** `cd backend && python -m pytest tests -m "not team_db and not network"`。内部Composeで全 `team_db and not network` 群をPython3.12/3.14で実行。専用runnerの起動方法は `docs/p2-team-operations.md` と現行 `.github/workflows/ci.yml` に従いDB portを公開しない。新caseをinventoryへ追加し旧case集合を保持する。
+- [x] **Step 4: 全frontend/build検証。** `cd frontend && npm run test`、`npx tsc -b`、`npm run build`。通常倍率1の全性能予算を維持する。
+- [x] **Step 5: 実browser受け入れ。** run-semantic-viewer skillを読み、合成データだけでlocal/team双方の国2件、部署移管、組織統合、同名、未知日付、stale、再送、Undo、日英、Tab/focusを確認。既存smoke/P1/P2/P3のregressionも確認する。
+- [x] **Step 6: 配布検査。** `python scripts/generate_message_contracts.py --check` を実行。`git ls-files -z --cached --others --exclude-standard > /tmp/semantic-studio-publication-files.txt` でNUL区切りの検査対象を列挙し、`python scripts/check_publication.py --root . --files-from /tmp/semantic-studio-publication-files.txt` と既存通知検査を実施。今回追加した語彙の権利表示とimage同梱を確認する。
 - [ ] **Step 7: 記録・commit・PR。** 設計9節の10受け入れ条件と試験証拠を対応付け、未実施は未実施と記録。`feat: verify country and government ontology workflows` をcommitして機能PRを更新し、最新head CIの成功を確認する。今回の設計PRを機能実装完了と表示しない。
 
 ## 実行前の確認と分割
