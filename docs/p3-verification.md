@@ -1,7 +1,7 @@
 # P3 実装・検証記録
 
 2026-10-27（日本時間）。対象branch：`feat/p3-local-releases`、起点main `e45e2a7`。
-実装・手元の全体検証・反復レビューと修正を実施済み。PR作成と最新head CIを次の完了gateとして確認する。
+実装・手元の全体検証・反復レビューと修正を実施済み。[PR #4](https://github.com/tosintech-web/semantic-studio/pull/4)を作成済み。最新head CIは下の最終gateで確認する。
 設計：[P3ローカル公開版](superpowers/specs/2026-10-27-p3-local-releases-design.md)。
 
 ## 検証境界
@@ -54,7 +54,7 @@ DB portはhostへ公開しない。配布/consumerはDBから独立したrelease
 
 ## 完了追記
 
-最終PR/CIの結果はPR本文とchecksで管理し、最新headの必須gateと参考budgetsを確認するまで公開工程の完了としない。
+最終CIの結果は[PR #4のchecks](https://github.com/tosintech-web/semantic-studio/pull/4/checks)を正本とし、最新headの必須gateと参考budgetsを実際に確認して公開工程の完了を判定する。過去headや手元の成功で代用しない。
 実装をmainへmergeする作業は行わない。
 
 ## 容量不足と試験環境の補足

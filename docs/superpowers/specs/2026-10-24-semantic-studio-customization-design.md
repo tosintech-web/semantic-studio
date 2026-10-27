@@ -3,7 +3,8 @@
 作成日：2026-10-24（日本時間）
 更新日：2026-10-27（日本時間）。P1・P2は実装・main統合済み。P3はローカルDockerでの開発・受け入れへ方針を具体化した。
 P3の詳細は[公開版設計](2026-10-27-p3-local-releases-design.md)、作業順は[実装計画](../plans/2026-10-27-p3-local-releases.md)を参照する。
-P3以降は未実装。本番Google設定・実データ移行・本番配備の完了を意味しない。
+P3は本branchで実装・手元受け入れ・反復レビュー修正済み、[PR #4](https://github.com/tosintech-web/semantic-studio/pull/4)でmain統合前のCIを確認する。P4/P5は未実装。
+本番Google設定・実データ移行・本番配備の完了を意味しない。
 
 ### 現在の実装状況（2026-10-27）
 
@@ -11,7 +12,7 @@ P3以降は未実装。本番Google設定・実データ移行・本番配備の
 | --- | --- | --- |
 | P1 | PR #2でmain統合済み。[検証](../../p1-verification.md)・[レビュー](../../p1-review.md) | 日英UI、辞書表示言語、全項目一覧、別名等の検索、既存編集フォーム |
 | P2 | [PR #3](https://github.com/tosintech-web/semantic-studio/pull/3)をmain `e45e2a7`へ統合済み。最終head `fad9c12`の[CI全11 job成功](https://github.com/tosintech-web/semantic-studio/actions/runs/40416830078)を確認 | Google Workspace認証、3権限、CAS・監査・要求再送・本人Undo、専用PostgreSQLと不変blob、世代backup/restore |
-| P3 | ローカルDockerで設計・開発・受け入れ。未実装 | 編集中と独立した確認済み版、許可項目だけの配布、利用側サンプル |
+| P3 | ローカルDockerで実装・手元受け入れ・レビュー済み。[PR #4](https://github.com/tosintech-web/semantic-studio/pull/4)、main未統合。最新CIはPR checksを正本とする | 編集中と独立した確認済み版、許可項目だけの配布、利用側サンプル |
 | P4 / P5 | 未着手。順序変更なし | WordNet全件の計測・差分管理、その後に確定形式の専用取り込み |
 
 P2の現行保存方式は[PostgreSQL置換設計](2026-10-27-p2-postgresql-design.md)。SQLite案は履歴であり採用しない。
@@ -350,6 +351,8 @@ DB方式、セッション寿命、Workspace停止時の既存セッションの
 差分取り込み、元IDの維持、検証、誤削除防止を含めて後段の仕様を作る。
 
 ## 9. 今回の対象外と実装前レビュー
+
+本節は2026-10-24の仕様策定時の作業範囲。後続の実装状況は冒頭と各段階の設計・計画・検証記録に従う。
 
 今回の仕様固めでアプリコード、運用Google設定、デプロイ、データ移行は実行しない。
 P1にリアルタイム共同編集、汎用プロフィール設計ツール、タグ/組織の新規専用フォーム、

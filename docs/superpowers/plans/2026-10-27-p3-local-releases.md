@@ -166,7 +166,7 @@ Modify `.claude/skills/run-semantic-viewer/driver.mjs`, `.github/workflows/ci.ym
 - [x] **Step 2: 全試験集合を確認。** backend nativeで `python -m pytest tests -m 'not team_db and not network' -q`、専用内部Composeで全 `team_db and not network` をPython3.12/3.14、frontendで `npm run test` / `npm run build`。既存inventoryと新規case分類を照合し全case/全予算を維持する。
 - [x] **Step 3: 実物・既存browserを確認。** `smoke` / `p1` / `p2` / `p3`、distribution通知、公開検査、Compose isolation/restore、契約生成checkを実行。計測条件と失敗は検証書へ記録し、通常倍率1の未解決予算を参考CI成功で代用しない。
 - [x] **Step 4: 全差分レビュー。** 認可・public/private抽出・RDF/ZIP・path・CAS/監査/replay・archive・分離と障害時をレビュー。指摘は再現→修正→再確認。実施していないhosted scanや本番認証成功を主張しない。
-- [ ] **Step 5: 文書とPRを仕上げる。** 起動・停止・保管・import/activate・照合・切り戻し、公開と内部backupの違い、上限、データ条件を日英UI説明と整合させる。実装時のユーザーのGit/push方針に従いPRを用意し、最新headの必須CI（Linux/Windows local、PG3.12/3.14、Compose/browser、frontend、Docker、publication）と参考budgetsを確認してから完了を記録する。
+- [x] **Step 5: 文書とPRを仕上げる。** 起動・停止・保管・import/activate・照合・切り戻し、公開と内部backupの違い、上限、データ条件を日英UI説明と整合させる。ユーザーの指定どおりbranchをpushして[PR #4](https://github.com/tosintech-web/semantic-studio/pull/4)を作成した。最新head CIの完了判定は下の独立した最終gateに従う。
 
 ## 見積もり・実装順・レビュー記録
 
@@ -195,4 +195,6 @@ release namespaceのcapture/Undo/archive落ち、viewerによるpreview、cache�
 ### 実装・レビュー結果
 
 Task 1〜6とTask 7の手元検証・反復レビュー修正を実施。詳細・失敗記録・最終実測は[P3検証記録](../../p3-verification.md)。
-最新headのCIとPR公開工程はStep 5の最終gateとして別に確認する。
+checkboxは実装・検証・文書・PR公開の作業記録。最終完了は次のgateで判定し、checkboxだけを代用にしない。
+
+**最終完了gate：** [PR #4のchecks](https://github.com/tosintech-web/semantic-studio/pull/4/checks)の最新headで、Linux/Windows local、PG3.12/3.14、Compose/browser、frontend、Docker、publicationと参考budgetsの結果を実際に確認する。文書commitでheadが変わった場合も新headで確認する。CIのvolatileな状態は文書へ複製せずPR checksを正本とする。
