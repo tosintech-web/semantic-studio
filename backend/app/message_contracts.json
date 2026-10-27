@@ -1703,6 +1703,11 @@
     "team.request_mismatch": {},
     "team.undo_forbidden": {},
     "team.last_admin": {},
-    "team.disabled": {}
+    "team.disabled": {},
+    "release.invalid": {},
+    "release.stale": {},
+    "release.too_large": {},
+    "release.not_found": {},
+    "release.unavailable": {}
   }
 }
