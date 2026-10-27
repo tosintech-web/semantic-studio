@@ -112,6 +112,7 @@ export const en: Catalog = {
   "government.cross_country": "This containment connects organizations belonging to different countries. Explain the exception in its description.",
   "government.noConfirmedCountry": "No confirmed country affiliation on this date",
   "government.nameUnconfirmed": "Name not confirmed for this date",
+  "government.referenceSelectionChanged": "The country source changed. Refresh country authority to reconfirm all selected countries.",
   "government.entry_stale": "The country entry changed. Reload it before saving.",
   "government.reloadEntry": "Reload entry",
   "government.countriesTitle": "Countries",

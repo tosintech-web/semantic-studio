@@ -152,6 +152,7 @@ export async function runGovernmentWorkflow({BASE,b,api,log,replayRegistration})
     await choose('Subject organization',ministry,'[data-edit="2"]');await choose('Related organization',parentB,'[data-edit="2"]');
     await choose('Relationship period — start','date','[data-edit="2"]');await fill('Relationship period — start date','2030-04-01','[data-edit="2"]');
     await choose('Relationship period — end','open','[data-edit="2"]');await fill('Source 1','Synthetic transfer Act','[data-edit="2"]');
+    await fill('Description','Synthetic treaty permits cross-country administration','[data-edit="2"]');
     await apply();
     for(const [at,parent]of [['2030-03-31',parentA],['2030-04-01',parentB]]){
       const r=await api('GET',`/api/projects/${government}/government/view?at=${at}`);assert.ok(r.ok);assert.equal(r.body.activeRelations.items.find(v=>v.subject===ministry&&v.predicate==='http://www.w3.org/ns/org#unitOf').object,parent);

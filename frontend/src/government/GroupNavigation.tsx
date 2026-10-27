@@ -35,7 +35,7 @@ export default function GroupNavigation({projects,onOpen,onCreate,canEdit,busy=f
  <label htmlFor={`${id}-search`}>{t('government.searchGroups')}</label><input id={`${id}-search`} type="search" value={query} maxLength={200} onChange={e=>{setQuery(e.target.value);setOffset(0);}}/>
  <p role="status">{t('government.groupCounts',{shown:groups.slice(offset,offset+50).length,total:groups.length})}</p>
  {!groups.length&&<p>{t(canEdit?'government.noGroups':'government.noGroupsReadOnly')}</p>}
- <ul>{groups.slice(offset,offset+50).map(project=><li key={project.id}><button type="button" aria-disabled={busy} aria-label={t('home.openName',{name:`${project.name} · ${project.id}`})} onClick={()=>{if(!busy)onOpen(project.id);}}>{project.name} <span className="detail-note">{project.id}</span></button></li>)}</ul>
+ <ul>{groups.slice(offset,offset+50).map(project=><li key={project.id}><button type="button" title={project.name} aria-disabled={busy} aria-label={t('home.openName',{name:`${project.name} · ${project.id}`})} onClick={()=>{if(!busy)onOpen(project.id);}}>{project.name}</button> <code>{project.id}</code></li>)}</ul>
  <button type="button" aria-disabled={offset===0} onClick={()=>{if(offset>0)setOffset(Math.max(0,offset-50));}}>{t('government.previousPage')}</button>
  <button type="button" aria-disabled={offset+50>=groups.length} onClick={()=>{if(offset+50<groups.length)setOffset(offset+50);}}>{t('government.nextPage')}</button>
  </section>}

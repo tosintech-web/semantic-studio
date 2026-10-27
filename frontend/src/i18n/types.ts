@@ -29,6 +29,7 @@ export interface MessageArgs extends ServerMessageArgs {
   "government.noGroups": undefined;
   "government.noConfirmedCountry": undefined;
   "government.nameUnconfirmed": undefined;
+  "government.referenceSelectionChanged": undefined;
 
   "government.relationState.active": undefined;
   "government.relationState.inactive": undefined;

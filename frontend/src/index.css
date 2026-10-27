@@ -6737,4 +6737,6 @@ kbd {
 .government-group-navigation section { padding-block: 16px; }
 .government-group-navigation label { display: block; margin-block: 12px 6px; }
 .government-group-navigation ul { list-style: none; padding: 0; display: grid; gap: 8px; }
-.government-group-navigation li button { max-width: 100%; height: auto; min-height: var(--btn-md); white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.government-group-navigation li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.government-group-navigation li button { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.government-group-navigation li code { max-width: 100%; overflow-wrap: anywhere; }

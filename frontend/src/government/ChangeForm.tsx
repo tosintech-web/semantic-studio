@@ -32,7 +32,7 @@ function Body({projectId,targetIri,recordType='change',onSaved,onCancel}:Props) 
  const [value,setValue]=useState<ChangeInput>(emptyChange),[name,setName]=useState<NameInput>(()=>emptyName(primary)),[dirty,setDirty]=useState(false),[unsupported,setUnsupported]=useState(false);const hydrated=useRef(false);
  useEffect(()=>{if(!authority.entry||hydrated.current)return;hydrated.current=true;setLabels(Object.fromEntries(authority.entry.organizations.items.map(r=>[r.iri,r.label])));if(targetIri){if(recordType==='name'){const row=authority.entry.names.items.find(r=>r.iri===targetIri);if(!row||row.unsupported.length||!row.entity||!row.value||!row.language)setUnsupported(true);else setName({...row,entity:row.entity,value:row.value,language:row.language});}else{const row=authority.entry.changes.items.find(r=>r.iri===targetIri);if(!row||row.unsupported.length)setUnsupported(true);else setValue({...emptyChange(),...row,relationEdits:[],nameEdits:[],existenceEdits:[]});}}},[authority.entry,targetIri,recordType]);
  usePendingEntry(projectId,dirty);
- const valid=(recordType==='name'?validName(name):validChange(value))&&Boolean(authority.basis)&&!unsupported&&!authority.loading&&authority.error===null;
+ const valid=(recordType==='name'?validName(name):validChange(value))&&Boolean(authority.basis)&&!authority.selectionConflict&&!unsupported&&!authority.loading&&authority.error===null;
  const review=useHistoryReview(projectId,recordType==='name'?'PutGovernmentName':'ApplyGovernmentChange',{...(recordType==='name'?name:value),referenceBasis:authority.basis},valid,iri=>{setDirty(false);onSaved(iri);});
  const busy=review.busy||authority.loading||unsupported||authority.error!==null;
  const update=(patch:Partial<ChangeInput>)=>{if(!busy){setValue({...value,...patch});setDirty(true);}};
@@ -41,6 +41,7 @@ function Body({projectId,targetIri,recordType='change',onSaved,onCancel}:Props) 
  <h2 id={`${id}-title`} tabIndex={-1}>{t(recordType==='name'?'government.nameHistoryEntry':'government.changeEntry')}</h2>
  {unsupported&&<p role="status">{t('government.unsupportedEntry')}</p>}{authority.error!==null&&<OperationError failure={{cause:authority.error,message:makeUiMessage('government.detailsUnavailable')}}/>}
  {recordType==='name'?<NameFields projectId={projectId} value={name} busy={busy} onChange={v=>{if(!busy){setName(v);setDirty(true);}}}/>:<>
+ {authority.selectionConflict&&<p role="alert">{t('government.referenceSelectionChanged')}</p>}
  <p>{t('government.identityHelp')}</p>
  <label htmlFor={`${id}-kind`}>{t('government.changeKind')}</label><select id={`${id}-kind`} value={value.kind} aria-disabled={busy} onChange={e=>update({kind:e.target.value as ChangeInput['kind']})}>{(['merge','split','transfer','rename','other']as const).map(kind=><option key={kind} value={kind}>{t(`government.changeKind.${kind}`)}</option>)}</select>
  <label htmlFor={`${id}-date`}>{t('government.effectiveDate')}</label><input id={`${id}-date`} type="date" min="0001-01-01" max="9999-12-31" value={value.effectiveDate} aria-disabled={busy} onChange={e=>update({effectiveDate:e.target.value})}/>

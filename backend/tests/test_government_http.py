@@ -140,6 +140,24 @@ def test_active_country_resolution_is_independent_of_single_record_edit_fields()
     assert row['activeCountryResolved'] is True
 
 
+def test_organization_detail_keeps_existence_provenance_separate_from_affiliation():
+    from rdflib import URIRef
+    _,pid,_,args=setup_organization()
+    decree=[{'kind':'text','value':'Establishment decree'}]
+    treaty=[{'kind':'text','value':'Affiliation treaty'}]
+    entity=command(pid,'CreateGovernmentOrganization',{**args,'sources':decree}).json()['created']
+    own=editing_service.document(pid,'model').graph
+    record=next(own.subjects(GOV.subject,URIRef(entity)))
+    body={'iri':str(record),'subject':entity,'predicate':str(GOV.inCountry),'object':args['countryIri'],
+          'period':args['countryPeriod'],'sources':treaty,'description':'','referenceBasis':args['referenceBasis']}
+    review=command(pid,'PutGovernmentRelation',body,dryRun=True)
+    assert review.status_code==200,review.text
+    assert command(pid,'PutGovernmentRelation',{**body,'previewBasis':review.json()['basis']}).status_code==200
+    row=client.get(f'/api/projects/{pid}/government/view',params={'at':'2025-01-01'}).json()['organizations']['items'][0]
+    assert row['sources']==treaty
+    assert row['existenceSources']==decree
+
+
 def test_country_lookup_matches_explicit_team_read_policy():
     from app.team.permissions import classify_route
     for suffix in ("countries", "view", "projection"):

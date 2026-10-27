@@ -112,6 +112,7 @@ export const ja: Catalog = {
   "government.cross_country": "異なる国に所属する組織の包含関係です。説明に例外の理由を記載してください。",
   "government.noConfirmedCountry": "基準日に確定した所属国はありません",
   "government.nameUnconfirmed": "名称の時点未確認",
+  "government.referenceSelectionChanged": "国の参照元が変わりました。国の参照元を再確認し、選択済みの国すべてを確認してください。",
   "government.entry_stale": "国の項目が変更されました。保存する前に読み込み直してください。",
   "government.reloadEntry": "項目を再読み込み",
   "government.countriesTitle": "国",

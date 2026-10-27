@@ -28,18 +28,23 @@ import {useGovernmentLanguage} from './DisplayLanguage';
 import type {GovernmentViewResult,HistoryPreview,ReferenceBasis} from './types';
 
 export function useHistoryAuthority(projectId:string,targetIri?:string) {
- const [entry,setEntry]=useState<GovernmentViewResult|null>(null),[basis,setBasis]=useState<ReferenceBasis|null>(null),[error,setError]=useState<unknown>(null),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
+ const [entry,setEntry]=useState<GovernmentViewResult|null>(null),[basis,setBasis]=useState<ReferenceBasis|null>(null),[error,setError]=useState<unknown>(null),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0),[selectionConflict,setSelectionConflict]=useState(false);
  const hydrated=useRef(false),appliedRetry=useRef(0),epoch=teamAuthEpoch(),language=useGovernmentLanguage();
  useEffect(()=>{let live=true;const c=new AbortController();setLoading(true);setError(null);
  getGovernmentView(projectId,localToday(),{recordIri:targetIri,displayLanguage:language,signal:c.signal}).then(view=>{if(live&&teamAuthEpoch()===epoch){
   // Authentication and label refreshes retain the chosen reference token.
   // Only initial hydration or explicit authority refresh accepts a new one.
-  if(!hydrated.current||appliedRetry.current!==retry)setBasis(view.referenceBasis);
+  if(!hydrated.current||appliedRetry.current!==retry){setBasis(view.referenceBasis);setSelectionConflict(false);}
   if(!hydrated.current){setEntry(view);hydrated.current=true;}
   appliedRetry.current=retry;setLoading(false);
  }}).catch(e=>{if(live){appliedRetry.current=retry;setError(e);setLoading(false);}});
  return()=>{live=false;c.abort();};},[projectId,targetIri,retry,epoch,language]);
- return {entry,basis,setBasis,error,loading,refresh:()=>setRetry(r=>r+1)};
+ const selectBasis=(selected:ReferenceBasis)=>{
+  // One changed picker cannot reconfirm other retained country choices.
+  if(basis&&(basis.sourceProjectId!==selected.sourceProjectId||basis.sourceToken!==selected.sourceToken)){setSelectionConflict(true);return;}
+  setBasis(selected);
+ };
+ return {entry,basis,setBasis:selectBasis,selectionConflict,error,loading,refresh:()=>setRetry(r=>r+1)};
 }
 
 export function useHistoryReview(projectId:string,command:string,args:Record<string,unknown>,valid:boolean,onSaved:(iri:string)=>void) {

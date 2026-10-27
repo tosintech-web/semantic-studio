@@ -2,7 +2,7 @@
 ================================================================================
 FILE: backend/app/government/commands.py
 SUMMARY
-    Builds ordinary editing Changes for country and government registration.
+    Builds validated editing Changes for country, organization and history entry.
 BASIC IDEA
     Validate the full payload and reference basis before returning any mutation.
     Each logical entry owns a UUID identity and all of its dependent records;
@@ -171,6 +171,7 @@ def cmd_create_government_organization(ctx, args):
             adds.update(((record, GOV.subject, node), (record, GOV.predicate, GOV.inCountry), (record, GOV.object, URIRef(country))))
         adds.update(period_statements(record, period))
         adds.update((record, DCTERMS.source, source) for source in sources)
+    _validate_history_delta(ctx, adds, removes)
     change = _change(ctx.graph, "Register government organization", adds, removes, ui_message=_command_message("government.organization_saved"))
     return _created(change, node) if created else change
 
@@ -261,10 +262,9 @@ def _existence_delta(ctx, args, tag):
     return node, adds, set(ctx.graph.triples((node, None, None)))
 
 
-def _history_change(ctx, label, adds, removes, node):
+def _validate_history_delta(ctx, adds, removes):
     from rdflib import Graph
     from .validation import validate_history
-    from ..editing import _change, _created
     proposed = Graph()
     for statement in set(ctx.graph) - removes | adds:
         proposed.add(statement)
@@ -275,6 +275,11 @@ def _history_change(ctx, label, adds, removes, node):
     if errors:
         raise DomainError('The proposed history has conflicting records.', code='government.history_conflict')
     ctx.history_warnings = [{'code': p.code, 'severity': p.severity, 'iri': p.iri, 'args': p.args} for p in problems]
+
+
+def _history_change(ctx, label, adds, removes, node):
+    from ..editing import _change, _created
+    _validate_history_delta(ctx, adds, removes)
     change = _change(ctx.graph, label, sorted(adds, key=lambda t: tuple(v.n3() for v in t)),
                      sorted(removes, key=lambda t: tuple(v.n3() for v in t)), ui_message=_command_message('government.history_saved'))
     return _created(change, node)
@@ -340,6 +345,7 @@ def cmd_apply_government_change(ctx, args):
     if description:
         adds.add((node, DCTERMS.description, Literal(description)))
     touched = set()
+    existence_entities = set()
     for key, builder, predicate in (('relationEdits', _relation_delta, GOV.relationRecord), ('nameEdits', _name_delta, GOV.nameRecord), ('existenceEdits', _existence_delta, GOV.existenceRecord)):
         raw = args.get(key, [])
         if not isinstance(raw, list) or len(raw) > 100:
@@ -348,6 +354,10 @@ def cmd_apply_government_change(ctx, args):
             if not isinstance(item, dict):
                 raise DomainError('Each edit is an object.')
             record, add, remove = builder(ctx, item, f'{key}:{index}')
+            if key == 'existenceEdits':
+                if item['entity'] in existence_entities:
+                    raise DomainError('Edit each organization existence period only once per change.')
+                existence_entities.add(item['entity'])
             if record in touched:
                 raise DomainError('Edit each record only once per change.')
             touched.add(record)

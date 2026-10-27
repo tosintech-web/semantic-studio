@@ -22,7 +22,7 @@ import {makeUiMessage} from '../i18n/uiMessage';
 import CountryPicker from './CountryPicker';
 import {useGovernmentLanguage} from './DisplayLanguage';
 import {PeriodEditor,SourcesEditor} from './EntryParts';
-import {localToday} from './form';
+import {localToday,unknownPeriod} from './form';
 import {RELATION_OPTIONS} from './history';
 import type {GovernmentViewResult,OrganizationView,RelationInput,NameInput,ExistenceInput,ReferenceBasis} from './types';
 
@@ -79,6 +79,6 @@ export function NameFields({projectId,value,onChange,busy}:{projectId:string;val
 }
 export function ExistenceFields({projectId,value,onChange,busy}:{projectId:string;value:ExistenceInput;onChange:(v:ExistenceInput)=>void;busy:boolean}) {
  const {t}=useI18n();const update=(patch:Partial<ExistenceInput>)=>{if(!busy)onChange({...value,...patch});};
- return <><OrganizationPicker projectId={projectId} label={t('government.existingOrganization')} value={value.entity} busy={busy} onChange={(entity,row)=>update({entity,...(row.existencePeriod?{period:row.existencePeriod,sources:row.sources}:{})})}/>
+ return <><OrganizationPicker projectId={projectId} label={t('government.existingOrganization')} value={value.entity} busy={busy} onChange={(entity,row)=>update({entity,period:row.existencePeriod??unknownPeriod(),sources:row.existenceSources?.length?row.existenceSources:[{kind:'text',value:''}]})}/>
  <PeriodEditor label={t('government.existencePeriod')} period={value.period} busy={busy} onChange={period=>update({period})}/><SourcesEditor sources={value.sources} busy={busy} onChange={sources=>update({sources})}/></>;
 }

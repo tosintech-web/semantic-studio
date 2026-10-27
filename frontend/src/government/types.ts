@@ -75,6 +75,7 @@ export interface OrganizationView {
   unsupported: string[];
   existenceState: TemporalState;
   existencePeriod: Period | null;
+  existenceSources: Source[];
   names: { value: string; language: string }[];
 }
 export interface RelationView extends Omit<RelationInput,"iri"|"subject"|"predicate"|"object"> {

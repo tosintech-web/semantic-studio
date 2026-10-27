@@ -3553,6 +3553,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.refreshAuthority` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/RelationForm.tsx` | en/ja |
 | `government.noConfirmedCountry` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.nameUnconfirmed` | — | `frontend/src/government/GovernmentView.tsx` | en/ja |
+| `government.referenceSelectionChanged` | — | `frontend/src/government/RelationForm.tsx`, `frontend/src/government/ChangeForm.tsx` | en/ja |
 | `government.nameHistoryEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx`, `frontend/src/government/GovernmentView.tsx` | en/ja |
 | `government.changeEntry` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |
 | `government.identityHelp` | — | `frontend/src/government/history.ts`, `frontend/src/government/ChangeForm.tsx` | en/ja |

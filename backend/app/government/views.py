@@ -122,6 +122,7 @@ def view(service, pid: str, at: str, offset: int = 0, limit: int = 50, displayLa
                           "activeCountryResolved": bool(reference and country and (URIRef(country), RDF.type, GOV.Country) in reference.graph),
                           "countryResolved": bool(reference and recorded_country and (URIRef(recorded_country), RDF.type, GOV.Country) in reference.graph),
                           "existenceState": states[entity_iri], "existencePeriod": period_json(life_records[0].period) if len(life_records) == 1 else None,
+                          "existenceSources": [{"kind": s.kind, "value": s.value} for s in life_records[0].sources] if len(life_records) == 1 else [],
                           "formCountryIri": recorded_country, "formCountryLabel": name(recorded_country) if recorded_country else "",
                           "countryPeriod": period_json(all_country[0].period) if len(all_country) == 1 else None,
                           "identifier": str(identifiers[0]) if identifiers else "",

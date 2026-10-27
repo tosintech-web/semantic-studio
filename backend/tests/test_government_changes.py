@@ -169,6 +169,42 @@ def test_cross_country_containment_requires_an_explained_exception(predicate):
     assert command(pid,'PutGovernmentRelation',approved).status_code==200
 
 
+def test_editing_an_affiliation_cannot_bypass_existing_containment_validation():
+    from test_government_commands import country
+    source,pid,args,entities=setup()
+    body={**relation(entities[0],entities[1]),'referenceBasis':args['referenceBasis']}
+    approved,_=preview(pid,'PutGovernmentRelation',body)
+    relation_iri=command(pid,'PutGovernmentRelation',approved).json()['created']
+    other=country(source,name='Other country',code='OTHER')
+    basis=client.get(f'/api/projects/{pid}/government/countries').json()['basis']
+    before=graph(pid)
+    response=command(pid,'CreateGovernmentOrganization',{**args,'iri':entities[0],
+                     'countryIri':other,'referenceBasis':basis})
+    assert response.status_code==422,response.text
+    assert graph(pid)==before
+    approved,_=preview(pid,'PutGovernmentRelation',{**body,'iri':relation_iri,
+                       'description':'Treaty-established joint administration','referenceBasis':basis})
+    assert command(pid,'PutGovernmentRelation',approved).status_code==200
+    response=command(pid,'CreateGovernmentOrganization',{**args,'iri':entities[0],
+                     'countryIri':other,'referenceBasis':basis})
+    assert response.status_code==200,response.text
+
+
+def test_one_change_cannot_create_two_existence_records_for_an_imported_organization():
+    _,pid,args,entities=setup()
+    own=editing_service.document(pid,'model').graph
+    # Generic RDF can register an organization without an existence record.
+    for record in list(own.subjects(GOV.entity,URIRef(entities[0]))):
+        if (record,RDF.type,GOV.ExistenceRecord) in own:
+            own.remove((record,None,None))
+    before=graph(pid)
+    entry={'entity':entities[0],'period':PERIOD,'sources':SOURCES}
+    body=event(args,entities,existenceEdits=[entry,entry])
+    response=command(pid,'ApplyGovernmentChange',body,dryRun=True)
+    assert response.status_code==422,response.text
+    assert graph(pid)==before
+
+
 def test_missing_or_stale_preview_refused_without_partial_write():
     _,pid,args,e=setup(); body=event(args,e)
     assert command(pid,'ApplyGovernmentChange',body).status_code==409
