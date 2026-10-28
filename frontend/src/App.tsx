@@ -188,6 +188,8 @@ import {
 import ConfirmDialog from "./components/ConfirmDialog";
 import NewProjectDialog, { type NewProjectRequest } from "./components/NewProjectDialog";
 import ProjectHeader from "./components/ProjectHeader";
+import GovernmentWorkspace from "./government/GovernmentWorkspace";
+import { supportedProfile } from "./government/form";
 import TurtleEditor from "./components/TurtleEditor";
 import { triggerDownload } from "./download";
 import {
@@ -255,6 +257,7 @@ import type {
   OntologySummary,
   ProjectDocName,
   ProjectSummary,
+  ProjectTemplate,
   Theme,
   VizGraph,
   VizNeighborhood,
@@ -586,6 +589,9 @@ export default function App() {
   // Read slice by slice: the editor's text is in the store too and changes on
   // every keystroke, which must not re-render all of App.
   const openProjectSummary = useProjectSelector((s) => s.project);
+  const [domainEditorOn, setDomainEditorOn] = useState(true);
+  const domainProfile = supportedProfile(openProjectSummary?.domainProfile);
+  useEffect(() => setDomainEditorOn(true), [openProjectSummary?.id]);
   const projectDocuments = useProjectSelector((s) => s.documents);
   const projectActiveDoc = useProjectSelector((s) => s.activeDoc);
   const projectRecovery = useProjectSelector((s) => s.recovery);
@@ -787,7 +793,7 @@ export default function App() {
   const [projectsError, setProjectsError] = useState<unknown>(null);
   const [projectBusyId, setProjectBusyId] = useState<string | null>(null);
   // The New project form, and the library ontology it starts from, if any.
-  const [newProject, setNewProject] = useState<{ source?: string } | null>(null);
+  const [newProject, setNewProject] = useState<{ source?: string;template?:ProjectTemplate } | null>(null);
   // The two questions an exit can need, each holding what to do on the way
   // out once it is answered.
   const [leaveEditor, setLeaveEditor] = useState<(() => void) | null>(null);
@@ -1088,8 +1094,9 @@ export default function App() {
   const guardTeamNavigation = useCallback((then: () => void) => {
     const run=++navigationRun.current;
     const owner=projectStore.getSnapshot().project?.id??null;
-    if (team.mode !== "team" || !team.hasUnsentInput?.(true)) { then(); return; }
-    if (!window.confirm(t("team.leave.confirm"))) return;
+    const domainDraft = projectStore.hasPendingForms();
+    if (!domainDraft && (team.mode !== "team" || !team.hasUnsentInput?.(true))) { then(); return; }
+    if (!window.confirm(t(team.mode === "local" ? "government.leave.confirm" : "team.leave.confirm"))) return;
     void projectStore.flushAll().then(() => {
       if(run!==navigationRun.current||(projectStore.getSnapshot().project?.id??null)!==owner)return;
       // Flush refusals keep the original view and drafts mounted. Only after
@@ -2050,7 +2057,10 @@ export default function App() {
               onError={(message) => setError(message)}
               onSaveCopy={onSaveCopy}
               onTurtle={() => onPickMode("view")}
-              canvas={editingModel ? { on: canvasOn, onToggle: toggleCanvas } : null}
+              canvas={editingModel && !(domainProfile && domainEditorOn && mode === "hierarchy") ? { on: canvasOn, onToggle: toggleCanvas } : null}
+              domainEditor={domainProfile && editingModel ? { on: domainEditorOn && mode === "hierarchy", onToggle: () => guardEditor(() => guardTeamNavigation(() => {
+                setDomainEditorOn(!(domainEditorOn && mode === "hierarchy")); setMode("hierarchy");
+              })) } : null}
             />
           ) : active ? (
             <>
@@ -2216,7 +2226,7 @@ export default function App() {
             loading: projectsLoading,
             error: projectsError,
             busyId: projectBusyId,
-            onNew: () => setNewProject({}),
+            onNew: (template) => setNewProject({template}),
             onOpen: openProjectById,
             onRename: onRenameProject,
             onChangeKind: (pid) => setChangingKind(projects.find((p) => p.id === pid) ?? null),
@@ -2265,6 +2275,8 @@ export default function App() {
             onError={(message) => setError(message)}
           />
         </main>
+      ) : mode === "hierarchy" && domainProfile && domainEditorOn && editingModel && openProjectSummary ? (
+        <main className="main government-page"><GovernmentWorkspace key={openProjectSummary.id} project={openProjectSummary} projects={projects} language={displayLanguage ?? openProjectSummary.primaryLanguage} onProjectsChanged={() => { void refreshProjects(); }} onOpenProject={openProjectById} /></main>
       ) : mode === "hierarchy" ? (
         // The Edit page (edit-page-rework, D-107): the outline on the left,
         // the canvas in the middle, one side panel on the right for every
@@ -2589,6 +2601,7 @@ export default function App() {
         <NewProjectDialog
           library={ontologies.map((o) => ({ id: o.id, name: o.name }))}
           initialSource={newProject.source}
+          initialTemplate={newProject.template}
           onCreate={onCreateProject}
           onClose={() => setNewProject(null)}
         />

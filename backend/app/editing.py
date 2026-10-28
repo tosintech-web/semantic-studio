@@ -4,6 +4,7 @@ FILE: backend/app/editing.py
 ================================================================================
 
 SUMMARY
+    A shared reference gate orders local project edits and cross-group snapshots.
     Command read-name facts project a display language while lexical/RDF names stay original.
     Project view names accept an explicit read language without changing RDF languages.
     Unnamed-shape history/refusals preserve source ownership beside legacy names.
@@ -3712,6 +3713,15 @@ def _draft_paths(document: OpenDocument) -> tuple[Path, Path]:
     return folder / f"{document.doc}.ttl", folder / f"{document.doc}.json"
 
 
+from .government.references import editing_locked
+from .government.commands import HISTORY_COMMANDS, history_basis, cmd_put_government_relation, cmd_put_government_name, cmd_apply_government_change
+from .government.commands import cmd_create_country, cmd_create_government_organization
+
+GOVERNMENT_COMMANDS = {"CreateCountry": cmd_create_country, "CreateGovernmentOrganization": cmd_create_government_organization}
+GOVERNMENT_COMMANDS.update({'PutGovernmentRelation': cmd_put_government_relation, 'PutGovernmentName': cmd_put_government_name, 'ApplyGovernmentChange': cmd_apply_government_change})
+COMMANDS.update(GOVERNMENT_COMMANDS)
+
+
 class EditingService:
     """Every open project and its documents."""
 
@@ -3722,6 +3732,7 @@ class EditingService:
         self._validation_runs: dict[str, object] = {}
         self._validation_readings: dict[str, tuple[dict, shacl.ResultReading]] = {}
         self._lock = threading.Lock()
+        self.reference_lock = threading.RLock()
         # How many drafts the timer has written; the autosave tests read it.
         self.drafts_written = 0
         # The open projects' data snapshots (csv-data-import 5.6): not
@@ -3734,6 +3745,35 @@ class EditingService:
         self.projects = projects
         self.store = store
         self.snapshots.configure(projects)
+
+    @editing_locked
+    def export_zip(self, pid: str) -> bytes:
+        # Team stores already export accepted document authority for every
+        # project. Local legacy projects keep their existing saved-file export.
+        if getattr(self.projects, 'authoritative_document_views', False) or self.projects.manifest(pid).get('domainProfile') is None:
+            return self.projects.export_zip(pid)
+        from .project_exports import current_project_zip
+        return current_project_zip(self.projects, pid, self._open.get(pid, {}).values())
+
+    @editing_locked
+    def duplicate_project(self, pid: str) -> dict:
+        if getattr(self.projects, 'authoritative_document_views', False) or self.projects.manifest(pid).get('domainProfile') is None:
+            return self.projects.duplicate(pid)
+        from .project_exports import current_project_files
+        source = self.projects.folder(pid)
+        files = current_project_files(self.projects, pid, self._open.get(pid, {}).values())
+        summary = self.projects.duplicate(pid)
+        target = self.projects.folder(summary['id'])
+        for name, content in files.items():
+            # Keep the new manifest and rekeyed queries from the existing
+            # duplicate service. Only accepted RDF and its new originals differ.
+            if isinstance(content, bytes) or not (source / name).exists():
+                path = target / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content if isinstance(content, bytes) else content.read_bytes())
+        if self.is_open(pid):
+            self.projects.update_manifest(summary['id'], counts=graph_counts(self.document(pid, 'model').graph))
+        return self.projects.summary(self.projects.manifest(summary['id']))
 
     # --- opening and closing --------------------------------------------------
 
@@ -3766,6 +3806,7 @@ class EditingService:
         ontology.lock = document.lock
         return document
 
+    @editing_locked
     def open(self, pid: str) -> dict:
         manifest = self.projects.manifest(pid)
         with self._lock:
@@ -3819,6 +3860,7 @@ class EditingService:
             raise UnknownDocument(doc)
         return documents[doc]
 
+    @editing_locked
     def close(self, pid: str, discard: bool = False) -> dict:
         documents = self._open.get(pid)
         if documents is None:
@@ -3927,6 +3969,7 @@ class EditingService:
             document.visual_since_save = True
         self._arm(document)
 
+    @editing_locked
     def command(self, pid: str, doc: str, name: str, args: dict, dry_run: bool = False, *, lang: Optional[str] = None) -> dict:
         handler = COMMANDS.get(name)
         if handler is None:
@@ -3948,7 +3991,19 @@ class EditingService:
         model_lock = self._open[pid]["model"].lock if doc != "model" else contextlib.nullcontext()
         with document.lock, model_lock:
             ctx = self._context(document, lang)
-            if name == "DeleteEntity":
+            if name in HISTORY_COMMANDS or name == "CreateGovernmentOrganization" or (name == "CreateCountry" and args.get("iri") is not None and "referenceBasis" in args):
+                from .government.references import country_reference
+                ctx.country_reference = country_reference(self, pid)
+            if name in HISTORY_COMMANDS:
+                ctx.history_basis = history_basis(ctx, name, args)
+                if not dry_run and args.get('previewBasis') != ctx.history_basis:
+                    from .government.profile import DomainError
+                    raise DomainError('Review this proposal again after its inputs or group changed.', code='government.entry_stale', status=409)
+                change = handler(ctx, args)
+                if dry_run:
+                    return {'dryRun': True, 'basis': ctx.history_basis, 'delta': _delta_json(change, cap=max(len(change.added), len(change.removed))), 'warnings': ctx.history_warnings, 'revision': document.ontology.revision}
+                impact = None
+            elif name == "DeleteEntity":
                 change, impact = delete_plan(ctx, args)
                 if dry_run:
                     return {"dryRun": True, "impact": display_values(impact), "revision": document.ontology.revision}
@@ -4012,6 +4067,7 @@ class EditingService:
             self._open[pid]["shapes"] = document
         self.store.register_document(document.ontology)
 
+    @editing_locked
     def apply_text(self, pid: str, doc: str, text: str, timeout: Optional[float]) -> dict:
         document = self.document(pid, doc)
         base = self.projects.manifest(pid)["baseIri"]
@@ -4072,6 +4128,7 @@ class EditingService:
         self._cancel(document)
         self._remove_draft(document)
 
+    @editing_locked
     def undo(self, pid: str, doc: str) -> dict:
         document = self.document(pid, doc)
         with document.lock:
@@ -4092,6 +4149,7 @@ class EditingService:
                 **({"uiMessage": step.ui_message} if step.ui_message is not None else {}),
             }
 
+    @editing_locked
     def redo(self, pid: str, doc: str) -> dict:
         document = self.document(pid, doc)
         with document.lock:
@@ -4123,6 +4181,7 @@ class EditingService:
 
     # --- saving -------------------------------------------------------------------
 
+    @editing_locked
     def save(self, pid: str, doc: str, confirm_rewrite: bool = False) -> dict:
         document = self.document(pid, doc)
         with document.lock:
@@ -4218,6 +4277,7 @@ class EditingService:
         for path in _draft_paths(document):
             path.unlink(missing_ok=True)
 
+    @editing_locked
     def recover(self, pid: str, action: str, timeout: Optional[float]) -> dict:
         documents = self._open.get(pid)
         if documents is None:

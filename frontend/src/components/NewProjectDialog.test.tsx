@@ -90,13 +90,13 @@ describe("NewProjectDialog", () => {
     );
   });
 
-  it("offers each kind's two templates, and switches with the kind", () => {
+  it("offers domain templates for ontologies and switches with the kind", () => {
     renderDialog();
     const select = field("Start from") as unknown as HTMLSelectElement;
     const templates = () => [...select.querySelectorAll('optgroup[label="Templates"] option')].map((o) => o.textContent);
     expect(templates()).toEqual([]);
     kind("Ontology");
-    expect(templates()).toEqual(["Empty ontology", "Small ontology (two classes, one relationship)"]);
+    expect(templates()).toEqual(["Empty ontology", "Small ontology (two classes, one relationship)", "Country group", "Government organization group"]);
     expect(select.value).toBe("template:small");
     kind("Taxonomy");
     expect(templates()).toEqual(["Empty taxonomy (one concept scheme)", "Small taxonomy (a scheme with a few concepts)"]);
@@ -253,4 +253,12 @@ it("translates an existing field refusal when UI language changes without changi
   fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
   expect(screen.getByText(/The base IRI must/)).toBeTruthy();
   expect((screen.getByLabelText("Base IRI") as HTMLInputElement).value).toBe("invalid");
+});
+
+it('preselects the country template when launched by the system menu',async()=>{
+ const {onCreate}=renderDialog({initialTemplate:'countries'});
+ expect((screen.getByRole('radio',{name:/^Ontology/})as HTMLInputElement).checked).toBe(true);
+ fireEvent.change(field('Name'),{target:{value:'Synthetic countries'}});
+ await act(async()=>{fireEvent.click(create());});
+ expect(onCreate).toHaveBeenCalledTimes(1);expect(onCreate.mock.calls[0][0]).toMatchObject({template:'countries'});
 });

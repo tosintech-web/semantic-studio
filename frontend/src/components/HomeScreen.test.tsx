@@ -1000,3 +1000,16 @@ it("translates an export limit from captured bytes without repeating a failed do
   expect(details.querySelector("img")).toBeNull();
   expect(downloadDocumentation).toHaveBeenCalledTimes(1);
 });
+
+it('exposes domain navigation without changing library card order or reading graphs',()=>{
+ const country={...project('prj-country','Countries group','2026-01-01'),domainProfile:{id:'countries-v1',version:1}};
+ const regular=project('prj-regular','Regular project','2026-02-01');
+ const list=projects([country,regular]);renderScreen({projects:list});
+ const before=cards().map(card=>card.textContent);
+ fireEvent.click(screen.getByRole('button',{name:'Countries'}));
+ expect(screen.getByRole('button',{name:'Create country group'})).toBeTruthy();
+ expect(cards().map(card=>card.textContent)).toEqual(before);
+ fireEvent.click(screen.getByRole('button',{name:'Create country group'}));
+ expect(list.onNew).toHaveBeenCalledWith('countries');
+ expect(API.getGraph).not.toHaveBeenCalled();
+});

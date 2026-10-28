@@ -4,6 +4,8 @@ FILE: frontend/src/components/HomeScreen.tsx
 ================================================================================
 
 SUMMARY
+    Countries and government groups have manifest-only navigation through the
+    same guarded open/new-project callbacks as the existing library cards.
     The screen the application opens on, and the screen the Home control returns
     to from anywhere. It shows one library -- the person's projects and loaded
     files, most recent first, then the three bundled examples -- as cards or as
@@ -83,8 +85,9 @@ import { downloadDocumentation } from "../api";
 import { triggerDownload } from "../download";
 import { libraryEntries } from "../home/libraryOrder";
 import OntologyCard from "./OntologyCard";
+import GroupNavigation from "../government/GroupNavigation";
 import ProjectCard, { type ProjectActions } from "./ProjectsSection";
-import type { AppMode, OntologySummary, ProjectSummary, Theme } from "../types";
+import type { AppMode, OntologySummary, ProjectSummary, ProjectTemplate, Theme } from "../types";
 
 /** The projects half of the library: App's list and every action on it. */
 export interface HomeProjects extends ProjectActions {
@@ -93,7 +96,7 @@ export interface HomeProjects extends ProjectActions {
   error: unknown;
   /** The project an action is running on, or null. */
   busyId: string | null;
-  onNew: () => void;
+  onNew: (template?:ProjectTemplate) => void;
 }
 
 /**
@@ -446,6 +449,7 @@ export default function HomeScreen({
           {announcement}
         </div>
 
+        {projects&&<GroupNavigation projects={projects.list} onOpen={projects.onOpen} onCreate={projects.onNew} canEdit={team.canEdit&&!team.suspended} busy={projectBusyId!==null||projects.loading}/>}
         <section className="start-section" aria-labelledby="home-library-heading">
           <div className="home-library-head">
             <h2 id="home-library-heading">{heading}</h2>
@@ -454,7 +458,7 @@ export default function HomeScreen({
                 <button
                   ref={newProjectRef}
                   className="primary large"
-                  onClick={projects.onNew}
+                  onClick={()=>projects.onNew()}
                   disabled={projectBusyId !== null || !team.canEdit}
                 >{t("home.newProject")}</button>
               )}

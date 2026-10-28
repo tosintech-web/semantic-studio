@@ -4271,3 +4271,26 @@ it('layout-only team refresh changes the canvas read generation without changing
  await act(async()=>window.dispatchEvent(new Event('semantic-studio-team-refresh')));
  expect(canvasProps.last!.refreshGeneration).toBe(1);expect(canvasProps.last!.revision).toBe(revision);
 });
+
+it('opens the shared country template from Home system navigation and returns focus on cancel',async()=>{
+ await act(async()=>render(<App/>));
+ await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Countries'})));
+ const create=screen.getByRole('button',{name:'Create country group'});create.focus();
+ await act(async()=>fireEvent.click(create));
+ expect((screen.getByRole('combobox',{name:'Start from'})as HTMLSelectElement).value).toBe('template:countries');
+ await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Cancel'})));
+ expect(document.activeElement).toBe(create);
+ expect(createProject).not.toHaveBeenCalled();
+});
+
+it('keeps local domain drafts mounted when navigation is declined',async()=>{
+ await renderProject();const release=projectStore.registerPendingForm(PROJECT.id,()=>true);
+ const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);
+ try{
+  await act(async()=>fireEvent.click(tab('Home')));
+  expect(confirm).toHaveBeenCalled();expect(document.querySelector('.home-screen')).toBeNull();
+  confirm.mockReturnValue(true);
+  await act(async()=>fireEvent.click(tab('Home')));
+  expect(document.querySelector('.home-screen')).toBeTruthy();
+ }finally{release();confirm.mockRestore();}
+});

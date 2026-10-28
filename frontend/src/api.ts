@@ -4,6 +4,7 @@ FILE: frontend/src/api.ts
 ================================================================================
 
 SUMMARY
+    Project metadata can retain explicit country/government domain profiles.
     Command/preview requests accept a read language independent of RDF arguments.
     Explicit label-language reads reuse recorded validation and reasoning results.
     Declined approvals retain host facts beside their original failure text.
@@ -824,6 +825,7 @@ export function listProjects(): Promise<ProjectSummary[]> {
 
 // A new project from a template, or from a library ontology (fromOntologyId).
 export function createProject(payload: {
+  domainProfile?: import("./government/types").DomainProfile;
   name: string;
   template?: ProjectTemplate;
   fromOntologyId?: string;
@@ -842,7 +844,7 @@ export function createProject(payload: {
 // manifest only: changing the kind rewrites nothing in the model.
 export function updateProject(
   pid: string,
-  changes: { name?: string; languages?: string[]; kind?: ProjectKind },
+  changes: { name?: string; languages?: string[]; kind?: ProjectKind; domainProfile?: import("./government/types").DomainProfile | null; profileBasis?: string },
 ): Promise<ProjectSummary> {
   return send(projectUrl(pid), {
     method: "PATCH",
@@ -1260,3 +1262,34 @@ export const previewRelease = (pid:string, metadata:ReleaseMetadata) => send(pro
 export const approveRelease = (pid:string, metadata:ReleaseMetadata, preview:ReleasePreview) => send(projectUrl(pid,"/releases"),{method:"POST",headers:{...JSON_WRITE,"X-Semantic-Studio-Versions":encodeTeamVersions(preview.basis.resourceVersions)},body:JSON.stringify({...metadata,previewDigest:preview.previewDigest})}).then(handle<ReleaseSummary>);
 export const listReleases = (pid:string,offset=0,limit=50) => send(projectUrl(pid,`/releases?offset=${offset}&limit=${limit}`)).then(handle<ReleasePage>);
 export const downloadRelease = (pid:string,rid:string) => bytes(projectUrl(pid,`/releases/${encodeURIComponent(rid)}/package`));
+
+// Country authority is read explicitly; a different display language changes
+// candidate labels without changing the reference basis or saved RDF identity.
+export function getCountryChoices(pid: string, options: { query?: string; offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal; iri?: string } = {}): Promise<import("./government/types").CountryPage> {
+  const query = new URLSearchParams({ q: options.query ?? "", offset: String(options.offset ?? 0), limit: String(options.limit ?? 50), displayLanguage: options.displayLanguage ?? "" });
+  if (options.iri) query.set("iri", options.iri);
+  return send(projectUrl(pid, `/government/countries?${query}`), { signal: options.signal }).then(handle<import("./government/types").CountryPage>);
+}
+
+export function getGovernmentView(pid: string, at: string, options: { offset?: number; limit?: number; displayLanguage?: string; signal?: AbortSignal; iri?: string; query?: string; recordIri?:string; includeInactive?:boolean } = {}): Promise<import("./government/types").GovernmentViewResult> {
+  const query = new URLSearchParams({ at, offset: String(options.offset ?? 0), limit: String(options.limit ?? 50), displayLanguage: options.displayLanguage ?? "" });
+  if (options.iri) query.set("iri", options.iri);
+  if (options.query) query.set("q", options.query);
+  if (options.recordIri) query.set("recordIri",options.recordIri);
+  if (options.includeInactive !== undefined) query.set("includeInactive",String(options.includeInactive));
+  return send(projectUrl(pid, `/government/view?${query}`), { signal: options.signal }).then(handle<import("./government/types").GovernmentViewResult>);
+}
+
+export function downloadGovernmentProjection(pid: string, at: string): Promise<{ blob: Blob; filename: string }> {
+  return bytes(projectUrl(pid, `/government/projection?at=${encodeURIComponent(at)}`));
+}
+
+export interface DomainProfilePreview { dryRun: true; basis: string; impact: { countryIris: string[]; unresolvedCountryIris: string[] }; project: ProjectSummary }
+export function previewDomainProfileChange(pid: string, domainProfile: import("./government/types").DomainProfile | null): Promise<DomainProfilePreview> {
+  return send(projectUrl(pid), { method: "PATCH", headers: JSON_WRITE, body: JSON.stringify({ domainProfile, dryRun: true }) }).then(handle<DomainProfilePreview>);
+}
+
+/** Review a complete history command without publishing a candidate mutation. */
+export function previewGovernmentCommand(pid:string,command:string,args:Record<string,unknown>):Promise<import('./government/types').HistoryPreview> {
+ return send(documentUrl(pid,'model','/commands'),{method:'POST',headers:JSON_WRITE,body:JSON.stringify({command,args,dryRun:true})}).then(r=>handle<import('./government/types').HistoryPreview>(r));
+}

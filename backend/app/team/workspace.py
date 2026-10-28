@@ -3,6 +3,7 @@
 FILE: backend/app/team/workspace.py
 ================================================================================
 SUMMARY
+    Profile review previews retain edit authorization without committing a write.
     Connects all protected legacy HTTP handlers to transactional team state.
 BASIC IDEA
     Keep mutable evaluation detached until the authoritative transaction commits.
@@ -304,6 +305,23 @@ class TeamWorkspace:
             if not message.get("more_body", False):
                 break
         body = b"".join(chunks)
+        if shared and scope["method"] == "PATCH" and re.fullmatch(r"/api/projects/[^/]+", scope["path"]):
+            try:
+                preview_body = json.loads(body)
+            except (ValueError, UnicodeError):
+                preview_body = None
+            # Authorization remains the route's edit operation. Only an exact
+            # profile-preview request skips candidate publication and audit.
+            if isinstance(preview_body, dict) and preview_body.get("dryRun") is True and "domainProfile" in preview_body:
+                shared = False
+        if shared and scope['method'] == 'POST' and re.fullmatch(r'/api/projects/[^/]+/documents/model/commands', scope['path']):
+            try:
+                preview_body = json.loads(body)
+            except (ValueError, UnicodeError):
+                preview_body = None
+            from ..government.commands import HISTORY_COMMANDS
+            if isinstance(preview_body, dict) and preview_body.get('dryRun') is True and preview_body.get('command') in HISTORY_COMMANDS:
+                shared = False
         expected, request_id, identity = {}, None, None
         if shared:
             try:

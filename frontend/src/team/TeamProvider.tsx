@@ -2,6 +2,7 @@
 ================================================================================
 FILE: frontend/src/team/TeamProvider.tsx
 SUMMARY
+    Government forms retain whole drafts even when add-row buttons create them.
     Authentication gate, retained-input recovery, document history and version polling.
 BASIC IDEA
     Native controls expose visible names and use the shared focus-visible rule.
@@ -53,10 +54,11 @@ export function TeamProvider({children}:{children:ReactNode}){
  // Detached inputs have completed or cancelled their form and no longer
  // own a pending edit. Search and filter inputs never enter this registry.
  for(const element of dirtyFields.current.keys()) if(!element.isConnected||element.getAttribute("data-team-draft-complete")==="true")dirtyFields.current.delete(element);
- const dirty=editorDraft||creating||dirtyFields.current.size>0||hasLayoutDrafts()||hasQueryDrafts();
+ const domainPending=()=>Boolean(host.current?.querySelector('.government-form[data-team-draft-complete="false"]'));
+ const dirty=editorDraft||creating||dirtyFields.current.size>0||hasLayoutDrafts()||hasQueryDrafts()||domainPending();
  const cleanNow=(exceptEditor=false)=>{
   const current=projectStore.getSnapshot();
-  return (exceptEditor||current.editorDraft===null)&&current.creating===null&&!hasLayoutDrafts()&&!hasQueryDrafts()&&
+  return (exceptEditor||current.editorDraft===null)&&current.creating===null&&!hasLayoutDrafts()&&!hasQueryDrafts()&&!domainPending()&&
     ![...dirtyFields.current.keys()].some(element=>element.isConnected&&element.getAttribute("data-team-draft-complete")!=="true");
  };
  const reloadLatest=useRef<()=>Promise<void>>(async()=>{});
@@ -108,6 +110,7 @@ export function TeamProvider({children}:{children:ReactNode}){
  useEffect(()=>{
   const observer=new MutationObserver(()=>{
     let changed=false;for(const element of dirtyFields.current.keys())if(!element.isConnected||element.getAttribute("data-team-draft-complete")==="true"){dirtyFields.current.delete(element);changed=true;}
+    for(const element of host.current?.querySelectorAll('.government-form[data-team-draft-complete="false"]')??[])if(!dirtyFields.current.has(element)){dirtyFields.current.set(element,"draft");changed=true;}
     if(changed)setInputGeneration(value=>value+1);
   });
   if(host.current)observer.observe(host.current,{childList:true,subtree:true,attributes:true,attributeFilter:["data-team-draft-complete"]});
@@ -172,7 +175,7 @@ export function TeamProvider({children}:{children:ReactNode}){
   if(target.closest(".turtle-editor, .create-form, .canvas-draft, .sparql-textarea"))return;
   // These containers own unsent draft choices across field rerenders and
   // wizard steps. Immediate commit controls outside them do not become drafts.
-  const owner=target.closest(".rule-editor, .rule-builder, .canvas-attr-form, .example-field-input, .delete-strategy, .approval-scope, .save-row, .data-wizard, .new-project-dialog form");
+  const owner=target.closest(".government-form, .rule-editor, .rule-builder, .canvas-attr-form, .example-field-input, .delete-strategy, .approval-scope, .save-row, .data-wizard, .new-project-dialog form");
   if(target instanceof HTMLButtonElement&&target.getAttribute("role")!=="switch")return;
   const choice=target instanceof HTMLButtonElement||target instanceof HTMLSelectElement||(target instanceof HTMLInputElement&&["checkbox","radio","file"].includes(target.type));
   if(target instanceof HTMLInputElement&&target.type==="search")return;

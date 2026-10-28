@@ -2,6 +2,12 @@
   "version": 1,
   "public_samples": [
     {
+      "path": "backend/app/domain_vocab/government-v1.ttl",
+      "source": "https://github.com/tosintech-web/semantic-studio",
+      "license": "MIT",
+      "sha256": "64ae5b4f64d31459d0337c485841765afad0cfaad31984651d41d0bf6d68ba7c"
+    },
+    {
       "path": "backend/app/examples/middle-earth.ttl",
       "source": "https://github.com/imrankhan1984/semantic-studio",
       "license": "CC BY 4.0",
@@ -14,10 +20,34 @@
       "sha256": "1edb0156834b1ae9b734b3ffd62dfe082016d5b89520419428aeb1b02abf7d30"
     },
     {
+      "path": "backend/app/templates/countries.shapes.ttl",
+      "source": "https://github.com/tosintech-web/semantic-studio",
+      "license": "MIT",
+      "sha256": "274ccdef35fb24ccb64827e2b3df855895b326926e8ae8b3b240f3732c46d439"
+    },
+    {
+      "path": "backend/app/templates/countries.ttl",
+      "source": "https://github.com/tosintech-web/semantic-studio",
+      "license": "MIT",
+      "sha256": "c6ed2af4b2a2504b726dff9d74233715e42b06a0f90e02d72be9ac256f6ab13c"
+    },
+    {
       "path": "backend/app/templates/empty.ttl",
       "source": "https://github.com/imrankhan1984/semantic-studio",
       "license": "MIT",
       "sha256": "bef38752d24174e3fc3f4d8def9bd6badacc573722065fce6c07cb8d7cc04ee3"
+    },
+    {
+      "path": "backend/app/templates/government-organizations.shapes.ttl",
+      "source": "https://github.com/tosintech-web/semantic-studio",
+      "license": "MIT",
+      "sha256": "49965cbc2558fee5ed27dec4ed6e6c75caf89fd5ff6e5cf7f7189130df5bb953"
+    },
+    {
+      "path": "backend/app/templates/government-organizations.ttl",
+      "source": "https://github.com/tosintech-web/semantic-studio",
+      "license": "MIT",
+      "sha256": "c6267112fc95a48121857615ed335acdcfca7186ef1ebe6caedcf82eed10012e"
     },
     {
       "path": "backend/app/templates/small.shapes.ttl",

@@ -61,3 +61,8 @@ docker compose -f docker-compose.postgresql-test.yml down
 `not perf`は付けず、nativeの倍率1・標本数・データ件数・閾値を維持する。
 Windows互換集合はCIのnative Windows jobで検証し、team DB群のWindows native成功とは呼ばない。
 通常停止はvolumeを保持する。再利用する場合は同じproject名・secret file・IPAM設定を保持する。
+
+## 国・政府組織グループの追加
+
+2026-10-28の追加時点は全3261 case、実DB285 case。国参照・改編・再起動・バックアップ復元・公開profile拒否のケースを追加した。旧2957 caseの一対一対応は保持している。
+例外生成元の行番号を含む収集IDは、変更前後の同一AST呼出しと出現順で対応させた。行番号だけが偶然一致する別の生成元へ対応付けず、既存全caseと旧版の全対応先が実在し、対応先が重複しないことを検査した。

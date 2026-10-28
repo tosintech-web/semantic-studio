@@ -178,6 +178,12 @@ const CALLS: Record<string, () => Promise<unknown>> = {
   // home-and-examples: the examples added back.
   restoreExamples: () => api.restoreExamples(),
   listProjects: () => api.listProjects(),
+  getCountryChoices: () => api.getCountryChoices("prj-1", { query: "Synthetic" }),
+  getGovernmentView: () => api.getGovernmentView("prj-1", "2020-04-01"),
+  downloadGovernmentProjection: () => api.downloadGovernmentProjection("prj-1", "2020-04-01"),
+  previewGovernmentCommand: () => api.previewGovernmentCommand("prj-1","PutGovernmentName",{}),
+  previewDomainProfileChange: () => api.previewDomainProfileChange("prj-1", null),
+
   createProject: () => api.createProject({ name: "p", template: "small" }),
   updateProject: () => api.updateProject("prj-1", { name: "q" }),
   duplicateProject: () => api.duplicateProject("prj-1"),
@@ -267,7 +273,8 @@ describe("api client header (S-6)", () => {
       "PATCH",
       "PATCH",
       "PATCH",
-      ...Array(35).fill("POST"),
+      "PATCH",
+      ...Array(36).fill("POST"),
       "PUT",
       "PUT",
       "PUT",

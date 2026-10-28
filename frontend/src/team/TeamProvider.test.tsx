@@ -56,9 +56,21 @@ function OtherDraftChoice({owner}:{owner:string}){
 function EditPermissionProbe(){
  const team=useTeam();return <span data-testid="permission">{String(team.canEdit)}</span>;
 }
+function DomainChoiceDraft(){
+ const [draft,setDraft]=useState(false);const team=useTeam();
+ return <form className="government-form" data-team-draft-complete={!draft}><button type="button" onClick={()=>setDraft(true)}>Add domain name</button><button type="button" onClick={()=>setDraft(false)}>Commit domain name</button><span data-testid="domain-pending">{String(team.hasUnsentInput?.())}</span></form>;
+}
 describe('team authentication shell',()=>{
  beforeEach(()=>{vi.clearAllMocks();localStorage.setItem('semantic-studio.uiLocale.v1','en');mocks.authStatus.mockResolvedValue(status);mocks.teamVersions.mockResolvedValue({resourceVersions:{workspace:1}});mocks.listProjects.mockResolvedValue([{name:'Latest shared project'}]);mocks.listOntologies.mockResolvedValue([]);mocks.getLayout.mockResolvedValue({positions:{}});});
  afterEach(()=>{cleanup();vi.restoreAllMocks();});
+ it('tracks domain drafts created by add-row buttons and clears only on completion',async()=>{
+  render(<I18nProvider><TeamProvider><DomainChoiceDraft/></TeamProvider></I18nProvider>);
+  await screen.findByRole('button',{name:'Add domain name'});
+  fireEvent.click(screen.getByRole('button',{name:'Add domain name'}));
+  await waitFor(()=>expect(screen.getByTestId('domain-pending').textContent).toBe('true'));
+  fireEvent.click(screen.getByRole('button',{name:'Commit domain name'}));
+  await waitFor(()=>expect(screen.getByTestId('domain-pending').textContent).toBe('false'));
+ });
  it('gates an unauthenticated workspace and exposes keyboard-native sign in and locale controls',async()=>{
   mocks.authStatus.mockResolvedValue({...status,authenticated:false,user:null,csrf:null});
   render(<I18nProvider><TeamProvider><input aria-label="draft" /></TeamProvider></I18nProvider>);

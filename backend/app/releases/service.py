@@ -12,6 +12,7 @@ EXPECTED OUTPUT
     Stable HTTP replay envelopes and retained release packages.
 """
 import base64
+import json
 from datetime import datetime, timezone
 import hmac
 import re
@@ -50,6 +51,16 @@ class ReleaseService:
         versions.setdefault('workspace',None)
         if not isinstance(project_id,str) or not PROJECT_ID.fullmatch(project_id) or f'file:projects/{project_id}/project.json' not in resources:
             raise ReleaseError('not_found',404)
+        manifest_key=f'file:projects/{project_id}/project.json'
+        try:
+            manifest=json.loads(self.blobs.get(resources[manifest_key]['blob']))
+        except (KeyError,ValueError,OSError,TypeError) as error:
+            raise ReleaseError('unavailable',503) from error
+        if type(manifest) is not dict:
+            raise ReleaseError('unavailable',503)
+        if manifest.get('domainProfile') is not None:
+            from ..government.profile import RELEASE_UNSUPPORTED
+            raise ReleaseError(RELEASE_UNSUPPORTED,422)
         oid=document_id(project_id,'model')
         payload=resources.get('graph:'+oid)
         if payload is None: raise ReleaseError('unavailable',503)

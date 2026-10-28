@@ -1,3 +1,17 @@
+/*
+================================================================================
+FILE: frontend/src/index.css
+SUMMARY
+    Shared application layout, tokens and native control styles.
+BASIC IDEA
+    Reuse semantic colors, six font sizes and one global visible-focus rule
+    across generic editors and country/government workspaces.
+INPUTS / INPUT SOURCES
+    Component classes, theme attributes and viewport/media preferences.
+EXPECTED OUTPUT
+    Consistent responsive presentation with reduced-motion support.
+================================================================================
+*/
 /* Six font sizes (portal-foundations 5.4): every font-size in this file is
    one of them or inherit. 12 px is the smallest text anywhere, uppercase
    section labels included; where a larger size did not fit, the layout
@@ -6679,3 +6693,50 @@ kbd {
 .release-panel label { display: block; margin-block: 0.75rem; }
 .release-panel input:not([type="checkbox"]), .release-panel textarea { display: block; width: 100%; }
 .release-panel code { overflow-wrap: anywhere; }
+
+/* Government entry pages use existing surfaces, font tokens and focus rules. */
+.government-page { display: block; overflow: auto; }
+.government-workspace { box-sizing: border-box; width: 100%; max-width: 1080px; margin-inline: auto; padding: 24px; }
+.government-workspace h1, .government-workspace h2 { font-size: var(--fs-xl); margin-block: 0 20px; }
+.government-form { display: flex; flex-direction: column; gap: 12px; max-width: 860px; margin-block: 16px; }
+.government-form fieldset { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--border); border-radius: 8px; }
+.government-form legend { font-size: var(--fs-lg); padding-inline: 8px; }
+.government-form input, .government-form select, .government-form textarea { box-sizing: border-box; min-width: 0; width: 100%; }
+.government-form textarea { min-height: 80px; resize: vertical; font: inherit; color: var(--text); background: var(--bg-raised); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+.government-form button { align-self: flex-start; }
+.government-form label { display: block; margin-block: 6px; }
+.government-form .detail-note { overflow-wrap: anywhere; }
+.government-name-row { padding-block: 8px; border-bottom: 1px solid var(--border-soft); }
+.government-list-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.government-list-controls input { min-width: 180px; flex: 1; }
+.government-entry-list { padding: 0; list-style: none; }
+.government-entry-list li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 10px; align-items: center; padding-block: 12px; border-bottom: 1px solid var(--border-soft); }
+.government-entry-list li span { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .government-workspace { padding: 16px; }
+  .government-entry-list li { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Government history uses native controls and the shared focus rule. */
+.government-dated-view { display: grid; gap: 12px; min-width: 0; }
+.government-dated-view ul, .government-review ol { padding-inline-start: 24px; }
+.government-dated-view li, .government-review li { margin-block: 8px; overflow-wrap: anywhere; }
+.government-dated-view code, .government-review code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.government-form > fieldset { min-width: 0; }
+.government-review { border: 1px solid var(--border); padding: 16px; }
+
+@media (max-width: 900px) {
+  .project-header .domain-editor-toggle { display: none; }
+  .project-header .context-label { display: none; }
+  .project-header #project-doc-select { max-width: 160px; }
+}
+
+.government-group-navigation { border-bottom: 1px solid var(--border); padding-block: 16px; }
+.government-group-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+.government-group-buttons [aria-pressed="true"] { border-color: var(--accent); font-weight: 600; }
+.government-group-navigation section { padding-block: 16px; }
+.government-group-navigation label { display: block; margin-block: 12px 6px; }
+.government-group-navigation ul { list-style: none; padding: 0; display: grid; gap: 8px; }
+.government-group-navigation li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.government-group-navigation li button { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.government-group-navigation li code { max-width: 100%; overflow-wrap: anywhere; }

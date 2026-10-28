@@ -90,7 +90,7 @@ from .messages import detail_body
 from .local_guard import LocalOnlyMiddleware
 from .network_broker import ApprovalRequired, GrantScopeMiddleware, HostBlocked, Offline
 from . import library_examples, tabular
-from .routers import data, examples, network, ontologies, projects, queries
+from .routers import data, examples, government, network, ontologies, projects, queries
 from .store import store
 
 
@@ -200,6 +200,8 @@ def request_body_limit(method: str, path: str) -> tuple[int, dict] | None:
     """
     from .messages import make_message
     limit, detail = None, None
+    if method == "POST" and re.fullmatch(r"/api/projects/[^/]+/documents/[^/]+/commands", path):
+        return projects.COMMAND_MAX_BYTES, {"code": "command_too_large", "uiMessage": make_message("project.command_limit")}
     if method == "POST" and re.fullmatch(r"/api/projects/[^/]+/(release-preview|releases)", path):
         return 65536, {"code": "release.too_large", "uiMessage": make_message("release.too_large")}
     if method == "PUT":
@@ -247,6 +249,7 @@ app.include_router(ontologies.router)
 app.include_router(queries.router)
 app.include_router(network.router)
 app.include_router(projects.router)
+app.include_router(government.router)
 app.include_router(data.router)
 app.include_router(examples.router)
 

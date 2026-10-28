@@ -4,6 +4,9 @@ FILE: frontend/src/components/ProjectHeader.tsx
 ================================================================================
 
 SUMMARY
+    Country/government entry tools can be switched from this bar or its
+    keyboard menu; the menu keeps the action reachable on narrow viewports.
+    Domain groups can switch between specialized entries and the ordinary model.
     Failed name-only result reads report once and can retry the selected language.
     The header's context row while a project is open (authoring-foundations
     5.2, 5.4.2; edit-page-rework 5.2): one row, never wrapped -- the
@@ -60,6 +63,7 @@ EXPECTED OUTPUT
 
 import ReleasePanel from "../releases/ReleasePanel";
 import {useTeam} from "../team/TeamProvider";
+import { supportedProfile } from "../government/form";
 import { useI18n } from "../i18n/I18nProvider";
 import { historyLabel, renderProjectAnnouncement } from "../modeling/projectNotices";
 import { useEffect, useId, useRef, useState } from "react";
@@ -84,9 +88,10 @@ interface Props {
   onSaveCopy: () => void;
   onTurtle?: () => void;
   canvas?: { on: boolean; onToggle: () => void } | null;
+  domainEditor?: { on: boolean; onToggle: () => void } | null;
 }
 
-type MenuAction = "language" | "shapes" | "copy" | "canvas" | "close";
+type MenuAction = "domain" | "language" | "shapes" | "copy" | "canvas" | "close";
 
 /** A text field owns its own undo (Section 6). */
 function inTextField(target: EventTarget | null): boolean {
@@ -111,6 +116,7 @@ export default function ProjectHeader({
   onSaveCopy,
   onTurtle,
   canvas = null,
+  domainEditor = null,
 }: Props) {
   const { t, locale } = useI18n();
   const team = useTeam();
@@ -232,6 +238,7 @@ export default function ProjectHeader({
       });
     } else if (action === "copy") onSaveCopy();
     else if (action === "canvas") canvas?.onToggle();
+    else if (action === "domain") domainEditor?.onToggle();
     else onClose();
   };
 
@@ -316,6 +323,8 @@ export default function ProjectHeader({
           Turtle
         </button>
       )}
+      {domainEditor && <button type="button" className="ghost domain-editor-toggle" onClick={domainEditor.onToggle}>{t(domainEditor.on ? "government.standardModel" : "government.groupEntries")}</button>}
+      {project.domainProfile && !supportedProfile(project.domainProfile) && <span role="status" className="detail-note">{t("government.unsupportedProfile")}</span>}
       <div className="onto-menu-wrap project-lang-wrap">
         <button
           ref={langButton}
@@ -380,6 +389,7 @@ export default function ProjectHeader({
                 </span>{t("projectHeader.canvas")}</button>
             </li>
           )}
+          {domainEditor && <li role="none"><button type="button" role="menuitem" tabIndex={-1} onClick={()=>chooseMenu('domain')}>{t(domainEditor.on?'government.standardModel':'government.groupEntries')}</button></li>}
           <li role="none">
             <button type="button" role="menuitem" tabIndex={-1} onClick={() => chooseMenu("close")}>{t("projectHeader.close")}</button>
           </li>

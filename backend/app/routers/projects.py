@@ -4,6 +4,7 @@ FILE: backend/app/routers/projects.py
 ================================================================================
 
 SUMMARY
+    Domain template/profile requests retain explicit preview and confirmation.
     Display-language parameters choose read names without changing project languages.
     The HTTP surface for projects and editing (authoring-foundations): list,
     create, rename, duplicate, trash and export projects, and change their
@@ -57,13 +58,14 @@ from __future__ import annotations
 
 import json
 import re
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from ..messages import MessageText, integer_arg, make_message
 from ..messages import UiHTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictBool, ValidationError, model_validator
 from starlette.concurrency import run_in_threadpool
 
 from .. import reasoning
@@ -81,13 +83,17 @@ from ..editing import (
 from ..projects import LAYOUT_MAX_BYTES, ProjectError, UnknownDocument, UnknownProject
 from ..store import ParseError, ParseTimeout, store
 from . import ontologies
+from ..government.profile import DomainError
+from ..government.references import metadata_locked
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+COMMAND_MAX_BYTES = 256 * 1024
 
 
 class CreateProject(BaseModel):
     name: str
-    template: Optional[Literal["empty", "small", "taxonomy-empty", "taxonomy-small", "vocabulary"]] = None
+    template: Optional[Literal["empty", "small", "taxonomy-empty", "taxonomy-small", "vocabulary", "countries", "government-organizations"]] = None
+    domainProfile: Optional[dict] = None
     fromOntologyId: Optional[str] = None
     baseIri: Optional[str] = None
     prefix: Optional[str] = None
@@ -95,6 +101,9 @@ class CreateProject(BaseModel):
 
 
 class PatchProject(BaseModel):
+    domainProfile: Optional[dict] = None
+    dryRun: StrictBool = False
+    profileBasis: Optional[str] = None
     name: Optional[str] = None
     languages: Optional[list[str]] = None
     # Ontology or taxonomy (D-089): the tools change, the model does not.
@@ -113,6 +122,14 @@ class RunCommand(BaseModel):
     command: str
     args: dict = {}
     dryRun: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def history_preview_boolean(cls, value):
+        from ..government.commands import HISTORY_COMMANDS
+        if isinstance(value, dict) and value.get('command') in HISTORY_COMMANDS and 'dryRun' in value and type(value['dryRun']) is not bool:
+            raise ValueError('A history preview uses a JSON boolean.')
+        return value
 
 
 class SaveDocument(BaseModel):
@@ -163,6 +180,8 @@ def _errors():
                 else make_message('parse.syntax_without_line', format='Turtle')
             ),
         ) from exc
+    except DomainError as exc:
+        raise UiHTTPException(status_code=exc.status, detail=str(exc), ui_message=exc.ui_message) from exc
     except AlreadyDefined as exc:
         # A property of that name and kind is there already (attribute-reuse
         # 5.1): the form offers to use it, so the property goes with the words.
@@ -198,8 +217,11 @@ def list_projects() -> list[dict]:
 
 
 @router.post("")
+@metadata_locked
 def create_project(body: CreateProject) -> dict:
     with _errors():
+        if body.fromOntologyId is not None and body.domainProfile is not None:
+            raise UiHTTPException(status_code=422, detail="A library copy cannot choose a domain profile.", ui_message=make_message("government.invalid_profile"))
         if body.fromOntologyId is not None:
             source = store.get(body.fromOntologyId)
             if source is None or source.editable:
@@ -226,32 +248,43 @@ def create_project(body: CreateProject) -> dict:
         return project_store.create(
             name=body.name, base_iri=body.baseIri, prefix=body.prefix,
             primary_language=body.primaryLanguage, template=body.template or "empty",
+            domain_profile=body.domainProfile,
         )
 
 
 @router.patch("/{pid}")
+@metadata_locked
 def patch_project(pid: str, body: PatchProject) -> dict:
     with _errors():
-        summary = None
-        if body.name is not None:
-            summary = project_store.rename(pid, body.name)
-        if body.languages is not None:
-            summary = project_store.set_languages(pid, body.languages)
-        if body.kind is not None:
-            summary = project_store.set_kind(pid, body.kind)
-        if summary is None:
-            summary = project_store.summary(project_store.manifest(pid))
+        from ..government.profile import ProfileConflict
+        fields = body.model_dump(exclude_unset=True, exclude={"dryRun", "profileBasis"})
+        document = None
+        reference_bases, available_countries = {}, set()
+        if "domainProfile" in fields:
+            from ..government.references import profile_reference_snapshots
+            reference_bases, available_countries = profile_reference_snapshots(editing_service, pid, fields["domainProfile"])
+        if "domainProfile" in fields and editing_service.is_open(pid):
+            document = editing_service.document(pid, "model")
+        with document.lock if document is not None else nullcontext():
+            try:
+                summary = project_store.patch(pid, fields, dry_run=body.dryRun, basis=body.profileBasis, graph=document.graph if document else None, reference_bases=reference_bases, available_countries=available_countries)
+            except ProfileConflict as exc:
+                raise UiHTTPException(status_code=409, detail="Review the changed profile settings again.", ui_message=make_message("government.profile_stale")) from exc
+        if body.dryRun:
+            return summary
         editing_service.refresh_manifest(pid)
         return summary
 
 
 @router.post("/{pid}/duplicate")
+@metadata_locked
 def duplicate_project(pid: str) -> dict:
     with _errors():
-        return project_store.duplicate(pid)
+        return editing_service.duplicate_project(pid)
 
 
 @router.delete("/{pid}")
+@metadata_locked
 def delete_project(pid: str) -> dict:
     """Move the folder to projects/.trash/, and say where it went."""
     with _errors():
@@ -264,7 +297,7 @@ def delete_project(pid: str) -> dict:
 @router.get("/{pid}/export")
 def export_project(pid: str) -> Response:
     with _errors():
-        data = project_store.export_zip(pid)
+        data = editing_service.export_zip(pid)
         name = re.sub(r"[^A-Za-z0-9._-]+", "-", project_store.manifest(pid)["name"]).strip("-.")
     return Response(
         content=data,
@@ -291,13 +324,28 @@ def add_document(pid: str, body: NewDocument) -> dict:
         return editing_service.add_document(pid, body.role)
 
 
-@router.post("/{pid}/documents/{doc}/commands")
-def run_command(pid: str, doc: str, body: RunCommand, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
+@router.post("/{pid}/documents/{doc}/commands", openapi_extra={"requestBody": {"required": True, "content": {"application/json": {"schema": RunCommand.model_json_schema()}}}})
+async def run_command(pid: str, doc: str, request: Request, lang: Optional[str] = ontologies.LANG_PARAM) -> dict:
     """One of the commands the canvas will use (5.4). A dry run is offered for
     DeleteEntity, returning the impact summary, and for ShareDomain, returning
     the reuse plan (attribute-reuse 5.2), with nothing changed either way."""
     with _errors():
-        return editing_service.command(pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
+        project_store.folder(pid)
+        project_store.document_file(doc)
+    chunks, total = [], 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > COMMAND_MAX_BYTES:
+            raise UiHTTPException(status_code=413, detail="One change is at most 256 KiB.", ui_message=make_message("project.command_limit"))
+        chunks.append(chunk)
+    try:
+        body = RunCommand.model_validate_json(b"".join(chunks))
+    except ValidationError as exc:
+        if any(error["type"] == "json_invalid" for error in exc.errors()):
+            raise UiHTTPException(status_code=422, detail="The body must be JSON.", ui_message=make_message("request.body_json")) from exc
+        raise RequestValidationError([{**error, "loc": ("body", *error["loc"])} for error in exc.errors()]) from exc
+    with _errors():
+        return await run_in_threadpool(editing_service.command, pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
 
 
 @router.get("/{pid}/documents/{doc}/source")

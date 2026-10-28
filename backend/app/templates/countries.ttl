@@ -1,0 +1,11 @@
+# FILE: backend/app/templates/countries.ttl
+# SUMMARY: Empty country group with fixed vocabulary references.
+# BASIC IDEA: Model owns data while common definitions stay in the application.
+# INPUTS / INPUT SOURCES: Validated project name, base, prefix and language.
+# EXPECTED OUTPUT: An ontology, with no seeded geopolitical records.
+@prefix {{prefix}}: <{{base}}> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix gov: <urn:semantic-studio:government:v1#> .
+
+<{{ontology}}> a owl:Ontology ; skos:prefLabel "{{name}}"@{{lang}} .

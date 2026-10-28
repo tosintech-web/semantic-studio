@@ -51,4 +51,6 @@ def dispatch_release_request(service, *, scope, body, expected, request_id, iden
         if method=='HEAD': result['body']=''
         return result
     except ReleaseError as error:
-        return response({'code':'release.'+error.code,'uiMessage':make_message('release.'+error.code)},status=error.status)
+        from ..government.profile import RELEASE_UNSUPPORTED
+        code=error.code if error.code==RELEASE_UNSUPPORTED else 'release.'+error.code
+        return response({'code':code,'uiMessage':make_message(code)},status=error.status)

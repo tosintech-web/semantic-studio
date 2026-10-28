@@ -934,6 +934,7 @@ export interface ImportFilesResult {
 
 // A project as the home screen lists it, from its manifest alone.
 export interface ProjectSummary {
+  domainProfile?: import("./government/types").StoredDomainProfile;
   id: string;
   name: string;
   createdAt: string;
@@ -961,7 +962,7 @@ export type ProjectKind = "ontology" | "taxonomy";
 export type CreatingKind = "class" | "concept" | "objectProperty" | "datatypeProperty" | "example";
 
 // "vocabulary" is the E-6 name for a small SKOS scheme, still accepted.
-export type ProjectTemplate = "empty" | "small" | "taxonomy-empty" | "taxonomy-small" | "vocabulary";
+export type ProjectTemplate = "empty" | "small" | "taxonomy-empty" | "taxonomy-small" | "vocabulary" | "countries" | "government-organizations";
 
 // An open document's state. `ontologyId` is what every existing view reads
 // it by (prj-<hex>-<doc>); `revision` keys every refetch (D-081).

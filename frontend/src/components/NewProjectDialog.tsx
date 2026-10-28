@@ -4,6 +4,9 @@ FILE: frontend/src/components/NewProjectDialog.tsx
 ================================================================================
 
 SUMMARY
+    System navigation may preselect a template; ordinary creation still asks
+    the user to choose a kind and uses exactly the same submission logic.
+    Country and government groups share the existing ontology creation flow.
     The New project form (authoring-foundations 5.1, relationships 5.1):
     first the kind, Ontology or Taxonomy, each with its sentence; then a
     name, a starting point (the chosen kind's two templates, or an ontology
@@ -56,6 +59,7 @@ import type { ProjectKind, ProjectTemplate } from "../types";
 import { useDialogTrap } from "./useDialogTrap";
 
 export interface NewProjectRequest {
+  domainProfile?: import("../government/types").DomainProfile;
   name: string;
   template?: ProjectTemplate;
   fromOntologyId?: string;
@@ -67,11 +71,12 @@ export interface NewProjectRequest {
 interface Props {
   library: { id: string; name: string }[];
   initialSource?: string;
+  initialTemplate?: ProjectTemplate;
   onCreate: (request: NewProjectRequest) => Promise<void>;
   onClose: () => void;
 }
 
-export default function NewProjectDialog({ library, initialSource, onCreate, onClose }: Props) {
+export default function NewProjectDialog({ library, initialSource, initialTemplate, onCreate, onClose }: Props) {
   const { locale, t } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -79,10 +84,10 @@ export default function NewProjectDialog({ library, initialSource, onCreate, onC
   const [name, setName] = useState(() =>
     initialSource ? library.find((o) => o.id === initialSource)?.name.replace(/\.[a-z]+$/i, "") ?? "" : "",
   );
-  const [kind, setKind] = useState<ProjectKind | null>(null);
+  const [kind, setKind] = useState<ProjectKind | null>(initialTemplate&&!initialSource?(initialTemplate.startsWith("taxonomy")?"taxonomy":"ontology"):null);
   // "template:<name>" or "library:<id>", one select for both kinds of start;
   // "" until a kind is chosen or a library ontology picked.
-  const [source, setSource] = useState(initialSource ? `library:${initialSource}` : "");
+  const [source, setSource] = useState(initialSource ? `library:${initialSource}` : initialTemplate?`template:${initialTemplate}`:"");
   const choices = useMemo(() => kindChoices(t), [t]);
   const templates = choices.find((c) => c.kind === kind)?.templates ?? [];
   // A library copy's kind is judged by the server from what it holds, so

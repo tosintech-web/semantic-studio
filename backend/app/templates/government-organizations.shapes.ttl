@@ -1,0 +1,19 @@
+# FILE: backend/app/templates/government-organizations.shapes.ttl
+# SUMMARY: Government organization and record requirements.
+# BASIC IDEA: Check authored records; temporal consistency uses domain validation.
+# INPUTS / INPUT SOURCES: ORG organizations and dated relation records.
+# EXPECTED OUTPUT: Named organizations and records with endpoints and a source.
+@prefix {{prefix}}: <{{base}}> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix gov: <urn:semantic-studio:government:v1#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+{{prefix}}:OrganizationShape a sh:NodeShape ;
+    sh:targetClass org:Organization, org:FormalOrganization, org:OrganizationalUnit ;
+    sh:property [ sh:path skos:prefLabel ; sh:minCount 1 ; sh:nodeKind sh:Literal ; sh:uniqueLang true ] .
+{{prefix}}:RelationShape a sh:NodeShape ; sh:targetClass gov:RelationRecord ;
+    sh:property [ sh:path gov:subject ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path gov:predicate ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path gov:object ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path dct:source ; sh:minCount 1 ] .
