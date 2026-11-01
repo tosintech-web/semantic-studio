@@ -25,6 +25,7 @@ import ProjectCard, {type ProjectActions} from '../components/ProjectsSection';
 interface Props {
  projects:ProjectSummary[];onOpen:(id:string)=>void;onCreate:(template:ProjectTemplate)=>void;
  canEdit:boolean;busy?:boolean;loading?:boolean;error?:unknown;children?:ReactNode;
+ onImport?:(id:string)=>void;
  projectActions?:ProjectActions;busyId?:string|null;
 }
 const TABS = [
@@ -33,7 +34,7 @@ const TABS = [
  {id:'models',label:'home.models'},
 ] as const;
 type Category = DomainProfile['id'] | 'models';
-export default function GroupNavigation({projects,onOpen,onCreate,canEdit,busy=false,loading=false,error,children,projectActions,busyId}:Props) {
+export default function GroupNavigation({projects,onOpen,onCreate,canEdit,busy=false,loading=false,error,children,projectActions,busyId,onImport}:Props) {
  const {t}=useI18n(),id=useId();
  const [selected,setSelected]=useState<Category>('models'),[query,setQuery]=useState(''),[offset,setOffset]=useState(0);
  const tabRefs=useRef<(HTMLButtonElement|null)[]>([]);
@@ -67,7 +68,7 @@ export default function GroupNavigation({projects,onOpen,onCreate,canEdit,busy=f
  <ul>{groups.slice(pageOffset,pageOffset+50).map(project=><li key={project.id}>
  {projectActions?<ProjectCard project={project} layout="row" busy={busyId===project.id} disabled={busy} {...projectActions}/>
  :<button type="button" title={project.name} aria-disabled={busy} aria-label={t('home.openName',{name:`${project.name} · ${project.id}`})} onClick={()=>{if(!busy)onOpen(project.id);}}>{project.name}</button>}
- <code>{project.id}</code></li>)}</ul>
+ <code>{project.id}</code>{onImport&&<button type="button" disabled={!canEdit||busy||loading} onClick={()=>onImport(project.id)}>{t("masterImport.open")}</button>}</li>)}</ul>
  <button type="button" aria-disabled={pageOffset===0} onClick={()=>{if(pageOffset>0)setOffset(Math.max(0,pageOffset-50));}}>{t('government.previousPage')}</button>
  <button type="button" aria-disabled={pageOffset+50>=groups.length} onClick={()=>{if(pageOffset+50<groups.length)setOffset(pageOffset+50);}}>{t('government.nextPage')}</button>
  </>}

@@ -49,7 +49,13 @@ def test_duplicate_headers_and_proto_names_keep_column_identity():
     assert t.evidence[0][0]['text']==' A '
 
 
-@pytest.mark.parametrize('selection',[[],[0],[2],[1,1]])
+@pytest.mark.parametrize('selection',[[],[0],[2],[1,1],[{}],{'1':1},'1'])
 def test_invalid_selection_refused(selection):
     t=read_master_table(b'code\nA\n','data.csv',{})
     with pytest.raises(ValueError):map_master_rows(t,'countries',{'columns':[]},selection)
+
+
+def test_mixed_set_operations_are_refused_before_mapping_rows():
+    t=read_master_table(b'code,s1,s2\nAA,First,Second\n','data.csv',{})
+    columns=[{'column':0,'field':'code','op':'set'},{'column':1,'field':'sources','op':'append'},{'column':2,'field':'sources','op':'replace'}]
+    with pytest.raises(ValueError):map_master_rows(t,'countries',{'columns':columns},[1])

@@ -80,3 +80,23 @@ def test_new_organization_resolves_country_beyond_first_page():
 def test_duplicate_input_keys_and_missing_country_refuse_whole_plan():
     p=plan_master_import(context(),batch(b'code,name\nJP,A\nJP,B\n',COLUMNS))
     assert not p.ready
+
+
+def test_multiple_alias_columns_replace_one_language_as_a_single_set():
+    ctx=context();node=URIRef('urn:country:AA')
+    for triple in [(node,RDF.type,GOV.Country),(node,GOV.countryCode,Literal('AA')),(node,SKOS.prefLabel,Literal('Alpha',lang='en')),(node,SKOS.altLabel,Literal('Old',lang='ja')),(node,SKOS.altLabel,Literal('Keep',lang='en'))]:ctx.graph.add(triple)
+    columns=[{'column':0,'field':'code','op':'set'},{'column':1,'field':'aliases','language':'ja','op':'replace'},{'column':2,'field':'aliases','language':'ja','op':'replace'}]
+    plan=plan_master_import(ctx,batch(b'code,alias1,alias2\nAA,First,Second\n',columns))
+    assert plan.ready
+    assert set(plan.candidate.objects(node,SKOS.altLabel))=={Literal('First',lang='ja'),Literal('Second',lang='ja'),Literal('Keep',lang='en')}
+
+
+def test_period_edit_without_existing_record_cannot_succeed_silently():
+    ctx=context('organizations');node=URIRef('urn:org:AA')
+    for triple in [(node,RDF.type,ORG.Organization),(node,ORG.identifier,Literal('AA')),(node,SKOS.prefLabel,Literal('Alpha',lang='en'))]:ctx.graph.add(triple)
+    ctx.country_reference=SimpleNamespace(graph=Graph(),basis={'sourceToken':'test'})
+    for field in ('existenceStart','affiliationStart'):
+        columns=[{'column':0,'field':'code','op':'set'},{'column':1,'field':field,'op':'set'}]
+        plan=plan_master_import(ctx,batch(b'code,start\nAA,2030-01-01\n',columns,'organizations'))
+        assert not plan.ready
+        assert plan.rows[0]['status'] in ('error','needs-review')

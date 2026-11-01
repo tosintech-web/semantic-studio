@@ -72,6 +72,9 @@ _ROUTE_ROWS = (
     ('POST','/api/network/grants','admin'),
     ('DELETE','/api/network/grants/{grant_id}','admin'),
     ('PUT','/api/network/offline','admin'),
+    ('POST','/api/projects/{pid}/government/import/inspect','edit'),
+    ('POST','/api/projects/{pid}/government/import/prepare','edit'),
+    ('GET','/api/projects/{pid}/government/import/templates/{mode}/{format}','read'),
     ('GET','/api/projects/{pid}/government/countries','read'),
     ('GET','/api/projects/{pid}/government/view','read'),
     ('GET','/api/projects/{pid}/government/projection','read'),
@@ -123,7 +126,9 @@ _ROUTE_ROWS = (
     ('PATCH','/api/team/users','admin'),
     ('PATCH','/api/team/users/{sub}','admin'),
 )
-ROUTE_POLICIES=tuple(RoutePolicy(method,path,operation,operation in {'edit','admin'} and method!='GET')
+ROUTE_POLICIES=tuple(RoutePolicy(method,path,operation,operation in {'edit','admin'} and method!='GET' and path not in {
+                         '/api/projects/{pid}/government/import/inspect',
+                         '/api/projects/{pid}/government/import/prepare'})
                      for method,path,operation in _ROUTE_ROWS)
 _COMPILED=tuple((policy,compile_path(policy.template)[0]) for policy in ROUTE_POLICIES)
 

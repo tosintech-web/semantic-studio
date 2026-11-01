@@ -536,7 +536,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `project.error.base` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.prefix` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `project.error.language` | — | `frontend/src/projects/form.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/InferredBlock.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningDetails.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` <br>`frontend/src/components/DeleteDialog.tsx`, `frontend/src/team/TeamHistory.tsx` <br>`frontend/src/government/GroupNavigation.tsx`| UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `common.details` | — | `frontend/src/App.tsx`<br>`frontend/src/canvas/ModelCanvas.tsx`<br>`frontend/src/components/CreateForm.tsx`<br>`frontend/src/components/DataWizard.tsx`<br>`frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/EditParts.tsx`<br>`frontend/src/components/HierarchyView.tsx`<br>`frontend/src/components/HomeScreen.tsx`<br>`frontend/src/components/ImportsPanel.tsx`<br>`frontend/src/components/InferredBlock.tsx`<br>`frontend/src/components/LoadDialog.tsx`<br>`frontend/src/components/NetworkPanel.tsx`<br>`frontend/src/components/NewProjectDialog.tsx`<br>`frontend/src/components/ProjectsSection.tsx`<br>`frontend/src/components/ReasoningDetails.tsx`<br>`frontend/src/components/ReasoningPanel.tsx`<br>`frontend/src/components/ResultPanels.tsx`<br>`frontend/src/components/ReusePlan.tsx`<br>`frontend/src/components/RmlEditor.tsx`<br>`frontend/src/components/ShapeForm.tsx`<br>`frontend/src/components/ShapesView.tsx`<br>`frontend/src/components/SnapshotList.tsx`<br>`frontend/src/components/SourceView.tsx`<br>`frontend/src/components/TurtleEditor.tsx`<br>`frontend/src/components/WarningMessage.tsx`<br>`frontend/src/components/WhyDisclosure.tsx` <br>`frontend/src/components/DeleteDialog.tsx`, `frontend/src/team/TeamHistory.tsx` <br>`frontend/src/government/GroupNavigation.tsx`, `frontend/src/government/imports/MasterImportWizard.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.close` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.title` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `network.panel.loading` | — | `frontend/src/components/NetworkPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -637,7 +637,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `load.announce.downloading` | — | `frontend/src/loadWords.ts` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.stopped` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `load.tooLate` | — | `frontend/src/components/LoadDialog.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
-| `about.close` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
+| `about.close` | — | `frontend/src/components/AboutPanel.tsx`, `frontend/src/government/imports/MasterImportWizard.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `about.purpose` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `about.description` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
 | `about.modified` | — | `frontend/src/components/AboutPanel.tsx` | UI・読み上げ・通知 | 2/3/7/8/10 | カタログ登録済み |
@@ -1049,7 +1049,7 @@ UIの言語とRDFの表示言語を分離する。識別子・RDFの値・SPARQL
 | `glossary.xsd.time` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.gYear` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
 | `glossary.xsd.anyURI` | — | `frontend/src/explain/glossary.ts` | 標準用語の意味定義 | 11 | 共通定義・画面接続済み |
-| `common.loading` | — | `frontend/src/team/ConflictPanel.tsx`, `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/ExploreStart.tsx`, `frontend/src/team/TeamProvider.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryPicker.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
+| `common.loading` | — | `frontend/src/team/ConflictPanel.tsx`, `frontend/src/components/DetailPanel.tsx`<br>`frontend/src/components/ExploreStart.tsx`, `frontend/src/team/TeamProvider.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryPicker.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/imports/MasterImportWizard.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.start` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.pickHelp` | — | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
 | `explore.data` | label | `frontend/src/components/ExploreStart.tsx` | 探索・詳細の操作と案内 | 11 | カタログ・画面接続済み |
@@ -3460,8 +3460,8 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.selectedCountry` | iri | `frontend/src/government/CountryPicker.tsx` |
 | `government.countryCounts` | shown, total | `frontend/src/government/CountryPicker.tsx` |
 | `government.countryEmpty` | — | `frontend/src/government/CountryPicker.tsx` |
-| `government.previousPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx`, `frontend/src/government/GroupNavigation.tsx` |
-| `government.nextPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx`, `frontend/src/government/GroupNavigation.tsx` |
+| `government.previousPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx`, `frontend/src/government/GroupNavigation.tsx`, `frontend/src/government/imports/ReviewStep.tsx` |
+| `government.nextPage` | — | `frontend/src/government/CountryPicker.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx`, `frontend/src/government/HistoryReview.tsx`, `frontend/src/government/GroupNavigation.tsx`, `frontend/src/government/imports/ReviewStep.tsx` |
 | `government.aliases` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.preferredNames` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.aliasNumber` | number | `frontend/src/government/EntryParts.tsx` |
@@ -3471,9 +3471,9 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.addAlias` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.addName` | — | `frontend/src/government/EntryParts.tsx` |
 | `government.sources` | — | `frontend/src/government/EntryParts.tsx` |
-| `government.sourceType` | number | `frontend/src/government/EntryParts.tsx` |
-| `government.sourceText` | — | `frontend/src/government/EntryParts.tsx` |
-| `government.sourceLink` | — | `frontend/src/government/EntryParts.tsx` |
+| `government.sourceType` | number | `frontend/src/government/EntryParts.tsx`, `frontend/src/government/imports/MappingStep.tsx` |
+| `government.sourceText` | — | `frontend/src/government/EntryParts.tsx`, `frontend/src/government/imports/MappingStep.tsx` |
+| `government.sourceLink` | — | `frontend/src/government/EntryParts.tsx`, `frontend/src/government/imports/MappingStep.tsx` |
 | `government.sourceNumber` | number | `frontend/src/government/EntryParts.tsx` |
 | `government.removeSource` | number | `frontend/src/government/EntryParts.tsx` |
 | `government.addSource` | — | `frontend/src/government/EntryParts.tsx` |
@@ -3492,7 +3492,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.existencePeriod` | — | `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/HistoryParts.tsx` |
 | `government.countryPeriod` | — | `frontend/src/government/OrganizationForm.tsx` |
 | `government.refreshCountries` | — | `frontend/src/government/CountryPicker.tsx` |
-| `government.leave.confirm` | — | `frontend/src/App.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/OrganizationForm.tsx` |
+| `government.leave.confirm` | — | `frontend/src/App.tsx` , `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/CountryForm.tsx`, `frontend/src/government/OrganizationForm.tsx`, `frontend/src/government/imports/MasterImportWizard.tsx` |
 | `government.countriesTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GroupNavigation.tsx` |
 | `government.organizationsTitle` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GovernmentView.tsx`, `frontend/src/government/GroupNavigation.tsx` |
 | `government.countryGroup` | — | `frontend/src/government/GovernmentWorkspace.tsx` |
@@ -3628,3 +3628,87 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `government.searchRecords` | — | `frontend/src/government/HistoryParts.tsx` | en/ja |
 
 | `home.models` | — | `frontend/src/government/GroupNavigation.tsx` | UI・読み上げ | ホームタブ | 語彙・概念モデル |
+
+| `masterImport.title` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.open` | — | `frontend/src/government/GovernmentWorkspace.tsx`, `frontend/src/government/GroupNavigation.tsx` | en/ja |
+| `masterImport.target` | id | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.source` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.mapping` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.review` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.file` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.mode` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.organizations` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.relations` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.header` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.headerRow` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.sheet` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.encoding` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.separator` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.auto` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.tab` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.inspect` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.template` | format | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.field` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.ignore` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.column` | name, number | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.operation` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.language` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.delimiter` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.defaults` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.defaultsHelp` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.rules` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.total` | total | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.rows` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.rowsHelp` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.line` | line | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/MasterImportWizard.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.prepare` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.summary` | created, errors, excluded, review, unchanged, updated | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.page` | shown, total | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.diff` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.chooseRecord` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.exclude` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.rowIssue` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
+| `masterImport.warnings` | count | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.atomic` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.apply` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.confirmNoop` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.noop` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.complete` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.ownerChanged` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.retained` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.tooMany` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+| `masterImport.op.set` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.op.append` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.op.replace` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.op.clear` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.status.created` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.status.updated` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.status.unchanged` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.status.error` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.status.needs-review` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.code` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.names` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.aliases` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.description` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.sources` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.orgKind` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.countryCode` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.existenceStart` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.existenceEnd` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.affiliationStart` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.affiliationEnd` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.existenceRecordIri` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.affiliationRecordIri` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.action` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.recordIri` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.subjectCode` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.predicate` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.objectCode` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.relationStart` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.field.relationEnd` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `government.master_imported` | — | `frontend/src/i18n/server-contracts.ts` | en/ja |
+
+| `masterImport.before` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.after` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+
+| `masterImport.rebind` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |

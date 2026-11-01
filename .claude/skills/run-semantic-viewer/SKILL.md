@@ -232,3 +232,11 @@ acceptance and reuses the government UI workflow, then checks replay, viewer
 refusal, country-preserving Undo and the explicit release-profile refusal.
 Use separate scratch directories and free PORT/CDP_PORT/TEAM_PORT values; no DB
 port is published. Keep the existing smoke, P1 and P3 acceptance as regressions.
+
+## Master table import acceptance
+
+After building, run `node .claude/skills/run-semantic-viewer/driver.mjs master-import`.
+It creates fictional country and organization masters, loads CSV through the
+native file control, reviews/applies all three table modes, repeats a country
+import as a no-op and checks whole-batch Undo with the country source unchanged.
+The server and Chrome profile are disposable; review screenshots land in shots/.

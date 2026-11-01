@@ -66,6 +66,7 @@ def plan_entities(ctx,batch):
                 choices=[]
                 for prefix,records,record_type,property_iri in [('existence',life,GOV.ExistenceRecord,'existenceRecordIri'),('affiliation',affiliation,GOV.RelationRecord,'affiliationRecordIri')]:
                     dated=any(prefix+s in fields for s in ('Start','End'))
+                    if not new and dated and not records:raise ValueError('No existing period record can be corrected. Create the missing record explicitly first.')
                     if not new and dated and (len(records)!=1 or intent.get(property_iri)!=records[0].iri):
                         choices.extend(r.iri for r in records);continue
                     if not new and not dated and 'sources' not in fields:continue

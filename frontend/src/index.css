@@ -6747,3 +6747,17 @@ kbd {
 .government-master-panel li > button { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 .government-master-panel li > article { width: 100%; }
 .government-master-panel li code { max-width: 100%; overflow-wrap: anywhere; }
+
+/* Master import keeps wide source evidence inside the modal on small screens. */
+.dialog-backdrop { position: fixed; inset: 0; z-index: 250; background: var(--bg-overlay, var(--bg)); display: grid; place-items: center; padding: 1rem; }
+.master-import-dialog { width: min(64rem, 100%); max-height: 92vh; overflow: auto; background: var(--bg-panel); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 1.25rem; }
+.master-import-dialog fieldset { min-width: 0; margin-block: .75rem; border: 1px solid var(--border); }
+.master-import-dialog label { display: inline-flex; flex-direction: column; gap: .25rem; margin: .5rem; max-width: 100%; }
+.master-import-dialog input, .master-import-dialog select { max-width: 100%; }
+.master-import-dialog code, .master-import-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.master-import-dialog li { margin-block: .5rem; }
+
+.master-import-dialog li > code { display: block; margin-block: .25rem; }
+.master-import-dialog table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.master-import-dialog td, .master-import-dialog th { border: 1px solid var(--border); padding: .5rem; text-align: start; overflow-wrap: anywhere; }
+.master-import-dialog th small { display: block; font-weight: normal; }

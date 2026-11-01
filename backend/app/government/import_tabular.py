@@ -56,7 +56,9 @@ def read_master_table(data:bytes,filename:str,options:dict)->MasterTable:
             if first and options.get('header',True):header=values;first=False;continue
             first=False
             if len(rows)<tabular.MAX_ROWS:rows.append((start,[(v,'text') for v in values]))
-        return _assemble(checked.columns,header,rows,separator=checked.separator,encoding=checked.encoding,total=checked.total)
+        result=_assemble(checked.columns,header,rows,separator=checked.separator,encoding=checked.encoding,total=checked.total)
+        result.table.header=checked.header
+        return result
     tabular.check_workbook(data,filename)
     book=tabular._open_workbook(data)
     try:

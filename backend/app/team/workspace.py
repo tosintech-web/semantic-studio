@@ -314,13 +314,17 @@ class TeamWorkspace:
             # profile-preview request skips candidate publication and audit.
             if isinstance(preview_body, dict) and preview_body.get("dryRun") is True and "domainProfile" in preview_body:
                 shared = False
+        if scope['method'] == 'POST' and re.fullmatch(r'/api/projects/[^/]+/government/import/(inspect|prepare)', scope['path']):
+            shared = False
+        import_command = False
         if shared and scope['method'] == 'POST' and re.fullmatch(r'/api/projects/[^/]+/documents/model/commands', scope['path']):
             try:
                 preview_body = json.loads(body)
             except (ValueError, UnicodeError):
                 preview_body = None
             from ..government.commands import HISTORY_COMMANDS
-            if isinstance(preview_body, dict) and preview_body.get('dryRun') is True and preview_body.get('command') in HISTORY_COMMANDS:
+            import_command = isinstance(preview_body, dict) and preview_body.get('command') == 'ImportMasterBatch'
+            if isinstance(preview_body, dict) and preview_body.get('dryRun') is True and (preview_body.get('command') in HISTORY_COMMANDS or import_command):
                 shared = False
         expected, request_id, identity = {}, None, None
         if shared:
@@ -476,10 +480,16 @@ class TeamWorkspace:
                             staged[key] = value
                 changes = {key: staged.get(key) for key in resources.keys() | staged.keys()
                            if key.startswith(("file:", "graph:", "state:")) and resources.get(key) != staged.get(key)}
-                decorated = await run_in_threadpool(self._states, payload, actor, scope["state"]["principal"].role, resources, changes, operation)
+                # Only the verified command result can suppress publication. Lazy
+                # candidate hydration is not an authored resource change.
+                import_noop = import_command and json.loads(payload).get("noop") is True
+                if import_noop:
+                    changes = {}
+                decorated = await run_in_threadpool(self._states, payload, actor, scope["state"]["principal"].role, resources, None if import_noop else changes, operation)
                 output = self._response(start["status"], start.get("headers", []), decorated, versions)
             if shared:
-                changes["workspace"] = {"kind": "workspace"}
+                if not (import_command and not changes):
+                    changes["workspace"] = {"kind": "workspace"}
                 missing = [key for key in changes if key in versions and key not in expected]
                 if missing:
                     raise MissingExpectation(sorted(missing))

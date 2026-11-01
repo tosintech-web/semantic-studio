@@ -345,6 +345,14 @@ async def run_command(pid: str, doc: str, request: Request, lang: Optional[str] 
             raise UiHTTPException(status_code=422, detail="The body must be JSON.", ui_message=make_message("request.body_json")) from exc
         raise RequestValidationError([{**error, "loc": ("body", *error["loc"])} for error in exc.errors()]) from exc
     with _errors():
+        if body.command == 'ImportMasterBatch':
+            from ..government.import_context import request_owner,bind_import_context
+            from ..government.import_receipts import process_signer
+            raw=body.args.get('batch')
+            if not isinstance(raw,dict):raise DomainError('Choose a prepared source.')
+            owner=request_owner(request,pid,raw.get('operationNonce'))
+            with bind_import_context(process_signer(),owner):
+                return await run_in_threadpool(editing_service.command,pid,doc,body.command,body.args,dry_run=body.dryRun,lang=lang)
         return await run_in_threadpool(editing_service.command, pid, doc, body.command, body.args, dry_run=body.dryRun, lang=lang)
 
 

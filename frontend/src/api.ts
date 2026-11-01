@@ -1293,3 +1293,25 @@ export function previewDomainProfileChange(pid: string, domainProfile: import(".
 export function previewGovernmentCommand(pid:string,command:string,args:Record<string,unknown>):Promise<import('./government/types').HistoryPreview> {
  return send(documentUrl(pid,'model','/commands'),{method:'POST',headers:JSON_WRITE,body:JSON.stringify({command,args,dryRun:true})}).then(r=>handle<import('./government/types').HistoryPreview>(r));
 }
+
+/** Source parsing is read-only and never advances a shared version baseline. */
+export function inspectMasterImport(pid:string,file:File,mode:import('./government/imports/types').Mode,options:import('./government/imports/types').Options):Promise<import('./government/imports/types').Inspection> {
+ const form=new FormData();form.set('file',file);form.set('mode',mode);form.set('options',JSON.stringify(options));
+ return postForm(projectUrl(pid,'/government/import/inspect'),form);
+}
+export function prepareMasterImport(pid:string,file:File,mode:import('./government/imports/types').Mode,options:import('./government/imports/types').Options,mapping:import('./government/imports/types').Mapping,selectedRows:number[],operationNonce:string):Promise<import('./government/imports/types').Prepared> {
+ const form=new FormData();form.set('file',file);form.set('mode',mode);
+ for(const [key,value] of Object.entries({options,mapping,selectedRows}))form.set(key,JSON.stringify(value));
+ form.set('operationNonce',operationNonce);
+ return postForm(projectUrl(pid,'/government/import/prepare'),form);
+}
+export async function reviewMasterImport(pid:string,signed:import('./government/imports/types').Signed,offset=0):Promise<import('./government/imports/types').Reviewed> {
+ const response=await send(documentUrl(pid,'model','/commands'),{method:'POST',headers:JSON_WRITE,body:JSON.stringify({command:'ImportMasterBatch',args:{...signed,reportOffset:offset},dryRun:true})});
+ const report=await handle<import('./government/imports/types').Review>(response);
+ const resourceVersions=JSON.parse(response.headers.get('X-Semantic-Studio-Versions')??'{}');
+ return {report,resourceVersions};
+}
+export function applyMasterImport(pid:string,signed:import('./government/imports/types').Signed,basis:string,versions:import('./team/types').ResourceVersions,requestId:string):Promise<import('./government/imports/types').Applied> {
+ return send(documentUrl(pid,'model','/commands'),{method:'POST',headers:{...JSON_WRITE,'X-Semantic-Studio-Versions':encodeTeamVersions(versions),'X-Semantic-Studio-Request-Id':requestId},body:JSON.stringify({command:'ImportMasterBatch',args:{...signed,previewBasis:basis}})}).then(handle<import('./government/imports/types').Applied>);
+}
+export function downloadMasterTemplate(pid:string,mode:import('./government/imports/types').Mode,format:'csv'|'xlsx') {return bytes(projectUrl(pid,`/government/import/templates/${mode}/${format}`));}
