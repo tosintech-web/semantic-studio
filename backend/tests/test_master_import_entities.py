@@ -85,7 +85,7 @@ def test_duplicate_input_keys_and_missing_country_refuse_whole_plan():
 def test_multiple_alias_columns_replace_one_language_as_a_single_set():
     ctx=context();node=URIRef('urn:country:AA')
     for triple in [(node,RDF.type,GOV.Country),(node,GOV.countryCode,Literal('AA')),(node,SKOS.prefLabel,Literal('Alpha',lang='en')),(node,SKOS.altLabel,Literal('Old',lang='ja')),(node,SKOS.altLabel,Literal('Keep',lang='en'))]:ctx.graph.add(triple)
-    columns=[{'column':0,'field':'code','op':'set'},{'column':1,'field':'aliases','language':'ja','op':'replace'},{'column':2,'field':'aliases','language':'ja','op':'replace'}]
+    columns=[{'column':0,'field':'code','op':'set'},{'column':1,'field':'aliases','language':'ja','op':'replace'},{'column':2,'field':'aliases','language':'JA','op':'replace'}]
     plan=plan_master_import(ctx,batch(b'code,alias1,alias2\nAA,First,Second\n',columns))
     assert plan.ready
     assert set(plan.candidate.objects(node,SKOS.altLabel))=={Literal('First',lang='ja'),Literal('Second',lang='ja'),Literal('Keep',lang='en')}

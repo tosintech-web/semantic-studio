@@ -26,7 +26,7 @@ beforeEach(async()=>{
 });
 afterEach(()=>{cleanup();projectStore._reset();configureTeam({mode:"local",authenticated:false,user:null,csrf:null});vi.restoreAllMocks();});
 function mount(){render(<Wizard owner={{pid:PID,session:projectStore.session(),authEpoch:teamAuthEpoch(),nonce:'n'}} country language="en" onClose={vi.fn()} onApplied={vi.fn()}/>);}
-async function review(){fireEvent.change(screen.getByLabelText('CSV / Excel file (up to 5 MiB)'),{target:{files:[new File(['code,names\nAA,Alpha\n'],'test.csv')]}});fireEvent.click(screen.getByRole('button',{name:'Read source'}));await screen.findByText('Source data rows: 1');fireEvent.click(screen.getByRole('button',{name:'Prepare and review'}));await screen.findByRole('button',{name:'Confirm all selected rows'});}
+async function review(confirm='Confirm all selected rows'){fireEvent.change(screen.getByLabelText('CSV / Excel file (up to 5 MiB)'),{target:{files:[new File(['code,names\nAA,Alpha\n'],'test.csv')]}});fireEvent.click(screen.getByRole('button',{name:'Read source'}));await screen.findByText('Source data rows: 1');fireEvent.click(screen.getByRole('button',{name:'Prepare and review'}));await screen.findByRole('button',{name:confirm});}
 it('requires explicit confirmation and exact reviewed team versions',async()=>{
  mount();await review();expect(api.applyMasterImport).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Confirm all selected rows'}));await screen.findByText('Import completed. Undo restores this entire batch.');expect(api.applyMasterImport).toHaveBeenCalledWith(PID,{batch,receipt:'receipt'},'basis',{workspace:3},expect.any(String));
 });
@@ -68,4 +68,22 @@ it('never reassigns retained source input to another member',async()=>{
 it('moves keyboard focus to the newly prepared review',async()=>{
  mount();await review();
  expect(document.activeElement).toBe(screen.getByRole('heading',{name:'3. Review all proposed changes'}));
+});
+
+it('uses a new request identity for an explicit new preparation with the same basis',async()=>{
+ const auth={mode:'team' as const,authenticated:true,user:{sub:'alice',email:'alice@example.test',role:'editor' as const,disabled:false,version:1},csrf:'initial'};
+ configureTeam(auth);
+ const noopReport={...report,noop:true,summary:{...report.summary,created:0,unchanged:1},rows:report.rows.map(row=>({...row,status:'unchanged'}))};
+ api.reviewMasterImport.mockResolvedValue({report:noopReport,resourceVersions:{workspace:3}});
+ api.applyMasterImport.mockResolvedValue({...changed(),noop:true,importReport:noopReport});
+ const props={owner:{pid:PID,session:projectStore.session(),authEpoch:teamAuthEpoch(),nonce:'n'},country:true,language:'en',onClose:vi.fn(),onApplied:vi.fn()};
+ const view=render(<Wizard {...props}/>);await review('Finish without changes');
+ fireEvent.click(screen.getByRole('button',{name:'Finish without changes'}));await screen.findByText('No changes were needed. Versions and Undo history were preserved.');
+ const firstId=api.applyMasterImport.mock.calls[0][4];
+ configureTeam({...auth,csrf:'rotated'});view.rerender(<Wizard {...props}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Review retained input with this session'}));
+ api.prepareMasterImport.mockResolvedValue({batch,receipt:'rotated-receipt',issues:[],summary:{selected:1,excluded:0},requiredBytes:100});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare and review'}));await screen.findByRole('button',{name:'Finish without changes'});
+ fireEvent.click(screen.getByRole('button',{name:'Finish without changes'}));await screen.findByText('No changes were needed. Versions and Undo history were preserved.');
+ expect(api.applyMasterImport.mock.calls[1][4]).not.toBe(firstId);
 });

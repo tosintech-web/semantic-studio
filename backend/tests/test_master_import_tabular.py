@@ -59,3 +59,6 @@ def test_mixed_set_operations_are_refused_before_mapping_rows():
     t=read_master_table(b'code,s1,s2\nAA,First,Second\n','data.csv',{})
     columns=[{'column':0,'field':'code','op':'set'},{'column':1,'field':'sources','op':'append'},{'column':2,'field':'sources','op':'replace'}]
     with pytest.raises(ValueError):map_master_rows(t,'countries',{'columns':columns},[1])
+
+    duplicate_names=[{'column':0,'field':'code','op':'set'},{'column':1,'field':'names','language':'en','op':'set'},{'column':2,'field':'names','language':'EN','op':'set'}]
+    with pytest.raises(ValueError):map_master_rows(t,'countries',{'columns':duplicate_names},[1])

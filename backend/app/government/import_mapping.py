@@ -24,9 +24,12 @@ def map_master_rows(table,mode,mapping,selected_rows):
     if set(mapping['defaults'])-FIELDS[mode] or set(mapping['defaults']) & KEYS:raise ValueError('Defaults cannot choose identities.')
     targets={}
     for col in mapping['columns']:
-        field=col['field'];tag=(field,col.get('language'))
+        field=col['field']
         if field not in FIELDS[mode] or col['column']>=len(table.table.columns):raise ValueError('Choose an existing column and supported field.')
         if field in {'names','aliases'} and not valid_lang(col.get('language','')):raise ValueError('Names need an explicit language.')
+        if field in {'names','aliases'}:col['language']=col['language'].casefold()
+        elif col.get('language') is not None:raise ValueError('Only names and aliases use a language tag.')
+        tag=(field,col.get('language'))
         if col.get('delimiter') and field not in {'aliases','sources'}:raise ValueError('Only sets can use a delimiter.')
         if tag in targets and field not in {'aliases','sources'}:raise ValueError('A scalar field cannot use two columns.')
         if tag in targets and targets[tag]!=col['op']:raise ValueError('Columns for one set must use the same operation.')
