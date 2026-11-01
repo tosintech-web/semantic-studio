@@ -1,5 +1,10 @@
 # 国・組織マスター取り込み Implementation Plan
 
+実装記録（2026-11-02）: Tasks 1–7とTask 8の実ブラウザー操作を実装済み。レビューで指摘された複数列の集合置換、既存期間記録0件、再認証後の入力保持を再現テスト付きで修正した。国・組織・関係の取り込み、再取り込みの無変更、1回のUndoは実Chromeで成功。新規依存・DB schema変更なし。
+
+検証: 取り込み／在庫整合性45件、API／画面／状態／翻訳48件、同一利用者の再認証と別利用者への入力引き継ぎ拒否5件、CI構成6件が成功。内部専用PostgreSQL Python 3.12は全289件成功。最終ソースのPython 3.14全体と[PR #11のCI](https://github.com/tosintech-web/semantic-studio/pull/11)で最終ゲートを確認する。Macの全体回帰では127.0.0.2未設定の既存3件と性能予算の超過を記録し、閾値・テスト選択は変更していない。元のチェックリストは設計時の受け入れ条件として残す。
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. If the user chooses delegated execution, use superpowers:subagent-driven-development instead. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 第1段階として、CSV／Excelから国・組織の新規登録・差分更新、および明示した組織関係の追加・訂正・終了を、安全なプレビューと一括Undo付きで実装する。
