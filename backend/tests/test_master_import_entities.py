@@ -1,0 +1,82 @@
+"""
+FILE: backend/tests/test_master_import_entities.py
+SUMMARY: Non-destructive country and organization batch planning.
+BASIC IDEA: Compare literal RDF expectations with a detached proposed graph.
+INPUTS / INPUT SOURCES: Synthetic S0 graphs and actual parsed/mapped CSV rows.
+EXPECTED OUTPUT: Stable identities, preserved unmapped terms and explicit ambiguity.
+"""
+from types import SimpleNamespace
+from rdflib import Graph,Literal,URIRef
+from rdflib.namespace import RDF,SKOS,DCTERMS
+from app.editing import Context
+from app.government.profile import GOV,ORG
+from app.government.import_tabular import read_master_table
+from app.government.import_mapping import map_master_rows
+from app.government.import_plan import plan_master_import
+
+
+def context(mode='countries',graph=None):
+    ctx=Context(graph if graph is not None else Graph(),{'id':'prj-000000000001','baseIri':'urn:example:','primaryLanguage':'en','domainProfile':{'id':'countries-v1' if mode=='countries' else 'government-organizations-v1','version':1}},lambda:None)
+    return ctx
+
+
+def batch(data,columns,mode='countries',defaults=None):
+    table=read_master_table(data,'test.csv',{})
+    mapping={'columns':columns,'defaults':defaults or {}}
+    mapped=map_master_rows(table,mode,mapping,[p['rowId'] for p in table.positions])
+    assert not mapped['issues']
+    return {'version':1,'source':{'sha256':'a'*64,'filename':'test.csv','options':{}},'mode':mode,'mapping':mapping,'selectedRows':mapped['selectedRows'],'operationNonce':'test','intents':mapped['intents']}
+
+COLUMNS=[{'column':0,'field':'code','op':'set'},{'column':1,'field':'names','language':'ja','op':'set'}]
+
+def test_country_patch_preserves_unmapped_values():
+    ctx=context();iri=URIRef('urn:test:jp')
+    for triple in [(iri,RDF.type,GOV.Country),(iri,GOV.countryCode,Literal('JP')),(iri,SKOS.prefLabel,Literal('Japan',lang='en')),(iri,SKOS.prefLabel,Literal('日本',lang='ja')),(iri,DCTERMS.source,Literal('A'))]:ctx.graph.add(triple)
+    original=set(ctx.graph)
+    plan=plan_master_import(ctx,batch('code,name,alias,source\nJP,日本国,にほん,B\n'.encode(),COLUMNS+[{'column':2,'field':'aliases','language':'ja','op':'append'},{'column':3,'field':'sources','op':'append'}]))
+    assert plan.ready
+    assert set(ctx.graph)==original
+    assert (iri,SKOS.prefLabel,Literal('Japan',lang='en')) in plan.candidate
+    assert (iri,SKOS.prefLabel,Literal('日本',lang='ja')) not in plan.candidate
+    assert (iri,SKOS.prefLabel,Literal('日本国',lang='ja')) in plan.candidate
+    assert set(plan.candidate.objects(iri,DCTERMS.source))=={Literal('A'),Literal('B')}
+    ctx.graph=plan.candidate
+    again=plan_master_import(ctx,batch('code,name,alias,source\nJP,日本国,にほん,B\n'.encode(),COLUMNS+[{'column':2,'field':'aliases','language':'ja','op':'append'},{'column':3,'field':'sources','op':'append'}]))
+    assert again.noop
+
+
+def test_ambiguous_code_never_becomes_new_entity():
+    ctx=context()
+    for number in range(2):
+        node=URIRef(f'urn:test:{number}');ctx.graph.add((node,RDF.type,GOV.Country));ctx.graph.add((node,GOV.countryCode,Literal('JP')))
+    plan=plan_master_import(ctx,batch(b'code,name\nJP,Name\n',COLUMNS))
+    assert not plan.ready
+    assert any(row['status']=='needs-review' for row in plan.rows)
+
+
+def test_defaults_apply_only_to_new_entities():
+    ctx=context();iri=URIRef('urn:test:old')
+    for t in [(iri,RDF.type,GOV.Country),(iri,GOV.countryCode,Literal('OLD')),(iri,SKOS.prefLabel,Literal('Old',lang='en')),(iri,DCTERMS.description,Literal('Keep'))]:ctx.graph.add(t)
+    plan=plan_master_import(ctx,batch(b'code,name\nOLD,Old\nNEW,New\n',COLUMNS,defaults={'description':'Default'}))
+    assert plan.ready
+    assert (iri,DCTERMS.description,Literal('Keep')) in plan.candidate
+    new=next(plan.candidate.subjects(GOV.countryCode,Literal('NEW')))
+    assert (new,DCTERMS.description,Literal('Default')) in plan.candidate
+
+
+def test_new_organization_resolves_country_beyond_first_page():
+    ctx=context('organizations');countries=Graph()
+    for number in range(51):
+        iri=URIRef(f'urn:country:{number}');countries.add((iri,RDF.type,GOV.Country));countries.add((iri,GOV.countryCode,Literal(str(number))))
+    ctx.country_reference=SimpleNamespace(graph=countries,basis={'sourceToken':'test'})
+    columns=COLUMNS+[{'column':2,'field':'countryCode','op':'set'},{'column':3,'field':'orgKind','op':'set'},{'column':4,'field':'sources','op':'append'}]
+    b=batch(b'code,name,country,kind,source\nORG,Office,50,Organization,Gazette\n',columns,'organizations',{'existenceStart':'open','existenceEnd':'open','affiliationStart':'open','affiliationEnd':'open'})
+    p=plan_master_import(ctx,b)
+    assert p.ready
+    assert (None,GOV.object,URIRef('urn:country:50')) in p.candidate
+    assert len(set(p.candidate.subjects(RDF.type,ORG.Organization)))==1
+
+
+def test_duplicate_input_keys_and_missing_country_refuse_whole_plan():
+    p=plan_master_import(context(),batch(b'code,name\nJP,A\nJP,B\n',COLUMNS))
+    assert not p.ready
