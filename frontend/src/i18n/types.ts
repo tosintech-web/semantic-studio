@@ -179,6 +179,8 @@ export interface MessageArgs extends ServerMessageArgs {
   "government.nextPage": undefined;
   "project.template.countries": undefined;
   "project.template.government-organizations": undefined;
+  "project.organizationMasterTitle": undefined;
+  "project.organizationMaster": undefined;
   "release.title": undefined;
   "release.note": undefined;
   "release.source": undefined;
@@ -2239,6 +2241,7 @@ export interface MessageArgs extends ServerMessageArgs {
   "catalogue.unesco.size": undefined;
   "catalogue.unesco.audience": undefined;
 
+  "home.models": undefined;
   "home.library": undefined;
   "home.preparing": undefined;
   "home.ready": undefined;

@@ -5,6 +5,7 @@ FILE: frontend/src/App.test.tsx
 ================================================================================
 
 SUMMARY
+    Workspace navigation assertions are scoped separately from Home categories.
     Tests for App: the startup chooser (what is and is not requested on mount,
     what replaces it, and the two ways back to it), the status bar's node and
     edge counts under a node budget, the removal sequence that counts saved
@@ -670,7 +671,7 @@ describe("App startup chooser", () => {
     // because the styling happens to agree with the sensible reading.
     await renderApp();
     const selected = () =>
-      screen
+      within(screen.getByRole("tablist", { name: "Workspace" }))
         .getAllByRole("tab")
         .filter((t) => t.getAttribute("aria-selected") === "true")
         .map((t) => t.textContent);
@@ -1949,11 +1950,11 @@ describe("App About control", () => {
     // told there are four views and one of them is a dead end.
     await renderApp();
 
-    const tablist = screen.getByRole("tablist");
+    const tablist = screen.getByRole("tablist", { name: "Workspace" });
     // Five now: Home (home-screen), then View / Explore / Query, then Hierarchy
     // (hierarchy-view), each a real view that swaps the main region. About still
     // does not, which is the distinction this test is about.
-    expect(screen.getAllByRole("tab")).toHaveLength(6);
+    expect(within(tablist).getAllByRole("tab")).toHaveLength(6);
     expect(tablist.contains(aboutControl())).toBe(false);
     expect(aboutControl().getAttribute("role")).toBeNull();
     expect(aboutControl().getAttribute("aria-haspopup")).toBe("dialog");
@@ -2093,7 +2094,7 @@ describe("App home screen", () => {
     // and where every route back leads, so it is the first thing in the nav.
     await renderApp();
 
-    const nav = screen.getByRole("tablist");
+    const nav = screen.getByRole("tablist", { name: "Workspace" });
     const items = [...nav.querySelectorAll("button")] as HTMLElement[];
     const home = screen.getByRole("tab", { name: "Home" });
     const load = screen.getByRole("button", { name: "Load" });
@@ -2693,7 +2694,7 @@ describe("App network approval (external-access Stage 1)", () => {
     await renderApp();
     const about = screen.getByRole("button", { name: "About" });
     const network = screen.getByRole("button", { name: "Network" });
-    expect(screen.getByRole("tablist").contains(network)).toBe(false);
+    expect(screen.getByRole("tablist", { name: "Workspace" }).contains(network)).toBe(false);
     expect(network.getAttribute("aria-haspopup")).toBe("dialog");
     expect(about.compareDocumentPosition(network) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(getNetworkPolicy).not.toHaveBeenCalled();
@@ -3374,7 +3375,7 @@ describe("App Edit page (edit-page-rework)", () => {
 
   it("AC-1: the tab is Edit, between Explore and Query; About and Network sit at the right end", async () => {
     await renderApp();
-    const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
+    const tabs = within(screen.getByRole("tablist", { name: "Workspace" })).getAllByRole("tab").map((t) => t.textContent);
     expect(tabs).toEqual(["Home", "View", "Explore", "Entities", "Edit", "Query"]);
     const row = document.querySelector(".nav-row")!;
     const last = [...row.children].slice(-4).map((el) => el.getAttribute("aria-label") ?? el.textContent);
@@ -4277,7 +4278,7 @@ it('layout-only team refresh changes the canvas read generation without changing
 
 it('opens the shared country template from Home system navigation and returns focus on cancel',async()=>{
  await act(async()=>render(<App/>));
- await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Countries'})));
+ await act(async()=>fireEvent.click(screen.getByRole('tab',{name:'Countries'})));
  const create=screen.getByRole('button',{name:'Create country group'});create.focus();
  await act(async()=>fireEvent.click(create));
  expect((screen.getByRole('combobox',{name:'Start from'})as HTMLSelectElement).value).toBe('template:countries');

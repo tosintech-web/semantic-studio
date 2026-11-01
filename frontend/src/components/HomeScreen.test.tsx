@@ -5,6 +5,8 @@ FILE: frontend/src/components/HomeScreen.test.tsx
 ================================================================================
 
 SUMMARY
+    Home categories keep masters out of the vocabulary library and share one
+    row of tabs, preserving the generic creation route and locale selection.
     Documentation refusals retain raw details across UI language changes.
     The first test for HomeScreen. Covers the library's states, the search box
     and what it does and does not filter, the two layouts and the toggle that
@@ -189,6 +191,50 @@ afterEach(() => {
 });
 
 describe("HomeScreen library", () => {
+  it("keeps master project management reachable in its dedicated tab", () => {
+    const country = { ...project("prj-country", "Country master", "2026-10-31"), domainProfile: { id: "countries-v1", version: 1 } };
+    const list = projects([country]);
+    renderScreen({ projects: list, ontologies: [] });
+    fireEvent.click(screen.getByRole("tab", { name: "Countries" }));
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Country master" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export as zip" }));
+    expect(list.onExport).toHaveBeenCalledExactlyOnceWith(country.id);
+  });
+  it("separates master projects from models, files and examples with one creation route per tab", () => {
+    const country = { ...project("prj-country", "Country master", "2026-10-31"), domainProfile: { id: "countries-v1" as const, version: 1 as const } };
+    const organization = { ...project("prj-org", "Organization master", "2026-10-31"), domainProfile: { id: "government-organizations-v1" as const, version: 1 as const } };
+    const model = project("prj-model", "Vocabulary model", "2026-10-30");
+    const list = projects([country, organization, model]);
+    renderScreen({ projects: list, ontologies: EXAMPLES });
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(cards().map(card => card.textContent).join(" ")).toContain("Vocabulary model");
+    expect(cards()).toHaveLength(4);
+    expect(screen.queryByText("Country master")).toBeNull();
+    expect(screen.queryByText("Organization master")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Create vocabulary / concept model" }));
+    expect(list.onNew).toHaveBeenLastCalledWith();
+    fireEvent.click(screen.getByRole("tab", { name: "Countries" }));
+    expect(cards()).toHaveLength(1);
+    expect(cards()[0].textContent).toContain("Country master");
+    expect(screen.queryByRole("button", { name: "Create vocabulary / concept model" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Create country group" }));
+    expect(list.onNew).toHaveBeenLastCalledWith("countries");
+    fireEvent.click(screen.getByRole("button", { name: /Open Country master/ }));
+    expect(list.onOpen).toHaveBeenLastCalledWith(country.id);
+    fireEvent.click(screen.getByRole("tab", { name: "Government organizations" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create government organization group" }));
+    expect(list.onNew).toHaveBeenLastCalledWith("government-organizations");
+    fireEvent.click(screen.getByRole("tab", { name: "Vocabulary & concept models" }));
+    expect(cards()).toHaveLength(4);
+    expect(Object.values(API).every(fn => fn.mock.calls.length === 0)).toBe(true);
+  });
+
+  it("keeps unsupported profiles visible in the vocabulary library", () => {
+    const unknown = { ...project("prj-future", "Future profile", "2026-10-30"), domainProfile: { id: "countries-v1" as const, version: 2 } };
+    renderScreen({ projects: projects([unknown]), ontologies: [] });
+    expect(cards()).toHaveLength(1);
+    expect(cards()[0].textContent).toContain("Future profile");
+  });
   it("renders one card per saved ontology", () => {
     // AC-3.
     renderScreen();
@@ -218,7 +264,7 @@ describe("HomeScreen library", () => {
       screen.getByText("Nothing here yet. Start a project, or open a file below."),
     ).toBeTruthy();
     expect(cards()).toHaveLength(0);
-    expect(screen.getByRole("button", { name: "New project" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create vocabulary / concept model" })).toBeTruthy();
     expect(fileRoutes()).toHaveLength(2);
     // No search box and no toggle over an empty library: controls that cannot
     // do anything.
@@ -279,7 +325,7 @@ describe("HomeScreen library", () => {
     const list = projects([]);
     renderScreen({ projects: list });
     const head = document.querySelector(".home-library-head")!;
-    const button = screen.getByRole("button", { name: "New project" });
+    const button = screen.getByRole("button", { name: "Create vocabulary / concept model" });
     expect(head.contains(button)).toBe(true);
     expect(button.className).toContain("primary");
     fireEvent.click(button);
@@ -579,7 +625,7 @@ describe("HomeScreen keyboard and screen reader", () => {
 
   it("focus starts on New project when the library is empty", () => {
     renderScreen({ ontologies: [], projects: projects([]) });
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "New project" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Create vocabulary / concept model" }));
   });
 
   it("focus starts on Open a file when the library is empty and there are no projects to make", () => {
@@ -620,7 +666,7 @@ describe("HomeScreen keyboard and screen reader", () => {
       expect(Number(node.getAttribute("tabindex") ?? 0)).toBeLessThanOrEqual(0);
     }
     const at = (node: Element | null) => focusable.indexOf(node!);
-    expect(at(screen.getByRole("button", { name: "New project" }))).toBeLessThan(at(searchBox()));
+    expect(at(screen.getByRole("button", { name: "Create vocabulary / concept model" }))).toBeLessThan(at(searchBox()));
     expect(at(searchBox())).toBeLessThan(at(cards()[0].querySelector("button")));
     expect(at(cards()[2].querySelector("button"))).toBeLessThan(at(fileRoutes()[0]));
   });
@@ -974,7 +1020,7 @@ it("shows Japanese library routes and opens the full entity list from its card",
   const enter = vi.fn();
   render(<I18nProvider><HomeScreen ontologies={summaries(1)} loading={false} error={null} theme="dark" workingId={null} pendingMode={null}
     onRetry={vi.fn()} onOpen={vi.fn()} onEnterMode={enter} onViewSource={vi.fn()} onRemove={vi.fn()} onOpenDialog={vi.fn()} /></I18nProvider>);
-  expect(screen.getByRole("heading", { name: "辞書ライブラリ" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "語彙・概念モデルの一覧" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "ファイルを開く" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /の項目一覧$/ }));
   expect(enter).toHaveBeenCalledWith(summaries(1)[0].id, "entities");
@@ -1001,15 +1047,18 @@ it("translates an export limit from captured bytes without repeating a failed do
   expect(downloadDocumentation).toHaveBeenCalledTimes(1);
 });
 
-it('exposes domain navigation without changing library card order or reading graphs',()=>{
+it('restores vocabulary card order after switching categories without reading graphs',()=>{
  const country={...project('prj-country','Countries group','2026-01-01'),domainProfile:{id:'countries-v1',version:1}};
  const regular=project('prj-regular','Regular project','2026-02-01');
  const list=projects([country,regular]);renderScreen({projects:list});
  const before=cards().map(card=>card.textContent);
- fireEvent.click(screen.getByRole('button',{name:'Countries'}));
+ fireEvent.click(screen.getByRole('tab',{name:'Countries'}));
  expect(screen.getByRole('button',{name:'Create country group'})).toBeTruthy();
- expect(cards().map(card=>card.textContent)).toEqual(before);
+ expect(cards()).toHaveLength(1);
+ expect(cards()[0].textContent).toContain('Countries group');
  fireEvent.click(screen.getByRole('button',{name:'Create country group'}));
  expect(list.onNew).toHaveBeenCalledWith('countries');
+ fireEvent.click(screen.getByRole('tab',{name:'Vocabulary & concept models'}));
+ expect(cards().map(card=>card.textContent)).toEqual(before);
  expect(API.getGraph).not.toHaveBeenCalled();
 });
