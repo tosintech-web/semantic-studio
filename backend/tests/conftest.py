@@ -17,6 +17,8 @@ BASIC IDEA
     PostgreSQL fixtures reset only the explicitly dedicated test schema and
     retain one writer lease per test. An audit hook rejects SQLite connections,
     and collection records the exact DB/local partition for coverage checks.
+    Native CI may then select whole-file shards after marker filtering and
+    write coverage manifests; ordinary local test runs remain unsharded.
 
     It also carries the network fixtures shared across files: an autouse reset
     of the network broker's policy and log, `loopback_is_public` (lets a pinned
@@ -193,10 +195,18 @@ def http_server():
 
 
 def pytest_addoption(parser):
+    from ci_sharding import parse_shard
     parser.addoption('--team-inventory-output', default=None, help='Write collected case IDs and database partition without running tests')
+    parser.addoption('--ci-shard', type=parse_shard, default=None, help='Run native CI shard INDEX/TOTAL, keeping each file together')
+    parser.addoption('--ci-shard-output', default=None, help='Write the native shard coverage manifest')
 
 
-@pytest.hookimpl(tryfirst=True)
+def pytest_configure(config):
+    if config.getoption('--ci-shard-output') and not config.getoption('--ci-shard'):
+        raise pytest.UsageError('--ci-shard-output requires --ci-shard')
+
+
+@pytest.hookimpl(wrapper=True, tryfirst=True)
 def pytest_collection_modifyitems(config, items):
     import json
     from pathlib import Path
@@ -211,3 +221,25 @@ def pytest_collection_modifyitems(config, items):
             'cases': sorted(item.nodeid for item in items),
             'team_db': sorted(item.nodeid for item in items if item.get_closest_marker('team_db')),
         }, indent=2) + '\n')
+    # Marker filtering belongs to pytest, and DB classification above must run
+    # first. Inventory exports intentionally describe the complete collection;
+    # neither the inventory subprocess nor an ordinary local run is sharded.
+    result = yield
+    shard = config.getoption('--ci-shard')
+    if shard:
+        from ci_sharding import make_manifest
+        try:
+            manifest = make_manifest([item.nodeid for item in items], shard)
+        except ValueError as error:
+            raise pytest.UsageError(str(error)) from error
+        selected = set(manifest['selected'])
+        kept = [item for item in items if item.nodeid in selected]
+        removed = [item for item in items if item.nodeid not in selected]
+        items[:] = kept
+        config.hook.pytest_deselected(items=removed)
+        output = config.getoption('--ci-shard-output')
+        if output:
+            target = Path(output)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+    return result
