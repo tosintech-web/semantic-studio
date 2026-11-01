@@ -7,6 +7,8 @@ BASIC IDEA
     Reset position on any view/filter change and scope all async state to its
     request. A changed token on a later page restarts once at zero; repeated
     movement asks the user to retry instead of polling indefinitely.
+    Retain accepted whole-view kind metadata while another page is loading,
+    but never expose a different dictionary's classifications.
 INPUTS / INPUT SOURCES
     Dictionary view identity, filter and sort; getEntities responses.
 EXPECTED OUTPUT
@@ -15,7 +17,7 @@ EXPECTED OUTPUT
 */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getEntities } from "../api";
-import type { EntityKindGroup, EntityPage } from "./types";
+import type { EntityKindCounts, EntityKindGroup, EntityPage } from "./types";
 export interface EntityPageOptions {
   ontologyId: string; language: string; imports: boolean; revision: number; viewGeneration: string;
   q: string; kind: EntityKindGroup; sort: "label" | "iri";
@@ -28,6 +30,7 @@ export function useEntityPage(options: EntityPageOptions) {
   const offset = position.scope === scope ? position.offset : 0;
   if (position.scope !== scope) setPosition({ scope, offset: 0 });
   const [nonce, setNonce] = useState(0);
+  const [catalog, setCatalog] = useState<{ ontologyId: string; counts: EntityKindCounts }>({ ontologyId: "", counts: {} });
   const key = JSON.stringify([scope, offset, nonce]);
   const [state, setState] = useState<PageState>({ key: "", page: null, loading: true, error: null, updating: false });
   const token = useRef<{ scope: string; value: string; expected?: string } | null>(null);
@@ -51,9 +54,11 @@ export function useEntityPage(options: EntityPageOptions) {
         setPosition({ scope, offset: 0 }); return;
       }
       token.current = { scope, value: page.revision };
+      setCatalog({ ontologyId, counts: page.kind_counts ?? {} });
       setState({ key, page, loading: false, error: null, updating: false });
     }).catch((error: unknown) => { if (!cancelled) setState({ key, page: null, loading: false, error, updating: false }); });
     return () => { cancelled = true; controller.abort(); };
   }, [key, scope, ontologyId, q, kind, sort, imports, language, offset]);
-  return { ...(state.key === key ? state : { page: null, loading: true, error: null, updating: false }), offset, setOffset, reload };
+  return { ...(state.key === key ? state : { page: null, loading: true, error: null, updating: false }),
+    kindCounts: catalog.ontologyId === ontologyId ? catalog.counts : {}, offset, setOffset, reload };
 }

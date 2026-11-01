@@ -3959,6 +3959,7 @@
     "tests/test_entities_api.py::test_all_individuals_are_paged_once_regardless_of_graph_budget",
     "tests/test_entities_api.py::test_display_lengths_preserve_full_index_match_and_unicode_codepoints",
     "tests/test_entities_api.py::test_empty_missing_invalid_and_limits",
+    "tests/test_entities_api.py::test_kind_counts_describe_the_complete_view_not_the_filtered_page",
     "tests/test_entities_api.py::test_page_defaults_filter_and_sort_are_independent_of_search_rank",
     "tests/test_entities_api.py::test_subject_only_reference_and_unrelated_url_membership",
     "tests/test_entity_budgets.py::test_entity_index_search_list_and_graph_budgets[1000-1000-200]",

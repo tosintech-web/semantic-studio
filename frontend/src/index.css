@@ -6661,6 +6661,7 @@ kbd {
 .dictionary-context { display: flex; flex-wrap: wrap; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
 .dictionary-context strong { overflow-wrap: anywhere; }
 .entity-list { padding: 1rem; }
+.entity-kind-tabs { flex-wrap: wrap; margin-bottom: 1rem; }
 .entity-list-controls, .entity-list-pages { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
 .entity-list-controls label { display: flex; flex-direction: column; gap: .25rem; }
 .entity-table-scroll { overflow-x: auto; }

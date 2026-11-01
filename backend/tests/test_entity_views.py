@@ -59,6 +59,7 @@ def test_same_view_reuses_index_and_language_projections_are_bounded(monkeypatch
     first = get(ont)
     assert get(ont) is first and len(calls) == 1
     assert first.index.entities[str(S.Dog)].display_name(first.languages) == '犬'
+    assert get(ont, lang='en').kind_counts is first.kind_counts
     for lang in ['en', 'fr', 'de', 'es']:
         assert get(ont, lang=lang).revision_token != first.revision_token
     assert len(ont.entity_cache) <= 4
@@ -70,11 +71,14 @@ def test_own_in_place_changes_are_revision_keyed_and_old_index_keeps_its_values(
     first = get(ont)
     with ont.reading():
         ont.graph.set((S.Dog, RDFS.label, Literal('新しい名前', lang='ja')))
+        ont.graph.add((S.sample, RDF.type, S.Dog))
         ont.revision += 1
     second = get(ont)
     assert second.revision_token != first.revision_token
     assert second.index.entities[str(S.Dog)].display_name(second.languages) == '新しい名前'
     assert first.index.entities[str(S.Dog)].display_name(first.languages) == '犬'
+    assert first.kind_counts.get('individual', 0) == 0
+    assert second.kind_counts['individual'] == 1
 
 
 def test_snapshots_on_off_and_empty_generation_change_invalidate_without_imports():

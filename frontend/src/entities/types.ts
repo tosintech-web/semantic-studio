@@ -13,6 +13,7 @@ EXPECTED OUTPUT
 ================================================================================
 */
 export type EntityKindGroup = "all" | "concept" | "individual" | "class" | "properties" | "other";
+export type EntityKindCounts = Partial<Record<Exclude<EntityKindGroup, "all">, number>>;
 export type EntityMatchReason = "name" | "alias" | "reading" | "search" | "identifier";
 export interface EntityMatchWire { reason: EntityMatchReason; value: string; truncated: boolean }
 export interface EntityItem {
@@ -32,6 +33,9 @@ export interface EntityPage {
   offset: number;
   limit: number;
   revision: string;
+  // Full-view counts ignore search and page filters. Older responses can omit
+  // them; the list still offers All instead of guessing from one visible page.
+  kind_counts?: EntityKindCounts;
 }
 export interface EntityParams {
   q?: string;

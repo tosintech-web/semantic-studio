@@ -90,6 +90,7 @@ def test_empty_missing_invalid_and_limits(synthetic_id):
     empty = upload(b'@prefix x: <https://example.org/empty/> .')
     page = client.get(f'/api/ontologies/{empty}/entities').json()
     assert page['items'] == [] and page['total'] == 0
+    assert page['kind_counts'] == {}
     assert client.get('/api/ontologies/not-issued/entities').status_code == 404
     for params in [{'offset': -1}, {'limit': 0}, {'limit': 101}, {'kind': 'unknown'}, {'sort': 'random'}, {'q': 'a' * 513}, {'lang': 'a' * 36}]:
         assert client.get(f'/api/ontologies/{synthetic_id}/entities', params=params).status_code == 422
@@ -115,3 +116,18 @@ def test_a_single_huge_iri_is_refused_without_cutting_it_or_dropping_the_row():
     assert detail['code'] == 'ENTITY_PAGE_TOO_LARGE' and detail['total'] == 1 and detail['suggested_limit'] == 1
     assert 'details' in detail['message'].lower()
     assert response.json()['uiMessage'] == {'code': 'entities.page_too_large', 'args': {'total': 1, 'suggested_limit': 1}}
+
+
+def test_kind_counts_describe_the_complete_view_not_the_filtered_page(synthetic_id):
+    base = f'/api/ontologies/{synthetic_id}/entities'
+    first = client.get(base, params={'limit': 1}).json()
+    counts = first['kind_counts']
+    assert counts['individual'] == 3036
+    assert sum(counts.values()) == first['total']
+    assert all(value > 0 for value in counts.values())
+    assert set(counts) <= {'concept', 'individual', 'class', 'properties', 'other'}
+    for params in ({'offset': 50}, {'kind': 'individual'}, {'kind': 'concept'},
+                   {'q': 'this-query-has-no-matches'}, {'sort': 'iri', 'lang': 'ja'}):
+        page = client.get(base, params=params).json()
+        assert page['kind_counts'] == counts
+    assert client.get(base, params={'q': 'this-query-has-no-matches'}).json()['items'] == []

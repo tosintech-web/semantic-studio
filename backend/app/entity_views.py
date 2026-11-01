@@ -9,6 +9,8 @@ BASIC IDEA
     an identical source/revision/language. Views retain source references so
     recycled object IDs cannot accidentally reuse an index from another view.
     Callers hold ontology.reading() through graph-based page projection too.
+    Full-view classification counts share the index's lifetime, so pagination
+    and searches cannot hide kinds that exist elsewhere in the dictionary.
 INPUTS / INPUT SOURCES
     Ontology, imports switch, explicit display language and existing read views.
 EXPECTED OUTPUT
@@ -19,6 +21,7 @@ EXPECTED OUTPUT
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import Counter
 import json
 from secrets import token_hex
 from types import MappingProxyType
@@ -48,6 +51,7 @@ class EntityView:
     imported_from: Mapping[str, str]
     data_from: Mapping[str, dict]
     ordered_iris: tuple[str, ...]
+    kind_counts: Mapping[str, int]
 
 
 def _source(ontology: Ontology, include_imports: bool):
@@ -78,17 +82,21 @@ def get_entity_view(ontology: Ontology, *, include_imports: bool, language: str 
             return held
         # Label projections may share a raw index: fields and kinds are not UI
         # locale. This also avoids rebuilding the graph just to change names.
-        index = next((v.index for v in ontology.entity_cache.values()
+        shared = next((v for v in ontology.entity_cache.values()
                       if v.source_key == source_key and v.graph is graph and v.source is source), None)
-        if index is None:
+        if shared is None:
             # Build from the captured graph, never by re-reading view_viz(): an
             # imports re-resolution during this call must not mix two sources.
             nodes = build_viz_graph(graph)['nodes']
             index = build_entity_index(graph, nodes)
+            kind_counts = MappingProxyType(dict(Counter(kind_group(entity.kind) for entity in index.entities.values())))
+        else:
+            index, kind_counts = shared.index, shared.kind_counts
         view = EntityView(index, languages, token_hex(16), graph, source, source_key,
                           MappingProxyType(dict(source.get('importedFrom', {}))) if source else MappingProxyType({}),
                           MappingProxyType(dict(source.get('dataFrom', {}))) if source else MappingProxyType({}),
-                          tuple(sorted(index.entities, key=lambda iri: (normalize_query(index.entities[iri].display_name(languages)), iri))))
+                          tuple(sorted(index.entities, key=lambda iri: (normalize_query(index.entities[iri].display_name(languages)), iri))),
+                          kind_counts)
         ontology.entity_cache[key] = view
         while len(ontology.entity_cache) > MAX_VIEWS:
             ontology.entity_cache.popitem(last=False)
@@ -145,7 +153,8 @@ def entity_page(view: EntityView, *, query="", kind="all", offset=0, limit=50, s
                      "match": match_wire(matches.get(iri)) if matches is not None else None,
                      "label_language": tag, "label_fallback": fallback, "label_truncated": len(text) > DISPLAY_CHARS,
                      "reference_only": entity.reference_only})
-    return {"items": rows, "total": len(found), "offset": offset, "limit": limit, "revision": view.revision_token}
+    return {"items": rows, "total": len(found), "offset": offset, "limit": limit, "revision": view.revision_token,
+            "kind_counts": dict(view.kind_counts)}
 
 
 def entity_search(view: EntityView, query: str, *, kind: str | None, limit: int) -> tuple[list[dict], int]:
