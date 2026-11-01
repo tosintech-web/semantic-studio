@@ -68,15 +68,21 @@ so test counts are not maintained as a second, easily stale copy here.
 **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to
 `main`. The existing blocking names `backend-linux` and `backend-windows` aggregate the
 Linux local/PG/Compose-browser jobs and Windows native local compatibility,
-respectively. Real PostgreSQL tests run in internal-only Linux containers on
+respectively. Each native platform runs three whole-file shards on isolated
+runners; the gates verify that their case manifests cover the full selected
+collection exactly once. Local pytest remains unsharded unless `--ci-shard`
+is explicitly supplied. Real PostgreSQL tests run in internal-only Linux containers on
 Python 3.12 and 3.14. Windows does not run native team DB integration. `frontend`
 (`npm run test:ci`, `tsc -b`, `vite build`), `docker` and `publication` also gate.
-`budgets` only reports, including the P1 browser median. A build
+Four independent `budgets-*` jobs measure native backend, frontend, P1 browser
+and PostgreSQL-runner performance without competing on one runner. Each remains
+informational; `budgets` aggregates their actual outcomes, including setup and
+cleanup failures. No required gate depends on these measurements. A build
 is not done until CI is green on its pull request.
 
 **Timing budgets are separated, not deleted.** Backend timing tests carry
 `@pytest.mark.perf`; frontend timing tests have `[budget]` in their title. CI runs
-them only in `budgets` (`-m "perf and not network"`, `npm run test:budgets`).
+them only in the `budgets-*` jobs (`-m "perf and not network"`, `npm run test:budgets`).
 A command-line `-m` *replaces* `pytest.ini`'s `-m "not network"`, so always name
 `network` again. Count-based budgets (renders, calls) are not timings and stay
 in the blocking jobs. A new wall-clock assertion gets the `[budget]` tag.
