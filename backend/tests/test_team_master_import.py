@@ -85,13 +85,31 @@ def test_accepted_import_replay_survives_receipt_key_rotation(team,monkeypatch):
 
 @pytest.mark.parametrize('step',['inspect','prepare'])
 def test_viewer_cannot_read_import_source(team,step):
+    import time
+    from types import SimpleNamespace
+    from starlette.testclient import TestClient
+    from app.team.middleware import TeamMiddleware
+    from app.routers.auth import SESSION_COOKIE
     from test_team_workspace import Harness
     pid=create(team,'countries','viewer-master')
-    second=Harness(team.workspace,'bob')
-    try:
-        second.request('GET','/api/team/versions')
-        result=second.request('PATCH','/api/team/users/alice',request_id='viewer-import-role',json={'role':'viewer','disabled':False,'expectedVersion':1})
-        assert result.status_code==200,result.text
-        refused=team.request('POST',f'/api/projects/{pid}/government/import/{step}',files={'file':('test.csv',b'code,name\nAA,Alpha\n')},data={'mode':'countries','mapping':json.dumps(MAPPING),'operationNonce':'viewer'})
-        assert refused.status_code==403,refused.text
-    finally:second.client.close()
+    runtime=SimpleNamespace(config=SimpleNamespace(public_origin='https://team.test'),
+                            auth_store=team.workspace.auth_store,workspace=team.workspace)
+    # The workspace harness intentionally enters after browser authentication.
+    # Source read authorization belongs to the production middleware, so this
+    # assertion must traverse that boundary rather than bypass it.
+    with TestClient(TeamMiddleware(team.app,runtime),base_url='https://team.test') as protected:
+        protected.cookies.set(SESSION_COOKIE,team.token)
+        session=team.workspace.auth_store.authenticate(team.token,now=time.time)
+        headers={'Origin':'https://team.test','X-Semantic-Studio':'1','X-Semantic-Studio-Csrf':session.csrf_token}
+        def source_request():
+            return protected.post(f'/api/projects/{pid}/government/import/{step}',headers=headers,
+                                  files={'file':('test.csv',b'code,name\nAA,Alpha\n')},
+                                  data={'mode':'countries','mapping':json.dumps(MAPPING),'operationNonce':'viewer'})
+        accepted=source_request();assert accepted.status_code==200,accepted.text
+        second=Harness(team.workspace,'bob')
+        try:
+            second.request('GET','/api/team/versions')
+            result=second.request('PATCH','/api/team/users/alice',request_id='viewer-import-role',json={'role':'viewer','disabled':False,'expectedVersion':1})
+            assert result.status_code==200,result.text
+            refused=source_request();assert refused.status_code==403,refused.text
+        finally:second.client.close()

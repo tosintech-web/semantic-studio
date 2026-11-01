@@ -64,3 +64,8 @@ it('never reassigns retained source input to another member',async()=>{
  expect((screen.getByRole('button',{name:'Confirm all selected rows'}) as HTMLButtonElement).disabled).toBe(true);
  expect(api.applyMasterImport).not.toHaveBeenCalled();
 });
+
+it('moves keyboard focus to the newly prepared review',async()=>{
+ mount();await review();
+ expect(document.activeElement).toBe(screen.getByRole('heading',{name:'3. Review all proposed changes'}));
+});
