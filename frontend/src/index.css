@@ -866,7 +866,7 @@ select:focus {
 /* The dense layout. One column of full-width rows; the card's own internal
    arrangement changes with it rather than being a second component. */
 .onto-grid-rows {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
@@ -975,13 +975,16 @@ select:focus {
 
 .onto-verbs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin-top: 2px;
 }
 
 .onto-verb {
-  flex: 1;
+  /* Four translated actions need more than a narrow card's width. Keep each
+     label readable and let whole buttons move to the next line. */
+  flex: 1 1 100px;
 }
 
 .onto-loading {
@@ -1082,6 +1085,7 @@ select:focus {
 .onto-row .onto-body {
   flex: 1;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 0;
@@ -1111,7 +1115,8 @@ select:focus {
 }
 
 .onto-row .onto-verbs {
-  flex: none;
+  flex: 0 1 auto;
+  max-width: 100%;
   margin-top: 0;
 }
 
