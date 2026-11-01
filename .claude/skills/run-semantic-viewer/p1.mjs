@@ -5,7 +5,7 @@ SUMMARY
     Real-browser acceptance for the Japanese dictionary workspace.
 BASIC IDEA
     Use the harness's own scratch server and Chrome profile with generated data.
-    Assert real IME/network behavior, keyboard/AX state, bounded pages, language
+    Assert real IME/network behavior, dynamic kind tabs, keyboard/AX state, bounded pages, language
     independence, same-name identity and project edit/undo/save/reload through UI.
 INPUTS / INPUT SOURCES
     Injected harness operations and independently generated synthetic RDF only.
@@ -106,7 +106,22 @@ export async function runP1({ROOT,DATA_DIR,BASE,Browser,api,uploadOntology,start
     }
     await browser.eval('document.querySelector(".entity-list input").focus()'); await key('Tab');
     assert.ok(await browser.eval('document.activeElement===document.querySelector(".entity-list-controls select") && document.activeElement.matches(":focus-visible")'));
-    await key('Tab'); assert.ok(await browser.eval('document.activeElement===document.querySelectorAll(".entity-list-controls select")[1]'));
+    await key('Tab'); assert.ok(await browser.eval('document.activeElement===document.querySelector(".entity-open")'));
+    // The kind dropdown is now a whole-dictionary tab set. Its selected tab
+    // precedes search, and changing it must preserve native keyboard focus.
+    const kindCounts = (await api('GET',`/api/ontologies/${loaded.id}/entities`)).body.kind_counts;
+    const expectedKinds = ['all',...['concept','individual','class','properties','other'].filter(kind=>kindCounts[kind]>0)];
+    assert.deepEqual(await browser.eval('[...document.querySelectorAll(".entity-kind-tabs [role=tab]")].map(tab=>tab.id.split("-").at(-1))'),expectedKinds);
+    await browser.eval('document.querySelector(".entity-list input").focus()'); await key('Tab','Tab',8);
+    assert.ok(await browser.eval('document.activeElement===document.querySelector(".entity-kind-tabs [aria-selected=true]") && document.activeElement.matches(":focus-visible")'));
+    await key('End');
+    assert.ok(await browser.eval('document.activeElement===document.querySelector(".entity-kind-tabs [role=tab]:last-child") && document.activeElement.getAttribute("aria-selected")==="true"'));
+    await key('Home');
+    assert.ok(await browser.eval('document.activeElement===document.querySelector(".entity-kind-tabs [role=tab]:first-child") && document.activeElement.getAttribute("aria-selected")==="true"'));
+    await key('ArrowRight');
+    assert.ok(await browser.eval('document.activeElement===document.querySelectorAll(".entity-kind-tabs [role=tab]")[1] && document.activeElement.getAttribute("aria-selected")==="true"'));
+    await key('Home');
+    await browser.waitFor('document.querySelector(".entity-list [role=tabpanel]")?.getAttribute("aria-busy")==="false"');
     const ax=await browser.send('Accessibility.getFullAXTree');
     assert.ok(ax.nodes.some(node=>!node.ignored&&node.role?.value==='table'));
     assert.equal(await browser.eval('document.querySelectorAll(".main-nav [role=tab][aria-selected=true]").length'),1);
