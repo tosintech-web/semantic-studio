@@ -10,7 +10,8 @@ SUMMARY
     prefix follow the name until edited, Create is unavailable with its
     reason until the form is valid, an invalid base IRI is said inline, a
     library ontology can be preselected and needs no kind, and the dialog
-    behaves as a dialog.
+    behaves as a dialog. Organization-master creation keeps its ORG template
+    fixed and its visible purpose follows the UI language.
 
 BASIC IDEA
     Rendered alone; onCreate is a spy, so what is asserted is exactly what the
@@ -261,4 +262,41 @@ it('preselects the country template when launched by the system menu',async()=>{
  fireEvent.change(field('Name'),{target:{value:'Synthetic countries'}});
  await act(async()=>{fireEvent.click(create());});
  expect(onCreate).toHaveBeenCalledTimes(1);expect(onCreate.mock.calls[0][0]).toMatchObject({template:'countries'});
+});
+
+it("keeps organization-master creation on ORG with no kind or source switch", async () => {
+  const { onCreate } = renderDialog({ initialTemplate: "government-organizations" });
+  expect(screen.getByRole("dialog", { name: "Create organization master" })).toBeTruthy();
+  expect(document.activeElement?.textContent).toBe("Create organization master");
+  expect(screen.getByRole("group", { name: "What are you making?" }).textContent).toContain("Organization master (ORG)");
+  expect(screen.queryByRole("radio")).toBeNull();
+  expect(screen.queryByLabelText("Start from")).toBeNull();
+  expect(create().getAttribute("aria-disabled")).toBe("true");
+  fireEvent.change(field("Name"), { target: { value: "Organizations" } });
+  expect(create().getAttribute("aria-disabled")).toBe("false");
+  await act(async () => { fireEvent.click(create()); });
+  expect(onCreate).toHaveBeenCalledExactlyOnceWith({
+    name: "Organizations", template: "government-organizations",
+    baseIri: "http://example.org/organizations#", prefix: "organizations", primaryLanguage: "en",
+  });
+});
+
+it("translates the fixed ORG purpose without changing the template or entered values", async () => {
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
+  const onCreate = vi.fn().mockResolvedValue(undefined);
+  render(<I18nProvider><UiLanguageSelect /><NewProjectDialog library={LIBRARY}
+    initialTemplate="government-organizations" onCreate={onCreate} onClose={vi.fn()} /></I18nProvider>);
+  expect(screen.getByRole("dialog", { name: "組織マスターを作成" })).toBeTruthy();
+  expect(screen.getByText("組織マスター（ORG）")).toBeTruthy();
+  fireEvent.change(field("名前"), { target: { value: "組織一覧" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "UIの言語" }), { target: { value: "en" } });
+  expect(screen.getByRole("dialog", { name: "Create organization master" })).toBeTruthy();
+  expect(screen.getByText("Organization master (ORG)")).toBeTruthy();
+  expect(field("Name").value).toBe("組織一覧");
+  expect(field("Primary language").value).toBe("ja");
+  await act(async () => { fireEvent.click(create()); });
+  expect(onCreate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+    name: "組織一覧", template: "government-organizations", primaryLanguage: "ja",
+  }));
+  localStorage.removeItem("semantic-studio.uiLocale.v1");
 });

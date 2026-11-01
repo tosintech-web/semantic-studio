@@ -4,12 +4,13 @@ FILE: frontend/src/components/HomeScreen.tsx
 ================================================================================
 
 SUMMARY
-    Countries and government groups have manifest-only navigation through the
-    same guarded open/new-project callbacks as the existing library cards.
+    Country masters, organization masters and vocabulary models share Home tabs.
+    The default vocabulary panel excludes supported master profiles and retains
+    the existing library actions; all navigation reads manifest summaries only.
     The screen the application opens on, and the screen the Home control returns
     to from anywhere. It shows one library -- the person's projects and loaded
     files, most recent first, then the three bundled examples -- as cards or as
-    dense rows, headed with New project, a search box and a view toggle, then
+    dense rows, headed with model creation, a search box and a view toggle, then
     the two file-loading routes (home-and-examples 5.5).
 
 BASIC IDEA
@@ -86,6 +87,7 @@ import { triggerDownload } from "../download";
 import { libraryEntries } from "../home/libraryOrder";
 import OntologyCard from "./OntologyCard";
 import GroupNavigation from "../government/GroupNavigation";
+import { supportedProfile } from "../government/form";
 import ProjectCard, { type ProjectActions } from "./ProjectsSection";
 import type { AppMode, OntologySummary, ProjectSummary, ProjectTemplate, Theme } from "../types";
 
@@ -394,7 +396,7 @@ export default function HomeScreen({
 
   const projectList = projects?.list;
   const entries = useMemo(
-    () => libraryEntries(projectList ?? [], ontologies),
+    () => libraryEntries((projectList ?? []).filter(project => !supportedProfile(project.domainProfile)), ontologies),
     [projectList, ontologies],
   );
 
@@ -430,26 +432,7 @@ export default function HomeScreen({
   const announcement = docsStatus === "preparing" ? t("home.preparing") : docsStatus === "ready" ? t("home.ready") : needle ? matching.length === 1 ? t("home.matches.one") : t("home.matches.many", { count: matching.length }) : "";
   const heading = pendingMode ? t(`home.pending.${pendingMode}`) : t("home.library");
 
-  return (
-    // Both class names on purpose. `start-screen` is what carries the layout
-    // and D-022's one scoped focus rule, neither of which changed; `home-screen`
-    // is what this screen's own rules key on.
-    <main className="main start-screen home-screen" aria-labelledby="home-screen-title">
-      <div className="start-screen-inner">
-        <h1 id="home-screen-title">Semantic Studio</h1>
-        <p className="start-lede">
-          {pendingMode
-            ? t("home.pick")
-            : t("home.begin")}
-        </p>
-
-        {/* Rendered even when idle: a live region added to the DOM at the same
-            moment as its text is unreliably announced. */}
-        <div className="start-live" role="status" aria-live="polite">
-          {announcement}
-        </div>
-
-        {projects&&<GroupNavigation projects={projects.list} onOpen={projects.onOpen} onCreate={projects.onNew} canEdit={team.canEdit&&!team.suspended} busy={projectBusyId!==null||projects.loading}/>}
+  const libraryPanel = (
         <section className="start-section" aria-labelledby="home-library-heading">
           <div className="home-library-head">
             <h2 id="home-library-heading">{heading}</h2>
@@ -564,6 +547,30 @@ export default function HomeScreen({
               leaves a broken file behind. */}
           {!!docsError && <><p className="detail-error">{renderServerError(docsError, t)}</p><details><summary>{t("common.details")}</summary><pre>{docsError instanceof Error ? docsError.message : String(docsError)}</pre></details></>}
         </section>
+  );
+
+  return (
+    // Both class names on purpose. `start-screen` is what carries the layout
+    // and D-022's one scoped focus rule, neither of which changed; `home-screen`
+    // is what this screen's own rules key on.
+    <main className="main start-screen home-screen" aria-labelledby="home-screen-title">
+      <div className="start-screen-inner">
+        <h1 id="home-screen-title">Semantic Studio</h1>
+        <p className="start-lede">
+          {pendingMode
+            ? t("home.pick")
+            : t("home.begin")}
+        </p>
+
+        {/* Rendered even when idle: a live region added to the DOM at the same
+            moment as its text is unreliably announced. */}
+        <div className="start-live" role="status" aria-live="polite">
+          {announcement}
+        </div>
+
+        {projects ? <GroupNavigation projects={projects.list} onOpen={projects.onOpen} onCreate={projects.onNew}
+          canEdit={team.canEdit&&!team.suspended} busy={projectBusyId!==null||projects.loading}
+          loading={projects.loading} error={projects.error} projectActions={projects} busyId={projectBusyId}>{libraryPanel}</GroupNavigation> : libraryPanel}
 
         <section className="start-section" aria-labelledby="home-or-heading">
           <h2 id="home-or-heading">{t("home.or")}</h2>

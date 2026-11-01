@@ -6,7 +6,9 @@ FILE: frontend/src/components/NewProjectDialog.tsx
 SUMMARY
     System navigation may preselect a template; ordinary creation still asks
     the user to choose a kind and uses exactly the same submission logic.
-    Country and government groups share the existing ontology creation flow.
+    Organization-master creation fixes the ORG template and shows its purpose
+    instead of the generic kind and source controls. Country groups retain
+    the existing ontology creation flow.
     The New project form (authoring-foundations 5.1, relationships 5.1):
     first the kind, Ontology or Taxonomy, each with its sentence; then a
     name, a starting point (the chosen kind's two templates, or an ontology
@@ -22,7 +24,7 @@ BASIC IDEA
     (and the focus-loss rule never arises). Each invalid field says so inline
     once it has been touched.
 
-    The kind is two native radio buttons in a fieldset, each labelled by its
+    In ordinary creation the kind is two native radio buttons in a fieldset, each labelled by its
     name and sentence, so a screen reader reads the sentence as it lands on
     the choice. Nothing is chosen at first -- the choice is the learner's to
     make, not a default to overlook -- and Create says *Choose Ontology or
@@ -36,6 +38,8 @@ INPUTS / INPUT SOURCES (props)
     - library: the ontologies a project can start from.
     - initialSource: a library ontology id to preselect ("Start a project from
       this" on a library card), or undefined to start by choosing a kind.
+    - initialTemplate: the system menu's template; government-organizations
+      fixes the purpose and starting point for organization-master creation.
     - onCreate: carries out the creation; resolves when the project is open.
     - onClose: the dialog's three exits (Cancel, Escape, backdrop).
 
@@ -78,6 +82,7 @@ interface Props {
 
 export default function NewProjectDialog({ library, initialSource, initialTemplate, onCreate, onClose }: Props) {
   const { locale, t } = useI18n();
+  const organizationMaster = initialTemplate === "government-organizations" && !initialSource;
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const reasonId = useId();
@@ -194,7 +199,7 @@ export default function NewProjectDialog({ library, initialSource, initialTempla
         aria-modal="true"
         aria-labelledby="new-project-title"
       >
-        <h2 id="new-project-title" ref={headingRef} tabIndex={-1} className="confirm-title">{t("project.title")}</h2>
+        <h2 id="new-project-title" ref={headingRef} tabIndex={-1} className="confirm-title">{t(organizationMaster ? "project.organizationMasterTitle" : "project.title")}</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -203,7 +208,7 @@ export default function NewProjectDialog({ library, initialSource, initialTempla
         >
           <fieldset className="form-field new-project-kinds">
             <legend>{t("project.kindQuestion")}</legend>
-            {choices.map((choice) => (
+            {organizationMaster ? <p>{t("project.organizationMaster")}</p> : choices.map((choice) => (
               <label key={choice.kind} className={`new-project-kind${kind === choice.kind ? " chosen" : ""}`}>
                 <input
                   type="radio"
@@ -220,7 +225,7 @@ export default function NewProjectDialog({ library, initialSource, initialTempla
             ))}
           </fieldset>
           {field("name", t("project.name"), name, setName)}
-          <div className="form-field">
+          {!organizationMaster && <div className="form-field">
             <label htmlFor="new-project-source">{t("project.source")}</label>
             <select
               id="new-project-source"
@@ -253,7 +258,7 @@ export default function NewProjectDialog({ library, initialSource, initialTempla
             {fromLibrary && (
               <p id="new-project-source-hint" className="form-hint">{t("project.copyHelp")}</p>
             )}
-          </div>
+          </div>}
           {field(
             "baseIri",
             t("project.baseIri"),

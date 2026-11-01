@@ -5,7 +5,8 @@ SUMMARY
     Synthetic real-Chrome country and government entry acceptance.
 BASIC IDEA
     Own a scratch server and browser; register entities through native controls,
-    check language-independent drafts, keyboard focus and accessible names.
+    check parallel Home category tabs, fixed ORG creation, language-independent
+    drafts, keyboard focus and accessible names.
 INPUTS / INPUT SOURCES
     Injected harness operations and generated, fictional groups only.
 EXPECTED OUTPUT
@@ -32,20 +33,57 @@ export async function runGovernmentWorkflow({BASE,b,api,log,replayRegistration})
     removeNetwork=b.on('Network.requestWillBeSent',event=>{if(new URL(event.request.url).pathname.endsWith('/graph'))graphReads++;});
     removeDialog=b.on('Page.javascriptDialogOpening',()=>{confirmations++;void b.send('Page.handleJavaScriptDialog',{accept:acceptNavigation});});
     const enter=async()=>{await b.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});await b.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});};
+    const categoryTabs='.government-group-buttons [role=tab]';
+    assert.deepEqual(await b.eval(`Array.from(document.querySelectorAll('${categoryTabs}')).map(e=>e.getAttribute('aria-selected'))`),['false','false','true']);
+    await b.select('.ui-language-select select','ja');
+    assert.deepEqual(await b.eval(`Array.from(document.querySelectorAll('${categoryTabs}')).map(e=>e.textContent)`),['国マスター','組織マスター','語彙・概念モデル']);
+    log('home-category-tabs',await b.shot('home-category-tabs-ja'));
+    await b.select('.ui-language-select select','en');
+    await b.clickText(categoryTabs,'Vocabulary & concept models');
+    for(const [key,code,index] of [['ArrowRight',39,0],['ArrowLeft',37,2],['Home',36,0],['End',35,2]]){
+      await b.send('Input.dispatchKeyEvent',{type:'keyDown',key,code:key,windowsVirtualKeyCode:code});
+      await b.send('Input.dispatchKeyEvent',{type:'keyUp',key,code:key,windowsVirtualKeyCode:code});
+      assert.equal(await b.eval(`document.activeElement===document.querySelectorAll('${categoryTabs}')[${index}]`),true);
+      assert.equal(await b.eval(`document.querySelectorAll('${categoryTabs}[aria-selected="true"]').length`),1);
+      assert.equal(await b.eval(`document.activeElement.matches(':focus-visible') && getComputedStyle(document.activeElement).outlineStyle!=='none'`),true);
+    }
+    const categoryAx=await b.send('Accessibility.getFullAXTree');
+    assert.ok(categoryAx.nodes.some(n=>n.role?.value==='tab'&&n.name?.value==='Vocabulary & concept models'&&n.properties?.some(p=>p.name==='selected'&&p.value.value===true)));
+    await b.clickText('.home-controls button','Create vocabulary / concept model');
+    await b.waitFor('document.querySelector("[role=dialog]")');
+    assert.equal(await b.eval('document.querySelectorAll("input[name=new-project-kind]").length'),2,'generic creation retains ontology/taxonomy choices');
+    await b.clickText('[role=dialog] button','Cancel');
+    assert.equal(graphReads,0,'Home category changes never read graphs');
     const createFromMenu=async(template,name,cancelFirst=false)=>{
       const before=graphReads;await b.clickText('.government-group-buttons button',template==='countries'?'Countries':'Government organizations');
       const label=template==='countries'?'Create country group':'Create government organization group';
       await b.clickText('.government-group-navigation section button',label);
       await b.waitFor('document.querySelector("[role=dialog]")');
       assert.equal(graphReads,before,'domain menu never loads graphs');
-      assert.equal(await b.eval('document.querySelector("#new-project-source").value'),`template:${template}`);
+      if(template==='government-organizations'){
+        assert.equal(await b.eval('document.querySelector("#new-project-title").textContent'),'Create organization master');
+        assert.equal(await b.eval('document.querySelector(".new-project-kinds").textContent'),'What are you making?Organization master (ORG)');
+        assert.equal(await b.eval('document.querySelectorAll("[role=dialog] input[type=radio],#new-project-source").length'),0);
+        const ax=await b.send('Accessibility.getFullAXTree');
+        assert.ok(ax.nodes.some(n=>n.role?.value==='dialog'&&n.name?.value==='Create organization master'));
+        await b.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+        await b.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+        assert.equal(await b.eval('document.activeElement.id'),'new-project-name');
+        assert.equal(await b.eval('document.activeElement.matches(":focus-visible")'),true);
+        log('government-org-create',await b.shot('government-org-create'));
+      }else{
+        assert.equal(await b.eval('document.querySelector("#new-project-source").value'),`template:${template}`);
+      }
       if(cancelFirst){
         await b.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});await b.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
         await b.waitFor('!document.querySelector("[role=dialog]")');assert.equal(await b.eval('document.activeElement.textContent'),label);await enter();await b.waitFor('document.querySelector("[role=dialog]")');
       }
       await b.type('#new-project-name',name);await b.clickText('[role=dialog] button','Create');
       await b.waitFor('document.querySelector(".government-workspace")');
-      const response=await api('GET','/api/projects');assert.ok(response.ok);return response.body.find(p=>p.name===name).id;
+      const response=await api('GET','/api/projects');assert.ok(response.ok);
+      const project=response.body.find(p=>p.name===name);
+      assert.equal(project.domainProfile.id,template==='countries'?'countries-v1':'government-organizations-v1');
+      return project.id;
     };
     countries=await createFromMenu('countries','Synthetic countries',true);
     await b.click(`#government-new-${countries}`);
@@ -128,7 +166,7 @@ export async function runGovernmentWorkflow({BASE,b,api,log,replayRegistration})
     // otherwise the team poll correctly suspends the newly entered input.
     await b.goto(BASE);await b.waitFor('document.querySelector(".home-screen")');
     await b.clickText('.government-group-buttons button','Government organizations');
-    await b.clickText('.government-group-navigation section li button','Synthetic government');
+    await b.click('.government-master-panel button[aria-label="Open Synthetic government"]');
     await b.waitFor('document.querySelector(".government-dated-view .government-entry-list")?.textContent.includes("Same agency")');
     await b.clickText('.government-workspace button','New relationship');
     await b.waitFor('document.querySelectorAll(".government-form select option").length>5');

@@ -6737,12 +6737,13 @@ kbd {
   .project-header #project-doc-select { max-width: 160px; }
 }
 
-.government-group-navigation { border-bottom: 1px solid var(--border); padding-block: 16px; }
-.government-group-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
-.government-group-buttons [aria-pressed="true"] { border-color: var(--accent); font-weight: 600; }
+.government-group-navigation { padding-block: 16px; }
+.government-group-buttons { display: flex; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+.government-group-buttons [aria-selected="true"] { border-color: var(--accent); font-weight: 600; }
 .government-group-navigation section { padding-block: 16px; }
-.government-group-navigation label { display: block; margin-block: 12px 6px; }
-.government-group-navigation ul { list-style: none; padding: 0; display: grid; gap: 8px; }
-.government-group-navigation li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.government-group-navigation li button { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
-.government-group-navigation li code { max-width: 100%; overflow-wrap: anywhere; }
+.government-master-panel label { display: block; margin-block: 12px 6px; }
+.government-master-panel ul { list-style: none; padding: 0; display: grid; gap: 8px; }
+.government-master-panel li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.government-master-panel li > button { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.government-master-panel li > article { width: 100%; }
+.government-master-panel li code { max-width: 100%; overflow-wrap: anywhere; }
