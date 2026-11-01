@@ -5,6 +5,8 @@ FILE: frontend/src/api.test.ts
 
 SUMMARY
     Declined approvals retain unique raw hosts as flat locale-independent facts.
+    Master source preparation, reviewed confirmation and templates use the same
+    guarded transport; the export inventory includes every new endpoint.
     Proves every call in api.ts that changes something on the server sends the
     X-Semantic-Studio header, and that read-only calls are plain GETs. Also
     proves the approval round trip in `send` (external-access Stage 1): a 409
@@ -122,7 +124,14 @@ afterEach(() => {
 
 // One call per exported function. The arguments are placeholders: fetch is a
 // spy, so nothing reaches a server.
+const IMPORT_BATCH: import('./government/imports/types').Batch={version:1,mode:'countries',source:{sha256:'s',filename:'test.csv',totalRows:1},operationNonce:'n',intents:[],mapping:{columns:[],defaults:{},rowOverrides:[]},selectedRows:[1]};
+const SIGNED_IMPORT={batch:IMPORT_BATCH,receipt:'receipt'};
 const CALLS: Record<string, () => Promise<unknown>> = {
+  inspectMasterImport:()=>api.inspectMasterImport('prj-1',new File(['code\nAA'],'test.csv'),'countries',{header:true}),
+  prepareMasterImport:()=>api.prepareMasterImport('prj-1',new File(['code\nAA'],'test.csv'),'countries',{header:true},{columns:[],defaults:{},rowOverrides:[]},[1],'nonce'),
+  reviewMasterImport:()=>api.reviewMasterImport('prj-1',SIGNED_IMPORT),
+  applyMasterImport:()=>api.applyMasterImport('prj-1',SIGNED_IMPORT,'basis',{workspace:1},'request'),
+  downloadMasterTemplate:()=>api.downloadMasterTemplate('prj-1','countries','xlsx'),
   authStatus: () => api.authStatus(),
   loginTeam: () => api.loginTeam(),
   logoutTeam: () => api.logoutTeam(),
@@ -267,14 +276,15 @@ describe("api client header (S-6)", () => {
     // a load's cancel one POST (load-progress 5.3); the reuse plan one POST
     // (ShareDomain's dry run, attribute-reuse 5.2); a query's hidden results
     // one POST (/nodes, query-page-rework 5.2); P3 adds two POSTs
-    // (release preview and approval).
+    // (release preview and approval). Master import adds four guarded POSTs
+    // (inspect, prepare, review and apply), and one plain template GET.
     const expected = [
       ...Array(6).fill("DELETE"),
       "PATCH",
       "PATCH",
       "PATCH",
       "PATCH",
-      ...Array(36).fill("POST"),
+      ...Array(40).fill("POST"),
       "PUT",
       "PUT",
       "PUT",
