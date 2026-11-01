@@ -18,7 +18,7 @@ import { useEntityPage, type EntityPageOptions } from "./useEntityPage";
 import type { EntityPage } from "./types";
 const { getEntities } = vi.hoisted(() => ({ getEntities: vi.fn() }));
 vi.mock("../api", () => ({ getEntities }));
-const page = (revision: string, offset = 0): EntityPage => ({ revision, offset, limit: 50, total: 101, items: [{ iri: "https://example.org/"+revision, label: revision, kind: "concept", description: null, match: null, label_language: "ja", label_fallback: false, label_truncated: false, reference_only: false }] });
+const page = (revision: string, offset = 0): EntityPage => ({ revision, offset, limit: 50, total: 101, kind_counts: revision === "old" ? { class: 1 } : { concept: 101 }, items: [{ iri: "https://example.org/"+revision, label: revision, kind: "concept", description: null, match: null, label_language: "ja", label_fallback: false, label_truncated: false, reference_only: false }] });
 const opts: EntityPageOptions = { ontologyId: "one", language: "ja", imports: true, revision: 1, viewGeneration: "1", q: "", kind: "all", sort: "label" };
 beforeEach(() => { getEntities.mockReset(); getEntities.mockResolvedValue(page("a")); });
 afterEach(cleanup);
@@ -36,8 +36,11 @@ it.each(["ontologyId", "language", "imports", "revision", "viewGeneration", "q",
   const { result, rerender } = renderHook(useEntityPage, { initialProps: opts });
   const signal = getEntities.mock.calls[0][2] as AbortSignal;
   const next = { ...opts, [field]: field === "imports" ? false : field === "revision" ? 2 : field === "kind" ? "individual" : field === "sort" ? "iri" : "new" };
-  rerender(next); expect(signal.aborted).toBe(true); expect(result.current.page).toBeNull(); await settle();
+  rerender(next); expect(signal.aborted).toBe(true); expect(result.current.page).toBeNull();
+  if (field === "ontologyId") expect(result.current.kindCounts).toEqual({});
+  await settle();
   await act(async () => { old(page("old")); }); expect(result.current.page?.revision).toBe("a");
+  expect(result.current.kindCounts).toEqual({ concept: 101 });
 });
 it("restarts at zero once when a later page has a different token", async () => {
   const { result } = renderHook(useEntityPage, { initialProps: opts }); await settle();

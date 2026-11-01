@@ -25,7 +25,7 @@ afterEach(() => { cleanup(); getEntities.mockReset(); });
 
 it.each([1000,10000,40000])('[budget] makes a 50-row page interactive within 500ms for %i entries', async total => {
   const samples:number[] = [];
-  const data:EntityPage = {total,offset:0,limit:50,revision:'synthetic',items:Array.from({length:50},(_,number) => ({
+  const data:EntityPage = {total,offset:0,limit:50,revision:'synthetic',kind_counts:{class:total},items:Array.from({length:50},(_,number) => ({
     iri:`https://example.org/budget/${number}`,label:`${number}`+'合成辞書項目'.repeat(40).slice(0,190),kind:'class',
     description:'合成説明'.repeat(30),match:null,label_language:'ja',label_fallback:false,label_truncated:false,reference_only:false,
   }))};

@@ -4042,6 +4042,9 @@ describe("App: a run before the graph is drawn (query-page-rework 5.2)", () => {
 
 it("opens the full list without waiting for or requesting graph JSON", async () => {
   await renderApp();
+  const listIcon = screen.getByRole("tab", { name: "Entities" }).querySelector("svg");
+  expect(listIcon).not.toBeNull();
+  expect(listIcon?.getAttribute("aria-hidden")).toBe("true");
   await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Entities" })); });
   await act(async () => { fireEvent.click(cardVerb("Entities", "FIBO")); });
   expect(getEntities).toHaveBeenCalled(); expect(getGraph).not.toHaveBeenCalled();

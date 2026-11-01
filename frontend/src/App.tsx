@@ -229,6 +229,7 @@ import {
   IconAbout,
   IconClose,
   IconExplore,
+  IconEntities,
   IconEdit,
   IconShapes,
   IconHome,
@@ -1960,6 +1961,7 @@ export default function App() {
             <button role="tab" aria-selected={tabSelected("entities")}
               className={tabSelected("entities") ? "nav-item active" : "nav-item"}
               onClick={() => onPickMode("entities")} title={activeId ? t("nav.entities") : t("app.pickFirst")}>
+              <IconEntities />
               <span>{t("nav.entities")}</span>
             </button>
             {/* Edit (edit-page-rework 5.1): the job, between looking at the

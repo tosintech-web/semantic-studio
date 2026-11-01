@@ -5,14 +5,16 @@ SUMMARY
     Complete dictionary browser independent of the graph drawing budget.
 BASIC IDEA
     Fetch one 50-row page, retain local filter/sort controls and select by IRI.
-    The ordinary table preserves keyboard navigation and explicit true totals.
+    Whole-dictionary metadata supplies only kinds present in the current view;
+    accessible tabs preserve their place while requests are pending.
 INPUTS / INPUT SOURCES
     Dictionary/view identity and a callback into App's existing detail selection.
 EXPECTED OUTPUT
     Bounded rows, paging, match explanations and translated loading/retry state.
 ================================================================================
 */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { useEntityPage } from "../entities/useEntityPage";
 import type { EntityKindGroup } from "../entities/types";
 import { kindLabelMessage } from "../i18n/kindLabel";
@@ -28,11 +30,45 @@ export default function EntityList({ initialQuery, onSelect, onReferenceOnly, se
   const [query, setQuery] = useState(initialQuery);
   const [composing, setComposing] = useState(false);
   const [q, setQ] = useState(initialQuery);
-  const [kind, setKind] = useState<EntityKindGroup>("all");
+  const [kindSelection, setKindSelection] = useState<{ owner: string; kind: EntityKindGroup }>({ owner: identity.ontologyId, kind: "all" });
+  const kind = kindSelection.owner === identity.ontologyId ? kindSelection.kind : "all";
+  if (kindSelection.owner !== identity.ontologyId) setKindSelection({ owner: identity.ontologyId, kind: "all" });
   const [sort, setSort] = useState<"label" | "iri">("label");
-  const { page, loading, error, updating, offset, setOffset, reload } = useEntityPage({ ...identity, q, kind, sort });
+  const { page: loadedPage, kindCounts, loading, error, updating, offset, setOffset, reload } = useEntityPage({ ...identity, q, kind, sort });
+  const tabsId = useId();
+  const tabRefs = useRef<Partial<Record<EntityKindGroup, HTMLButtonElement | null>>>({});
+  const focusedKind = useRef<EntityKindGroup | null>(null);
+  const restoreAllFocus = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const focusAfterPage = useRef(false);
+  const available = groups.filter(group => group === "all" || (kindCounts[group] ?? 0) > 0);
+  const missingKind = loadedPage !== null && kind !== "all" && (kindCounts[kind] ?? 0) <= 0;
+  const page = missingKind ? null : loadedPage;
+  const selectKind = (next: EntityKindGroup) => {
+    focusAfterPage.current = false;
+    setKindSelection({ owner: identity.ontologyId, kind: next });
+  };
+  useLayoutEffect(() => {
+    // An edit can remove the final member of the chosen kind. Reset before
+    // paint; restore focus only if the disappearing tab actually held it.
+    if (missingKind) {
+      restoreAllFocus.current = focusedKind.current === kind;
+      focusAfterPage.current = false;
+      setKindSelection({ owner: identity.ontologyId, kind: "all" });
+    } else if (restoreAllFocus.current) {
+      restoreAllFocus.current = false;
+      tabRefs.current.all?.focus();
+    }
+  }, [missingKind, kind, identity.ontologyId]);
+  const moveTab = (event: KeyboardEvent<HTMLDivElement>) => {
+    const at = available.indexOf(kind);
+    let next: EntityKindGroup | undefined;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = available[(at + 1) % available.length];
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = available[(at + available.length - 1) % available.length];
+    else if (event.key === "Home") next = available[0];
+    else if (event.key === "End") next = available[available.length - 1];
+    if (next) { event.preventDefault(); selectKind(next); tabRefs.current[next]?.focus(); }
+  };
   useEffect(() => { setQuery(initialQuery); setQ(initialQuery); }, [initialQuery, identity.ontologyId]);
   useEffect(() => {
     if (composing) return;
@@ -53,17 +89,23 @@ export default function EntityList({ initialQuery, onSelect, onReferenceOnly, se
   const range = page ? t("entities.range", { start: page.total ? page.offset + 1 : 0, end: Math.min(page.offset + page.items.length, page.total), total: page.total }) : "";
   return <section className="entity-list" aria-labelledby="entities-heading">
     <h2 id="entities-heading" ref={heading} tabIndex={-1}>{t("nav.entities")}</h2>
+    <div className="side-tabs entity-kind-tabs" role="tablist" aria-label={t("entities.kind")} onKeyDown={moveTab}>
+      {available.map(group => <button key={group} type="button" role="tab"
+        ref={element => { tabRefs.current[group] = element; }}
+        id={`${tabsId}-${group}`} aria-controls={`${tabsId}-panel`} aria-selected={kind === group}
+        tabIndex={kind === group ? 0 : -1} className={kind === group ? "side-tab active" : "side-tab"}
+        onFocus={() => { focusedKind.current = group; }} onBlur={() => { focusedKind.current = null; }}
+        onClick={() => selectKind(group)}>{t(`entities.${group}`)}</button>)}
+    </div>
+    <div role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${missingKind ? "all" : kind}`} aria-busy={loading || missingKind}>
     <div className="entity-list-controls">
       <label>{t("entities.filter")}<input type="search" value={query} maxLength={512}
         onCompositionStart={() => setComposing(true)} onCompositionEnd={() => setComposing(false)} onChange={e => setQuery(e.target.value)} /></label>
-      <label>{t("entities.kind")}<select value={kind} onChange={e => setKind(e.target.value as EntityKindGroup)}>
-        {groups.map(group => <option key={group} value={group}>{t(`entities.${group}`)}</option>)}
-      </select></label>
       <label>{t("entities.sort")}<select value={sort} onChange={e => setSort(e.target.value as "label" | "iri")}>
         <option value="label">{t("entities.sortLabel")}</option><option value="iri">{t("entities.sortIri")}</option>
       </select></label>
     </div>
-    <p role="status" aria-live="polite">{loading ? t("search.loading") : updating ? t("entities.updating") : error ? renderServerError(error, t) : range}</p>
+    <p role="status" aria-live="polite">{loading || missingKind ? t("search.loading") : updating ? t("entities.updating") : error ? renderServerError(error, t) : range}</p>
     {(error || updating) && <button type="button" onClick={reload}>{t("common.retry")}</button>}
     {!!error && <details><summary>{t("common.error")}</summary><pre>{error instanceof Error ? error.message : String(error)}</pre></details>}
     {page && <>
@@ -84,5 +126,6 @@ export default function EntityList({ initialQuery, onSelect, onReferenceOnly, se
         <button type="button" disabled={page.offset + page.items.length >= page.total} onClick={() => move(offset + 50)}>{t("entities.next")}</button>
       </div>
     </>}
+    </div>
   </section>;
 }

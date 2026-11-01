@@ -5,7 +5,7 @@ FILE: frontend/src/components/icons.tsx
 
 SUMMARY
     A set of small inline SVG icons used in the header nav and toolbar (Home,
-    Load, View, Explore, Query, Hierarchy, Shapes, About, Network, sun/moon
+    Load, View, Explore, Entities, Query, Hierarchy, Shapes, About, Network, sun/moon
     theme toggle, close, trash).
 
 BASIC IDEA
@@ -64,6 +64,16 @@ export function IconExplore() {
       <path d="M7.8 15.1L10.8 8.6" />
       <path d="M13.7 8.2l3 8.2" />
       <path d="M8.6 17.4l6.3.9" />
+    </svg>
+  );
+}
+
+/* A table distinguishes the complete item list from the graph and pencil. */
+export function IconEntities() {
+  return (
+    <svg {...base}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M3 14h18M9 4v16" />
     </svg>
   );
 }
