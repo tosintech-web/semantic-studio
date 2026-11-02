@@ -7,7 +7,7 @@ INPUTS / INPUT SOURCES: Synthetic CSV, project and signed batch.
 EXPECTED OUTPUT: Apply requires an owned review and is never retried implicitly.
 */
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
-import {screen,fireEvent,cleanup} from '@testing-library/react';
+import {screen,fireEvent,cleanup,act} from '@testing-library/react';
 import {renderEn as render} from '../../testutils/i18n';
 import Wizard from './MasterImportWizard';
 import {projectStore} from '../../state/projectStore';
@@ -86,4 +86,51 @@ it('uses a new request identity for an explicit new preparation with the same ba
  fireEvent.click(screen.getByRole('button',{name:'Prepare and review'}));await screen.findByRole('button',{name:'Finish without changes'});
  fireEvent.click(screen.getByRole('button',{name:'Finish without changes'}));await screen.findByText('No changes were needed. Versions and Undo history were preserved.');
  expect(api.applyMasterImport.mock.calls[1][4]).not.toBe(firstId);
+});
+
+it('discards the old confirmation when the source is inspected again',async()=>{
+ mount();await review();
+ await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Read source'}));});
+ expect(screen.queryByRole('button',{name:'Confirm all selected rows'})).toBeNull();
+ expect(api.applyMasterImport).not.toHaveBeenCalled();
+});
+
+it('cannot apply an old report after a new preparation refuses its input',async()=>{
+ mount();await review();
+ api.prepareMasterImport.mockResolvedValue({batch:null,receipt:null,issues:[{code:'government.invalid_input',args:{},reason:'Synthetic refusal'}],summary:{selected:1,excluded:0},requiredBytes:0});
+ await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Prepare and review'}));});
+ expect(screen.queryByRole('button',{name:'Confirm all selected rows'})).toBeNull();
+ expect(api.applyMasterImport).not.toHaveBeenCalled();
+});
+
+it('cannot apply an old report if the replacement review fails',async()=>{
+ mount();await review();api.reviewMasterImport.mockRejectedValue(new Error('Synthetic review outage'));
+ await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Prepare and review'}));});
+ expect(screen.queryByRole('button',{name:'Confirm all selected rows'})).toBeNull();
+ expect(api.applyMasterImport).not.toHaveBeenCalled();
+});
+
+it('keeps the accepted mixed row counts in the result screen',async()=>{
+ mount();await review();
+ const accepted={...report,summary:{...report.summary,created:2,updated:3,unchanged:4,excluded:5}};
+ api.applyMasterImport.mockResolvedValue({...changed(),noop:false,importReport:accepted});
+ fireEvent.click(screen.getByRole('button',{name:'Confirm all selected rows'}));
+ await screen.findByText('Import completed. Undo restores this entire batch.');
+ expect(screen.getByText('New 2 · Updated 3 · Unchanged 4 · Errors 0 · Needs review 0 · Excluded 5')).toBeTruthy();
+});
+
+it('shows exact source and matching keys for a normalized row outside the sample',async()=>{
+ api.reviewMasterImport.mockResolvedValue({report:{...report,rows:[{...report.rows[0],row:{rowId:21,record:21,startLine:22},normalizations:[{field:'code',column:0,raw:' JP ',value:'JP'}]}]},resourceVersions:{workspace:3}});
+ mount();await review();
+ expect(screen.getByText(' JP ',{exact:true,normalizer:value=>value})).toBeTruthy();
+ expect(screen.getByText('JP',{exact:true,normalizer:value=>value})).toBeTruthy();
+});
+
+it('sends an actual tab character when Tab is selected as CSV separator',async()=>{
+ mount();
+ fireEvent.change(screen.getByLabelText('CSV / Excel file (up to 5 MiB)'),{target:{files:[new File(['code\tnames\nAA\tAlpha\n'],'test.tsv')]}});
+ const option=screen.getByRole('option',{name:'Tab'}) as HTMLOptionElement;
+ fireEvent.change(screen.getByRole('combobox',{name:'CSV separator'}),{target:{value:option.value}});
+ fireEvent.click(screen.getByRole('button',{name:'Read source'}));await screen.findByText('Source data rows: 1');
+ expect(api.inspectMasterImport.mock.calls[0][3].separator).toBe('\t');
 });

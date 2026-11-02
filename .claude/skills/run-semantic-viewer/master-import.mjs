@@ -21,19 +21,22 @@ export async function runMasterImport({BASE,Browser,api,startServer,stopServer,w
    const ax=await b.send('Accessibility.getFullAXTree');assert.ok(ax.nodes.some(n=>n.role?.value==='dialog'&&n.name?.value==='Import master data'));
    if(relations)await b.select('.master-import-dialog select','relations');
    await b.eval(`(()=>{const el=document.querySelector('.master-import-dialog input[type=file]'),dt=new DataTransfer();dt.items.add(new File([${JSON.stringify(text)}],'synthetic.csv',{type:'text/csv'}));el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+   if(text.includes('\t')){await b.eval("Array.from(document.querySelectorAll('.master-import-dialog select')).find(e=>e.closest('label')?.textContent.includes('CSV separator')).setAttribute('data-master-separator','true')");await b.select('[data-master-separator]','\t');}
    await b.clickText('.master-import-dialog button','Read source');
    await b.waitFor('document.querySelector(".master-import-dialog").textContent.includes("Source data rows:")');
    await b.clickText('.master-import-dialog button','Prepare and review');
    await b.waitFor('Array.from(document.querySelectorAll(".master-import-dialog button")).some(e=>e.textContent==="Confirm all selected rows"||e.textContent==="Finish without changes")');
+   if(text.includes(' AA '))assert.ok((await b.eval('document.querySelector(".master-import-dialog").textContent')).includes('Identifier whitespace normalization'));
    const confirm=noop?'Finish without changes':'Confirm all selected rows';
    assert.equal(await b.eval(`Array.from(document.querySelectorAll('.master-import-dialog button')).find(e=>e.textContent===${JSON.stringify(confirm)})?.disabled`),false,await b.eval('document.querySelector(".master-import-dialog").textContent'));
    await b.eval("document.querySelector('.master-import-dialog').scrollTop=document.querySelector('.master-import-dialog').scrollHeight");
    log('master-import-review',await b.shot('master-import-'+(relations?'relations':category==='Countries'?'countries':'organizations')+'-review'));
    await b.clickText('.master-import-dialog button',confirm);
    await b.waitFor(`document.querySelector('.master-import-dialog').textContent.includes(${JSON.stringify(noop?'No changes were needed.':'Import completed.')})`);
+   assert.ok((await b.eval('document.querySelector(".master-import-dialog").textContent')).includes('Excluded 0'));
    await b.clickText('.master-import-dialog button','Close');await b.waitFor('!document.querySelector(".master-import-dialog")');
   };
-  const countryCsv='code,names,sources\nAA,Synthetic Alpha,Gazette\n';
+  const countryCsv='code\tnames\tsources\n AA \tSynthetic Alpha\tGazette\n';
   await importTable(country,'Countries',countryCsv);
   const source=async(pid)=>(await api('GET',`/api/projects/${pid}/documents/model/source`)).body.text;
   const acceptedCountry=await source(country);

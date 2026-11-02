@@ -100,3 +100,34 @@ def test_period_edit_without_existing_record_cannot_succeed_silently():
         plan=plan_master_import(ctx,batch(b'code,start\nAA,2030-01-01\n',columns,'organizations'))
         assert not plan.ready
         assert plan.rows[0]['status'] in ('error','needs-review')
+
+
+def test_new_name_defaults_fill_only_missing_languages_and_never_existing_items():
+    ctx=context();old=URIRef('urn:country:OLD')
+    for t in [(old,RDF.type,GOV.Country),(old,GOV.countryCode,Literal('OLD')),(old,SKOS.prefLabel,Literal('Existing',lang='en'))]:ctx.graph.add(t)
+    columns=COLUMNS+[{'column':2,'field':'aliases','language':'ja','op':'append'}]
+    defaults={'names':[{'value':'Fallback','language':'en'},{'value':'Unused','language':'JA'}],
+              'aliases':[{'value':'Default alias','language':'en'},{'value':'Unused alias','language':'JA'}]}
+    p=plan_master_import(ctx,batch(b'code,name,alias\nNEW,Source,Source alias\nOLD,Updated,Old alias\n',columns,defaults=defaults))
+    assert p.ready
+    new=next(p.candidate.subjects(GOV.countryCode,Literal('NEW')))
+    assert set(p.candidate.objects(new,SKOS.prefLabel))=={Literal('Source',lang='ja'),Literal('Fallback',lang='en')}
+    assert set(p.candidate.objects(new,SKOS.altLabel))=={Literal('Source alias',lang='ja'),Literal('Default alias',lang='en')}
+    assert (old,SKOS.prefLabel,Literal('Existing',lang='en')) in p.candidate
+    assert (old,SKOS.altLabel,Literal('Default alias',lang='en')) not in p.candidate
+
+
+def test_malformed_name_default_is_reported_instead_of_crashing_preview():
+    p=plan_master_import(context(),batch(b'code,name\nNEW,\n',COLUMNS,defaults={'names':[{'value':'Missing language'}]}))
+    assert not p.ready
+    assert p.rows[0]['status']=='error'
+
+
+def test_normalized_key_evidence_survives_beyond_the_inspection_sample():
+    data=('code,name\n'+''.join(f'C{i},Name {i}\n' for i in range(20))+' JP ,Japan\n').encode()
+    prepared=batch(data,COLUMNS)
+    plan=plan_master_import(context(),prepared)
+    assert plan.ready
+    row=plan.result()['rows'][20]
+    assert row['normalizations']==[{'field':'code','column':0,'raw':' JP ','value':'JP'}]
+    assert (URIRef(row['entityIri']),GOV.countryCode,Literal('JP')) in plan.candidate

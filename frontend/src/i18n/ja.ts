@@ -18,6 +18,7 @@ export const ja: Catalog = {
   "masterImport.before": "変更前",
   "masterImport.after": "変更後",
   "masterImport.rebind": "保持した入力を現在のセッションで再確認する",
+  "masterImport.keyNormalization": "識別コードの前後空白の除去",
   "masterImport.title": "マスターデータを取り込む",
   "masterImport.open": "データを取り込む",
   "masterImport.target": "対象マスター: {id}",

@@ -18,6 +18,7 @@ export const en: Catalog = {
   "masterImport.before": "Before",
   "masterImport.after": "After",
   "masterImport.rebind": "Review retained input with this session",
+  "masterImport.keyNormalization": "Identifier whitespace normalization",
   "masterImport.title": "Import master data",
   "masterImport.open": "Import data",
   "masterImport.target": "Target master: {id}",

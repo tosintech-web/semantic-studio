@@ -19,7 +19,8 @@ export interface Batch {version:1;mode:Mode;source:{sha256:string;filename:strin
 export interface Prepared {batch:Batch|null;receipt:string|null;issues:Issue[];summary:{selected:number;excluded:number};requiredBytes:number}
 export interface Term {kind:string;value:string;language?:string;datatype?:string}
 export interface FieldChange {field:string;recordIri:string;before:Term[];after:Term[]}
-export interface Row {row:Position;status:'created'|'updated'|'unchanged'|'error'|'needs-review';entityIri?:string;issues:Issue[];fields:FieldChange[];recordChoices?:string[]}
+export interface KeyNormalization {field:string;column:number;raw:string;value:string}
+export interface Row {normalizations?:KeyNormalization[];row:Position;status:'created'|'updated'|'unchanged'|'error'|'needs-review';entityIri?:string;issues:Issue[];fields:FieldChange[];recordChoices?:string[]}
 export interface Review {basis:string;ready:boolean;noop:boolean;summary:{selected:number;excluded:number;created:number;updated:number;unchanged:number;errors:number;needsReview:number};rows:Row[];totalRows:number;offset:number;limit:number;warnings:Issue[]}
 export interface ReviewOwner {pid:string;session:number;authEpoch:number;nonce:string}
 export interface Reviewed {report:Review;resourceVersions:ResourceVersions}

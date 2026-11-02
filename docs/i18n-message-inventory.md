@@ -3650,7 +3650,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `masterImport.template` | format | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
 | `masterImport.field` | — | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
 | `masterImport.ignore` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
-| `masterImport.column` | name, number | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
+| `masterImport.column` | name, number | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
 | `masterImport.operation` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
 | `masterImport.language` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
 | `masterImport.delimiter` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
@@ -3662,7 +3662,7 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `masterImport.rowsHelp` | — | `frontend/src/government/imports/MappingStep.tsx` | en/ja |
 | `masterImport.line` | line | `frontend/src/government/imports/MappingStep.tsx`, `frontend/src/government/imports/MasterImportWizard.tsx`, `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
 | `masterImport.prepare` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
-| `masterImport.summary` | created, errors, excluded, review, unchanged, updated | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
+| `masterImport.summary` | created, errors, excluded, review, unchanged, updated | `frontend/src/government/imports/ReviewStep.tsx`, `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
 | `masterImport.page` | shown, total | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
 | `masterImport.diff` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
 | `masterImport.chooseRecord` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
@@ -3712,3 +3712,5 @@ Keyboard: native buttons and selects in document order. Focus uses the global `:
 | `masterImport.after` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |
 
 | `masterImport.rebind` | — | `frontend/src/government/imports/MasterImportWizard.tsx` | en/ja |
+
+| `masterImport.keyNormalization` | — | `frontend/src/government/imports/ReviewStep.tsx` | en/ja |

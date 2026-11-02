@@ -94,9 +94,21 @@ def merged_fields(batch,intent,new):
     fields={k:list(v) for k,v in intent['fields'].items()}
     if new:
         for name,value in batch.get('mapping',{}).get('defaults',{}).items():
-            if name not in fields:
-                values=value if isinstance(value,list) else [value]
-                fields[name]=([{'op':'append' if name=='aliases' else 'set','language':v['language'],'values':[v]} for v in values] if name in ('names','aliases') else [{'op':'append' if name=='sources' else 'set','values':values}])
+            values=value if isinstance(value,list) else [value]
+            if name in ('names','aliases'):
+                # Each language is a separate field. An explicit source edit,
+                # including clear, owns that language even when it has no value.
+                defaults=_names(values,required=False,unique=name=='names')
+                present={edit.get('language','').casefold() for edit in fields.get(name,[])}
+                missing={}
+                for term in defaults:
+                    language=term.language.casefold()
+                    if language not in present:
+                        missing.setdefault(language,[]).append({'value':str(term),'language':language})
+                if missing:
+                    fields.setdefault(name,[]).extend({'op':'append' if name=='aliases' else 'set','language':language,'values':terms} for language,terms in missing.items())
+            elif name not in fields:
+                fields[name]=[{'op':'append' if name=='sources' else 'set','values':values}]
     return fields
 
 
@@ -154,7 +166,7 @@ def patch_period(graph,node,fields,prefix,old=None):
 
 
 def report(plan,intent,status,iri=None,reason=None,choices=None):
-    row={'row':intent['row'],'status':status,'issues':[issue(intent['row'],reason)] if reason else [],'fields':[],'recordChoices':choices or []}
+    row={'row':intent['row'],'status':status,'issues':[issue(intent['row'],reason)] if reason else [],'fields':[],'recordChoices':choices or [],'normalizations':intent.get('normalizations',[])}
     if iri is not None:row['entityIri']=str(iri)
     plan.rows.append(row)
     return row

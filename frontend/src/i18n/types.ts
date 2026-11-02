@@ -19,6 +19,7 @@ export interface MessageArgs extends ServerMessageArgs {
   "masterImport.before": undefined;
   "masterImport.after": undefined;
   "masterImport.rebind": undefined;
+  "masterImport.keyNormalization": undefined;
   "masterImport.title": undefined;
   "masterImport.open": undefined;
   "masterImport.target": {id:string};

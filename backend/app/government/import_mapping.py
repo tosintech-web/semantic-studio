@@ -40,11 +40,13 @@ def map_master_rows(table,mode,mapping,selected_rows):
     if len(overrides)!=len(mapping['rowOverrides']) or set(overrides)-set(selected_rows):raise ValueError('Record choices must belong to selected rows.')
     intents=[];issues=[]
     for index in sorted(selected_rows):
-        row=table.positions[index-1];fields={};key='';errors=[];special={}
+        row=table.positions[index-1];fields={};key='';errors=[];special={};normalizations=[]
         for col in mapping['columns']:
             cell=table.evidence[index-1][col['column']];field=col['field'];value=cell['text'].strip();op=col['op']
             if field in KEYS and cell['kind'] not in {'text','empty'}:
                 errors.append(issue(row,'Identifiers must be text cells, not numeric or formula cells.',col['column']));continue
+            if field in KEYS and cell['text']!=value:
+                normalizations.append({'field':field,'column':col['column'],'raw':cell['text'],'value':value})
             if not value and op!='clear':continue
             if field=='code':key=value;continue
             if field in {'action','recordIri','subjectCode','predicate','objectCode','existenceRecordIri','affiliationRecordIri'}:special[field]=value;continue
@@ -60,5 +62,5 @@ def map_master_rows(table,mode,mapping,selected_rows):
         if mode!='relations' and not key and not errors:errors.append(issue(row,'An identifier code is required.'))
         if mode=='relations' and special.get('action') not in {'add','correct','end'}:errors.append(issue(row,'Choose add, correct or end.'))
         if errors:issues.extend(errors)
-        else:intents.append({'row':row,'code':key,'fields':fields,**special})
+        else:intents.append({'row':row,'code':key,'fields':fields,**special,**({'normalizations':normalizations} if normalizations else {})})
     return {'intents':intents,'issues':issues,'selectedRows':sorted(selected_rows),'defaults':mapping['defaults']}
