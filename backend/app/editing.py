@@ -4,6 +4,7 @@ FILE: backend/app/editing.py
 ================================================================================
 
 SUMMARY
+    Reviewed master batches publish one detached candidate and one Undo step.
     A shared reference gate orders local project edits and cross-group snapshots.
     Command read-name facts project a display language while lexical/RDF names stay original.
     Project view names accept an explicit read language without changing RDF languages.
@@ -3971,6 +3972,8 @@ class EditingService:
 
     @editing_locked
     def command(self, pid: str, doc: str, name: str, args: dict, dry_run: bool = False, *, lang: Optional[str] = None) -> dict:
+        if name == 'ImportMasterBatch':
+            return self._master_import(pid,doc,args,dry_run,lang)
         handler = COMMANDS.get(name)
         if handler is None:
             raise CommandError(
@@ -4041,6 +4044,56 @@ class EditingService:
             if change.created is not None:
                 result["created"] = str(change.created)
             return result
+
+    def _master_import(self,pid,doc,args,dry_run,lang):
+        from .government.import_context import verify_import_request
+        from .government.import_plan import plan_master_import
+        from .government.references import country_reference
+        from .government.profile import DomainError
+        if doc!='model' or not isinstance(args,dict):raise DomainError('Master imports belong to the model document.')
+        batch=verify_import_request(pid,args)
+        offset=args.get('reportOffset',0);limit=args.get('reportLimit',50)
+        if type(offset) is not int or not 0<=offset<=2000 or type(limit) is not int or not 1<=limit<=50:raise DomainError('Review pages contain at most 50 rows.')
+        document=self.document(pid,doc)
+        with document.lock:
+            ctx=self._context(document,lang)
+            ctx.import_revision=document.ontology.revision
+            ctx.country_reference=country_reference(self,pid)
+            plan=plan_master_import(ctx,batch)
+            plan.excluded=max(0,batch['source']['totalRows']-len(batch['intents']))
+            review=plan.result(offset,limit)
+            if dry_run:return review
+            if args.get('previewBasis')!=plan.basis:raise DomainError('The master changed after review. Review the proposal again.',code='government.entry_stale',status=409)
+            if not plan.ready:raise DomainError('Resolve every selected row before applying the batch.')
+            change=_change(document.graph,'Import master data',sorted(plan.added,key=lambda t:tuple(v.n3() for v in t)),sorted(plan.removed,key=lambda t:tuple(v.n3() for v in t)),ui_message=make_message('government.master_imported'))
+            if not plan.noop:self._apply_master_import(document,plan,change)
+            return {'revision':document.ontology.revision,'state':document.state(),'label':change.label,'delta':_delta_json(change),'importReport':review,'noop':plan.noop,'uiMessage':change.ui_message}
+
+    def _apply_master_import(self,document,plan,change):
+        # Swapping the detached candidate keeps S0 intact even if publication
+        # fails. Only this module publishes project RDF and Undo state.
+        names=('dirty','last_text','visual_since_save','save_point','_clean','_canvas')
+        before={name:getattr(document,name) for name in names}
+        old_graph=document.graph;revision=document.ontology.revision
+        undo=list(document.undo);redo=list(document.redo);pending=document.timer is not None
+        editor_before=document.editor_state()
+        try:
+            document.ontology.graph=plan.candidate
+            document.ontology.revision+=1
+            document.dirty=True;document.last_text=None;document.visual_since_save=True
+            self._push(document,change,editor_before)
+            self._arm(document)
+        except Exception:
+            self._cancel(document)
+            document.ontology.graph=old_graph;document.ontology.revision=revision
+            document.undo[:]=undo;document.redo[:]=redo
+            for name,value in before.items():setattr(document,name,value)
+            # A canceled timer never regains its old generation: an already
+            # running writer must not publish the refused candidate later.
+            if pending:
+                try:self._arm(document)
+                except Exception:pass
+            raise
 
     def _first_shapes_command(self, pid: str, handler, args: dict, dry_run: bool, lang: Optional[str] = None) -> None:
         """The first shape command creates shapes.ttl (shacl-authoring 8) --

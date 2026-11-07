@@ -201,6 +201,7 @@ jobs:
       - name: Actual network, ownership, changed DNS and two-project restore
         run: python -m unittest scripts.test_pg_compose_network scripts.test_pg_compose_lifecycle scripts.test_release_compose
       - run: node .claude/skills/run-semantic-viewer/driver.mjs smoke
+      - run: node .claude/skills/run-semantic-viewer/driver.mjs master-import
       - run: node .claude/skills/run-semantic-viewer/driver.mjs p1
         env:
           BUDGET_REPORT_ONLY: "1"

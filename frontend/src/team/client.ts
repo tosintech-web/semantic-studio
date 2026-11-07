@@ -16,6 +16,8 @@ let status: AuthStatus = {mode:"local", authenticated:false, user:null, csrf:nul
 let versions: ResourceVersions = {};
 let authEpoch = 0;
 export function teamAuthEpoch():number { return authEpoch; }
+/** Draft ownership survives session rotation only for the same principal. */
+export function teamInputOwner():string { return JSON.stringify([status.mode,status.mode==="team"?status.user?.sub:null]); }
 const listeners = new Set<(event: TeamEvent) => void>();
 export function isTeamMode(): boolean { return status.mode === "team"; }
 export function configureTeam(next: AuthStatus) {
@@ -36,7 +38,7 @@ export function teamRequest(init?: RequestInit): RequestInit | undefined {
   const headers = new Headers(init?.headers);
   if (status.csrf) headers.set("X-Semantic-Studio-Csrf", status.csrf);
   if (!["GET", "HEAD", "OPTIONS"].includes((init?.method ?? "GET").toUpperCase())) {
-    headers.set("X-Semantic-Studio-Request-Id", crypto.randomUUID());
+    if(!headers.has("X-Semantic-Studio-Request-Id"))headers.set("X-Semantic-Studio-Request-Id", crypto.randomUUID());
     // Administration reads carry per-user expectations independent of the
     // graph baseline; these remain the exact versions the member form read.
     let explicit:ResourceVersions={};
@@ -81,6 +83,10 @@ export function isSharedTeamWrite(url: string, init?: RequestInit): boolean {
   if (/^\/api\/ontologies\/[^/]+\/(nodes|sparql)$/.test(path)) return false;
   if (/^\/api\/projects\/[^/]+\/(open|close|validate|reasoning|release-preview)$/.test(path)) return false;
   if (/^\/api\/projects\/[^/]+\/data\/(inspect|preview)$/.test(path)) return false;
+  if (/^\/api\/projects\/[^/]+\/government\/import\/(inspect|prepare)$/.test(path)) return false;
+  if (/^\/api\/projects\/[^/]+\/documents\/model\/commands$/.test(path) && typeof init?.body==="string") {
+    try {const value=JSON.parse(init.body);if(value.command==="ImportMasterBatch"&&value.dryRun===true)return false;}catch{/* Server validates the body. */}
+  }
   if (/^\/api\/ontologies\/loads\/[^/]+\/cancel$/.test(path)) return false;
   return true;
 }

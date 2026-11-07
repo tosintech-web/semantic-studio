@@ -651,6 +651,8 @@ export const projectStore = {
   },
 
   /** Record a change made elsewhere (a command) so the views refetch. */
+  session(): number { return projectSession; },
+
   applied(result: ChangeResult): void {
     afterChange(result, "applied");
   },

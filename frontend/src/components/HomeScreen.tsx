@@ -99,6 +99,7 @@ export interface HomeProjects extends ProjectActions {
   /** The project an action is running on, or null. */
   busyId: string | null;
   onNew: (template?:ProjectTemplate) => void;
+  onImport?: (pid:string) => void;
 }
 
 /**
@@ -570,7 +571,7 @@ export default function HomeScreen({
 
         {projects ? <GroupNavigation projects={projects.list} onOpen={projects.onOpen} onCreate={projects.onNew}
           canEdit={team.canEdit&&!team.suspended} busy={projectBusyId!==null||projects.loading}
-          loading={projects.loading} error={projects.error} projectActions={projects} busyId={projectBusyId}>{libraryPanel}</GroupNavigation> : libraryPanel}
+          loading={projects.loading} error={projects.error} projectActions={projects} busyId={projectBusyId} onImport={projects.onImport}>{libraryPanel}</GroupNavigation> : libraryPanel}
 
         <section className="start-section" aria-labelledby="home-or-heading">
           <h2 id="home-or-heading">{t("home.or")}</h2>

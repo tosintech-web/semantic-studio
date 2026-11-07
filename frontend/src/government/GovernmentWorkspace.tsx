@@ -31,13 +31,13 @@ import { usePendingEntry } from "./EntryParts";
 import { localToday, supportedProfile } from "./form";
 import type { CountryPage, DomainProfile } from "./types";
 
-interface Props { project: ProjectSummary; projects: ProjectSummary[]; language: string; onProjectsChanged: () => void; onOpenProject?: (pid: string) => void }
+interface Props { project: ProjectSummary; projects: ProjectSummary[]; language: string; onProjectsChanged: () => void; onOpenProject?: (pid: string) => void; onImport?:()=>void }
 export default function GovernmentWorkspace(props: Props) {
   const profile = supportedProfile(props.project.domainProfile);
   return profile ? <GovernmentLanguageContext.Provider value={props.language}><WorkspaceBody key={`${props.project.id}|${profile.id}`} {...props} profile={profile} /></GovernmentLanguageContext.Provider> : null;
 }
 
-function WorkspaceBody({ project, projects, language, onProjectsChanged, onOpenProject, profile }: Props & { profile: DomainProfile }) {
+function WorkspaceBody({ project, projects, language, onProjectsChanged, onOpenProject, onImport, profile }: Props & { profile: DomainProfile }) {
   const { t } = useI18n();
   const team = useTeam();
   const countryMode = profile.id === "countries-v1";
@@ -138,6 +138,7 @@ function WorkspaceBody({ project, projects, language, onProjectsChanged, onOpenP
         {configFailure !== null && <OperationError failure={{ cause: configFailure, message: makeUiMessage("government.connectionFailed") }} />}
       </form>}
       <div className="government-list-controls">
+        {onImport&&<button type="button" disabled={!canEdit} onClick={()=>leaveForm(onImport)}>{t("masterImport.open")}</button>}
         <button id={`government-new-${project.id}`} type="button" className="primary" aria-disabled={!canEdit || (!countryMode && (!profile.countryProjectId || sourceMissing))}
           onClick={() => { if (canEdit && (countryMode || (profile.countryProjectId && !sourceMissing))) openEntry(); }}>{t(countryMode ? "government.newCountry" : "government.newOrganization")}</button>
         {!countryMode&&<>

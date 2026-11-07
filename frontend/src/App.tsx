@@ -189,6 +189,9 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import NewProjectDialog, { type NewProjectRequest } from "./components/NewProjectDialog";
 import ProjectHeader from "./components/ProjectHeader";
 import GovernmentWorkspace from "./government/GovernmentWorkspace";
+import MasterImportWizard from "./government/imports/MasterImportWizard";
+import type {ReviewOwner} from "./government/imports/types";
+import {teamAuthEpoch} from "./team/client";
 import { supportedProfile } from "./government/form";
 import TurtleEditor from "./components/TurtleEditor";
 import { triggerDownload } from "./download";
@@ -589,6 +592,7 @@ export default function App() {
   // views; a Library keeps revision 0 but has its own display language.
   // Read slice by slice: the editor's text is in the store too and changes on
   // every keystroke, which must not re-render all of App.
+  const [masterImport,setMasterImport]=useState<ReviewOwner|null>(null);
   const openProjectSummary = useProjectSelector((s) => s.project);
   const [domainEditorOn, setDomainEditorOn] = useState(true);
   const domainProfile = supportedProfile(openProjectSummary?.domainProfile);
@@ -1690,7 +1694,7 @@ export default function App() {
   );
 
   const openProjectById = useCallback(
-    (pid: string) => {
+    (pid: string, onOpened?:()=>void) => {
       const go = async () => {
         setProjectBusyId(pid);
         try {
@@ -1698,6 +1702,7 @@ export default function App() {
           // A project opens on its model: the tree, the canvas and the form
           // (5.4), so a learner starts where the building is done.
           enterMode(oid, "hierarchy");
+          onOpened?.();
         } catch (e: unknown) {
           failed(e);
         } finally {
@@ -1714,6 +1719,14 @@ export default function App() {
     },
     [enterMode, exitProject],
   );
+
+  const startMasterImport=(pid:string)=>{
+    if(!team.canEdit||team.suspended)return;
+    const authEpoch=teamAuthEpoch();
+    const open=()=>setMasterImport({pid,session:projectStore.session(),authEpoch,nonce:crypto.randomUUID()});
+    if(projectStore.getSnapshot().project?.id===pid)guardEditor(()=>guardTeamNavigation(open));
+    else openProjectById(pid,open);
+  };
 
   // A library ontology opened while a project is open leaves the project.
   const enterLibrary = useCallback(
@@ -2208,6 +2221,8 @@ export default function App() {
         />
       )}
 
+      {masterImport&&<MasterImportWizard key={masterImport.nonce} owner={masterImport} country={supportedProfile(openProjectSummary?.domainProfile)?.id==='countries-v1'} language={openProjectSummary?.primaryLanguage??'en'} onClose={()=>setMasterImport(null)} onApplied={()=>{void refreshProjects();}}/>}
+
       {showHome ? (
         <HomeScreen
           ontologies={ontologies}
@@ -2230,6 +2245,7 @@ export default function App() {
             busyId: projectBusyId,
             onNew: (template) => setNewProject({template}),
             onOpen: openProjectById,
+            onImport: startMasterImport,
             onRename: onRenameProject,
             onChangeKind: (pid) => setChangingKind(projects.find((p) => p.id === pid) ?? null),
             onDuplicate: onDuplicateProject,
@@ -2278,7 +2294,7 @@ export default function App() {
           />
         </main>
       ) : mode === "hierarchy" && domainProfile && domainEditorOn && editingModel && openProjectSummary ? (
-        <main className="main government-page"><GovernmentWorkspace key={openProjectSummary.id} project={openProjectSummary} projects={projects} language={displayLanguage ?? openProjectSummary.primaryLanguage} onProjectsChanged={() => { void refreshProjects(); }} onOpenProject={openProjectById} /></main>
+        <main className="main government-page"><GovernmentWorkspace key={openProjectSummary.id} project={openProjectSummary} projects={projects} language={displayLanguage ?? openProjectSummary.primaryLanguage} onProjectsChanged={() => { void refreshProjects(); }} onOpenProject={openProjectById} onImport={()=>startMasterImport(openProjectSummary.id)} /></main>
       ) : mode === "hierarchy" ? (
         // The Edit page (edit-page-rework, D-107): the outline on the left,
         // the canvas in the middle, one side panel on the right for every

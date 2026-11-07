@@ -894,6 +894,7 @@ export const SERVER_CONTRACTS = {
   "government.history_saved": {},
   "government.invalid_input": {},
   "government.invalid_profile": {},
+  "government.master_imported": {},
   "government.name_required": {},
   "government.organization_saved": {},
   "government.period_invalid": {},
@@ -2473,6 +2474,7 @@ export interface ServerMessageArgs {
   "government.history_saved": undefined;
   "government.invalid_input": undefined;
   "government.invalid_profile": undefined;
+  "government.master_imported": undefined;
   "government.name_required": undefined;
   "government.organization_saved": undefined;
   "government.period_invalid": undefined;

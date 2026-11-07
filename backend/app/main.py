@@ -105,6 +105,8 @@ async def lifespan(_app: FastAPI):
     examples are a convenience, and a data folder that cannot take
     examples.json should not cost the person their own library. What did not
     come in can be added back from the Load dialog."""
+    from .government.import_receipts import process_signer
+    _app.state.master_import_signer=process_signer()
     team = getattr(_app.state, "team", None)
     if team is not None:
         from .team.pg_storage import StorageError
@@ -215,6 +217,8 @@ def request_body_limit(method: str, path: str) -> tuple[int, dict] | None:
     elif method == "POST":
         if _NODES_PATH.match(path):
             limit, detail = ontologies.NODES_MAX_BYTES, ontologies.nodes_too_large()
+        elif re.fullmatch(r"/api/projects/[^/]+/government/import/(inspect|prepare)",path):
+            limit, detail = tabular.MAX_BYTES + ontologies.CHUNK_BYTES, data.file_too_large()
         elif _DATA_FILE_PATH.match(path):
             limit, detail = tabular.MAX_BYTES + ontologies.CHUNK_BYTES, data.file_too_large()
         elif path == "/api/ontologies/upload":

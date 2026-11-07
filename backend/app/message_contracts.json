@@ -1728,6 +1728,7 @@
     "government.history_conflict": {},
     "government.history_saved": {},
     "government.cross_country": {},
-    "government_release_profile_unsupported": {}
+    "government_release_profile_unsupported": {},
+    "government.master_imported": {}
   }
 }
